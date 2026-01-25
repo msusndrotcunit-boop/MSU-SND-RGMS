@@ -31,7 +31,14 @@ const Login = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">ROTC Management Login</h2>
+                <div className="flex justify-center mb-6">
+                    <img 
+                        src="https://upload.wikimedia.org/wikipedia/en/thumb/5/5f/Mindanao_State_University_seal.svg/200px-Mindanao_State_University_seal.svg.png" 
+                        alt="MSU-SND ROTC Unit Logo" 
+                        className="w-32 h-32 object-contain"
+                    />
+                </div>
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">MSU-SND ROTC UNIT Grading Management Login</h2>
                 {error && <p className="text-red-500 mb-4">{error}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
