@@ -27,11 +27,18 @@ if (!fs.existsSync(uploadDir)){
 }
 
 // Serve static files from client/dist (React Build)
-app.use(express.static(path.join(__dirname, '../client/dist')));
+const clientBuildPath = path.join(__dirname, '../client/dist');
+app.use(express.static(clientBuildPath));
 
 // Handle React Routing, return all requests to React app
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+    const indexPath = path.join(clientBuildPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        console.error(`Build not found at: ${indexPath}`);
+        res.status(404).send('App is running, but the React build was not found. Please ensure "npm run build" ran successfully.');
+    }
 });
 
 app.listen(PORT, () => {
