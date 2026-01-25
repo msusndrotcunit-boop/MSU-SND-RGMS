@@ -499,12 +499,12 @@ const Cadets = () => {
                                     <label className="text-sm">Days Present:</label>
                                     <input 
                                         type="number" 
-                                        max="15"
-                                        className="border p-2 rounded w-24" 
+                                        className="border p-2 rounded w-24 bg-gray-200 text-gray-600 cursor-not-allowed" 
                                         value={gradeForm.attendancePresent} 
-                                        onChange={e => setGradeForm({...gradeForm, attendancePresent: parseInt(e.target.value) || 0})} 
+                                        readOnly
+                                        title="Auto-calculated from Attendance Records"
                                     />
-                                    <span className="text-sm text-gray-500">/ 15 Training Days</span>
+                                    <span className="text-sm text-gray-500">/ 15 Training Days (Auto-computed)</span>
                                 </div>
                             </div>
 
@@ -516,21 +516,24 @@ const Cadets = () => {
                                         <label className="block text-sm mb-1">Merit Points</label>
                                         <input 
                                             type="number" 
-                                            className="border p-2 rounded w-full" 
+                                            className="border p-2 rounded w-full bg-gray-200 text-gray-600 cursor-not-allowed" 
                                             value={gradeForm.meritPoints} 
-                                            onChange={e => setGradeForm({...gradeForm, meritPoints: parseInt(e.target.value) || 0})} 
+                                            readOnly
+                                            title="Auto-calculated from Merit Logs"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm mb-1">Demerit Points</label>
                                         <input 
                                             type="number" 
-                                            className="border p-2 rounded w-full" 
+                                            className="border p-2 rounded w-full bg-gray-200 text-gray-600 cursor-not-allowed" 
                                             value={gradeForm.demeritPoints} 
-                                            onChange={e => setGradeForm({...gradeForm, demeritPoints: parseInt(e.target.value) || 0})} 
+                                            readOnly
+                                            title="Auto-calculated from Demerit Logs"
                                         />
                                     </div>
                                 </div>
+                                <p className="text-xs text-gray-500 mt-2 text-center">* Manage points via Merit/Demerit Ledger</p>
                             </div>
 
                             {/* Subject Proficiency */}
