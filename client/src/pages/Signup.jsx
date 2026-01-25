@@ -134,19 +134,32 @@ const Signup = () => {
                     </div>
 
                     {/* Account Credentials */}
-                    <h3 className="font-semibold text-lg text-gray-700 border-b pb-2 mt-4">Account Credentials</h3>
+                    <h3 className="font-semibold text-lg text-green-800 border-b pb-2 mt-4">Account Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" name="username" placeholder="Username" onChange={handleChange} className="border p-2 rounded" required />
-                        <input type="password" name="password" placeholder="Password" onChange={handleChange} className="border p-2 rounded" required />
+                        <input
+                            type="text"
+                            name="username"
+                            placeholder="Username"
+                            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-700"
+                            onChange={handleChange}
+                            required
+                        />
+                        <input
+                            type="password"
+                            name="password"
+                            placeholder="Password"
+                            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-700"
+                            onChange={handleChange}
+                            required
+                        />
                     </div>
-
-                    <button type="submit" className="w-full bg-green-800 text-white py-3 rounded hover:bg-green-900 transition font-bold text-lg mt-6 shadow-lg uppercase tracking-wider">
+                    <button type="submit" className="w-full bg-green-800 text-white py-3 rounded hover:bg-green-900 transition font-bold text-lg mt-6 shadow-lg">
                         Register
                     </button>
+                    <div className="mt-4 text-center">
+                         <p className="text-sm">Already registered? <Link to="/login" className="text-green-800 font-semibold hover:underline">Login</Link></p>
+                    </div>
                 </form>
-                <div className="mt-4 text-center">
-                    <p className="text-sm">Already registered? <Link to="/login" className="text-green-800 font-semibold hover:underline">Login</Link></p>
-                </div>
             </div>
         </div>
     );
