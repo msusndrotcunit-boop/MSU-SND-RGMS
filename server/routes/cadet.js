@@ -43,18 +43,28 @@ router.get('/my-grades', (req, res) => {
 
     db.get(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        if (!row) return res.status(404).json({ message: 'Grades not found' });
+        
+        // If no grades found, return default initialized structure
+        const gradeData = row || {
+            attendance_present: 0,
+            merit_points: 0,
+            demerit_points: 0,
+            prelim_score: 0,
+            midterm_score: 0,
+            final_score: 0,
+            status: 'active'
+        };
 
         // Calculate Grades
-        const attendanceScore = (row.attendance_present / 15) * 30;
-        const aptitudeScore = (row.merit_points - row.demerit_points) * 0.3;
-        const subjectScore = ((row.prelim_score + row.midterm_score + row.final_score) / 300) * 40;
+        const attendanceScore = (gradeData.attendance_present / 15) * 30;
+        const aptitudeScore = (gradeData.merit_points - gradeData.demerit_points) * 0.3;
+        const subjectScore = ((gradeData.prelim_score + gradeData.midterm_score + gradeData.final_score) / 300) * 40;
         const finalGrade = attendanceScore + aptitudeScore + subjectScore;
 
-        const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, row.status);
+        const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, gradeData.status);
 
         res.json({
-            ...row,
+            ...gradeData,
             attendanceScore,
             aptitudeScore,
             subjectScore,

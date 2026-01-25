@@ -3,6 +3,7 @@ const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const { sendEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -291,6 +292,26 @@ router.get('/users', (req, res) => {
 router.put('/users/:id/approve', (req, res) => {
     db.run(`UPDATE users SET is_approved = 1 WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
+        
+        // Ensure grades record exists for the approved cadet
+        db.get("SELECT cadet_id, email FROM users WHERE id = ?", [req.params.id], (err, user) => {
+            if (user && user.cadet_id) {
+                db.run("INSERT OR IGNORE INTO grades (cadet_id) VALUES (?)", [user.cadet_id], (err) => {
+                    if (err) console.error("Error creating grades record:", err);
+                });
+                
+                // Optional: Send welcome email
+                if (user.email) {
+                    sendEmail(
+                        user.email, 
+                        'Account Approved - ROTC Grading System',
+                        'Your account has been approved. You can now login.',
+                        '<p>Your account has been approved. You can now login.</p>'
+                    );
+                }
+            }
+        });
+
         res.json({ message: 'User approved' });
     });
 });

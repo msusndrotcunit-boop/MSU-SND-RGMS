@@ -112,9 +112,18 @@ function updateTotalAttendance(cadetId, res) {
         const count = row.count;
         
         // Update grades table
-        db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], (err) => {
+        db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], function(err) {
             if (err) return res.status(500).json({ message: 'Error updating grades' });
-            res.json({ message: 'Attendance marked and total updated', totalPresent: count });
+            
+            if (this.changes === 0) {
+                // Grade record might not exist, create it
+                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
+                    if (err) return res.status(500).json({ message: 'Error creating grade record' });
+                    res.json({ message: 'Attendance marked and total updated', totalPresent: count });
+                });
+            } else {
+                res.json({ message: 'Attendance marked and total updated', totalPresent: count });
+            }
         });
     });
 }
