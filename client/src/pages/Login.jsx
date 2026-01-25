@@ -32,22 +32,22 @@ const Login = () => {
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
                 <div className="flex justify-center items-center space-x-4 mb-6">
-                    {/* 1002nd CDC Logo Placeholder - Replace with actual 1002nd CDC logo */}
+                    {/* 1002nd CDC Logo */}
                     <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Armed_Forces_of_the_Philippines_Reserve_Command_%28AFPRESCOM%29.svg/200px-Armed_Forces_of_the_Philippines_Reserve_Command_%28AFPRESCOM%29.svg.png" 
+                        src="/assets/1002nd_cdc.png" 
                         alt="1002nd CDC Logo" 
                         className="w-20 h-20 object-contain"
                     />
-                    {/* ROTC Unit Logo Placeholder - Replace with actual MSU-SND ROTC Unit logo */}
+                    {/* ROTC Unit Logo */}
                     <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Philippine_Army_Seal.svg/200px-Philippine_Army_Seal.svg.png" 
+                        src="/assets/msu_rotc_logo.png" 
                         alt="ROTC Unit Logo" 
                         className="w-20 h-20 object-contain"
                     />
-                    {/* MSU-SND Logo */}
+                    {/* MSU-SND Seal */}
                     <img 
-                        src="https://upload.wikimedia.org/wikipedia/en/thumb/5/5f/Mindanao_State_University_seal.svg/200px-Mindanao_State_University_seal.svg.png" 
-                        alt="MSU-SND Logo" 
+                        src="/assets/msu_snd_seal.png" 
+                        alt="MSU-SND Seal" 
                         className="w-20 h-20 object-contain"
                     />
                 </div>
