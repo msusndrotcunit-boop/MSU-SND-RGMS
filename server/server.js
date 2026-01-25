@@ -6,6 +6,7 @@ const db = require('./database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const cadetRoutes = require('./routes/cadet');
+const integrationRoutes = require('./routes/integration');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +20,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cadet', cadetRoutes);
+app.use('/api/integration', integrationRoutes);
 
 // Create uploads directory if not exists
 const fs = require('fs');
