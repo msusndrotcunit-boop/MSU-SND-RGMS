@@ -31,11 +31,24 @@ const Login = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-                <div className="flex justify-center mb-6">
+                <div className="flex justify-center items-center space-x-4 mb-6">
+                    {/* 1002nd CDC Logo Placeholder - Replace with actual 1002nd CDC logo */}
+                    <img 
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Armed_Forces_of_the_Philippines_Reserve_Command_%28AFPRESCOM%29.svg/200px-Armed_Forces_of_the_Philippines_Reserve_Command_%28AFPRESCOM%29.svg.png" 
+                        alt="1002nd CDC Logo" 
+                        className="w-20 h-20 object-contain"
+                    />
+                    {/* ROTC Unit Logo Placeholder - Replace with actual MSU-SND ROTC Unit logo */}
+                    <img 
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Philippine_Army_Seal.svg/200px-Philippine_Army_Seal.svg.png" 
+                        alt="ROTC Unit Logo" 
+                        className="w-20 h-20 object-contain"
+                    />
+                    {/* MSU-SND Logo */}
                     <img 
                         src="https://upload.wikimedia.org/wikipedia/en/thumb/5/5f/Mindanao_State_University_seal.svg/200px-Mindanao_State_University_seal.svg.png" 
-                        alt="MSU-SND ROTC Unit Logo" 
-                        className="w-32 h-32 object-contain"
+                        alt="MSU-SND Logo" 
+                        className="w-20 h-20 object-contain"
                     />
                 </div>
                 <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">MSU-SND ROTC UNIT Grading Management Login</h2>
