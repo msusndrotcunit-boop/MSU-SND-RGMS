@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, User, Moon, Sun, Camera } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { 
+    RANK_OPTIONS, 
+    YEAR_LEVEL_OPTIONS, 
+    SCHOOL_YEAR_OPTIONS, 
+    BATTALION_OPTIONS, 
+    COMPANY_OPTIONS, 
+    PLATOON_OPTIONS, 
+    SEMESTER_OPTIONS, 
+    COURSE_OPTIONS 
+} from '../../constants/options';
 
 const Profile = () => {
     const [profile, setProfile] = useState({
@@ -190,7 +200,10 @@ const Profile = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.rank} onChange={e => setProfile({...profile, rank: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.rank} onChange={e => setProfile({...profile, rank: e.target.value})}>
+                                    <option value="">Select Rank</option>
+                                    {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Suffix</label>
@@ -234,30 +247,48 @@ const Profile = () => {
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.course} onChange={e => setProfile({...profile, course: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.course} onChange={e => setProfile({...profile, course: e.target.value})}>
+                                    <option value="">Select Course</option>
+                                    {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.yearLevel} onChange={e => setProfile({...profile, yearLevel: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.yearLevel} onChange={e => setProfile({...profile, yearLevel: e.target.value})}>
+                                    <option value="">Select Year Level</option>
+                                    {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.schoolYear} onChange={e => setProfile({...profile, schoolYear: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.schoolYear} onChange={e => setProfile({...profile, schoolYear: e.target.value})}>
+                                    <option value="">Select School Year</option>
+                                    {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.battalion} onChange={e => setProfile({...profile, battalion: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.battalion} onChange={e => setProfile({...profile, battalion: e.target.value})}>
+                                    <option value="">Select Battalion</option>
+                                    {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.company} onChange={e => setProfile({...profile, company: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.company} onChange={e => setProfile({...profile, company: e.target.value})}>
+                                    <option value="">Select Company</option>
+                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.platoon} onChange={e => setProfile({...profile, platoon: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.platoon} onChange={e => setProfile({...profile, platoon: e.target.value})}>
+                                    <option value="">Select Platoon</option>
+                                    {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                         </div>
 
@@ -276,7 +307,10 @@ const Profile = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.semester} onChange={e => setProfile({...profile, semester: e.target.value})} />
+                                <select className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded" value={profile.semester} onChange={e => setProfile({...profile, semester: e.target.value})}>
+                                    <option value="">Select Semester</option>
+                                    {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                         </div>
 

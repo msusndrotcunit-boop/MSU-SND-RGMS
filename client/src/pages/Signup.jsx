@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { 
+    RANK_OPTIONS, 
+    YEAR_LEVEL_OPTIONS, 
+    SCHOOL_YEAR_OPTIONS, 
+    BATTALION_OPTIONS, 
+    COMPANY_OPTIONS, 
+    PLATOON_OPTIONS, 
+    SEMESTER_OPTIONS, 
+    COURSE_OPTIONS 
+} from '../constants/options';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
@@ -45,7 +55,10 @@ const Signup = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input type="text" name="suffixName" placeholder="Suffix (e.g., Jr.)" onChange={handleChange} className="border p-2 rounded" />
-                        <input type="text" name="rank" placeholder="Rank" onChange={handleChange} className="border p-2 rounded" />
+                        <select name="rank" onChange={handleChange} className="border p-2 rounded" value={formData.rank}>
+                            <option value="">Select Rank</option>
+                            {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                         <input type="text" name="studentId" placeholder="Student ID" onChange={handleChange} className="border p-2 rounded" required />
                     </div>
                     
@@ -59,14 +72,32 @@ const Signup = () => {
                     {/* Academic Info */}
                     <h3 className="font-semibold text-lg text-gray-700 border-b pb-2 mt-4">Academic & ROTC Info</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" name="course" placeholder="Course" onChange={handleChange} className="border p-2 rounded" />
-                        <input type="text" name="yearLevel" placeholder="Year Level" onChange={handleChange} className="border p-2 rounded" />
-                        <input type="text" name="schoolYear" placeholder="School Year" onChange={handleChange} className="border p-2 rounded" />
+                        <select name="course" onChange={handleChange} className="border p-2 rounded" value={formData.course}>
+                            <option value="">Select Course</option>
+                            {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <select name="yearLevel" onChange={handleChange} className="border p-2 rounded" value={formData.yearLevel}>
+                            <option value="">Select Year Level</option>
+                            {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <select name="schoolYear" onChange={handleChange} className="border p-2 rounded" value={formData.schoolYear}>
+                            <option value="">Select School Year</option>
+                            {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" name="battalion" placeholder="Battalion" onChange={handleChange} className="border p-2 rounded" />
-                        <input type="text" name="company" placeholder="Company" onChange={handleChange} className="border p-2 rounded" />
-                        <input type="text" name="platoon" placeholder="Platoon" onChange={handleChange} className="border p-2 rounded" />
+                        <select name="battalion" onChange={handleChange} className="border p-2 rounded" value={formData.battalion}>
+                            <option value="">Select Battalion</option>
+                            {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <select name="company" onChange={handleChange} className="border p-2 rounded" value={formData.company}>
+                            <option value="">Select Company</option>
+                            {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <select name="platoon" onChange={handleChange} className="border p-2 rounded" value={formData.platoon}>
+                            <option value="">Select Platoon</option>
+                            {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -84,7 +115,10 @@ const Signup = () => {
                         </div>
                         <div>
                              <label className="block text-sm text-gray-600 mb-1">Semester</label>
-                             <input type="text" name="semester" placeholder="Semester" onChange={handleChange} className="w-full border p-2 rounded" />
+                             <select name="semester" onChange={handleChange} className="w-full border p-2 rounded" value={formData.semester}>
+                                 <option value="">Select Semester</option>
+                                 {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                             </select>
                         </div>
                         <div>
                             <label className="block text-sm text-gray-600 mb-1">Status</label>
