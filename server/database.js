@@ -1,20 +1,162 @@
 const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.resolve(__dirname, 'rotc.db');
+const isPostgres = !!process.env.DATABASE_URL;
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-        initDb();
-    }
-});
+let db;
 
-function initDb() {
+// DB Adapter to unify SQLite and Postgres
+if (isPostgres) {
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
+
+    console.log('Connected to PostgreSQL database.');
+
+    db = {
+        pool: pool, // Expose pool if needed
+        run: function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            
+            // Convert ? to $1, $2, etc.
+            let paramIndex = 1;
+            let pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+            
+            // Handle INSERT to return ID (simulating this.lastID)
+            const isInsert = sql.trim().toUpperCase().startsWith('INSERT');
+            if (isInsert && !pgSql.toLowerCase().includes('returning')) {
+                pgSql += ' RETURNING id';
+            }
+
+            pool.query(pgSql, params, (err, res) => {
+                if (err) {
+                    if (callback) callback(err);
+                    return;
+                }
+                const context = {
+                    lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : 0,
+                    changes: res.rowCount
+                };
+                if (callback) callback.call(context, null);
+            });
+        },
+        all: function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            let paramIndex = 1;
+            const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+            
+            pool.query(pgSql, params, (err, res) => {
+                if (callback) callback(err, res ? res.rows : []);
+            });
+        },
+        get: function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            let paramIndex = 1;
+            const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+            
+            pool.query(pgSql, params, (err, res) => {
+                if (callback) callback(err, res && res.rows.length > 0 ? res.rows[0] : undefined);
+            });
+        },
+        serialize: function(callback) {
+            if (callback) callback();
+        }
+    };
+    
+    // Initialize Postgres Tables
+    initPgDb();
+
+} else {
+    const dbPath = path.resolve(__dirname, 'rotc.db');
+    db = new sqlite3.Database(dbPath, (err) => {
+        if (err) console.error('Error opening database', err.message);
+        else {
+            console.log('Connected to SQLite database.');
+            initSqliteDb();
+        }
+    });
+}
+
+function initPgDb() {
+    const queries = [
+        `CREATE TABLE IF NOT EXISTS cadets (
+            id SERIAL PRIMARY KEY,
+            rank TEXT,
+            first_name TEXT NOT NULL,
+            middle_name TEXT,
+            last_name TEXT NOT NULL,
+            suffix_name TEXT,
+            email TEXT,
+            contact_number TEXT,
+            address TEXT,
+            course TEXT,
+            year_level TEXT,
+            school_year TEXT,
+            battalion TEXT,
+            company TEXT,
+            platoon TEXT,
+            cadet_course TEXT,
+            semester TEXT,
+            status TEXT DEFAULT 'Ongoing',
+            student_id TEXT UNIQUE NOT NULL,
+            profile_pic TEXT
+        )`,
+        `CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT CHECK(role IN ('admin', 'cadet')) NOT NULL,
+            cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
+            is_approved INTEGER DEFAULT 0,
+            email TEXT,
+            profile_pic TEXT
+        )`,
+        `CREATE TABLE IF NOT EXISTS grades (
+            id SERIAL PRIMARY KEY,
+            cadet_id INTEGER UNIQUE NOT NULL REFERENCES cadets(id) ON DELETE CASCADE,
+            attendance_present INTEGER DEFAULT 0,
+            merit_points INTEGER DEFAULT 0,
+            demerit_points INTEGER DEFAULT 0,
+            prelim_score INTEGER DEFAULT 0,
+            midterm_score INTEGER DEFAULT 0,
+            final_score INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'active'
+        )`,
+        `CREATE TABLE IF NOT EXISTS activities (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            date TEXT,
+            image_path TEXT
+        )`
+    ];
+
+    const runQueries = async () => {
+        try {
+            for (const q of queries) {
+                await db.pool.query(q);
+            }
+            seedAdmin();
+        } catch (err) {
+            console.error('Error initializing PG DB:', err);
+        }
+    };
+    runQueries();
+}
+
+function initSqliteDb() {
     db.serialize(() => {
         // Cadets Table
         db.run(`CREATE TABLE IF NOT EXISTS cadets (
@@ -76,28 +218,31 @@ function initDb() {
             image_path TEXT
         )`);
 
-        // Check for admin and seed if missing
-        db.get("SELECT * FROM users WHERE username = 'msu-sndrotc_admin'", async (err, row) => {
-            if (!row) {
-                console.log('Admin not found. Seeding admin...');
-                const username = 'msu-sndrotc_admin';
-                const password = 'admingrading@2026';
-                const email = 'msusndrotcunit@gmail.com';
-                
-                try {
-                    const hashedPassword = await bcrypt.hash(password, 10);
-                    db.run(`INSERT INTO users (username, password, role, is_approved, email) VALUES (?, ?, 'admin', 1, ?)`, 
-                        [username, hashedPassword, email], 
-                        (err) => {
-                            if (err) console.error('Error seeding admin:', err.message);
-                            else console.log('Admin seeded successfully.');
-                        }
-                    );
-                } catch (hashErr) {
-                    console.error('Error hashing password:', hashErr);
-                }
+        seedAdmin();
+    });
+}
+
+function seedAdmin() {
+    db.get("SELECT * FROM users WHERE username = 'msu-sndrotc_admin'", async (err, row) => {
+        if (!row) {
+            console.log('Admin not found. Seeding admin...');
+            const username = 'msu-sndrotc_admin';
+            const password = 'admingrading@2026';
+            const email = 'msusndrotcunit@gmail.com';
+            
+            try {
+                const hashedPassword = await bcrypt.hash(password, 10);
+                db.run(`INSERT INTO users (username, password, role, is_approved, email) VALUES (?, ?, 'admin', 1, ?)`, 
+                    [username, hashedPassword, email], 
+                    (err) => {
+                        if (err) console.error('Error seeding admin:', err ? err.message : err);
+                        else console.log('Admin seeded successfully.');
+                    }
+                );
+            } catch (hashErr) {
+                console.error('Error hashing password:', hashErr);
             }
-        });
+        }
     });
 }
 
