@@ -48,7 +48,7 @@ const Login = () => {
                     <img 
                         src="/assets/msu_snd_seal.png" 
                         alt="MSU-SND Seal" 
-                        className="w-20 h-20 object-contain"
+                        className="w-24 h-24 object-contain"
                     />
                 </div>
                 <h2 className="text-2xl font-bold mb-6 text-center text-green-900">MSU-SND ROTC UNIT Grading Management Login</h2>
