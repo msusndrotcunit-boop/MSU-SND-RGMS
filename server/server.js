@@ -29,9 +29,20 @@ if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
 }
 
-// Serve static files from client/dist (React Build)
+// Serve static files from client/dist (React Build) with caching
 const clientBuildPath = path.join(__dirname, '../client/dist');
-app.use(express.static(clientBuildPath));
+app.use(express.static(clientBuildPath, {
+    maxAge: '1d', // Cache static assets for 1 day
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+            // Never cache index.html so updates are seen immediately
+            res.setHeader('Cache-Control', 'no-cache');
+        } else {
+            // Aggressively cache images, js, css
+            res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+        }
+    }
+}));
 
 // Handle React Routing, return all requests to React app
 app.get('*', (req, res) => {
