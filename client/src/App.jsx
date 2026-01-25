@@ -11,6 +11,7 @@ import Signup from './pages/Signup';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminCadets from './pages/admin/Cadets';
+import AdminAttendance from './pages/admin/Attendance';
 import AdminActivities from './pages/admin/Activities';
 import AdminApprovals from './pages/admin/Approvals';
 import AdminProfile from './pages/admin/Profile';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList } from 'lucide-react';
 import clsx from 'clsx';
 
 const AdminLayout = () => {
