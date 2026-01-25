@@ -12,7 +12,20 @@ const integrationRoutes = require('./routes/integration');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log('Starting ROTC Grading System Server V2.3.1 (Pinger Added)...'); // Version bump for deployment trigger
+// Keep-Alive Mechanism for Render Free Tier
+// Pings the server every 14 minutes to prevent sleep
+if (process.env.RENDER_EXTERNAL_URL) {
+    const https = require('https');
+    setInterval(() => {
+        https.get(`${process.env.RENDER_EXTERNAL_URL}/api/auth/login`, (resp) => {
+            console.log('Self-ping successful');
+        }).on('error', (err) => {
+            console.error('Self-ping failed:', err.message);
+        });
+    }, 14 * 60 * 1000); // 14 minutes
+}
+
+console.log('Starting ROTC Grading System Server V2.3.1 (Pinger Restored)...'); // Version bump for deployment trigger
 
 // Middleware
 app.use(cors());

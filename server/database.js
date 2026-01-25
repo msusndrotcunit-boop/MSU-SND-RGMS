@@ -5,14 +5,8 @@ const bcrypt = require('bcryptjs');
 
 const isPostgres = !!process.env.DATABASE_URL;
 
-if (isPostgres && process.env.DATABASE_URL.includes('postgres://user:pass@base/db')) {
-    console.error('CRITICAL ERROR: Invalid DATABASE_URL detected.');
-    console.error('You are using a placeholder connection string: "postgres://user:pass@base/db"');
-    console.error('Please either:');
-    console.error('1. Unset the DATABASE_URL environment variable to use local SQLite.');
-    console.error('2. Or set a valid PostgreSQL connection string from Neon/Supabase.');
-    process.exit(1);
-}
+// Removed strict placeholder check to prevent immediate crash on Render if env var is default.
+// The connection will fail naturally if the URL is invalid.
 
 let db;
 
