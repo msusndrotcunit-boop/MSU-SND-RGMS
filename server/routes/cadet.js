@@ -65,6 +65,18 @@ router.get('/my-grades', (req, res) => {
     });
 });
 
+// Get My Merit/Demerit Logs
+router.get('/my-merit-logs', (req, res) => {
+    const cadetId = req.user.cadetId;
+    if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
+
+    db.all(`SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`, [cadetId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+
 router.get('/profile', (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });

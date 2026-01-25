@@ -135,7 +135,8 @@ router.post('/cadets/delete', (req, res) => {
 // Update Grades for a Cadet
 router.put('/grades/:cadetId', (req, res) => {
     const { attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status } = req.body;
-    
+    const cadetId = req.params.cadetId;
+
     db.run(`UPDATE grades SET 
             attendance_present = ?, 
             merit_points = ?, 
@@ -145,10 +146,21 @@ router.put('/grades/:cadetId', (req, res) => {
             final_score = ?,
             status = ?
             WHERE cadet_id = ?`,
-        [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', req.params.cadetId],
+        [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
         function(err) {
             if (err) return res.status(500).json({ message: err.message });
-            res.json({ message: 'Grades updated' });
+            
+            // Send Email Notification
+            db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                if (!err && cadet && cadet.email) {
+                    const subject = 'ROTC Grading System - Grades Updated';
+                    const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
+                    const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+                    
+                    await sendEmail(cadet.email, subject, text, html);
+                }
+                res.json({ message: 'Grades updated' });
+            });
         }
     );
 });
@@ -283,29 +295,34 @@ router.post('/merit-logs', (req, res) => {
             
             // 2. Update Total in Grades
             const column = type === 'merit' ? 'merit_points' : 'demerit_points';
-            // We use standard SQL update. Note: This assumes the row exists. If not, we might need to upsert, but 'grades' should exist for approved cadets.
-            // Safe bet: Check if grade exists first? Usually created on approval or first fetch.
-            // Actually, my 'get cadets' endpoint creates them implicitly? No, it joins.
-            // Let's assume grades row exists. If not, it won't update anything, which is a bug.
-            // Let's ensure grades row exists.
+            
+            const updateGrades = () => {
+                db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (err) => {
+                    if (err) return res.status(500).json({ message: err.message });
+                    
+                    // 3. Send Email Notification
+                    db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                        if (!err && cadet && cadet.email) {
+                            const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
+                            const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nA new ${type} record has been added to your profile.\nPoints: ${points}\nReason: ${reason}\n\nPlease check your dashboard for details.\n\nRegards,\nROTC Admin`;
+                            const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>A new <strong>${type}</strong> record has been added to your profile.</p><ul><li><strong>Points:</strong> ${points}</li><li><strong>Reason:</strong> ${reason}</li></ul><p>Please check your dashboard for details.</p><p>Regards,<br>ROTC Admin</p>`;
+                            
+                            await sendEmail(cadet.email, subject, text, html);
+                        }
+                        res.json({ message: 'Log added and points updated' });
+                    });
+                });
+            };
             
             db.get(`SELECT id FROM grades WHERE cadet_id = ?`, [cadetId], (err, row) => {
                 if (!row) {
                     // Create grade row first
                     db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (err) => {
                         if (err) return res.status(500).json({ message: 'Failed to init grades' });
-                        // Now update
-                        db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (err) => {
-                            if (err) return res.status(500).json({ message: err.message });
-                            res.json({ message: 'Log added and points updated' });
-                        });
+                        updateGrades();
                     });
                 } else {
-                    // Update directly
-                    db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (err) => {
-                        if (err) return res.status(500).json({ message: err.message });
-                        res.json({ message: 'Log added and points updated' });
-                    });
+                    updateGrades();
                 }
             });
         }
