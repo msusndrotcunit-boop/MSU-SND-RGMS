@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, GraduationCap, Save, X, FileDown } from 'lucide-react';
+import { Pencil, Trash2, GraduationCap, Save, X, FileDown, ShieldAlert } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
@@ -11,11 +11,14 @@ const Cadets = () => {
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
+    const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
     const [currentCadet, setCurrentCadet] = useState(null);
+    const [ledgerLogs, setLedgerLogs] = useState([]);
 
     // Form States
     const [editForm, setEditForm] = useState({});
     const [gradeForm, setGradeForm] = useState({});
+    const [ledgerForm, setLedgerForm] = useState({ type: 'merit', points: 0, reason: '' });
 
     useEffect(() => {
         fetchCadets();
@@ -168,6 +171,38 @@ const Cadets = () => {
         }
     };
 
+    // Merit/Demerit Ledger
+    const openLedgerModal = async (cadet) => {
+        setCurrentCadet(cadet);
+        setLedgerForm({ type: 'merit', points: 0, reason: '' });
+        try {
+            const res = await axios.get(`/api/admin/merit-logs/${cadet.id}`);
+            setLedgerLogs(res.data);
+            setIsLedgerModalOpen(true);
+        } catch (err) {
+            alert('Error fetching logs');
+        }
+    };
+
+    const handleLedgerSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post('/api/admin/merit-logs', {
+                cadetId: currentCadet.id,
+                ...ledgerForm
+            });
+            // Refresh logs
+            const res = await axios.get(`/api/admin/merit-logs/${currentCadet.id}`);
+            setLedgerLogs(res.data);
+            // Refresh main list (to update total points)
+            fetchCadets();
+            // Reset form
+            setLedgerForm({ type: 'merit', points: 0, reason: '' });
+        } catch (err) {
+            alert('Error adding log');
+        }
+    };
+
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
     return (
@@ -263,6 +298,13 @@ const Cadets = () => {
                                         <GraduationCap size={18} />
                                     </button>
                                     <button 
+                                        onClick={() => openLedgerModal(cadet)}
+                                        className="text-purple-600 hover:bg-purple-50 p-2 rounded"
+                                        title="Merit/Demerit Ledger"
+                                    >
+                                        <ShieldAlert size={18} />
+                                    </button>
+                                    <button 
                                         onClick={() => openEditModal(cadet)}
                                         className="text-gray-600 hover:bg-gray-50 p-2 rounded"
                                         title="Edit Info"
@@ -343,7 +385,7 @@ const Cadets = () => {
 
             {/* Grading Modal */}
             {isGradeModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg w-full max-w-2xl p-6">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold">Grading Management: {currentCadet?.last_name}</h3>
@@ -408,31 +450,34 @@ const Cadets = () => {
                             </div>
 
                             {/* Subject Proficiency */}
-                            <div className="bg-purple-50 p-4 rounded">
-                                <h4 className="font-semibold text-purple-800 mb-2">Subject Proficiency (40%)</h4>
+                            <div className="bg-yellow-50 p-4 rounded">
+                                <h4 className="font-semibold text-yellow-800 mb-2">Subject Proficiency (40%)</h4>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-sm mb-1">Prelim (100)</label>
+                                        <label className="block text-sm mb-1">Prelim</label>
                                         <input 
-                                            type="number" max="100"
+                                            type="number" 
+                                            max="100"
                                             className="border p-2 rounded w-full" 
                                             value={gradeForm.prelimScore} 
                                             onChange={e => setGradeForm({...gradeForm, prelimScore: parseInt(e.target.value) || 0})} 
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm mb-1">Midterm (100)</label>
+                                        <label className="block text-sm mb-1">Midterm</label>
                                         <input 
-                                            type="number" max="100"
+                                            type="number" 
+                                            max="100"
                                             className="border p-2 rounded w-full" 
                                             value={gradeForm.midtermScore} 
                                             onChange={e => setGradeForm({...gradeForm, midtermScore: parseInt(e.target.value) || 0})} 
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm mb-1">Final (100)</label>
+                                        <label className="block text-sm mb-1">Final</label>
                                         <input 
-                                            type="number" max="100"
+                                            type="number" 
+                                            max="100"
                                             className="border p-2 rounded w-full" 
                                             value={gradeForm.finalScore} 
                                             onChange={e => setGradeForm({...gradeForm, finalScore: parseInt(e.target.value) || 0})} 
@@ -441,8 +486,96 @@ const Cadets = () => {
                                 </div>
                             </div>
 
-                            <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Save Grades</button>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">Save Grades</button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Ledger Modal */}
+            {isLedgerModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold">Merit/Demerit Ledger: {currentCadet?.last_name}</h3>
+                            <button onClick={() => setIsLedgerModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        
+                        <div className="mb-6 grid grid-cols-2 gap-4">
+                             <div className="bg-green-100 p-4 rounded text-center">
+                                 <h4 className="text-green-800 font-bold text-xl">{currentCadet?.merit_points || 0}</h4>
+                                 <span className="text-xs uppercase font-semibold text-green-600">Total Merits</span>
+                             </div>
+                             <div className="bg-red-100 p-4 rounded text-center">
+                                 <h4 className="text-red-800 font-bold text-xl">{currentCadet?.demerit_points || 0}</h4>
+                                 <span className="text-xs uppercase font-semibold text-red-600">Total Demerits</span>
+                             </div>
+                        </div>
+
+                        <form onSubmit={handleLedgerSubmit} className="bg-gray-50 p-4 rounded mb-6 border">
+                            <h4 className="font-semibold mb-2">Add New Entry</h4>
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                                <select 
+                                    className="border p-2 rounded"
+                                    value={ledgerForm.type}
+                                    onChange={e => setLedgerForm({...ledgerForm, type: e.target.value})}
+                                >
+                                    <option value="merit">Merit</option>
+                                    <option value="demerit">Demerit</option>
+                                </select>
+                                <input 
+                                    type="number" 
+                                    placeholder="Points" 
+                                    className="border p-2 rounded"
+                                    value={ledgerForm.points}
+                                    onChange={e => setLedgerForm({...ledgerForm, points: parseInt(e.target.value) || 0})}
+                                    required
+                                />
+                                <input 
+                                    type="text" 
+                                    placeholder="Reason / Violation" 
+                                    className="border p-2 rounded"
+                                    value={ledgerForm.reason}
+                                    onChange={e => setLedgerForm({...ledgerForm, reason: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-1 rounded text-sm">Add Entry</button>
+                        </form>
+
+                        <h4 className="font-bold mb-2">History</h4>
+                        <div className="overflow-y-auto max-h-60 border rounded">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-100 sticky top-0">
+                                    <tr>
+                                        <th className="p-2">Date</th>
+                                        <th className="p-2">Type</th>
+                                        <th className="p-2">Points</th>
+                                        <th className="p-2">Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ledgerLogs.length === 0 ? (
+                                        <tr><td colSpan="4" className="p-4 text-center text-gray-500">No records found</td></tr>
+                                    ) : (
+                                        ledgerLogs.map(log => (
+                                            <tr key={log.id} className="border-b">
+                                                <td className="p-2 text-gray-500">{new Date(log.date_recorded).toLocaleDateString()}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                                        log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {log.type.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 font-bold">{log.points}</td>
+                                                <td className="p-2">{log.reason}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
