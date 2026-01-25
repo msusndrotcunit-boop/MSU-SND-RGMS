@@ -84,6 +84,10 @@ router.post('/login', (req, res) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!user) return res.status(400).json({ message: 'User not found' });
 
+        if (user.is_approved === 0) {
+            return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
+        }
+
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
 

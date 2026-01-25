@@ -47,7 +47,15 @@ const Approvals = () => {
 
     return (
         <div className="bg-white rounded shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Pending Approvals</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Pending Approvals</h2>
+                <button 
+                    onClick={fetchPendingUsers}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm flex items-center gap-2"
+                >
+                    Refresh List
+                </button>
+            </div>
             {users.length === 0 ? (
                 <p className="text-gray-500">No pending approvals.</p>
             ) : (
