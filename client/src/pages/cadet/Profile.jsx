@@ -40,7 +40,7 @@ const Profile = () => {
 
     const fetchProfile = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/cadet/profile');
+            const res = await axios.get('/api/cadet/profile');
             const data = res.data;
             setProfile({
                 rank: data.rank || '',
