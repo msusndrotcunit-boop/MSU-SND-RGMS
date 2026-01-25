@@ -72,19 +72,25 @@ const Approvals = () => {
                                     <td className="p-3">{user.username}</td>
                                     <td className="p-3">{user.email || 'N/A'}</td>
                                     <td className="p-3">{user.student_id || 'N/A'}</td>
-                                    <td className="p-3 capitalize">{user.role}</td>
+                                    <td className="p-3 capitalize">
+                                        {user.role}
+                                        {user.is_approved === 1 && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Approved</span>}
+                                        {user.is_approved === 0 && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Pending</span>}
+                                    </td>
                                     <td className="p-3 flex space-x-2">
-                                        <button 
-                                            onClick={() => handleApprove(user.id)}
-                                            className="bg-green-600 text-white p-2 rounded hover:bg-green-700"
-                                            title="Approve"
-                                        >
-                                            <Check size={16} />
-                                        </button>
+                                        {user.is_approved === 0 && (
+                                            <button 
+                                                onClick={() => handleApprove(user.id)}
+                                                className="bg-green-600 text-white p-2 rounded hover:bg-green-700"
+                                                title="Approve"
+                                            >
+                                                <Check size={16} />
+                                            </button>
+                                        )}
                                         <button 
                                             onClick={() => handleReject(user.id)}
                                             className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
-                                            title="Reject"
+                                            title="Reject / Delete"
                                         >
                                             <X size={16} />
                                         </button>

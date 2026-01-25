@@ -67,6 +67,7 @@ router.post('/signup', async (req, res) => {
                         if (err) {
                             console.error("Error initializing grades", err);
                         }
+                        console.log(`User created: ${username} (ID: ${this.lastID}, Cadet ID: ${cadetId}, Approved: ${isApproved})`);
                         res.status(201).json({ message: 'Cadet registered successfully' });
                     });
                 }

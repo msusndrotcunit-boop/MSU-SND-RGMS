@@ -189,13 +189,20 @@ router.get('/users', (req, res) => {
                FROM users u
                LEFT JOIN cadets c ON u.cadet_id = c.id`;
     
+    // Debug log to check database queries
+    console.log(`Fetching users with pending=${pending}`);
+
     const params = [];
     if (pending === 'true') {
         sql += ` WHERE u.is_approved = 0`;
     }
 
     db.all(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
+        if (err) {
+            console.error('Error fetching users:', err);
+            return res.status(500).json({ message: err.message });
+        }
+        console.log(`Found ${rows.length} users`);
         res.json(rows);
     });
 });
