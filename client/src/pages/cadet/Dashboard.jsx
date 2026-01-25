@@ -14,17 +14,41 @@ const CadetDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const gradesRes = await axios.get('/api/cadet/my-grades');
-                const activitiesRes = await axios.get('/api/cadet/activities');
-                const logsRes = await axios.get('/api/cadet/my-merit-logs');
-                const attendanceRes = await axios.get('/api/attendance/my-history');
-                setGrades(gradesRes.data);
-                setActivities(activitiesRes.data);
-                setLogs(logsRes.data);
-                setAttendanceLogs(attendanceRes.data);
-                setLoading(false);
+                // Fetch Grades (Critical)
+                try {
+                    const gradesRes = await axios.get('/api/cadet/my-grades');
+                    setGrades(gradesRes.data);
+                } catch (err) {
+                    console.error("Error fetching grades:", err);
+                }
+
+                // Fetch Activities (Non-critical)
+                try {
+                    const activitiesRes = await axios.get('/api/cadet/activities');
+                    setActivities(activitiesRes.data);
+                } catch (err) {
+                    console.error("Error fetching activities:", err);
+                }
+
+                // Fetch Merit Logs (Non-critical)
+                try {
+                    const logsRes = await axios.get('/api/cadet/my-merit-logs');
+                    setLogs(logsRes.data);
+                } catch (err) {
+                    console.error("Error fetching merit logs:", err);
+                }
+
+                // Fetch Attendance History (Non-critical)
+                try {
+                    const attendanceRes = await axios.get('/api/attendance/my-history');
+                    setAttendanceLogs(attendanceRes.data);
+                } catch (err) {
+                    console.error("Error fetching attendance history:", err);
+                }
+
             } catch (err) {
-                console.error(err);
+                console.error("General fetch error:", err);
+            } finally {
                 setLoading(false);
             }
         };
