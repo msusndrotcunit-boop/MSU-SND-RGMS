@@ -46,14 +46,16 @@ const calculateTransmutedGrade = (finalGrade, status) => {
 
 // --- Cadet Management ---
 
-// Get All Cadets (with computed grades)
+// Get All Cadets (with computed grades) - ONLY APPROVED
 router.get('/cadets', (req, res) => {
     const sql = `
         SELECT c.*, 
                g.attendance_present, g.merit_points, g.demerit_points, 
                g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
         FROM cadets c
+        JOIN users u ON u.cadet_id = c.id
         LEFT JOIN grades g ON c.id = g.cadet_id
+        WHERE u.is_approved = 1
     `;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
