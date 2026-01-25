@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const dbPath = path.resolve(__dirname, 'rotc.db');
 
@@ -46,6 +47,9 @@ function initDb() {
             password TEXT NOT NULL,
             role TEXT CHECK(role IN ('admin', 'cadet')) NOT NULL,
             cadet_id INTEGER,
+            is_approved INTEGER DEFAULT 0,
+            email TEXT,
+            profile_pic TEXT,
             FOREIGN KEY (cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
         )`);
 
@@ -72,10 +76,26 @@ function initDb() {
             image_path TEXT
         )`);
 
-        // Check for admin
-        db.get("SELECT * FROM users WHERE username = 'admin'", (err, row) => {
+        // Check for admin and seed if missing
+        db.get("SELECT * FROM users WHERE username = 'msu-sndrotc_admin'", async (err, row) => {
             if (!row) {
-                // Admin seeding logic is handled elsewhere or manual
+                console.log('Admin not found. Seeding admin...');
+                const username = 'msu-sndrotc_admin';
+                const password = 'admingrading@2026';
+                const email = 'msusndrotcunit@gmail.com';
+                
+                try {
+                    const hashedPassword = await bcrypt.hash(password, 10);
+                    db.run(`INSERT INTO users (username, password, role, is_approved, email) VALUES (?, ?, 'admin', 1, ?)`, 
+                        [username, hashedPassword, email], 
+                        (err) => {
+                            if (err) console.error('Error seeding admin:', err.message);
+                            else console.log('Admin seeded successfully.');
+                        }
+                    );
+                } catch (hashErr) {
+                    console.error('Error hashing password:', hashErr);
+                }
             }
         });
     });
