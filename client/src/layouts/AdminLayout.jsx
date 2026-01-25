@@ -20,6 +20,7 @@ const AdminLayout = () => {
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/cadets', label: 'Cadet & Grading', icon: Users },
+        { path: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
         { path: '/admin/approvals', label: 'Approvals', icon: UserCheck },
         { path: '/admin/profile', label: 'Profile', icon: User },

@@ -11,6 +11,8 @@ const integrationRoutes = require('./routes/integration');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+console.log('Starting ROTC Grading System Server V2.1...'); // Version bump for deployment trigger
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -20,6 +22,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cadet', cadetRoutes);
+app.use('/api/attendance', attendanceRoutes);
 app.use('/api/integration', integrationRoutes);
 
 // Create uploads directory if not exists

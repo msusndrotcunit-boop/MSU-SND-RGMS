@@ -1,19 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Calendar } from 'lucide-react';
+import { Calendar, X, AlertCircle } from 'lucide-react';
 
 const CadetDashboard = () => {
     const [grades, setGrades] = useState(null);
     const [activities, setActivities] = useState([]);
+    const [logs, setLogs] = useState([]);
+    const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const gradesRes = await axios.get('/api/cadet/my-grades');
                 const activitiesRes = await axios.get('/api/cadet/activities');
+                const logsRes = await axios.get('/api/cadet/my-merit-logs');
+                const attendanceRes = await axios.get('/api/attendance/my-history');
                 setGrades(gradesRes.data);
                 setActivities(activitiesRes.data);
+                setLogs(logsRes.data);
+                setAttendanceLogs(attendanceRes.data);
                 setLoading(false);
             } catch (err) {
                 console.error(err);
@@ -36,12 +44,18 @@ const CadetDashboard = () => {
                     <div className="space-y-6">
                         {/* Raw Scores */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-blue-50 p-4 rounded text-center">
+                            <div 
+                                className="bg-blue-50 p-4 rounded text-center cursor-pointer hover:bg-blue-100 transition"
+                                onClick={() => setIsAttendanceModalOpen(true)}
+                            >
                                 <h3 className="text-sm text-blue-800 font-semibold uppercase">Attendance (30%)</h3>
                                 <div className="text-2xl font-bold mt-2">{grades.attendanceScore.toFixed(2)} pts</div>
                                 <div className="text-xs text-gray-500 mt-1">{grades.attendance_present} / 15 days</div>
                             </div>
-                            <div className="bg-green-50 p-4 rounded text-center">
+                            <div 
+                                className="bg-green-50 p-4 rounded text-center cursor-pointer hover:bg-green-100 transition"
+                                onClick={() => setIsLogsModalOpen(true)}
+                            >
                                 <h3 className="text-sm text-green-800 font-semibold uppercase">Aptitude (30%)</h3>
                                 <div className="text-2xl font-bold mt-2">{grades.aptitudeScore.toFixed(2)} pts</div>
                                 <div className="text-xs text-gray-500 mt-1">M: {grades.merit_points} | D: {grades.demerit_points}</div>
@@ -105,6 +119,113 @@ const CadetDashboard = () => {
                     {activities.length === 0 && <p className="text-gray-500">No activities posted.</p>}
                 </div>
             </div>
+
+            {/* Attendance Modal */}
+            {isAttendanceModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative animate-fadeIn">
+                        <button 
+                            onClick={() => setIsAttendanceModalOpen(false)}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        >
+                            <X size={24} />
+                        </button>
+                        
+                        <h2 className="text-2xl font-bold mb-4 flex items-center">
+                            <Calendar className="mr-2 text-blue-600" />
+                            Attendance History
+                        </h2>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-100 border-b">
+                                        <th className="p-2">Date</th>
+                                        <th className="p-2">Status</th>
+                                        <th className="p-2">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {attendanceLogs.length > 0 ? (
+                                        attendanceLogs.map(log => (
+                                            <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                                        log.status === 'present' ? 'bg-green-100 text-green-800' : 
+                                                        log.status === 'late' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {log.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 text-sm">{log.remarks || '-'}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="3" className="p-4 text-center text-gray-500">No attendance records found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Logs Modal */}
+            {isLogsModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative animate-fadeIn">
+                        <button 
+                            onClick={() => setIsLogsModalOpen(false)}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        >
+                            <X size={24} />
+                        </button>
+                        
+                        <h2 className="text-2xl font-bold mb-4 flex items-center">
+                            <AlertCircle className="mr-2 text-blue-600" />
+                            Merit & Demerit History
+                        </h2>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-100 border-b">
+                                        <th className="p-2">Date</th>
+                                        <th className="p-2">Type</th>
+                                        <th className="p-2">Points</th>
+                                        <th className="p-2">Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {logs.length > 0 ? (
+                                        logs.map(log => (
+                                            <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                                        log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {log.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 font-bold">{log.points}</td>
+                                                <td className="p-2 text-sm">{log.reason}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

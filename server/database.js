@@ -246,6 +246,26 @@ function initSqliteDb() {
             FOREIGN KEY (cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
         )`);
 
+        // Training Days Table
+        db.run(`CREATE TABLE IF NOT EXISTS training_days (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT
+        )`);
+
+        // Attendance Records Table
+        db.run(`CREATE TABLE IF NOT EXISTS attendance_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            training_day_id INTEGER NOT NULL,
+            cadet_id INTEGER NOT NULL,
+            status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
+            remarks TEXT,
+            UNIQUE(training_day_id, cadet_id),
+            FOREIGN KEY(training_day_id) REFERENCES training_days(id) ON DELETE CASCADE,
+            FOREIGN KEY(cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
+        )`);
+
         seedAdmin();
     });
 }
