@@ -11,7 +11,7 @@ const integrationRoutes = require('./routes/integration');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log('Starting ROTC Grading System Server V2.1...'); // Version bump for deployment trigger
+console.log('Starting ROTC Grading System Server V2.2...'); // Version bump for deployment trigger
 
 // Middleware
 app.use(cors());
