@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
 
 const Cadets = () => {
@@ -69,43 +69,49 @@ const Cadets = () => {
     };
 
     const handleExportPDF = () => {
-        const doc = new jsPDF();
-        
-        doc.setFontSize(18);
-        doc.text(`MSU-SND ROTC UNIT - ${exportOptions.title}`, 14, 22);
-        doc.setFontSize(11);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+        try {
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.text(`MSU-SND ROTC UNIT - ${exportOptions.title}`, 14, 22);
+            doc.setFontSize(11);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-        const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
-        
-        const tableRows = [];
+            const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
+            
+            const tableRows = [];
 
-        const filteredCadets = exportOptions.company === 'All' 
-            ? cadets 
-            : cadets.filter(c => c.company === exportOptions.company);
+            const filteredCadets = exportOptions.company === 'All' 
+                ? cadets 
+                : cadets.filter(c => c.company === exportOptions.company);
 
-        filteredCadets.forEach(cadet => {
-            const cadetData = [
-                cadet.rank,
-                `${cadet.last_name}, ${cadet.first_name}`,
-                cadet.student_id,
-                `${cadet.company || '-'}/${cadet.platoon || '-'}`,
-                cadet.email || '-',
-                cadet.contact_number || '-'
-            ];
-            tableRows.push(cadetData);
-        });
+            filteredCadets.forEach(cadet => {
+                const cadetData = [
+                    cadet.rank,
+                    `${cadet.last_name}, ${cadet.first_name}`,
+                    cadet.student_id,
+                    `${cadet.company || '-'}/${cadet.platoon || '-'}`,
+                    cadet.email || '-',
+                    cadet.contact_number || '-'
+                ];
+                tableRows.push(cadetData);
+            });
 
-        doc.autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 40,
-            theme: 'grid',
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [22, 163, 74] } 
-        });
+            // Use explicit autoTable function
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 40,
+                theme: 'grid',
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [22, 163, 74] } 
+            });
 
-        doc.save('ROTC_Cadet_List.pdf');
+            doc.save('ROTC_Cadet_List.pdf');
+        } catch (err) {
+            console.error("PDF Export Error:", err);
+            alert(`Failed to generate PDF: ${err.message}`);
+        }
     };
 
     const handleBulkDelete = async () => {
