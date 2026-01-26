@@ -3,6 +3,8 @@ const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const xlsx = require('xlsx');
+const pdfParse = require('pdf-parse');
 const { sendEmail } = require('../utils/emailService');
 
 const router = express.Router();
@@ -23,10 +25,78 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
     try {
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet);
+        let data = [];
+        
+        // Check file type
+        if (req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf')) {
+            try {
+                const dataBuffer = req.file.buffer;
+                const pdfData = await pdfParse(dataBuffer);
+                const text = pdfData.text;
+                const lines = text.split('\n');
+                
+                lines.forEach(line => {
+                    // Heuristic extraction
+                    // Look for Student ID (Sequence of digits, possibly with dashes, e.g. 2023-0001 or 12345678)
+                    // We assume Student ID is the primary identifier.
+                    const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/);
+                    
+                    if (idMatch) {
+                        const studentId = idMatch[0];
+                        
+                        // Look for Email
+                        const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                        const email = emailMatch ? emailMatch[0] : '';
+                        
+                        // Remove ID and Email to isolate Name
+                        let cleanLine = line.replace(studentId, '').replace(email, '').trim();
+                        
+                        // Attempt to extract Name (Last, First format preferred)
+                        let lastName = cleanLine;
+                        let firstName = '';
+                        let middleName = '';
+                        
+                        if (cleanLine.includes(',')) {
+                            const parts = cleanLine.split(',');
+                            lastName = parts[0].trim();
+                            const rest = parts.slice(1).join(' ').trim();
+                            // Split rest into First and Middle? 
+                            // Simple heuristic: Last word is middle name if > 1 word? No, risky.
+                            // Just put rest in First Name
+                            firstName = rest;
+                        } else {
+                            // If no comma, assume "First Middle Last" or "Last First"? 
+                            // Without comma, it's ambiguous. We'll put everything in Last Name to be safe, 
+                            // or try to split by space.
+                            // Let's assume standard "Last Name, First Name" is the ROTCMIS format. 
+                            // If not, users should verify.
+                        }
+
+                        data.push({
+                            'Student ID': studentId,
+                            'Email': email,
+                            'Last Name': lastName,
+                            'First Name': firstName,
+                            'Middle Name': middleName
+                        });
+                    }
+                });
+
+                if (data.length === 0) {
+                    throw new Error("No cadet records detected in PDF. Ensure the PDF contains text lines with Student IDs (e.g., 2023-1234).");
+                }
+
+            } catch (err) {
+                console.error("PDF Parse Error", err);
+                return res.status(400).json({ message: 'Failed to parse PDF: ' + err.message });
+            }
+        } else {
+            // Excel/CSV Parsing
+            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            data = xlsx.utils.sheet_to_json(sheet);
+        }
 
         let successCount = 0;
         let failCount = 0;
@@ -174,6 +244,8 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
                 cadet_course: row['Cadet Course'] || row['cadet_course'] || '', // MS1, MS2...
                 semester: row['Semester'] || row['semester'] || ''
             };
+
+            const customUsername = row['Username'] || row['username'] || '';
 
             try {
                 let cadetId;
