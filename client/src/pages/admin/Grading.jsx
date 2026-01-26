@@ -298,8 +298,8 @@ const Grading = () => {
                                     {/* Add New Log */}
                                     <div className="bg-white p-6 rounded shadow-sm border">
                                         <h3 className="font-bold text-lg mb-4">Add Entry</h3>
-                                        <form onSubmit={handleLedgerSubmit} className="flex gap-4 items-end">
-                                            <div className="w-1/4">
+                                        <form onSubmit={handleLedgerSubmit} className="flex flex-col md:flex-row gap-4 md:items-end">
+                                            <div className="w-full md:w-1/4">
                                                 <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
                                                 <select 
                                                     className="w-full border p-2 rounded"
@@ -310,7 +310,7 @@ const Grading = () => {
                                                     <option value="demerit">Demerit</option>
                                                 </select>
                                             </div>
-                                            <div className="w-1/4">
+                                            <div className="w-full md:w-1/4">
                                                 <label className="block text-xs font-medium text-gray-700 mb-1">Points</label>
                                                 <input 
                                                     type="number" 
@@ -320,7 +320,7 @@ const Grading = () => {
                                                     onChange={e => setLedgerForm({...ledgerForm, points: Number(e.target.value)})}
                                                 />
                                             </div>
-                                            <div className="flex-1">
+                                            <div className="w-full md:flex-1">
                                                 <label className="block text-xs font-medium text-gray-700 mb-1">Reason/Date</label>
                                                 <input 
                                                     className="w-full border p-2 rounded"
@@ -329,14 +329,14 @@ const Grading = () => {
                                                     onChange={e => setLedgerForm({...ledgerForm, reason: e.target.value})}
                                                 />
                                             </div>
-                                            <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                                            <button type="submit" className="w-full md:w-auto bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
                                                 Add
                                             </button>
                                         </form>
                                     </div>
 
                                     {/* History Table */}
-                                    <div className="bg-white rounded shadow-sm border overflow-hidden">
+                                    <div className="bg-white rounded shadow-sm border overflow-x-auto">
                                         <table className="w-full text-left text-sm">
                                             <thead className="bg-gray-100 border-b">
                                                 <tr>

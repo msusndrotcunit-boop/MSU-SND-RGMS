@@ -159,12 +159,12 @@ const Cadets = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">Cadet Management</h2>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 w-full md:w-auto">
                     <button 
                         onClick={() => setIsExportModalOpen(true)}
-                        className="bg-green-700 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-green-800"
+                        className="flex-1 md:flex-none bg-green-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-800"
                     >
                         <FileDown size={18} />
                         <span>Export PDF</span>
@@ -172,7 +172,7 @@ const Cadets = () => {
                     {selectedCadets.length > 0 && (
                         <button 
                             onClick={handleBulkDelete}
-                            className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700"
+                            className="flex-1 md:flex-none bg-red-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-700"
                         >
                             <Trash2 size={18} />
                             <span>Delete ({selectedCadets.length})</span>
@@ -313,14 +313,14 @@ const Cadets = () => {
 
             {/* Edit Modal */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg w-full max-w-lg p-6">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-lg mx-4 p-6 flex flex-col max-h-[90vh]">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold">Edit Cadet Info</h3>
                             <button onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
                         </div>
-                        <form onSubmit={handleEditSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                            <div className="grid grid-cols-3 gap-4">
+                        <form onSubmit={handleEditSubmit} className="space-y-4 overflow-y-auto pr-2">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <input className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} placeholder="Rank" />
                                 <input className="border p-2 rounded" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="First Name" />
                                 <input className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
@@ -329,25 +329,25 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input className="border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
                                 <input className="border p-2 rounded" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} placeholder="Contact Number" />
                             </div>
 
                             <input className="border p-2 rounded w-full" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" />
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})} placeholder="Course" />
                                 <input className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})} placeholder="Year Level" />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <input className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})} placeholder="Battalion" />
                                 <input className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})} placeholder="Company" />
                                 <input className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})} placeholder="Platoon" />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
                                     <option value="MS1">MS1</option>
                                     <option value="MS2">MS2</option>

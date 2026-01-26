@@ -124,9 +124,9 @@ const Attendance = () => {
     }, {});
 
     return (
-        <div className="flex h-[calc(100vh-100px)] gap-6">
+        <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-100px)] gap-6">
             {/* Sidebar List */}
-            <div className="w-1/3 bg-white rounded shadow flex flex-col">
+            <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t">
                     <h2 className="font-bold text-lg text-gray-700">Training Days</h2>
                     <button 
@@ -168,25 +168,28 @@ const Attendance = () => {
             </div>
 
             {/* Main Content */}
-            <div className="w-2/3 bg-white rounded shadow flex flex-col">
+            <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
                 {selectedDay ? (
                     <>
                         <div className="p-4 border-b bg-gray-50 rounded-t">
-                            <div className="flex justify-between items-start">
+                            <div className="flex flex-col md:flex-row justify-between items-start mb-4">
                                 <div>
+                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 mb-2 flex items-center text-sm">
+                                        <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
+                                    </button>
                                     <h2 className="text-2xl font-bold text-gray-800">{selectedDay.title}</h2>
                                     <p className="text-gray-600 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
-                                <div className="flex space-x-4 text-sm">
-                                    <div className="flex items-center text-green-700"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
-                                    <div className="flex items-center text-red-700"><XCircle size={16} className="mr-1"/> Absent: {stats.absent || 0}</div>
-                                    <div className="flex items-center text-yellow-700"><Clock size={16} className="mr-1"/> Late: {stats.late || 0}</div>
-                                    <div className="flex items-center text-blue-700"><AlertTriangle size={16} className="mr-1"/> Excused: {stats.excused || 0}</div>
+                                <div className="flex flex-wrap gap-2 mt-2 md:mt-0 text-sm">
+                                    <div className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
+                                    <div className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded"><XCircle size={16} className="mr-1"/> Absent: {stats.absent || 0}</div>
+                                    <div className="flex items-center text-yellow-700 bg-yellow-50 px-2 py-1 rounded"><Clock size={16} className="mr-1"/> Late: {stats.late || 0}</div>
+                                    <div className="flex items-center text-blue-700 bg-blue-50 px-2 py-1 rounded"><AlertTriangle size={16} className="mr-1"/> Excused: {stats.excused || 0}</div>
                                 </div>
                             </div>
                             
                             {/* Filters */}
-                            <div className="grid grid-cols-3 gap-4 mt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                 <input 
                                     placeholder="Search Name..." 
                                     className="border p-2 rounded"
@@ -208,7 +211,7 @@ const Attendance = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-100 sticky top-0 z-10">
                                     <tr>
