@@ -401,12 +401,12 @@ const Cadets = () => {
                         <form onSubmit={handleImport} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Upload Excel/CSV File (ROTCMIS Format)
+                                    Upload File (ROTCMIS Format)
                                 </label>
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                                     <input 
                                         type="file" 
-                                        accept=".xlsx,.xls,.csv"
+                                        accept=".xlsx,.xls,.csv,.pdf"
                                         onChange={(e) => setImportFile(e.target.files[0])}
                                         className="hidden" 
                                         id="file-upload"
@@ -419,9 +419,11 @@ const Cadets = () => {
                                         </span>
                                     </label>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    Supported formats: .xlsx, .xls, .csv. Ensure the file contains "Student ID", "First Name", "Last Name", and optionally "Username" columns.
-                                </p>
+                                <div className="text-xs text-gray-500 mt-2 space-y-1">
+                                    <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf</p>
+                                    <p><strong>Excel/CSV:</strong> Required columns: "Student ID", "First Name", "Last Name". Optional: "Username" (for login), "Email".</p>
+                                    <p><strong>PDF:</strong> Attempts to extract Student ID and Email automatically. Student ID will be used as the Username.</p>
+                                </div>
                             </div>
                             
                             <div className="pt-4 flex space-x-3">
@@ -513,55 +515,6 @@ const Cadets = () => {
                 </div>
             )}
 
-            {/* Import Modal */}
-            {isImportModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Import Cadet List</h3>
-                            <button onClick={() => setIsImportModalOpen(false)}><X size={20} /></button>
-                        </div>
-                        <div className="text-sm text-gray-600 mb-4 space-y-2">
-                            <p>Upload the official list of cadets from ROTCMIS.</p>
-                            <p><b>Supported Format:</b> Excel (.xlsx, .xls), CSV, or PDF</p>
-                            <p className="text-xs italic text-gray-500">
-                                This will automatically create user accounts for new cadets.
-                                <br/>
-                                <b>Note:</b> For PDF files, the system attempts to extract Student IDs and Emails automatically. Ensure the PDF is text-based (not scanned image).
-                            </p>
-                        </div>
-                        <form onSubmit={handleImport} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
-                                <input 
-                                    type="file" 
-                                    accept=".csv, .xlsx, .xls, .pdf"
-                                    required
-                                    className="w-full border p-2 rounded"
-                                    onChange={e => setImportFile(e.target.files[0])}
-                                />
-                            </div>
-                            <div className="flex space-x-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setIsImportModalOpen(false)}
-                                    className="flex-1 py-2 border rounded hover:bg-gray-50"
-                                    disabled={importing}
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex justify-center items-center"
-                                    disabled={importing}
-                                >
-                                    {importing ? 'Importing...' : 'Import List'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Edit Modal */}
             {isEditModalOpen && (

@@ -172,27 +172,31 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
             });
         };
 
-        const upsertUser = (cadetId, studentId, email) => {
+        const upsertUser = (cadetId, studentId, email, customUsername) => {
             return new Promise(async (resolve, reject) => {
                 try {
                     const existingUser = await getUserByCadetId(cadetId);
-                    // Use Student ID as username
-                    const username = studentId;
+                    // Use Custom Username if provided, else Student ID
+                    const username = customUsername || studentId;
                     
                     if (!existingUser) {
                         // Create User
                         // is_approved = 1 (Auto-approved since imported by admin)
-                        // password = NULL (or a default hash if DB requires NOT NULL). 
-                        // Since we are doing "no password login", we can set a dummy unguessable password 
-                        // OR modify DB schema. Let's set a dummy hash for now to satisfy NOT NULL constraints if any.
-                        // But wait, user schema might require password.
-                        // Let's use a dummy password that no one knows.
+                        // password = dummy hash
                         const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED'; 
 
                         db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
                             [username, dummyHash, 'cadet', cadetId, 1, email], 
                             (err) => {
-                                if (err) reject(err);
+                                if (err) {
+                                    // If username taken, try appending student ID? No, just fail or log.
+                                    if (err.message.includes('UNIQUE constraint failed')) {
+                                        console.warn(`Username ${username} already exists. Skipping user creation for ${studentId}.`);
+                                        resolve(); // Treat as success but skip? Or fail?
+                                    } else {
+                                        reject(err);
+                                    }
+                                }
                                 else {
                                     // Initialize Grades
                                     db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (err) => {
@@ -203,8 +207,20 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
                             }
                         );
                     } else {
-                        // Update Email and Ensure Approved
-                        db.run(`UPDATE users SET email = ?, is_approved = 1 WHERE id = ?`, [email, existingUser.id], (err) => {
+                        // Update Email, Approved Status, and optionally Username
+                        // Only update username if a custom one is provided and it's different
+                        let sql = `UPDATE users SET email = ?, is_approved = 1`;
+                        const params = [email];
+
+                        if (customUsername && customUsername !== existingUser.username) {
+                            sql += `, username = ?`;
+                            params.push(customUsername);
+                        }
+
+                        sql += ` WHERE id = ?`;
+                        params.push(existingUser.id);
+
+                        db.run(sql, params, (err) => {
                             if (err) reject(err);
                             else resolve();
                         });
