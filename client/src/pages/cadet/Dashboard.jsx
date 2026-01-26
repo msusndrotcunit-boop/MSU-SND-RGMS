@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, X, AlertCircle } from 'lucide-react';
+import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
 
 const CadetDashboard = () => {
     const [grades, setGrades] = useState(null);
@@ -119,28 +120,31 @@ const CadetDashboard = () => {
 
             {/* Activities Section */}
             <div>
-                <h2 className="text-xl font-bold mb-4">Activities</h2>
+                <h2 className="text-xl font-bold mb-4">Upcoming Activities</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {activities.map(activity => (
+                    {activities.length > 0 ? activities.map(activity => (
                         <div key={activity.id} className="bg-white rounded shadow overflow-hidden">
                             {activity.image_path && (
                                 <img 
-                                    src={activity.image_path.startsWith('data:') ? activity.image_path : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`} 
+                                    src={activity.image_path.startsWith('data:') ? activity.image_path : `/uploads/${activity.image_path.replace(/\\/g, '/')}`} 
                                     alt={activity.title} 
                                     className="w-full h-48 object-cover"
                                 />
                             )}
                             <div className="p-4">
-                                <h3 className="text-lg font-bold mb-2">{activity.title}</h3>
-                                <div className="flex items-center text-gray-500 text-sm mb-2">
-                                    <Calendar size={14} className="mr-1" />
-                                    {activity.date}
+                                <h3 className="font-bold text-lg mb-2">{activity.title}</h3>
+                                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{activity.description}</p>
+                                <div className="flex items-center text-gray-500 text-sm">
+                                    <Calendar size={16} className="mr-2" />
+                                    {new Date(activity.date).toLocaleDateString()}
                                 </div>
-                                <p className="text-gray-600 text-sm line-clamp-3">{activity.description}</p>
                             </div>
                         </div>
-                    ))}
-                    {activities.length === 0 && <p className="text-gray-500">No activities posted.</p>}
+                    )) : (
+                        <div className="col-span-full bg-white p-6 rounded shadow text-center text-gray-500">
+                            No upcoming activities.
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -196,6 +200,12 @@ const CadetDashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Secure Documents / Excuse Letters */}
+            <div className="bg-white rounded shadow p-6">
+                <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
+                <ExcuseLetterSubmission />
+            </div>
 
             {/* Logs Modal */}
             {isLogsModalOpen && (

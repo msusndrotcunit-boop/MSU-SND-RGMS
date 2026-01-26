@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload } from 'lucide-react';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText } from 'lucide-react';
+import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 
 const Attendance = () => {
+    const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
     const [days, setDays] = useState([]);
     const [selectedDay, setSelectedDay] = useState(null);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -157,53 +159,77 @@ const Attendance = () => {
     }, {});
 
     return (
-        <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-100px)] gap-6">
-            {/* Sidebar List */}
-            <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t">
-                    <h2 className="font-bold text-lg text-gray-700">Training Days</h2>
+        <div className="h-full flex flex-col gap-4">
+            <div className="flex justify-between items-center bg-white p-4 rounded shadow">
+                <h1 className="text-2xl font-bold text-gray-800">Attendance & Excuses</h1>
+                <div className="flex space-x-2">
                     <button 
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-green-700 text-white p-2 rounded hover:bg-green-800"
-                        title="Add Training Day"
+                        onClick={() => setViewMode('attendance')}
+                        className={`px-4 py-2 rounded flex items-center transition ${viewMode === 'attendance' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
-                        <Plus size={20} />
+                        <Calendar size={18} className="mr-2" />
+                        Training Days
                     </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    {days.map(day => (
-                        <div 
-                            key={day.id}
-                            onClick={() => selectDay(day)}
-                            className={`p-4 rounded border cursor-pointer transition ${
-                                selectedDay?.id === day.id ? 'bg-green-50 border-green-500' : 'hover:bg-gray-50'
-                            }`}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="font-bold text-gray-800">{day.title}</div>
-                                    <div className="text-sm text-gray-500 flex items-center mt-1">
-                                        <Calendar size={14} className="mr-1" />
-                                        {new Date(day.date).toLocaleDateString()}
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={(e) => handleDeleteDay(day.id, e)}
-                                    className="text-gray-400 hover:text-red-600"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {days.length === 0 && <div className="p-4 text-center text-gray-500">No training days found.</div>}
+                    <button 
+                        onClick={() => setViewMode('excuse')}
+                        className={`px-4 py-2 rounded flex items-center transition ${viewMode === 'excuse' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                        <FileText size={18} className="mr-2" />
+                        Excuse Letters
+                    </button>
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
-                {selectedDay ? (
-                    <>
+            {viewMode === 'excuse' ? (
+                <ExcuseLetterManager />
+            ) : (
+                <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-180px)] gap-6">
+                    {/* Sidebar List */}
+                    <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t">
+                            <h2 className="font-bold text-lg text-gray-700">Training Days</h2>
+                            <button 
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="bg-green-700 text-white p-2 rounded hover:bg-green-800"
+                                title="Add Training Day"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                            {days.map(day => (
+                                <div 
+                                    key={day.id}
+                                    onClick={() => selectDay(day)}
+                                    className={`p-4 rounded border cursor-pointer transition ${
+                                        selectedDay?.id === day.id ? 'bg-green-50 border-green-500' : 'hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold text-gray-800">{day.title}</div>
+                                            <div className="text-sm text-gray-500 flex items-center mt-1">
+                                                <Calendar size={14} className="mr-1" />
+                                                {new Date(day.date).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => handleDeleteDay(day.id, e)}
+                                            className="text-gray-400 hover:text-red-600"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {days.length === 0 && <div className="p-4 text-center text-gray-500">No training days found.</div>}
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
+                        {selectedDay ? (
+                            <>
                         <div className="p-4 border-b bg-gray-50 rounded-t">
                             <div className="flex flex-col md:flex-row justify-between items-start mb-4">
                                 <div>
@@ -432,6 +458,8 @@ const Attendance = () => {
                         </form>
                     </div>
                 </div>
+            )}
+            </div>
             )}
         </div>
     );

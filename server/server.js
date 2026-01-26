@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const cadetRoutes = require('./routes/cadet');
 const attendanceRoutes = require('./routes/attendance');
+const excuseRoutes = require('./routes/excuse');
 const integrationRoutes = require('./routes/integration');
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cadet', cadetRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/excuse', excuseRoutes);
 app.use('/api/integration', integrationRoutes);
 
 // Create uploads directory if not exists

@@ -12,8 +12,11 @@ let db;
 
 // DB Adapter to unify SQLite and Postgres
 if (isPostgres) {
+    const connectionString = process.env.DATABASE_URL.trim();
+    // console.log('Using DB URL:', connectionString.replace(/:[^:@]*@/, ':****@')); // Debug log
+
     const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: connectionString,
         ssl: { rejectUnauthorized: false }
     });
 
@@ -165,6 +168,16 @@ function initPgDb() {
             status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
             remarks TEXT,
             UNIQUE(training_day_id, cadet_id)
+        )`,
+        `CREATE TABLE IF NOT EXISTS excuse_letters (
+            id SERIAL PRIMARY KEY,
+            cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
+            training_day_id INTEGER REFERENCES training_days(id) ON DELETE CASCADE,
+            date_absent DATE NOT NULL,
+            reason TEXT,
+            file_url TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 
@@ -272,6 +285,20 @@ function initSqliteDb() {
             UNIQUE(training_day_id, cadet_id),
             FOREIGN KEY(training_day_id) REFERENCES training_days(id) ON DELETE CASCADE,
             FOREIGN KEY(cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
+        )`);
+
+        // Excuse Letters Table
+        db.run(`CREATE TABLE IF NOT EXISTS excuse_letters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cadet_id INTEGER,
+            training_day_id INTEGER,
+            date_absent TEXT NOT NULL,
+            reason TEXT,
+            file_url TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(cadet_id) REFERENCES cadets(id) ON DELETE CASCADE,
+            FOREIGN KEY(training_day_id) REFERENCES training_days(id) ON DELETE CASCADE
         )`);
 
         seedAdmin();

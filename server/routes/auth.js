@@ -2,9 +2,32 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
-const { SECRET_KEY } = require('../middleware/auth');
+const { SECRET_KEY, authenticateToken } = require('../middleware/auth');
+const admin = require('../utils/firebaseAdmin');
 
 const router = express.Router();
+
+// Get Firebase Custom Token
+router.get('/firebase-token', authenticateToken, async (req, res) => {
+    try {
+        const uid = req.user.id.toString();
+        const additionalClaims = {
+            role: req.user.role,
+            cadetId: req.user.cadetId,
+            admin: req.user.role === 'admin'
+        };
+
+        if (admin.apps.length === 0) {
+            return res.status(503).json({ message: "Firebase not initialized on server" });
+        }
+
+        const customToken = await admin.auth().createCustomToken(uid, additionalClaims);
+        res.json({ token: customToken });
+    } catch (error) {
+        console.error("Error creating custom token:", error);
+        res.status(500).json({ message: "Failed to create Firebase token" });
+    }
+});
 
 // Register (Sign Up) for Cadets - REMOVED
 // router.post('/signup', ...);
