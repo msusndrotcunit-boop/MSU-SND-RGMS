@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, FileDown, Upload } from 'lucide-react';
+import { Pencil, Trash2, X, FileDown, Upload, Plus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
@@ -18,6 +18,14 @@ const Cadets = () => {
     const [importing, setImporting] = useState(false);
 
     // Form States
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [addForm, setAddForm] = useState({
+        rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
+        studentId: '', email: '', contactNumber: '', address: '',
+        course: '', yearLevel: '', schoolYear: '',
+        battalion: '', company: '', platoon: '',
+        cadetCourse: '', semester: '', status: 'Ongoing'
+    });
     const [editForm, setEditForm] = useState({});
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -318,6 +326,64 @@ const Cadets = () => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Modal */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-lg mx-4 p-6 flex flex-col max-h-[90vh]">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold">Add New Cadet</h3>
+                            <button onClick={() => setIsAddModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleAddSubmit} className="space-y-4 overflow-y-auto pr-2">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <input className="border p-2 rounded" value={addForm.rank} onChange={e => setAddForm({...addForm, rank: e.target.value})} placeholder="Rank" />
+                                <input className="border p-2 rounded" required value={addForm.firstName} onChange={e => setAddForm({...addForm, firstName: e.target.value})} placeholder="First Name *" />
+                                <input className="border p-2 rounded" value={addForm.middleName} onChange={e => setAddForm({...addForm, middleName: e.target.value})} placeholder="Middle Name" />
+                                <input className="border p-2 rounded" required value={addForm.lastName} onChange={e => setAddForm({...addForm, lastName: e.target.value})} placeholder="Last Name *" />
+                                <input className="border p-2 rounded" value={addForm.suffixName} onChange={e => setAddForm({...addForm, suffixName: e.target.value})} placeholder="Suffix" />
+                                <input className="border p-2 rounded" required value={addForm.studentId} onChange={e => setAddForm({...addForm, studentId: e.target.value})} placeholder="Student ID *" />
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input className="border p-2 rounded" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} placeholder="Email (Login Username)" />
+                                <input className="border p-2 rounded" value={addForm.contactNumber} onChange={e => setAddForm({...addForm, contactNumber: e.target.value})} placeholder="Contact Number" />
+                            </div>
+
+                            <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})} placeholder="Course" />
+                                <input className="border p-2 rounded" value={addForm.yearLevel} onChange={e => setAddForm({...addForm, yearLevel: e.target.value})} placeholder="Year Level" />
+                                <input className="border p-2 rounded" value={addForm.schoolYear} onChange={e => setAddForm({...addForm, schoolYear: e.target.value})} placeholder="School Year" />
+                                <input className="border p-2 rounded" value={addForm.semester} onChange={e => setAddForm({...addForm, semester: e.target.value})} placeholder="Semester" />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <input className="border p-2 rounded" value={addForm.battalion} onChange={e => setAddForm({...addForm, battalion: e.target.value})} placeholder="Battalion" />
+                                <input className="border p-2 rounded" value={addForm.company} onChange={e => setAddForm({...addForm, company: e.target.value})} placeholder="Company" />
+                                <input className="border p-2 rounded" value={addForm.platoon} onChange={e => setAddForm({...addForm, platoon: e.target.value})} placeholder="Platoon" />
+                            </div>
+                            
+                            <div className="pt-4 flex space-x-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsAddModalOpen(false)}
+                                    className="flex-1 py-2 border rounded hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                    Add Cadet
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

@@ -299,6 +299,67 @@ router.get('/analytics', (req, res) => {
 
 // --- Cadet Management ---
 
+// Create Single Cadet (Manual Add)
+router.post('/cadets', async (req, res) => {
+    const cadet = req.body;
+    
+    // Validate required fields
+    if (!cadet.studentId || !cadet.lastName || !cadet.firstName) {
+        return res.status(400).json({ message: 'Student ID, Last Name, and First Name are required' });
+    }
+
+    try {
+        // Check if student ID exists
+        const checkSql = 'SELECT id FROM cadets WHERE student_id = ?';
+        db.get(checkSql, [cadet.studentId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row) return res.status(400).json({ message: 'Cadet with this Student ID already exists' });
+
+            // Insert Cadet
+            const insertSql = `INSERT INTO cadets (
+                rank, first_name, middle_name, last_name, suffix_name, 
+                student_id, email, contact_number, address, 
+                course, year_level, school_year, 
+                battalion, company, platoon, 
+                cadet_course, semester, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+            const params = [
+                cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
+                cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
+                cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
+                cadet.battalion || '', cadet.company || '', cadet.platoon || '',
+                cadet.cadetCourse || '', cadet.semester || '', cadet.status || 'Ongoing'
+            ];
+
+            db.run(insertSql, params, function(err) {
+                if (err) return res.status(500).json({ message: err.message });
+                const newCadetId = this.lastID;
+
+                // Create User Account (Auto-approved)
+                const username = cadet.studentId; // Default username
+                const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED';
+                
+                db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
+                    [username, dummyHash, 'cadet', newCadetId, 1, cadet.email || ''], 
+                    (err) => {
+                        if (err) console.error("Error creating user for new cadet:", err);
+                        
+                        // Initialize Grades
+                        db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [newCadetId], (err) => {
+                            if (err) console.error("Error initializing grades:", err);
+                            res.status(201).json({ message: 'Cadet created successfully', id: newCadetId });
+                        });
+                    }
+                );
+            });
+        });
+    } catch (error) {
+        console.error("Create cadet error:", error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 // Get All Cadets (with computed grades) - ONLY APPROVED
 router.get('/cadets', (req, res) => {
     const sql = `

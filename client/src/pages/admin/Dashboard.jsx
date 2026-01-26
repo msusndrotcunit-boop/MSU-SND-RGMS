@@ -39,7 +39,11 @@ const Dashboard = () => {
         fetchStats();
     }, []);
 
-    const COLORS = ['#22c55e', '#ef4444', '#f59e0b']; // Green, Red, Amber
+    const COLORS = {
+        Passed: '#22c55e', // Green
+        Failed: '#ef4444', // Red
+        Incomplete: '#f59e0b' // Amber
+    };
 
     return (
         <div className="space-y-6">
@@ -96,7 +100,7 @@ const Dashboard = () => {
                                     dataKey="value"
                                 >
                                     {analytics.grades.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#8884d8'} />
                                     ))}
                                 </Pie>
                                 <Tooltip />
