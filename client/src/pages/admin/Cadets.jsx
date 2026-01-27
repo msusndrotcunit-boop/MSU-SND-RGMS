@@ -284,7 +284,7 @@ const Cadets = () => {
                                 <input type="checkbox" onChange={handleSelectAll} checked={selectedCadets.length === cadets.length && cadets.length > 0} />
                             </th>
                             <th className="p-4">Name & Rank</th>
-                            <th className="p-4">Student ID</th>
+                            <th className="p-4">Username</th>
                             <th className="p-4 text-center">Unit (Coy/Plt)</th>
                             <th className="p-4 text-center">Status</th>
                             <th className="p-4 text-right">Actions</th>
@@ -307,7 +307,7 @@ const Cadets = () => {
                                     </div>
                                     <div className="text-xs text-gray-500">{cadet.email}</div>
                                 </td>
-                                <td className="p-4">{cadet.student_id}</td>
+                                <td className="p-4">{cadet.username || cadet.student_id}</td>
                                 <td className="p-4 text-center">{cadet.company || '-'}/{cadet.platoon || '-'}</td>
                                 <td className="p-4 text-center">
                                     <span className={`text-xs font-semibold px-2 py-1 rounded ${
@@ -558,14 +558,29 @@ const Cadets = () => {
                             <input className="border p-2 rounded w-full" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})} placeholder="Course" />
-                                <input className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})} placeholder="Year Level" />
+                                <select className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
+                                    <option value="">Select Course</option>
+                                    {['BSCS', 'BSIT', 'BSCrim', 'BEEd', 'BSEd', 'BSHM', 'BSTM', 'BSBA', 'BSN', 'Other'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
+                                    <option value="">Select Year Level</option>
+                                    {['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})} placeholder="Battalion" />
-                                <input className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})} placeholder="Company" />
-                                <input className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})} placeholder="Platoon" />
+                                <select className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
+                                    <option value="">Select BN</option>
+                                    <option value="1st BN">1st BN</option>
+                                </select>
+                                <select className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
+                                    <option value="">Select Coy</option>
+                                    {['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Headquarters'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
+                                    <option value="">Select Platoon</option>
+                                    {['1st PLT', '2nd PLT', '3rd PLT'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -575,7 +590,12 @@ const Cadets = () => {
                                     <option value="MS3">MS3</option>
                                     <option value="MS4">MS4</option>
                                 </select>
-                                <input className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})} placeholder="Semester" />
+                                <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
+                                    <option value="">Select Sem</option>
+                                    <option value="1st Semester">1st Semester</option>
+                                    <option value="2nd Semester">2nd Semester</option>
+                                    <option value="Summer">Summer</option>
+                                </select>
                                 <select className="border p-2 rounded" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
                                     <option value="Ongoing">Ongoing</option>
                                     <option value="Completed">Completed</option>
