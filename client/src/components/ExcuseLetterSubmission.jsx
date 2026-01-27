@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth, storage } from '../lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink } from 'lucide-react';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
-    const [user, setUser] = useState(null);
     const [file, setFile] = useState(null);
     const [date, setDate] = useState('');
     const [reason, setReason] = useState('');
@@ -15,9 +12,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [history, setHistory] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(setUser);
         fetchHistory();
-        return () => unsubscribe();
     }, []);
 
     const fetchHistory = async () => {
@@ -36,26 +31,20 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
             return;
         }
 
-        if (!user) {
-            setError('Authentication initializing...');
-            return;
-        }
-
         setLoading(true);
         setError('');
         setSuccess('');
 
         try {
-            // 1. Upload to Firebase Storage
-            const storageRef = ref(storage, `excuse_letters/${user.uid}/${Date.now()}_${file.name}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
+            const formData = new FormData();
+            formData.append('date_absent', date);
+            formData.append('reason', reason);
+            formData.append('file', file);
 
-            // 2. Submit to PostgreSQL
-            await axios.post('/api/excuse', {
-                date_absent: date,
-                reason: reason,
-                file_url: downloadURL
+            await axios.post('/api/excuse', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
 
             setSuccess('Excuse letter submitted successfully.');

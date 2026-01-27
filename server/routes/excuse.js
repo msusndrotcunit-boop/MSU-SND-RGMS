@@ -2,13 +2,40 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, '../../client/public/uploads/excuse_letters');
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer config
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // Submit Excuse Letter (Cadet)
-router.post('/', authenticateToken, (req, res) => {
-    const { date_absent, reason, file_url } = req.body;
+router.post('/', authenticateToken, upload.single('file'), (req, res) => {
+    const { date_absent, reason } = req.body;
     const cadet_id = req.user.cadetId;
 
     if (!cadet_id) return res.status(403).json({ message: 'Only cadets can submit excuse letters.' });
+
+    let file_url = '';
+    if (req.file) {
+        // Save relative path for frontend access
+        file_url = '/uploads/excuse_letters/' + req.file.filename;
+    }
 
     const sql = `INSERT INTO excuse_letters (cadet_id, date_absent, reason, file_url) VALUES (?, ?, ?, ?)`;
     db.run(sql, [cadet_id, date_absent, reason, file_url], function(err) {

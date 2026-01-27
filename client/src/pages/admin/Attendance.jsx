@@ -421,20 +421,45 @@ const Attendance = () => {
                         </div>
                         <form onSubmit={handleImport} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Option 1: Upload File</label>
                                 <input 
                                     type="file" 
                                     accept=".csv, .xlsx, .xls, .pdf, .docx, .doc, .png, .jpg, .jpeg"
-                                    required
                                     className="w-full border p-2 rounded"
-                                    onChange={e => setImportFile(e.target.files[0])}
+                                    onChange={e => {
+                                        setImportFile(e.target.files[0]);
+                                        if(e.target.files[0]) setImportUrl('');
+                                    }}
+                                    disabled={!!importUrl}
                                 />
+                            </div>
+
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Option 2: Import from URL (Lightshot/Image)</label>
+                                <input 
+                                    type="url" 
+                                    placeholder="https://prnt.sc/..."
+                                    className="w-full border p-2 rounded"
+                                    value={importUrl}
+                                    onChange={e => {
+                                        setImportUrl(e.target.value);
+                                        if(e.target.value) setImportFile(null);
+                                    }}
+                                    disabled={!!importFile}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Paste a Lightshot link (prnt.sc) or a direct image URL.</p>
                             </div>
                             
                             <div className="flex space-x-3 pt-4">
                                 <button 
                                     type="button"
-                                    onClick={() => { setIsImportModalOpen(false); setImportFile(null); }}
+                                    onClick={() => { setIsImportModalOpen(false); setImportFile(null); setImportUrl(''); }}
                                     className="flex-1 py-2 border rounded hover:bg-gray-50"
                                     disabled={importing}
                                 >
@@ -443,7 +468,7 @@ const Attendance = () => {
                                 <button 
                                     type="submit"
                                     className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 flex justify-center items-center"
-                                    disabled={importing}
+                                    disabled={importing || (!importFile && !importUrl)}
                                 >
                                     {importing ? (
                                         <>
@@ -451,7 +476,7 @@ const Attendance = () => {
                                             Importing...
                                         </>
                                     ) : (
-                                        'Upload & Import'
+                                        'Import'
                                     )}
                                 </button>
                             </div>

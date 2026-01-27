@@ -27,7 +27,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
     }, 14 * 60 * 1000); // 14 minutes
 }
 
-console.log('Starting ROTC Grading System Server V2.3.1 (Pinger Restored)...'); // Version bump for deployment trigger
+console.log('Starting ROTC Grading System Server V2.3.15 (OneDrive Fix Active)...'); // Version bump for deployment trigger
 
 // Middleware
 app.use(cors());

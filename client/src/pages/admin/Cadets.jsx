@@ -576,6 +576,11 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={addForm.company} onChange={e => setAddForm({...addForm, company: e.target.value})} placeholder="Company" />
                                 <input className="border p-2 rounded" value={addForm.platoon} onChange={e => setAddForm({...addForm, platoon: e.target.value})} placeholder="Platoon" />
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})} placeholder="Cadet Course" />
+                                <input className="border p-2 rounded" value={addForm.status} onChange={e => setAddForm({...addForm, status: e.target.value})} placeholder="Status" />
+                            </div>
                             
                             <div className="pt-4 flex space-x-3">
                                 <button 
@@ -651,10 +656,8 @@ const Cadets = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
-                                    <option value="MS1">MS1</option>
-                                    <option value="MS2">MS2</option>
-                                    <option value="MS3">MS3</option>
-                                    <option value="MS4">MS4</option>
+                                    <option value="">Select Cadet Course</option>
+                                    {['MS1', 'MS2', 'COQC', 'MS32', 'MS42'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
                                     <option value="">Select Sem</option>

@@ -7,6 +7,7 @@ const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
+const axios = require('axios');
 
 // Multer config for file upload (Memory storage for immediate parsing)
 const storage = multer.memoryStorage();
@@ -187,11 +188,21 @@ const parseDocx = async (buffer) => {
     }
 };
 
+// Parse Image buffer to text rows using OCR
+const parseImage = async (buffer) => {
+    try {
+        const { data: { text } } = await Tesseract.recognize(buffer, 'eng');
+        return text.split('\n').map(line => ({ raw: line.trim() })).filter(l => l.raw);
+    } catch (err) {
+        console.error("Image OCR Error:", err);
+        return [];
+    }
+};
+
 // Extract data from raw text line
 const extractFromRaw = (line) => {
     const row = {};
-    // Regex for Student ID (Simple assumption: contains digits, maybe dashes)
-    // Adjust regex based on actual ID format. e.g., "2021-00123" or "123456"
+    // Regex for Student ID
     const idMatch = line.match(/(\d{4}-\d{4,6}|\d{6,10})/); 
     if (idMatch) row['Student ID'] = idMatch[0];
 
@@ -206,27 +217,162 @@ const extractFromRaw = (line) => {
     else if (lowerLine.includes('late')) row['Status'] = 'late';
     else if (lowerLine.includes('excused')) row['Status'] = 'excused';
 
-    // Name extraction is very hard from raw string without delimiter. 
-    // We will skip name extraction from raw lines unless it's comma separated clearly.
-    // However, if we found ID or Email, we might not need Name.
-    
     return row;
 };
 
-// Import Attendance from File (CSV/Excel/PDF/DOCX)
-router.post('/import', authenticateToken, isAdmin, upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
+// --- Shared Import Logic ---
+
+const getCadetByStudentId = (studentId) => {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT id FROM cadets WHERE student_id = ?', [studentId], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+};
+
+const getCadetByEmail = (email) => {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT id FROM cadets WHERE email = ?', [email], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+};
+
+const getCadetByName = (firstName, lastName) => {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT id FROM cadets WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)', 
+            [firstName, lastName], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+};
+
+const findCadet = async (row) => {
+    // 1. Try Student ID
+    const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
+    if (studentId) {
+        try {
+            const cadet = await getCadetByStudentId(studentId);
+            if (cadet) return cadet;
+        } catch (e) {}
     }
 
-    const { dayId } = req.body;
-    if (!dayId) {
-        return res.status(400).json({ message: 'Day ID is required' });
+    // 2. Try Email
+    const email = row['Email'] || row['email'] || row['EMAIL'];
+    if (email) {
+        try {
+            const cadet = await getCadetByEmail(email);
+            if (cadet) return cadet;
+        } catch (e) {}
     }
+
+    // 3. Try Name
+    let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
+    let firstName = row['First Name'] || row['first_name'];
+    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'];
+
+    if (!lastName && !firstName && fullName) {
+        if (fullName.includes(',')) {
+            const parts = fullName.split(',');
+            lastName = parts[0].trim();
+            firstName = parts[1].trim();
+        } else {
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                lastName = parts[parts.length - 1]; 
+                firstName = parts.slice(0, -1).join(' ');
+            }
+        }
+    }
+
+    if (lastName && firstName) {
+        try {
+            const cadet = await getCadetByName(firstName, lastName);
+            if (cadet) return cadet;
+        } catch (e) {}
+    }
+
+    return null;
+};
+
+const upsertAttendance = (dayId, cadetId, status, remarks) => {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
+            if (err) return reject(err);
+
+            if (row) {
+                db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', 
+                    [status, remarks, row.id], 
+                    (err) => {
+                        if (err) reject(err);
+                        else {
+                            updateTotalAttendance(cadetId, null); 
+                            resolve('updated');
+                        }
+                    }
+                );
+            } else {
+                db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', 
+                    [dayId, cadetId, status, remarks], 
+                    (err) => {
+                        if (err) reject(err);
+                        else {
+                            updateTotalAttendance(cadetId, null); 
+                            resolve('inserted');
+                        }
+                    }
+                );
+            }
+        });
+    });
+};
+
+const processAttendanceData = async (data, dayId) => {
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    for (const row of data) {
+        const status = (row['Status'] || row['status'] || 'present').toLowerCase();
+        const remarks = row['Remarks'] || row['remarks'] || '';
+
+        try {
+            const cadet = await findCadet(row);
+            
+            if (cadet) {
+                await upsertAttendance(dayId, cadet.id, status, remarks);
+                successCount++;
+            } else {
+                const id = row['Student ID'] || row['ID'];
+                const email = row['Email'];
+                const name = row['Name'] || (row['First Name'] + ' ' + row['Last Name']);
+                
+                if (id || email || name) {
+                    failCount++;
+                    errors.push(`Cadet not found: ${id || email || name}`);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            failCount++;
+            errors.push(`Error processing row: ${err.message}`);
+        }
+    }
+
+    return { successCount, failCount, errors };
+};
+
+// Import Attendance from File
+router.post('/import', authenticateToken, isAdmin, upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    const { dayId } = req.body;
+    if (!dayId) return res.status(400).json({ message: 'Day ID is required' });
 
     try {
         let data = [];
-        const mime = req.file.mimetype;
         const filename = req.file.originalname.toLowerCase();
 
         if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
@@ -240,163 +386,74 @@ router.post('/import', authenticateToken, isAdmin, upload.single('file'), async 
         } else if (filename.endsWith('.docx') || filename.endsWith('.doc')) {
             const rawRows = await parseDocx(req.file.buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (filename.match(/\.(png|jpg|jpeg|bmp|webp)$/)) {
+            const rawRows = await parseImage(req.file.buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
         } else {
             return res.status(400).json({ message: 'Unsupported file format' });
         }
 
-        let successCount = 0;
-        let failCount = 0;
-        const errors = [];
-
-        // DB Helpers (Promisified)
-        const getCadetByStudentId = (studentId) => {
-            return new Promise((resolve, reject) => {
-                db.get('SELECT id FROM cadets WHERE student_id = ?', [studentId], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-        };
-
-        const getCadetByEmail = (email) => {
-            return new Promise((resolve, reject) => {
-                db.get('SELECT id FROM cadets WHERE email = ?', [email], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-        };
-
-        const getCadetByName = (firstName, lastName) => {
-            return new Promise((resolve, reject) => {
-                // Case insensitive search
-                db.get('SELECT id FROM cadets WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)', 
-                    [firstName, lastName], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-        };
-
-        const findCadet = async (row) => {
-            // 1. Try Student ID
-            const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
-            if (studentId) {
-                try {
-                    const cadet = await getCadetByStudentId(studentId);
-                    if (cadet) return cadet;
-                } catch (e) {}
-            }
-
-            // 2. Try Email
-            const email = row['Email'] || row['email'] || row['EMAIL'];
-            if (email) {
-                try {
-                    const cadet = await getCadetByEmail(email);
-                    if (cadet) return cadet;
-                } catch (e) {}
-            }
-
-            // 3. Try Name
-            let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
-            let firstName = row['First Name'] || row['first_name'];
-            const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'];
-
-            if (!lastName && !firstName && fullName) {
-                // Heuristic: "Last, First" or "First Last"
-                if (fullName.includes(',')) {
-                    const parts = fullName.split(',');
-                    lastName = parts[0].trim();
-                    firstName = parts[1].trim();
-                } else {
-                    const parts = fullName.trim().split(/\s+/);
-                    if (parts.length >= 2) {
-                        lastName = parts[parts.length - 1]; 
-                        firstName = parts.slice(0, -1).join(' ');
-                    }
-                }
-            }
-
-            if (lastName && firstName) {
-                try {
-                    const cadet = await getCadetByName(firstName, lastName);
-                    if (cadet) return cadet;
-                } catch (e) {}
-            }
-
-            return null;
-        };
-
-        // Helper for async attendance upsert
-        const upsertAttendance = (cadetId, status, remarks) => {
-            return new Promise((resolve, reject) => {
-                db.get('SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
-                    if (err) return reject(err);
-
-                    if (row) {
-                        db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                            [status, remarks, row.id], 
-                            (err) => {
-                                if (err) reject(err);
-                                else {
-                                    updateTotalAttendance(cadetId, null); 
-                                    resolve('updated');
-                                }
-                            }
-                        );
-                    } else {
-                        db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                            [dayId, cadetId, status, remarks], 
-                            (err) => {
-                                if (err) reject(err);
-                                else {
-                                    updateTotalAttendance(cadetId, null); 
-                                    resolve('inserted');
-                                }
-                            }
-                        );
-                    }
-                });
-            });
-        };
-
-        for (const row of data) {
-            // Flexible column matching
-            const status = (row['Status'] || row['status'] || 'present').toLowerCase();
-            const remarks = row['Remarks'] || row['remarks'] || '';
-
-            try {
-                const cadet = await findCadet(row);
-                
-                if (cadet) {
-                    await upsertAttendance(cadet.id, status, remarks);
-                    successCount++;
-                } else {
-                    // Only count as failure if there was some identifiable info
-                    const id = row['Student ID'] || row['ID'];
-                    const email = row['Email'];
-                    const name = row['Name'] || (row['First Name'] + ' ' + row['Last Name']);
-                    
-                    if (id || email || name) {
-                        failCount++;
-                        errors.push(`Cadet not found: ${id || email || name}`);
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-                failCount++;
-                errors.push(`Error processing row: ${err.message}`);
-            }
-        }
+        const result = await processAttendanceData(data, dayId);
 
         res.json({ 
-            message: `Import complete. Success: ${successCount}, Failed: ${failCount}`,
-            errors: errors.slice(0, 10) 
+            message: `Import complete. Success: ${result.successCount}, Failed: ${result.failCount}`,
+            errors: result.errors.slice(0, 10) 
         });
 
     } catch (error) {
         console.error('Import error:', error);
         res.status(500).json({ message: 'Failed to process file' });
+    }
+});
+
+// Import Attendance from URL (Lightshot/Image Link)
+router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
+    const { url, dayId } = req.body;
+    if (!url || !dayId) return res.status(400).json({ message: 'URL and Day ID are required' });
+
+    try {
+        let imageUrl = url;
+        
+        // Handle Lightshot (prnt.sc)
+        if (url.includes('prnt.sc')) {
+            console.log(`Fetching Lightshot URL: ${url}`);
+            const response = await axios.get(url, { 
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' } 
+            });
+            const html = response.data;
+            const match = html.match(/<meta property="og:image" content="([^"]+)"/);
+            if (match && match[1]) {
+                imageUrl = match[1];
+                console.log(`Found image URL: ${imageUrl}`);
+            } else {
+                 // Fallback: try regex for the image tag if og:image missing
+                 const imgMatch = html.match(/<img.+?src="([^"]+)".+?id="screenshot-image"/);
+                 if (imgMatch && imgMatch[1]) {
+                     imageUrl = imgMatch[1];
+                 } else {
+                     return res.status(400).json({ message: 'Could not extract image from Lightshot link' });
+                 }
+            }
+        }
+
+        // Fetch the image
+        console.log(`Fetching image from: ${imageUrl}`);
+        const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(imgResponse.data);
+        
+        const rawRows = await parseImage(buffer);
+        const data = rawRows.map(r => extractFromRaw(r.raw));
+
+        const result = await processAttendanceData(data, dayId);
+        
+        res.json({ 
+            message: `Import complete. Success: ${result.successCount}, Failed: ${result.failCount}`,
+            errors: result.errors.slice(0, 10) 
+        });
+
+    } catch (err) {
+        console.error("Import URL Error:", err);
+        res.status(500).json({ message: 'Failed to process URL: ' + err.message });
     }
 });
 

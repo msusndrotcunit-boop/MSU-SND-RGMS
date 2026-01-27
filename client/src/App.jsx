@@ -31,6 +31,7 @@ const LoadingSpinner = () => (
 );
 
 function App() {
+  console.log("App Version: 2.3.15 (OneDrive Fix)");
   return (
     <ErrorBoundary>
       <Router>

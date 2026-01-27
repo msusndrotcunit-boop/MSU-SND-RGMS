@@ -254,11 +254,14 @@ const getDirectDownloadUrl = (url) => {
         const urlObj = new URL(url);
         
         // Google Drive
-        if (urlObj.hostname.includes('docs.google.com') && urlObj.pathname.includes('/spreadsheets/')) {
-             return url.replace(/\/edit.*$/, '/export?format=xlsx');
-        }
+            if (urlObj.hostname.includes('google.com')) {
+                 // Google Sheets
+                 if (urlObj.pathname.includes('/spreadsheets/')) {
+                      return url.replace(/\/edit.*$/, '/export?format=xlsx');
+                 }
+            }
 
-        // Dropbox
+            // Dropbox
         if (urlObj.hostname.includes('dropbox.com')) {
              if (url.includes('dl=1')) return url;
              if (url.includes('dl=0')) return url.replace('dl=0', 'dl=1');
@@ -300,8 +303,8 @@ const getDirectDownloadUrl = (url) => {
             }
 
             // Case 5: Generic fallback (append download=1)
-            // This works for many SharePoint sharing links like /:x:/s/...
-            if (!url.includes('download=1')) {
+            // This works for many OneDrive/SharePoint sharing links that don't match above patterns
+            if (!url.includes('download=1') && !url.includes('action=download')) {
                  const separator = url.includes('?') ? '&' : '?';
                  return `${url}${separator}download=1`;
             }
@@ -391,25 +394,64 @@ const processUrlImport = async (url) => {
     console.log(`Original URL: ${url}`);
     console.log(`Downloading from: ${downloadUrl}`);
     
-    try {
-        const response = await axios.get(downloadUrl, { 
+    // Helper to fetch and validate
+    const fetchFile = async (targetUrl) => {
+        const response = await axios.get(targetUrl, { 
             responseType: 'arraybuffer',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             },
-            validateStatus: (status) => status < 400
+            validateStatus: (status) => status < 400,
+            maxRedirects: 5
         });
+        return response;
+    };
+
+    try {
+        let response = await fetchFile(downloadUrl);
+        let buffer = Buffer.from(response.data);
+        let contentType = response.headers['content-type'];
         
-        const buffer = Buffer.from(response.data);
-        const contentType = response.headers['content-type'];
         console.log(`Response Content-Type: ${contentType}`);
         console.log(`Response Size: ${buffer.length} bytes`);
 
         // Check for HTML content (redirects or error pages often return HTML)
         const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
         if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html')) {
-            console.error("Received HTML instead of file. Preview:", buffer.slice(0, 500).toString());
-            throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
+            console.error("Received HTML instead of file. Checking for redirect...");
+            
+            // Try to find the effective URL if it redirected to a viewer
+            const effectiveUrl = response.request.res.responseUrl;
+            if (effectiveUrl && effectiveUrl !== downloadUrl) {
+                console.log(`Redirected to: ${effectiveUrl}`);
+                const newDownloadUrl = getDirectDownloadUrl(effectiveUrl);
+                
+                if (newDownloadUrl !== effectiveUrl && newDownloadUrl !== downloadUrl) {
+                    console.log(`Attempting retry with converted effective URL: ${newDownloadUrl}`);
+                    response = await fetchFile(newDownloadUrl);
+                    buffer = Buffer.from(response.data);
+                    contentType = response.headers['content-type'];
+                    
+                    // Re-check HTML
+                    const retryBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
+                    if (retryBytes.includes('<!doctype html') || retryBytes.includes('<html')) {
+                         throw new Error(`The link redirected to a webpage (${effectiveUrl}) and we couldn't automatically convert it to a direct download. Please ensure the link is a DIRECT download link.`);
+                    }
+                } else {
+                     // Try one last heuristic: if it's OneDrve/SharePoint and has no download param, force it
+                     if ((effectiveUrl.includes('onedrive') || effectiveUrl.includes('sharepoint')) && !effectiveUrl.includes('download=1')) {
+                         const forcedUrl = effectiveUrl + (effectiveUrl.includes('?') ? '&' : '?') + 'download=1';
+                         console.log(`Attempting retry with forced download param: ${forcedUrl}`);
+                         response = await fetchFile(forcedUrl);
+                         buffer = Buffer.from(response.data);
+                         contentType = response.headers['content-type'];
+                     } else {
+                        throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
+                     }
+                }
+            } else {
+                 throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
+            }
         }
         
         let data = [];
@@ -447,7 +489,7 @@ const processUrlImport = async (url) => {
             if (err.response && err.response.status === 404) {
                  throw new Error(`File not found (404). Please check the link.`);
             }
-             throw new Error(`Network Error: ${err.message}`);
+             throw new Error(`Network/Connection Error: ${err.message}. Please check your internet connection and the link validity.`);
         }
         throw err;
     }
