@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const CadetHome = () => {
     const [activities, setActivities] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [selectedActivity, setSelectedActivity] = useState(null);
 
     useEffect(() => {
         const fetchActivities = async () => {
@@ -24,12 +25,23 @@ const CadetHome = () => {
 
     const hasActivities = activities && activities.length > 0;
 
-    const goPrev = () => {
+    useEffect(() => {
+        if (!hasActivities) return;
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % activities.length);
+        }, 8000); // 2s transition + 6s wait
+
+        return () => clearInterval(interval);
+    }, [hasActivities, activities.length]);
+
+    const goPrev = (e) => {
+        e.stopPropagation();
         if (!hasActivities) return;
         setCurrentIndex((prev) => (prev - 1 + activities.length) % activities.length);
     };
 
-    const goNext = () => {
+    const goNext = (e) => {
+        e.stopPropagation();
         if (!hasActivities) return;
         setCurrentIndex((prev) => (prev + 1) % activities.length);
     };
@@ -60,23 +72,29 @@ const CadetHome = () => {
 
                 {hasActivities && (
                     <div className="relative max-w-4xl mx-auto">
-                        <div className="overflow-hidden rounded-lg shadow">
+                        <div className="overflow-hidden rounded-lg shadow cursor-pointer">
                             <div
-                                className="flex transition-transform duration-500 ease-out"
+                                className="flex transition-transform duration-[2000ms] ease-in-out"
                                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                             >
                                 {activities.map((activity) => (
-                                    <div key={activity.id} className="w-full flex-shrink-0 bg-white">
+                                    <div 
+                                        key={activity.id} 
+                                        className="w-full flex-shrink-0 bg-white"
+                                        onClick={() => setSelectedActivity(activity)}
+                                    >
                                         {activity.image_path && (
-                                            <img
-                                                src={
-                                                    activity.image_path.startsWith('data:')
-                                                        ? activity.image_path
-                                                        : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`
-                                                }
-                                                alt={activity.title}
-                                                className="w-full h-64 object-cover"
-                                            />
+                                            <div className="w-full bg-gray-100 flex justify-center items-center">
+                                                <img
+                                                    src={
+                                                        activity.image_path.startsWith('data:')
+                                                            ? activity.image_path
+                                                            : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`
+                                                    }
+                                                    alt={activity.title}
+                                                    className="w-full h-auto max-h-[500px] object-contain"
+                                                />
+                                            </div>
                                         )}
                                         <div className="p-6">
                                             <div className="flex items-center text-gray-500 text-sm mb-2">
@@ -84,9 +102,10 @@ const CadetHome = () => {
                                                 {activity.date}
                                             </div>
                                             <h3 className="text-2xl font-bold mb-2">{activity.title}</h3>
-                                            <p className="text-gray-700 whitespace-pre-line">
+                                            <p className="text-gray-700 whitespace-pre-line line-clamp-3">
                                                 {activity.description || 'No description provided.'}
                                             </p>
+                                            <p className="text-blue-600 text-sm mt-2">Click to view details</p>
                                         </div>
                                     </div>
                                 ))}
@@ -129,6 +148,54 @@ const CadetHome = () => {
                     </div>
                 )}
             </div>
+
+            {/* Activity Detail Modal */}
+            {selectedActivity && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75 backdrop-blur-sm"
+                    onClick={() => setSelectedActivity(null)}
+                >
+                    <div 
+                        className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
+                            <h3 className="text-xl font-bold text-gray-900 pr-8">{selectedActivity.title}</h3>
+                            <button 
+                                onClick={() => setSelectedActivity(null)}
+                                className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6">
+                            {selectedActivity.image_path && (
+                                <div className="mb-6 bg-gray-50 rounded-lg p-2 border">
+                                    <img
+                                        src={
+                                            selectedActivity.image_path.startsWith('data:')
+                                                ? selectedActivity.image_path
+                                                : `${import.meta.env.VITE_API_URL || ''}${selectedActivity.image_path.replace(/\\/g, '/')}`
+                                        }
+                                        alt={selectedActivity.title}
+                                        className="w-full h-auto max-h-[60vh] object-contain rounded mx-auto"
+                                    />
+                                </div>
+                            )}
+                            
+                            <div className="flex items-center text-gray-500 text-sm mb-4 bg-gray-50 p-2 rounded inline-block">
+                                <Calendar size={16} className="mr-2" />
+                                <span className="font-medium">{selectedActivity.date}</span>
+                            </div>
+                            
+                            <div className="prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed text-lg">
+                                {selectedActivity.description}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
