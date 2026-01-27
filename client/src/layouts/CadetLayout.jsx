@@ -1,7 +1,7 @@
 import React, { useState, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Info } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 const CadetLayout = () => {
@@ -39,6 +39,17 @@ const CadetLayout = () => {
                     </button>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
+                    <Link
+                        to="/cadet/home"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/cadet/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                        )}
+                    >
+                        <HomeIcon size={20} />
+                        <span>Home</span>
+                    </Link>
                     <Link
                         to="/cadet/dashboard"
                         onClick={() => setIsSidebarOpen(false)}
@@ -93,7 +104,10 @@ const CadetLayout = () => {
                         <Menu size={24} />
                     </button>
                     <h1 className="text-xl font-semibold text-gray-800">
-                        {location.pathname.includes('dashboard') ? 'My Portal' : 'My Profile'}
+                        {location.pathname.includes('/cadet/home') && 'Home'}
+                        {location.pathname.includes('/cadet/dashboard') && 'My Portal'}
+                        {location.pathname.includes('/cadet/profile') && 'My Profile'}
+                        {location.pathname.includes('/cadet/about') && 'About'}
                     </h1>
                 </header>
                 <main className="flex-1 overflow-auto p-6">

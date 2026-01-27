@@ -244,35 +244,89 @@ const Profile = () => {
                             <textarea className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" rows="2" value={profile.address} onChange={e => setProfile({...profile, address: e.target.value})}></textarea>
                         </div>
 
-                        <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2 dark:text-white">Military & School Info <span className="text-sm font-normal text-gray-500 ml-2">(Contact Admin to Update)</span></h3>
+                        <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2 dark:text-white">Military &amp; School Info</h3>
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.course} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.course}
+                                    onChange={e => setProfile({ ...profile, course: e.target.value })}
+                                >
+                                    <option value="">Select Course</option>
+                                    {COURSE_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.yearLevel} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.yearLevel}
+                                    onChange={e => setProfile({ ...profile, yearLevel: e.target.value })}
+                                >
+                                    <option value="">Select Year Level</option>
+                                    {YEAR_LEVEL_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.schoolYear} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.schoolYear}
+                                    onChange={e => setProfile({ ...profile, schoolYear: e.target.value })}
+                                >
+                                    <option value="">Select School Year</option>
+                                    {SCHOOL_YEAR_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.battalion} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.battalion}
+                                    onChange={e => setProfile({ ...profile, battalion: e.target.value })}
+                                >
+                                    <option value="">Select Battalion</option>
+                                    {BATTALION_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.company} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.company}
+                                    onChange={e => setProfile({ ...profile, company: e.target.value })}
+                                >
+                                    <option value="">Select Company</option>
+                                    {COMPANY_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.platoon} disabled />
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.platoon}
+                                    onChange={e => setProfile({ ...profile, platoon: e.target.value })}
+                                >
+                                    <option value="">Select Platoon</option>
+                                    {PLATOON_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

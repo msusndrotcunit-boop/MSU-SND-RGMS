@@ -1,0 +1,29 @@
+[33mcommit 882255e392c90c612ea5be9fb99c29d5b314474d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Admin <admin@example.com>
+Date:   Tue Jan 27 11:00:19 2026 +0800
+
+    feat: complete cadet import fixes and add about page
+
+[33mcommit a274a58167e5e9a3dfde94884ef3a30fefd182cd[m
+Author: Admin <admin@example.com>
+Date:   Mon Jan 26 17:23:43 2026 +0800
+
+    feat: enable custom username import and fix import modal UI
+
+[33mcommit 59d8e100354520cc3103629d12c25128432de43d[m
+Author: Admin <admin@example.com>
+Date:   Mon Jan 26 16:33:15 2026 +0800
+
+    feat: implement excuse letter system with firebase storage and admin review
+
+[33mcommit 3b5f467d349c71d46957fc0e35a15d9dd65f336a[m
+Author: Admin <admin@example.com>
+Date:   Mon Jan 26 13:57:33 2026 +0800
+
+    fix: downgrade pdf-parse to v1.1.1 to resolve function error
+
+[33mcommit ce33858ca496862e1a9e13421207d01662f3f11b[m
+Author: Admin <admin@example.com>
+Date:   Mon Jan 26 13:11:24 2026 +0800
+
+    fix: move build dependencies and add pdf support

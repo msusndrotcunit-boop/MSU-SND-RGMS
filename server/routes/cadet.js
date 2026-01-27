@@ -103,19 +103,24 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    // Only allow updating personal contact info and profile picture
     const { 
         firstName, middleName, lastName, suffixName,
-        email, contactNumber, address 
+        email, contactNumber, address,
+        course, yearLevel, schoolYear,
+        battalion, company, platoon
     } = req.body;
 
     let sql = `UPDATE cadets SET 
         first_name=?, middle_name=?, last_name=?, suffix_name=?,
-        email=?, contact_number=?, address=?`;
+        email=?, contact_number=?, address=?,
+        course=?, year_level=?, school_year=?,
+        battalion=?, company=?, platoon=?`;
     
     const params = [
         firstName, middleName, lastName, suffixName,
-        email, contactNumber, address
+        email, contactNumber, address,
+        course, yearLevel, schoolYear,
+        battalion, company, platoon
     ];
 
     if (req.file) {

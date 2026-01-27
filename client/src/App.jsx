@@ -18,6 +18,7 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
 // Cadet Pages
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
+const CadetHome = lazy(() => import('./pages/cadet/Home'));
 const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
@@ -56,10 +57,11 @@ function App() {
             {/* Cadet Routes */}
             <Route element={<ProtectedRoute allowedRoles={['cadet']} />}>
               <Route path="/cadet" element={<CadetLayout />}>
+                <Route path="home" element={<CadetHome />} />
                 <Route path="dashboard" element={<CadetDashboard />} />
                 <Route path="profile" element={<CadetProfile />} />
                 <Route path="about" element={<CadetAbout />} />
-                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route index element={<Navigate to="home" replace />} />
               </Route>
             </Route>
 
