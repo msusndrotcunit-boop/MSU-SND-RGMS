@@ -450,6 +450,25 @@ const Cadets = () => {
                                 </div>
                             </div>
                             
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Import via OneDrive/SharePoint Link
+                                </label>
+                                <input
+                                    type="url"
+                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Paste OneDrive/SharePoint direct download link..."
+                                    value={importUrl}
+                                    onChange={(e) => {
+                                        setImportUrl(e.target.value);
+                                        setImportFile(null);
+                                    }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Ensure the link is accessible. For OneDrive/SharePoint, use a shared link and append <code>?download=1</code> if needed.
+                                </p>
+                            </div>
+                            
                             <div className="pt-4 flex space-x-3">
                                 <button 
                                     type="button"
