@@ -252,10 +252,32 @@ router.use(isAdmin);
 const getDirectDownloadUrl = (url) => {
     try {
         const urlObj = new URL(url);
+        
+        // Google Drive
+        if (urlObj.hostname.includes('docs.google.com') && urlObj.pathname.includes('/spreadsheets/')) {
+             return url.replace(/\/edit.*$/, '/export?format=xlsx');
+        }
+
+        // Dropbox
+        if (urlObj.hostname.includes('dropbox.com')) {
+             if (url.includes('dl=1')) return url;
+             if (url.includes('dl=0')) return url.replace('dl=0', 'dl=1');
+             const separator = url.includes('?') ? '&' : '?';
+             return `${url}${separator}dl=1`;
+        }
+
         // OneDrive Personal: Replace /embed with /download
         if (urlObj.hostname.includes('onedrive.live.com')) {
-            return url.replace('/embed', '/download');
+            if (url.includes('/embed')) {
+                return url.replace('/embed', '/download');
+            }
+            // Fallback: append download=1 if not present
+            if (!url.includes('download=1')) {
+                 const separator = url.includes('?') ? '&' : '?';
+                 return `${url}${separator}download=1`;
+            }
         }
+
         // SharePoint / Business / 1drv.ms: Append download=1
         if (urlObj.hostname.includes('sharepoint.com') || urlObj.hostname.includes('1drv.ms')) {
             if (url.includes('download=1')) return url;
@@ -343,39 +365,69 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
 
 const processUrlImport = async (url) => {
     const downloadUrl = getDirectDownloadUrl(url);
+    console.log(`Original URL: ${url}`);
     console.log(`Downloading from: ${downloadUrl}`);
     
-    const response = await axios.get(downloadUrl, { 
-        responseType: 'arraybuffer',
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    try {
+        const response = await axios.get(downloadUrl, { 
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            },
+            validateStatus: (status) => status < 400
+        });
+        
+        const buffer = Buffer.from(response.data);
+        const contentType = response.headers['content-type'];
+        console.log(`Response Content-Type: ${contentType}`);
+        console.log(`Response Size: ${buffer.length} bytes`);
+
+        // Check for HTML content (redirects or error pages often return HTML)
+        const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
+        if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html')) {
+            console.error("Received HTML instead of file. Preview:", buffer.slice(0, 500).toString());
+            throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
         }
-    });
-    
-    const buffer = Buffer.from(response.data);
-    const contentType = response.headers['content-type'];
-    
-    let data = [];
-    
-    if (contentType && contentType.includes('pdf')) {
-         try {
-            data = await parsePdfBuffer(buffer);
-        } catch (err) {
-             throw new Error('Failed to parse PDF from URL: ' + err.message);
+        
+        let data = [];
+        
+        if (contentType && contentType.includes('pdf')) {
+             try {
+                data = await parsePdfBuffer(buffer);
+            } catch (err) {
+                 throw new Error('Failed to parse PDF from URL: ' + err.message);
+            }
+        } else {
+            // Assume Excel
+            try {
+                const workbook = xlsx.read(buffer, { type: 'buffer' });
+                if (workbook.SheetNames.length === 0) throw new Error("Excel file is empty");
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                data = xlsx.utils.sheet_to_json(sheet);
+            } catch (err) {
+                 console.error("Excel Parse Error:", err);
+                 throw new Error(`Failed to parse Excel file. content-type: ${contentType}. Error: ${err.message}`);
+            }
         }
-    } else {
-        // Assume Excel
-        try {
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
-        } catch (err) {
-             throw new Error('Failed to parse Excel file from URL. Ensure the link is a direct download.');
+        
+        if (!data || data.length === 0) {
+            throw new Error("No data found in the imported file.");
         }
+
+        return await processCadetData(data);
+    } catch (err) {
+        if (axios.isAxiosError(err)) {
+            if (err.response && err.response.status === 403) {
+                 throw new Error(`Access Denied (403). The link might be private or require a login. Please make the link "Anyone with the link" or use a direct public link.`);
+            }
+            if (err.response && err.response.status === 404) {
+                 throw new Error(`File not found (404). Please check the link.`);
+            }
+             throw new Error(`Network Error: ${err.message}`);
+        }
+        throw err;
     }
-    
-    return await processCadetData(data);
 };
 
 router.post('/import-cadets-url', async (req, res) => {
