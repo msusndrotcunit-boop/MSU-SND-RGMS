@@ -26,16 +26,19 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        const cadetId = localStorage.getItem('cadetId');
-        if (token) {
-            setUser({ token, role, cadetId });
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            // Attempt to sync Firebase on load
-            syncFirebase();
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            const cadetId = localStorage.getItem('cadetId');
+            if (token) {
+                setUser({ token, role, cadetId });
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                // Attempt to sync Firebase on load
+                await syncFirebase();
+            }
+            setLoading(false);
+        };
+        initAuth();
     }, [syncFirebase]);
 
     const login = useCallback(async (userData) => {

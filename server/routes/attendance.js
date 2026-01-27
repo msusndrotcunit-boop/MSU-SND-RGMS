@@ -137,8 +137,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
 
 // Helper to update total attendance count in grades table
 function updateTotalAttendance(cadetId, res) {
-    // Count 'present' records
-    db.get(`SELECT COUNT(*) as count FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId], (err, row) => {
+    // Count 'present' and 'excused' records
+    db.get(`SELECT COUNT(*) as count FROM attendance_records WHERE cadet_id = ? AND status IN ('present', 'excused')`, [cadetId], (err, row) => {
         if (err) {
             console.error(`Error counting attendance for cadet ${cadetId}:`, err);
             return;

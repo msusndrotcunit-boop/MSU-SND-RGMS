@@ -51,13 +51,61 @@ router.put('/:id', authenticateToken, isAdmin, (req, res) => {
     db.run(`UPDATE excuse_letters SET status = ? WHERE id = ?`, [status, id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         
-        // If approved, optionally update attendance record to 'excused'
-        // We would need to find the attendance record for that date and cadet.
-        // This is complex because we need the training_day_id.
-        // For now, we just mark the letter as approved.
+        if (status === 'approved') {
+            // Find the letter details
+            db.get(`SELECT cadet_id, date_absent FROM excuse_letters WHERE id = ?`, [id], (err, letter) => {
+                if (err || !letter) return;
+
+                // Find the training day
+                db.get(`SELECT id FROM training_days WHERE date = ?`, [letter.date_absent], (err, day) => {
+                    if (err || !day) return; // No training day matches
+
+                    const newStatus = 'excused';
+                    const remarks = 'Approved Excuse Letter';
+
+                    // Check if attendance record exists
+                    db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [day.id, letter.cadet_id], (err, record) => {
+                        if (record) {
+                             db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', [newStatus, remarks, record.id], () => {
+                                 updateTotalAttendance(letter.cadet_id);
+                             });
+                        } else {
+                             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', [day.id, letter.cadet_id, newStatus, remarks], () => {
+                                 updateTotalAttendance(letter.cadet_id);
+                             });
+                        }
+                    });
+                });
+            });
+        }
         
         res.json({ message: `Excuse letter ${status}` });
     });
 });
+
+// Helper to update total attendance count in grades table (Duplicated from attendance.js)
+function updateTotalAttendance(cadetId) {
+    // Count 'present' and 'excused' records
+    db.get(`SELECT COUNT(*) as count FROM attendance_records WHERE cadet_id = ? AND status IN ('present', 'excused')`, [cadetId], (err, row) => {
+        if (err) {
+            console.error(`Error counting attendance for cadet ${cadetId}:`, err);
+            return;
+        }
+        
+        const count = row.count;
+        
+        // Update grades table
+        db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], function(err) {
+            if (err) console.error(`Error updating grades for cadet ${cadetId}:`, err);
+            
+            if (this.changes === 0) {
+                // Grade record might not exist, create it
+                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
+                    if (err) console.error(`Error creating grade record for cadet ${cadetId}:`, err);
+                });
+            }
+        });
+    });
+}
 
 module.exports = router;
