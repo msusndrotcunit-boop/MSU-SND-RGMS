@@ -281,63 +281,139 @@ const parsePdfBuffer = async (buffer) => {
 };
 
 const processUrlImport = async (url) => {
-    let currentUrl = getDirectDownloadUrl(url);
-    const fetchFile = async (targetUrl) => {
+    // Helper to resolve short links (like 1drv.ms)
+    const resolveShortLink = async (shortUrl) => {
+        try {
+            const resp = await axios.get(shortUrl, {
+                maxRedirects: 0,
+                validateStatus: status => status >= 300 && status < 400
+            });
+            if (resp.headers.location) return resp.headers.location;
+        } catch (e) {
+            // If it doesn't redirect, maybe it's 200 OK (already resolved?)
+        }
+        return shortUrl;
+    };
+
+    let currentUrl = url;
+    if (url.includes('1drv.ms')) {
+        currentUrl = await resolveShortLink(url);
+    }
+    
+    // Initial transformation
+    currentUrl = getDirectDownloadUrl(currentUrl);
+
+    const fetchFile = async (targetUrl, ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36') => {
+        const headers = {};
+        if (ua) headers['User-Agent'] = ua;
+        
         const response = await axios.get(targetUrl, { 
             responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            },
+            headers: headers,
             validateStatus: (status) => status < 400 || (status >= 300 && status < 400),
             maxRedirects: 0
         });
         return response;
     };
+
     try {
         let response;
         let buffer;
         let contentType;
-        let redirectCount = 0;
-        const maxRedirects = 10;
-        while (redirectCount < maxRedirects) {
-            response = await fetchFile(currentUrl);
-            if (response.status >= 300 && response.headers.location) {
-                redirectCount++;
-                let redirectUrl = response.headers.location;
-                if (redirectUrl.startsWith('/')) {
-                    const u = new URL(currentUrl);
-                    redirectUrl = `${u.protocol}//${u.host}${redirectUrl}`;
+        
+        // Strategy for OneDrive: Try multiple candidates if first attempt returns HTML
+        const candidates = [];
+        candidates.push({ url: currentUrl, ua: 'Mozilla/5.0' });
+
+        // If it's a OneDrive link, add more candidates
+        if (currentUrl.includes('onedrive.live.com') || currentUrl.includes('sharepoint.com')) {
+             try {
+                const u = new URL(currentUrl);
+                const pathParts = u.pathname.split('/');
+                let cid = null;
+                let authkey = null;
+                let resid = u.searchParams.get('resid');
+                
+                const personalIndex = pathParts.findIndex(p => p.toLowerCase() === 'personal');
+                if (personalIndex !== -1 && pathParts.length > personalIndex + 2) {
+                    cid = pathParts[personalIndex + 1];
+                    authkey = pathParts[personalIndex + 2];
                 }
-                if ((redirectUrl.includes('onedrive.live.com') || redirectUrl.includes('sharepoint.com')) && 
-                    !redirectUrl.includes('download=1')) {
-                    const u = new URL(redirectUrl);
-                    if (u.pathname.endsWith('.xlsx') || u.pathname.endsWith('.xls')) {
-                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 'download=1';
+                if (!cid && resid) cid = resid.split('!')[0];
+
+                if (resid && authkey) {
+                    // Embed
+                    candidates.push({ url: `https://onedrive.live.com/embed?cid=${cid}&resid=${resid}&authkey=${authkey}&em=2`, ua: 'Mozilla/5.0' });
+                    // Export
+                    candidates.push({ url: `https://onedrive.live.com/export?cid=${cid}&resid=${resid}&authkey=${authkey}&format=xlsx`, ua: 'Mozilla/5.0' });
+                    // Legacy Download
+                    candidates.push({ url: `https://onedrive.live.com/download?cid=${cid}&resid=${resid}&authkey=${authkey}`, ua: 'Mozilla/5.0' });
+                    // No UA
+                    candidates.push({ url: `https://onedrive.live.com/download?cid=${cid}&resid=${resid}&authkey=${authkey}`, ua: null });
+                }
+             } catch(e) {}
+        }
+
+        let success = false;
+        let lastError = null;
+
+        for (const candidate of candidates) {
+            const targetUrl = typeof candidate === 'string' ? candidate : candidate.url;
+            const ua = typeof candidate === 'object' ? candidate.ua : 'Mozilla/5.0'; // Default UA
+
+            try {
+                // Handle Redirects for this candidate
+                let loopUrl = targetUrl;
+                let redirectCount = 0;
+                const maxRedirects = 5;
+                
+                while (redirectCount < maxRedirects) {
+                    response = await fetchFile(loopUrl, ua);
+                    
+                    if (response.status >= 300 && response.headers.location) {
+                        redirectCount++;
+                        let redirectUrl = response.headers.location;
+                        if (redirectUrl.startsWith('/')) {
+                            const u = new URL(loopUrl);
+                            redirectUrl = `${u.protocol}//${u.host}${redirectUrl}`;
+                        }
+                        // Transform redirect if needed
+                        if ((redirectUrl.includes('onedrive.live.com') || redirectUrl.includes('sharepoint.com')) && !redirectUrl.includes('download=1') && !redirectUrl.includes('export=') && !redirectUrl.includes('embed?')) {
+                             const u = new URL(redirectUrl);
+                             if (u.pathname.endsWith('.xlsx') || u.pathname.endsWith('.xls')) {
+                                 redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 'download=1';
+                             }
+                        }
+                        loopUrl = redirectUrl;
+                        continue;
                     }
+                    
+                    // Check Content
+                    buffer = Buffer.from(response.data);
+                    contentType = response.headers['content-type'];
+                    const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
+                    
+                    if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html') || firstBytes.startsWith('<!--')) {
+                         // HTML detected
+                         throw new Error('Returned HTML');
+                    }
+                    
+                    // Success!
+                    success = true;
+                    break;
                 }
-                const convertedUrl = getDirectDownloadUrl(redirectUrl);
-                if (convertedUrl !== redirectUrl) {
-                    redirectUrl = convertedUrl;
-                }
-                currentUrl = redirectUrl;
-                continue;
+                if (success) break;
+            } catch (e) {
+                lastError = e;
+                continue; // Try next candidate
             }
-            buffer = Buffer.from(response.data);
-            contentType = response.headers['content-type'];
-            const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
-            if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html') || (contentType && contentType.includes('html'))) {
-                if ((currentUrl.includes('onedrive') || currentUrl.includes('sharepoint')) && !currentUrl.includes('download=1')) {
-                    currentUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'download=1';
-                    redirectCount++;
-                    continue;
-                }
-                throw new Error(`The link returned a webpage (HTML) instead of a file. Content-Type: ${contentType}. URL: ${currentUrl}`);
-            }
-            break;
         }
-        if (redirectCount >= maxRedirects) {
-            throw new Error('Too many redirects.');
+
+        if (!success) {
+            if (lastError) throw lastError;
+            throw new Error('All download attempts failed or returned HTML.');
         }
+
         let data = [];
         if (contentType && contentType.includes('pdf')) {
             try {
