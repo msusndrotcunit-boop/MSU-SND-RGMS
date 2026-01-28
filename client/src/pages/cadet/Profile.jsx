@@ -187,7 +187,7 @@ const Profile = () => {
     if (loading) return <div className="text-center p-10 dark:text-white">Loading...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-10">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">My Profile</h1>
                 <button 
@@ -197,6 +197,29 @@ const Profile = () => {
                     {darkMode ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-gray-600" size={20} />}
                     <span className="text-sm font-medium dark:text-white">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
                 </button>
+            </div>
+
+            {/* About the App Section */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-lg border border-indigo-100 dark:border-indigo-800 mb-8">
+                <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-300 mb-2">About the App</h2>
+                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                    The ROTC Grading Management System is the official platform for the MSU-SND ROTC Unit. 
+                    This system streamlines the management of cadet records, attendance tracking, grading, and merit/demerit points.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-200">Version:</span> 
+                        <span className="text-gray-600 dark:text-gray-400 ml-2">2.3.18</span>
+                    </div>
+                    <div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-200">Developer:</span> 
+                        <span className="text-gray-600 dark:text-gray-400 ml-2">MSU-SND ROTC Unit</span>
+                    </div>
+                    <div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-200">Contact:</span> 
+                        <span className="text-gray-600 dark:text-gray-400 ml-2">msusndrotcunit@gmail.com</span>
+                    </div>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">

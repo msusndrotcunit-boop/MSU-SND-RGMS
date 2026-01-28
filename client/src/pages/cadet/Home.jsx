@@ -90,7 +90,7 @@ const CadetHome = () => {
                                         onClick={() => setSelectedActivity(activity)}
                                     >
                                         {activity.image_path && (
-                                            <div className="w-full bg-gray-100 flex justify-center items-center">
+                                            <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
                                                 <img
                                                     src={
                                                         activity.image_path.startsWith('data:')
@@ -98,7 +98,7 @@ const CadetHome = () => {
                                                             : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`
                                                     }
                                                     alt={activity.title}
-                                                    className="w-full h-auto max-h-[500px] object-contain"
+                                                    className="w-full h-full object-cover"
                                                 />
                                             </div>
                                         )}

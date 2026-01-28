@@ -323,13 +323,6 @@ const Cadets = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">Cadet Management</h2>
                 <div className="flex space-x-2 w-full md:w-auto">
-                    <button 
-                        onClick={() => setShowAnalytics(!showAnalytics)}
-                        className={`flex-1 md:flex-none ${showAnalytics ? 'bg-indigo-600' : 'bg-gray-600'} text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-indigo-700 transition`}
-                    >
-                        {showAnalytics ? <PieChartIcon size={18} /> : <BarChart3 size={18} />}
-                        <span>{showAnalytics ? 'Hide Analytics' : 'Show Analytics'}</span>
-                    </button>
                     {linkedUrl && (
                         <button 
                             onClick={handleSync}
@@ -373,77 +366,6 @@ const Cadets = () => {
                     )}
                 </div>
             </div>
-
-            {/* Analytics Section */}
-            {showAnalytics && (
-                <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
-                    {/* Total Count Card */}
-                    <div className="bg-white p-6 rounded shadow flex flex-col items-center justify-center border-l-4 border-blue-600">
-                        <h3 className="text-gray-500 font-medium mb-2">Total Cadets</h3>
-                        <span className="text-5xl font-bold text-blue-700">{cadets.length}</span>
-                    </div>
-
-                    {/* Company Distribution */}
-                    <div className="bg-white p-4 rounded shadow md:col-span-2">
-                        <h3 className="font-bold text-gray-700 mb-4 ml-4">Distribution by Company</h3>
-                        <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={companyData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="count" fill="#3b82f6" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Rank Distribution */}
-                    <div className="bg-white p-4 rounded shadow md:col-span-2">
-                        <h3 className="font-bold text-gray-700 mb-4 ml-4">Distribution by Rank</h3>
-                        <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={rankData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="count" fill="#10b981" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Status Distribution */}
-                    <div className="bg-white p-4 rounded shadow">
-                        <h3 className="font-bold text-gray-700 mb-4 text-center">Cadet Status</h3>
-                        <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        label
-                                    >
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
                 <table className="w-full text-left border-collapse">
