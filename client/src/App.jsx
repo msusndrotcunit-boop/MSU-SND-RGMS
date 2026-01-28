@@ -23,6 +23,12 @@ const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
 
+// Staff Pages
+const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
+const StaffHome = lazy(() => import('./pages/staff/Home'));
+const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
+const StaffProfile = lazy(() => import('./pages/staff/Profile'));
+
 // Loading Fallback
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
