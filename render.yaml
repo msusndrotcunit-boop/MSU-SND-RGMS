@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: rotc-grading-system
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0

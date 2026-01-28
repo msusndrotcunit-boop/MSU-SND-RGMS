@@ -390,9 +390,9 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
 });
 
 const processUrlImport = async (url) => {
-    const downloadUrl = getDirectDownloadUrl(url);
+    let currentUrl = getDirectDownloadUrl(url);
     console.log(`Original URL: ${url}`);
-    console.log(`Downloading from: ${downloadUrl}`);
+    console.log(`Initial Download URL: ${currentUrl}`);
     
     // Helper to fetch and validate
     const fetchFile = async (targetUrl) => {
@@ -401,57 +401,88 @@ const processUrlImport = async (url) => {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             },
-            validateStatus: (status) => status < 400,
-            maxRedirects: 5
+            validateStatus: (status) => status < 400 || (status >= 300 && status < 400),
+            maxRedirects: 0 // We handle redirects manually
         });
         return response;
     };
 
     try {
-        let response = await fetchFile(downloadUrl);
-        let buffer = Buffer.from(response.data);
-        let contentType = response.headers['content-type'];
-        
-        console.log(`Response Content-Type: ${contentType}`);
-        console.log(`Response Size: ${buffer.length} bytes`);
+        let response;
+        let buffer;
+        let contentType;
+        let redirectCount = 0;
+        const maxRedirects = 10;
 
-        // Check for HTML content (redirects or error pages often return HTML)
-        const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
-        if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html')) {
-            console.error("Received HTML instead of file. Checking for redirect...");
+        while (redirectCount < maxRedirects) {
+            console.log(`Fetching: ${currentUrl}`);
+            response = await fetchFile(currentUrl);
             
-            // Try to find the effective URL if it redirected to a viewer
-            const effectiveUrl = response.request.res.responseUrl;
-            if (effectiveUrl && effectiveUrl !== downloadUrl) {
-                console.log(`Redirected to: ${effectiveUrl}`);
-                const newDownloadUrl = getDirectDownloadUrl(effectiveUrl);
+            // Handle Redirects
+            if (response.status >= 300 && response.status < 400 && response.headers.location) {
+                redirectCount++;
+                let redirectUrl = response.headers.location;
                 
-                if (newDownloadUrl !== effectiveUrl && newDownloadUrl !== downloadUrl) {
-                    console.log(`Attempting retry with converted effective URL: ${newDownloadUrl}`);
-                    response = await fetchFile(newDownloadUrl);
-                    buffer = Buffer.from(response.data);
-                    contentType = response.headers['content-type'];
-                    
-                    // Re-check HTML
-                    const retryBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
-                    if (retryBytes.includes('<!doctype html') || retryBytes.includes('<html')) {
-                         throw new Error(`The link redirected to a webpage (${effectiveUrl}) and we couldn't automatically convert it to a direct download. Please ensure the link is a DIRECT download link.`);
-                    }
-                } else {
-                     // Try one last heuristic: if it's OneDrve/SharePoint and has no download param, force it
-                     if ((effectiveUrl.includes('onedrive') || effectiveUrl.includes('sharepoint')) && !effectiveUrl.includes('download=1')) {
-                         const forcedUrl = effectiveUrl + (effectiveUrl.includes('?') ? '&' : '?') + 'download=1';
-                         console.log(`Attempting retry with forced download param: ${forcedUrl}`);
-                         response = await fetchFile(forcedUrl);
-                         buffer = Buffer.from(response.data);
-                         contentType = response.headers['content-type'];
-                     } else {
-                        throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
-                     }
+                // Handle relative URLs
+                if (redirectUrl.startsWith('/')) {
+                    const u = new URL(currentUrl);
+                    redirectUrl = `${u.protocol}//${u.host}${redirectUrl}`;
                 }
-            } else {
-                 throw new Error(`The link returned a webpage (HTML) instead of a file. Please ensure the link is a DIRECT download link (e.g. ends in .xlsx or has download=1). Content-Type: ${contentType}`);
+
+                console.log(`Redirecting to: ${redirectUrl}`);
+
+                // --- KEY FIX: Check if we need to append download=1 to the redirect URL ---
+                // If the redirect URL is a OneDrive/SharePoint URL and looks like a file path but lacks download=1
+                // We assume it's redirecting to a viewer, so we force download=1.
+                if ((redirectUrl.includes('onedrive.live.com') || redirectUrl.includes('sharepoint.com')) && 
+                    !redirectUrl.includes('download=1')) {
+                    
+                    // Logic to detect if it's a file path (ends in .xlsx or similar)
+                    const u = new URL(redirectUrl);
+                    if (u.pathname.endsWith('.xlsx') || u.pathname.endsWith('.xls')) {
+                        console.log("Redirect URL ends in .xlsx but missing download=1. Appending it.");
+                        redirectUrl += (redirectUrl.includes('?') ? '&' : '?') + 'download=1';
+                    }
+                }
+                
+                // Apply standard conversion logic (e.g. converting /redir or /view.aspx if they appear in redirect)
+                const convertedUrl = getDirectDownloadUrl(redirectUrl);
+                if (convertedUrl !== redirectUrl) {
+                    console.log(`Converted redirect URL to: ${convertedUrl}`);
+                    redirectUrl = convertedUrl;
+                }
+
+                currentUrl = redirectUrl;
+                continue; // Loop again with new URL
             }
+
+            // Success (200 OK)
+            buffer = Buffer.from(response.data);
+            contentType = response.headers['content-type'];
+            console.log(`Response Content-Type: ${contentType}`);
+            console.log(`Response Size: ${buffer.length} bytes`);
+
+            // Check if we got HTML (Viewer)
+            const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
+            if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html') || (contentType && contentType.includes('html'))) {
+                console.warn("Received HTML content. Checking heuristics...");
+                
+                // If we are at a OneDrive URL and got HTML, try appending download=1 if we haven't yet
+                if ((currentUrl.includes('onedrive') || currentUrl.includes('sharepoint')) && !currentUrl.includes('download=1')) {
+                     console.log("Got HTML from OneDrive. Trying to force download=1...");
+                     currentUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'download=1';
+                     redirectCount++;
+                     continue;
+                }
+
+                throw new Error(`The link returned a webpage (HTML) instead of a file. Content-Type: ${contentType}. URL: ${currentUrl}`);
+            }
+
+            break; // Got file!
+        }
+
+        if (redirectCount >= maxRedirects) {
+            throw new Error("Too many redirects.");
         }
         
         let data = [];
@@ -467,9 +498,13 @@ const processUrlImport = async (url) => {
             try {
                 const workbook = xlsx.read(buffer, { type: 'buffer' });
                 if (workbook.SheetNames.length === 0) throw new Error("Excel file is empty");
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                data = xlsx.utils.sheet_to_json(sheet);
+                
+                // Read all sheets
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const sheetData = xlsx.utils.sheet_to_json(sheet);
+                    data = data.concat(sheetData);
+                });
             } catch (err) {
                  console.error("Excel Parse Error:", err);
                  throw new Error(`Failed to parse Excel file. content-type: ${contentType}. Error: ${err.message}`);

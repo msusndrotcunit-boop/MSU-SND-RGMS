@@ -15,6 +15,7 @@ const Attendance = () => {
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
+    const [importUrl, setImportUrl] = useState('');
     const [importing, setImporting] = useState(false);
 
     // Filters for marking
@@ -76,17 +77,27 @@ const Attendance = () => {
 
     const handleImport = async (e) => {
         e.preventDefault();
-        if (!importFile || !selectedDay) return;
+        if ((!importFile && !importUrl) || !selectedDay) return;
 
         setImporting(true);
-        const formData = new FormData();
-        formData.append('file', importFile);
-        formData.append('dayId', selectedDay.id);
 
         try {
-            const res = await axios.post('/api/attendance/import', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            let res;
+            if (importFile) {
+                const formData = new FormData();
+                formData.append('file', importFile);
+                formData.append('dayId', selectedDay.id);
+
+                res = await axios.post('/api/attendance/import', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                res = await axios.post('/api/attendance/import-url', {
+                    url: importUrl,
+                    dayId: selectedDay.id
+                });
+            }
+
             alert(res.data.message);
             if (res.data.errors && res.data.errors.length > 0) {
                 alert('Errors:\n' + res.data.errors.join('\n'));
@@ -94,6 +105,7 @@ const Attendance = () => {
             selectDay(selectedDay); // Refresh records
             setIsImportModalOpen(false);
             setImportFile(null);
+            setImportUrl('');
         } catch (err) {
             console.error(err);
             alert('Import failed: ' + (err.response?.data?.message || err.message));

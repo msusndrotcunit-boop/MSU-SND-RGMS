@@ -1,0 +1,5 @@
+[33m2a325a3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: update activities UI and version to 2.3.18
+[33mcaf72c8[m fix: OneDrive import, Lightshot attendance import, Excuse Letter uploads, and version bump to 2.3.17
+[33m6acd13c[m fix: enhanced onedrive/sharepoint link conversion
+[33m16ffabc[m fix: improve url import robust handling for onedrive/google/dropbox
+[33m3ac870e[m feat: add sync button for cadet import url

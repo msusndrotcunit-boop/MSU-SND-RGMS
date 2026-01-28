@@ -23,7 +23,7 @@ const AdminProfile = () => {
             setProfile(response.data);
         } catch (error) {
             console.error('Error fetching profile:', error);
-            setError('Failed to load profile.');
+            setError(error.response?.data?.message || 'Failed to load profile.');
         } finally {
             setLoading(false);
         }
