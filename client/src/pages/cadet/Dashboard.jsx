@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, X, AlertCircle } from 'lucide-react';
 import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
+import { cacheData, getCachedData } from '../../utils/db';
 
 const CadetDashboard = () => {
     const [grades, setGrades] = useState(null);
@@ -15,37 +16,45 @@ const CadetDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch Grades (Critical)
+                try {
+                    const cachedGrades = await getCachedData('grades');
+                    if (cachedGrades && cachedGrades.length > 0) setGrades(cachedGrades[0]);
+                } catch {}
                 try {
                     const gradesRes = await axios.get('/api/cadet/my-grades');
                     setGrades(gradesRes.data);
-                } catch (err) {
-                    console.error("Error fetching grades:", err);
-                }
+                    await cacheData('grades', [gradesRes.data]);
+                } catch {}
 
-                // Fetch Activities (Non-critical)
+                try {
+                    const cachedActivities = await getCachedData('activities');
+                    if (cachedActivities && cachedActivities.length > 0) setActivities(cachedActivities);
+                } catch {}
                 try {
                     const activitiesRes = await axios.get('/api/cadet/activities');
                     setActivities(activitiesRes.data);
-                } catch (err) {
-                    console.error("Error fetching activities:", err);
-                }
+                    await cacheData('activities', activitiesRes.data);
+                } catch {}
 
-                // Fetch Merit Logs (Non-critical)
+                try {
+                    const cachedLogs = await getCachedData('merit_demerit_logs');
+                    if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
+                } catch {}
                 try {
                     const logsRes = await axios.get('/api/cadet/my-merit-logs');
                     setLogs(logsRes.data);
-                } catch (err) {
-                    console.error("Error fetching merit logs:", err);
-                }
+                    await cacheData('merit_demerit_logs', logsRes.data);
+                } catch {}
 
-                // Fetch Attendance History (Non-critical)
+                try {
+                    const cachedAttendance = await getCachedData('attendance_records');
+                    if (cachedAttendance && cachedAttendance.length > 0) setAttendanceLogs(cachedAttendance);
+                } catch {}
                 try {
                     const attendanceRes = await axios.get('/api/attendance/my-history');
                     setAttendanceLogs(attendanceRes.data);
-                } catch (err) {
-                    console.error("Error fetching attendance history:", err);
-                }
+                    await cacheData('attendance_records', attendanceRes.data);
+                } catch {}
 
             } catch (err) {
                 console.error("General fetch error:", err);

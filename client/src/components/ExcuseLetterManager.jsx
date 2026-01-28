@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, XCircle, ExternalLink, Filter } from 'lucide-react';
+import { cacheData, getCachedData } from '../utils/db';
 
 const ExcuseLetterManager = () => {
     const [letters, setLetters] = useState([]);
@@ -13,8 +14,13 @@ const ExcuseLetterManager = () => {
 
     const fetchLetters = async () => {
         try {
+            try {
+                const cached = await getCachedData('excuse_letters');
+                if (cached?.length) setLetters(cached);
+            } catch {}
             const res = await axios.get('/api/excuse');
             setLetters(res.data);
+            await cacheData('excuse_letters', res.data);
         } catch (err) {
             console.error(err);
         } finally {

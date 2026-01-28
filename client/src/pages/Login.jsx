@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { User, ShieldCheck } from 'lucide-react';
+import { User, ShieldCheck, Briefcase } from 'lucide-react';
 
 const Login = () => {
-    const [isCadetLogin, setIsCadetLogin] = useState(true);
-    const [formData, setFormData] = useState({ username: '', password: '', identifier: '' });
+    const [loginType, setLoginType] = useState('cadet'); // 'cadet', 'staff', 'admin'
+    const [formData, setFormData] = useState({ username: '', password: '', identifier: '', email: '' });
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -20,8 +20,10 @@ const Login = () => {
         setError('');
         try {
             let response;
-            if (isCadetLogin) {
+            if (loginType === 'cadet') {
                 response = await axios.post('/api/auth/cadet-login', { identifier: formData.identifier });
+            } else if (loginType === 'staff') {
+                response = await axios.post('/api/auth/staff-login-no-pass', { identifier: formData.email });
             } else {
                 response = await axios.post('/api/auth/login', { username: formData.username, password: formData.password });
             }
@@ -29,6 +31,8 @@ const Login = () => {
             login(response.data);
             if (response.data.role === 'admin') {
                 navigate('/admin/dashboard');
+            } else if (response.data.role === 'training_staff') {
+                navigate('/staff/dashboard');
             } else {
                 navigate('/cadet/dashboard');
             }
@@ -65,25 +69,32 @@ const Login = () => {
                 {/* Login Type Toggle */}
                 <div className="flex mb-6 bg-gray-200 rounded p-1">
                     <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${isCadetLogin ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => setIsCadetLogin(true)}
+                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
+                        onClick={() => setLoginType('cadet')}
                     >
                         <User size={18} className="mr-2" />
-                        Cadet Login
+                        Cadet
                     </button>
                     <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${!isCadetLogin ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => setIsCadetLogin(false)}
+                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
+                        onClick={() => setLoginType('staff')}
+                    >
+                        <Briefcase size={18} className="mr-2" />
+                        Staff
+                    </button>
+                    <button
+                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'admin' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
+                        onClick={() => setLoginType('admin')}
                     >
                         <ShieldCheck size={18} className="mr-2" />
-                        Admin Login
+                        Admin
                     </button>
                 </div>
 
                 {error && <p className="text-red-500 mb-4 text-center text-sm font-semibold bg-red-50 p-2 rounded border border-red-200">{error}</p>}
                 
                 <form onSubmit={handleSubmit}>
-                    {isCadetLogin ? (
+                    {loginType === 'cadet' && (
                         <div className="mb-6">
                             <label className="block text-gray-700 font-semibold mb-2">Username or Email Address</label>
                             <input
@@ -98,7 +109,26 @@ const Login = () => {
                                 Note: You must be included in the official ROTCMIS list to login. No password required.
                             </p>
                         </div>
-                    ) : (
+                    )}
+
+                    {loginType === 'staff' && (
+                        <div className="mb-6">
+                            <label className="block text-gray-700 font-semibold mb-2">Email Address</label>
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Enter your Email"
+                                className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
+                                onChange={handleChange}
+                                required
+                            />
+                            <p className="text-xs text-gray-500 mt-2 italic">
+                                Note: Training Staff login. No password required.
+                            </p>
+                        </div>
+                    )}
+
+                    {loginType === 'admin' && (
                         <>
                             <div className="mb-4">
                                 <label className="block text-gray-700 font-semibold">Username</label>
@@ -127,7 +157,7 @@ const Login = () => {
                         type="submit"
                         className="w-full bg-green-800 text-white py-3 rounded font-bold uppercase tracking-wider hover:bg-green-900 transition shadow-lg mt-2"
                     >
-                        {isCadetLogin ? 'Access Portal' : 'Login as Admin'}
+                        {loginType === 'admin' ? 'Login as Admin' : 'Access Portal'}
                     </button>
                 </form>
             </div>

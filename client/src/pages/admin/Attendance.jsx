@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
+import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
+    const [attendanceType, setAttendanceType] = useState('cadet'); // 'cadet' | 'staff'
     const [days, setDays] = useState([]);
     const [selectedDay, setSelectedDay] = useState(null);
     const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -27,10 +29,24 @@ const Attendance = () => {
         fetchDays();
     }, []);
 
+    useEffect(() => {
+        if (selectedDay) {
+            selectDay(selectedDay);
+        }
+    }, [attendanceType]);
+
     const fetchDays = async () => {
         try {
+            try {
+                const cached = await getCachedData('training_days');
+                if (cached?.length) {
+                    setDays(cached);
+                    setLoading(false);
+                }
+            } catch {}
             const res = await axios.get('/api/attendance/days');
             setDays(res.data);
+            await cacheData('training_days', res.data);
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -66,8 +82,19 @@ const Attendance = () => {
         setSelectedDay(day);
         setLoading(true);
         try {
-            const res = await axios.get(`/api/attendance/records/${day.id}`);
+            const cacheKey = `${day.id}_${attendanceType}`;
+            try {
+                const cached = await getSingleton('attendance_by_day', cacheKey);
+                if (cached?.length) setAttendanceRecords(cached);
+            } catch {}
+            
+            const endpoint = attendanceType === 'cadet' 
+                ? `/api/attendance/records/${day.id}`
+                : `/api/attendance/records/staff/${day.id}`;
+
+            const res = await axios.get(endpoint);
             setAttendanceRecords(res.data);
+            await cacheSingleton('attendance_by_day', cacheKey, res.data);
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -114,41 +141,58 @@ const Attendance = () => {
         }
     };
 
-    const handleMarkAttendance = async (cadetId, status) => {
+    const handleMarkAttendance = async (id, status) => {
         // Optimistic update
         const updatedRecords = attendanceRecords.map(r => 
-            r.cadet_id === cadetId ? { ...r, status: status } : r
+            (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, status: status } : r
         );
         setAttendanceRecords(updatedRecords);
 
         try {
-            await axios.post('/api/attendance/mark', {
-                dayId: selectedDay.id,
-                cadetId,
-                status,
-                remarks: ''
-            });
+            if (attendanceType === 'cadet') {
+                await axios.post('/api/attendance/mark', {
+                    dayId: selectedDay.id,
+                    cadetId: id,
+                    status,
+                    remarks: ''
+                });
+            } else {
+                await axios.post('/api/attendance/mark/staff', {
+                    dayId: selectedDay.id,
+                    staffId: id,
+                    status,
+                    remarks: ''
+                });
+            }
         } catch (err) {
             console.error('Failed to save attendance', err);
-            // Revert on failure would be better, but keeping it simple
         }
     };
 
-    const handleRemarkChange = async (cadetId, remarks) => {
+    const handleRemarkChange = async (id, remarks) => {
         const updatedRecords = attendanceRecords.map(r => 
-            r.cadet_id === cadetId ? { ...r, remarks: remarks } : r
+            (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, remarks: remarks } : r
         );
         setAttendanceRecords(updatedRecords);
     };
     
-    const saveRemark = async (cadetId, remarks, status) => {
+    const saveRemark = async (id, remarks, status) => {
          try {
-            await axios.post('/api/attendance/mark', {
-                dayId: selectedDay.id,
-                cadetId,
-                status: status || 'present', // Default to present if null
-                remarks
-            });
+            if (attendanceType === 'cadet') {
+                await axios.post('/api/attendance/mark', {
+                    dayId: selectedDay.id,
+                    cadetId: id,
+                    status: status || 'present', 
+                    remarks
+                });
+            } else {
+                await axios.post('/api/attendance/mark/staff', {
+                    dayId: selectedDay.id,
+                    staffId: id,
+                    status: status || 'present',
+                    remarks
+                });
+            }
         } catch (err) {
             console.error('Failed to save remark', err);
         }
@@ -156,11 +200,18 @@ const Attendance = () => {
 
     // Filter logic
     const filteredRecords = attendanceRecords.filter(record => {
-        const matchesCompany = filterCompany ? record.company === filterCompany : true;
-        const matchesPlatoon = filterPlatoon ? record.platoon === filterPlatoon : true;
-        const matchesSearch = searchTerm ? 
-            `${record.last_name} ${record.first_name}`.toLowerCase().includes(searchTerm.toLowerCase()) : true;
-        return matchesCompany && matchesPlatoon && matchesSearch;
+        if (attendanceType === 'cadet') {
+            const matchesCompany = filterCompany ? record.company === filterCompany : true;
+            const matchesPlatoon = filterPlatoon ? record.platoon === filterPlatoon : true;
+            const matchesSearch = searchTerm ? 
+                `${record.last_name} ${record.first_name}`.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+            return matchesCompany && matchesPlatoon && matchesSearch;
+        } else {
+            // Staff Filter
+            const matchesSearch = searchTerm ? 
+                `${record.last_name} ${record.first_name}`.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+            return matchesSearch;
+        }
     });
 
     // Stats
@@ -269,79 +320,119 @@ const Attendance = () => {
                             
                             {/* Filters */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div className="md:col-span-3 flex justify-center mb-2">
+                                    <div className="bg-gray-200 rounded p-1 flex">
+                                        <button
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            onClick={() => setAttendanceType('cadet')}
+                                        >
+                                            Cadets
+                                        </button>
+                                        <button
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            onClick={() => setAttendanceType('staff')}
+                                        >
+                                            Training Staff
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <input 
                                     placeholder="Search Name..." 
                                     className="border p-2 rounded"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
-                                <input 
-                                    placeholder="Filter Company" 
-                                    className="border p-2 rounded"
-                                    value={filterCompany}
-                                    onChange={e => setFilterCompany(e.target.value)}
-                                />
-                                <input 
-                                    placeholder="Filter Platoon" 
-                                    className="border p-2 rounded"
-                                    value={filterPlatoon}
-                                    onChange={e => setFilterPlatoon(e.target.value)}
-                                />
+                                {attendanceType === 'cadet' && (
+                                    <>
+                                        <input 
+                                            placeholder="Filter Company" 
+                                            className="border p-2 rounded"
+                                            value={filterCompany}
+                                            onChange={e => setFilterCompany(e.target.value)}
+                                        />
+                                        <input 
+                                            placeholder="Filter Platoon" 
+                                            className="border p-2 rounded"
+                                            value={filterPlatoon}
+                                            onChange={e => setFilterPlatoon(e.target.value)}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-x-auto">
+                        <div className="flex-1 overflow-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-100 sticky top-0 z-10">
                                     <tr>
-                                        <th className="p-3 border-b">Cadet</th>
+                                        <th className="p-3 border-b">{attendanceType === 'cadet' ? 'Cadet' : 'Staff Member'}</th>
                                         <th className="p-3 border-b text-center">Status</th>
                                         <th className="p-3 border-b">Remarks</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredRecords.map(record => (
-                                        <tr key={record.cadet_id} className="border-b hover:bg-gray-50">
+                                    {filteredRecords.map(record => {
+                                        const id = attendanceType === 'cadet' ? record.cadet_id : record.staff_id;
+                                        return (
+                                        <tr key={id} className="border-b hover:bg-gray-50">
                                             <td className="p-3">
                                                 <div className="font-medium">{record.last_name}, {record.first_name}</div>
                                                 <div className="text-xs text-gray-500">
-                                                    {record.rank} | {record.company || '-'}/{record.platoon || '-'}
+                                                    {record.rank} | {attendanceType === 'cadet' ? `${record.company || '-'}/${record.platoon || '-'}` : (record.role || 'Instructor')}
                                                 </div>
                                             </td>
                                             <td className="p-3">
                                                 <div className="flex justify-center space-x-1">
-                                                    {[
-                                                        { val: 'present', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
-                                                        { val: 'absent', icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
-                                                        { val: 'late', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
-                                                        { val: 'excused', icon: AlertTriangle, color: 'text-blue-600', bg: 'bg-blue-100' }
-                                                    ].map(opt => (
-                                                        <button
-                                                            key={opt.val}
-                                                            onClick={() => handleMarkAttendance(record.cadet_id, opt.val)}
-                                                            className={`p-2 rounded-full transition ${
-                                                                record.status === opt.val ? `${opt.bg} ${opt.color} ring-2 ring-offset-1 ring-${opt.color.split('-')[1]}-400` : 'text-gray-300 hover:bg-gray-100'
-                                                            }`}
-                                                            title={opt.val.charAt(0).toUpperCase() + opt.val.slice(1)}
-                                                        >
-                                                            <opt.icon size={20} />
-                                                        </button>
-                                                    ))}
+                                                    <button 
+                                                        onClick={() => handleMarkAttendance(id, 'present')}
+                                                        className={`p-1 rounded ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'text-gray-300 hover:text-green-500'}`}
+                                                        title="Present"
+                                                    >
+                                                        <CheckCircle size={20} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleMarkAttendance(id, 'absent')}
+                                                        className={`p-1 rounded ${record.status === 'absent' ? 'bg-red-100 text-red-700' : 'text-gray-300 hover:text-red-500'}`}
+                                                        title="Absent"
+                                                    >
+                                                        <XCircle size={20} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleMarkAttendance(id, 'late')}
+                                                        className={`p-1 rounded ${record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-300 hover:text-yellow-500'}`}
+                                                        title="Late"
+                                                    >
+                                                        <Clock size={20} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleMarkAttendance(id, 'excused')}
+                                                        className={`p-1 rounded ${record.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:text-blue-500'}`}
+                                                        title="Excused"
+                                                    >
+                                                        <AlertTriangle size={20} />
+                                                    </button>
                                                 </div>
                                             </td>
                                             <td className="p-3">
-                                                <div className="relative">
+                                                <div className="flex items-center">
                                                     <input 
-                                                        className="border-b border-gray-300 focus:border-blue-500 outline-none w-full py-1 text-sm bg-transparent"
+                                                        className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
                                                         placeholder="Add remark..."
                                                         value={record.remarks || ''}
-                                                        onChange={e => handleRemarkChange(record.cadet_id, e.target.value)}
-                                                        onBlur={() => saveRemark(record.cadet_id, record.remarks, record.status)}
+                                                        onChange={(e) => handleRemarkChange(id, e.target.value)}
+                                                        onBlur={(e) => saveRemark(id, e.target.value, record.status)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                saveRemark(id, e.target.value, record.status);
+                                                                e.target.blur();
+                                                            }
+                                                        }}
                                                     />
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )})}
                                 </tbody>
                             </table>
                         </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { cacheData, getCachedData } from '../../utils/db';
 
 const CadetHome = () => {
     const [activities, setActivities] = useState([]);
@@ -11,8 +12,13 @@ const CadetHome = () => {
     useEffect(() => {
         const fetchActivities = async () => {
             try {
+                try {
+                    const cached = await getCachedData('activities');
+                    if (cached?.length) setActivities(cached);
+                } catch {}
                 const res = await axios.get('/api/cadet/activities');
                 setActivities(res.data || []);
+                await cacheData('activities', res.data || []);
             } catch (err) {
                 console.error('Error fetching activities:', err);
             } finally {
@@ -84,7 +90,7 @@ const CadetHome = () => {
                                         onClick={() => setSelectedActivity(activity)}
                                     >
                                         {activity.image_path && (
-                                            <div className="w-full bg-gray-100 flex justify-center items-center">
+                                            <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
                                                 <img
                                                     src={
                                                         activity.image_path.startsWith('data:')
@@ -92,7 +98,7 @@ const CadetHome = () => {
                                                             : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`
                                                     }
                                                     alt={activity.title}
-                                                    className="w-full h-auto max-h-[500px] object-contain"
+                                                    className="w-full h-full object-cover"
                                                 />
                                             </div>
                                         )}

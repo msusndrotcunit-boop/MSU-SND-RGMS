@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
 const COLORS = {
   Passed: '#22c55e', // Green
@@ -8,35 +9,70 @@ const COLORS = {
   Incomplete: '#f59e0b' // Amber
 };
 
+const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
 const Dashboard = () => {
     const [stats, setStats] = useState({ totalCadets: 0, totalActivities: 0 });
     const [analytics, setAnalytics] = useState({ attendance: [], grades: [] });
+    const [cadets, setCadets] = useState([]);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [cadetsRes, activitiesRes, analyticsRes] = await Promise.all([
+                try {
+                    const cachedCadets = await getCachedData('cadets');
+                    const cachedActivities = await getCachedData('activities');
+                    const cachedAnalytics = await getSingleton('analytics', 'dashboard');
+                    if (cachedCadets?.length) {
+                        setStats(s => ({ ...s, totalCadets: cachedCadets.length }));
+                        setCadets(cachedCadets);
+                    }
+                    if (cachedActivities?.length) {
+                        setStats(s => ({ ...s, totalActivities: cachedActivities.length }));
+                    }
+                    if (cachedAnalytics) {
+                        const gradeDataCached = [
+                            { name: 'Passed', value: cachedAnalytics.grades.passed },
+                            { name: 'Failed', value: cachedAnalytics.grades.failed },
+                            { name: 'Incomplete', value: cachedAnalytics.grades.incomplete }
+                        ].filter(item => item.value > 0);
+                        setAnalytics({
+                            attendance: cachedAnalytics.attendance || [],
+                            grades: gradeDataCached
+                        });
+                    }
+                } catch {}
+                
+                const [cadetsRes, activitiesRes, analyticsRes] = await Promise.allSettled([
                     axios.get('/api/admin/cadets'),
                     axios.get('/api/cadet/activities'),
                     axios.get('/api/admin/analytics')
                 ]);
 
-                setStats({
-                    totalCadets: cadetsRes.data.length,
-                    totalActivities: activitiesRes.data.length
-                });
+                if (cadetsRes.status === 'fulfilled') {
+                    setStats(s => ({ ...s, totalCadets: cadetsRes.value.data.length }));
+                    setCadets(cadetsRes.value.data);
+                    await cacheData('cadets', cadetsRes.value.data);
+                }
+                if (activitiesRes.status === 'fulfilled') {
+                    setStats(s => ({ ...s, totalActivities: activitiesRes.value.data.length }));
+                    await cacheData('activities', activitiesRes.value.data);
+                }
 
-                // Format grade data for Pie Chart
-                const gradeData = [
-                    { name: 'Passed', value: analyticsRes.data.grades.passed },
-                    { name: 'Failed', value: analyticsRes.data.grades.failed },
-                    { name: 'Incomplete', value: analyticsRes.data.grades.incomplete }
-                ].filter(item => item.value > 0);
+                if (analyticsRes.status === 'fulfilled') {
+                    const analyticsData = analyticsRes.value.data;
+                    const gradeData = [
+                        { name: 'Passed', value: analyticsData.grades.passed },
+                        { name: 'Failed', value: analyticsData.grades.failed },
+                        { name: 'Incomplete', value: analyticsData.grades.incomplete }
+                    ].filter(item => item.value > 0);
 
-                setAnalytics({
-                    attendance: analyticsRes.data.attendance,
-                    grades: gradeData
-                });
+                    setAnalytics({
+                        attendance: analyticsData.attendance,
+                        grades: gradeData
+                    });
+                    await cacheSingleton('analytics', 'dashboard', analyticsData);
+                }
 
             } catch (err) {
                 console.error(err);
@@ -44,6 +80,46 @@ const Dashboard = () => {
         };
         fetchStats();
     }, []);
+
+    // Analytics Data Computation
+    const { companyData, rankData, statusData } = useMemo(() => {
+        if (!cadets.length) return { companyData: [], rankData: [], statusData: [] };
+
+        // By Company
+        const companyCount = {};
+        cadets.forEach(c => {
+            const company = c.company || 'Unknown';
+            companyCount[company] = (companyCount[company] || 0) + 1;
+        });
+        const companyData = Object.keys(companyCount).map(key => ({
+            name: key,
+            count: companyCount[key]
+        }));
+
+        // By Rank
+        const rankCount = {};
+        cadets.forEach(c => {
+            const rank = c.rank || 'Unknown';
+            rankCount[rank] = (rankCount[rank] || 0) + 1;
+        });
+        const rankData = Object.keys(rankCount).map(key => ({
+            name: key,
+            count: rankCount[key]
+        }));
+
+        // By Status
+        const statusCount = {};
+        cadets.forEach(c => {
+            const status = c.status || 'Unknown';
+            statusCount[status] = (statusCount[status] || 0) + 1;
+        });
+        const statusData = Object.keys(statusCount).map(key => ({
+            name: key,
+            value: statusCount[key]
+        }));
+
+        return { companyData, rankData, statusData };
+    }, [cadets]);
 
     return (
         <div className="space-y-6">
@@ -62,6 +138,71 @@ const Dashboard = () => {
                     <p className="text-3xl font-bold text-gray-800">15</p>
                 </div>
             </div>
+
+            {/* Demographics Section */}
+            {cadets.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Company Distribution */}
+                    <div className="bg-white p-6 rounded shadow">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadets by Company</h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={companyData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="count" fill="#3b82f6" name="Cadets" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Rank Distribution */}
+                    <div className="bg-white p-6 rounded shadow">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadets by Rank</h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={rankData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="count" fill="#10b981" name="Cadets" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Status Distribution */}
+                    <div className="bg-white p-6 rounded shadow">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadet Status Overview</h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={statusData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        label
+                                    >
+                                        {statusData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

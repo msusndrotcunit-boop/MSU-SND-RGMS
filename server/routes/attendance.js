@@ -504,4 +504,80 @@ router.get('/my-history', authenticateToken, (req, res) => {
     });
 });
 
+// --- Staff Attendance ---
+
+// Get attendance for a specific day (Staff)
+router.get('/records/staff/:dayId', authenticateToken, isAdmin, (req, res) => {
+    const dayId = req.params.dayId;
+
+    let sql = `
+        SELECT 
+            s.id as staff_id, 
+            s.last_name, 
+            s.first_name, 
+            s.rank,
+            sar.status, 
+            sar.remarks
+        FROM training_staff s
+        LEFT JOIN staff_attendance_records sar ON s.id = sar.staff_id AND sar.training_day_id = ?
+        ORDER BY s.last_name ASC
+    `;
+    
+    db.all(sql, [dayId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Mark Staff Attendance (Upsert)
+router.post('/mark/staff', authenticateToken, isAdmin, (req, res) => {
+    const { dayId, staffId, status, remarks } = req.body;
+
+    db.get('SELECT id FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+
+        if (row) {
+            // Update
+            db.run('UPDATE staff_attendance_records SET status = ?, remarks = ? WHERE id = ?', 
+                [status, remarks, row.id], 
+                (err) => {
+                    if (err) return res.status(500).json({ message: err.message });
+                    res.json({ message: 'Updated' });
+                }
+            );
+        } else {
+            // Insert
+            db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks) VALUES (?, ?, ?, ?)', 
+                [dayId, staffId, status, remarks], 
+                (err) => {
+                    if (err) return res.status(500).json({ message: err.message });
+                    res.json({ message: 'Marked' });
+                }
+            );
+        }
+    });
+});
+
+// Get Staff My History
+router.get('/my-history/staff', authenticateToken, (req, res) => {
+    const staffId = req.user.staffId;
+    if (!staffId) return res.status(403).json({ message: 'Not a staff member' });
+
+    const sql = `
+        SELECT 
+            td.date,
+            td.title,
+            sar.status,
+            sar.remarks
+        FROM training_days td
+        LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
+        ORDER BY td.date DESC
+    `;
+
+    db.all(sql, [staffId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
 module.exports = router;

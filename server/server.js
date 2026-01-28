@@ -10,6 +10,8 @@ const cadetRoutes = require('./routes/cadet');
 const attendanceRoutes = require('./routes/attendance');
 const excuseRoutes = require('./routes/excuse');
 const integrationRoutes = require('./routes/integration');
+const { processUrlImport } = require('./utils/importCadets');
+const dbSettingsKey = 'cadet_list_source_url';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,6 +76,25 @@ app.get('*', (req, res) => {
         res.status(404).send('App is running, but the React build was not found. Please ensure "npm run build" ran successfully.');
     }
 });
+
+const enableAutoSync = process.env.ENABLE_CADET_AUTO_SYNC !== 'false';
+const syncIntervalMinutes = parseInt(process.env.CADET_SYNC_INTERVAL_MINUTES || '10', 10);
+if (enableAutoSync && syncIntervalMinutes > 0) {
+    setInterval(() => {
+        try {
+            db.get(`SELECT value FROM system_settings WHERE key = ?`, [dbSettingsKey], async (err, row) => {
+                if (err) return;
+                if (!row || !row.value) return;
+                try {
+                    const result = await processUrlImport(row.value);
+                    console.log(`Auto-sync cadets: success=${result.successCount} failed=${result.failCount}`);
+                } catch (e) {
+                    console.error('Auto-sync cadets error:', e.message);
+                }
+            });
+        } catch (e) {}
+    }, syncIntervalMinutes * 60 * 1000);
+}
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

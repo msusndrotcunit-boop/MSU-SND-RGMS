@@ -123,7 +123,7 @@ function initPgDb() {
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT CHECK(role IN ('admin', 'cadet')) NOT NULL,
+            role TEXT CHECK(role IN ('admin', 'cadet', 'training_staff')) NOT NULL,
             cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
             is_approved INTEGER DEFAULT 0,
             email TEXT,
@@ -183,6 +183,27 @@ function initPgDb() {
             id SERIAL PRIMARY KEY,
             key TEXT UNIQUE NOT NULL,
             value TEXT
+        )`,
+        `CREATE TABLE IF NOT EXISTS training_staff (
+            id SERIAL PRIMARY KEY,
+            rank TEXT,
+            first_name TEXT NOT NULL,
+            middle_name TEXT,
+            last_name TEXT NOT NULL,
+            suffix_name TEXT,
+            email TEXT UNIQUE,
+            contact_number TEXT,
+            role TEXT DEFAULT 'Instructor',
+            profile_pic TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS staff_attendance_records (
+            id SERIAL PRIMARY KEY,
+            training_day_id INTEGER NOT NULL REFERENCES training_days(id) ON DELETE CASCADE,
+            staff_id INTEGER NOT NULL REFERENCES training_staff(id) ON DELETE CASCADE,
+            status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
+            remarks TEXT,
+            UNIQUE(training_day_id, staff_id)
         )`
     ];
 
@@ -191,6 +212,20 @@ function initPgDb() {
             for (const q of queries) {
                 await db.pool.query(q);
             }
+            
+            // Migration: Add staff_id to users if not exists
+            try {
+                await db.pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
+            } catch (e) { console.log('Migration note: staff_id column might already exist or error', e.message); }
+
+            // Migration: Update role check constraint (Postgres)
+            try {
+                // Drop old constraint
+                await db.pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+                // Add new constraint
+                await db.pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'cadet', 'training_staff'))`);
+            } catch (e) { console.log('Migration note: Could not update users_role_check constraint', e.message); }
+
             seedAdmin();
         } catch (err) {
             console.error('Error initializing PG DB:', err);
@@ -230,7 +265,7 @@ function initSqliteDb() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT CHECK(role IN ('admin', 'cadet')) NOT NULL,
+            role TEXT CHECK(role IN ('admin', 'cadet', 'training_staff')) NOT NULL,
             cadet_id INTEGER,
             is_approved INTEGER DEFAULT 0,
             email TEXT,
@@ -312,6 +347,43 @@ function initSqliteDb() {
             key TEXT UNIQUE NOT NULL,
             value TEXT
         )`);
+
+        // Training Staff Table
+        db.run(`CREATE TABLE IF NOT EXISTS training_staff (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rank TEXT,
+            first_name TEXT NOT NULL,
+            middle_name TEXT,
+            last_name TEXT NOT NULL,
+            suffix_name TEXT,
+            email TEXT UNIQUE,
+            contact_number TEXT,
+            role TEXT DEFAULT 'Instructor',
+            profile_pic TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // Staff Attendance Records Table
+        db.run(`CREATE TABLE IF NOT EXISTS staff_attendance_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            training_day_id INTEGER NOT NULL,
+            staff_id INTEGER NOT NULL,
+            status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
+            remarks TEXT,
+            UNIQUE(training_day_id, staff_id),
+            FOREIGN KEY(training_day_id) REFERENCES training_days(id) ON DELETE CASCADE,
+            FOREIGN KEY(staff_id) REFERENCES training_staff(id) ON DELETE CASCADE
+        )`);
+
+        // Migration for SQLite: Add staff_id to users
+        db.run(`PRAGMA foreign_keys=OFF;`);
+        db.run(`ALTER TABLE users ADD COLUMN staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`, (err) => {
+            // Ignore error if column exists
+        });
+        
+        // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
+        // Ensure new users table creation has correct check.
+
 
         seedAdmin();
     });

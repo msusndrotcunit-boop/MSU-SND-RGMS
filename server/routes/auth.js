@@ -47,9 +47,9 @@ router.post('/login', (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
 
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
         
-        res.json({ token, role: user.role, cadetId: user.cadet_id });
+        res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id });
     });
 });
 
@@ -81,6 +81,30 @@ router.post('/cadet-login', (req, res) => {
         const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' }); // Longer session for cadets?
         
         res.json({ token, role: user.role, cadetId: user.cadet_id });
+    });
+});
+
+// Staff Login (Same as Cadet Login but checks training_staff role)
+// User requested "login route for training staff in the cadet login route"
+router.post('/staff-login-no-pass', (req, res) => {
+    const { identifier } = req.body; 
+
+    if (!identifier) {
+        return res.status(400).json({ message: 'Please enter your Username or Email.' });
+    }
+
+    const sql = `SELECT * FROM users WHERE (username = ? OR email = ?) AND role = 'training_staff'`;
+    
+    db.get(sql, [identifier, identifier], (err, user) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        if (!user) {
+            return res.status(400).json({ message: 'Staff user not found.' });
+        }
+
+        const token = jwt.sign({ id: user.id, role: user.role, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '24h' });
+        
+        res.json({ token, role: user.role, staffId: user.staff_id });
     });
 });
 

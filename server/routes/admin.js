@@ -375,9 +375,16 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
             }
         } else {
             const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
+            if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                return res.status(400).json({ message: 'Excel file has no sheets' });
+            }
+            let aggregated = [];
+            workbook.SheetNames.forEach(name => {
+                const sheet = workbook.Sheets[name];
+                const sheetData = xlsx.utils.sheet_to_json(sheet);
+                aggregated = aggregated.concat(sheetData);
+            });
+            data = aggregated;
         }
 
         const result = await processCadetData(data);

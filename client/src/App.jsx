@@ -66,6 +66,16 @@ function App() {
               </Route>
             </Route>
 
+            {/* Staff Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['training_staff']} />}>
+              <Route path="/staff" element={<StaffLayout />}>
+                <Route path="home" element={<StaffHome />} />
+                <Route path="dashboard" element={<StaffDashboard />} />
+                <Route path="profile" element={<StaffProfile />} />
+                <Route index element={<Navigate to="home" replace />} />
+              </Route>
+            </Route>
+
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

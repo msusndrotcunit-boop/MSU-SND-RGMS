@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, FileDown, Upload, Plus, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, X, FileDown, Upload, Plus, RefreshCw, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -11,6 +14,7 @@ const Cadets = () => {
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [currentCadet, setCurrentCadet] = useState(null);
+    const [showAnalytics, setShowAnalytics] = useState(false);
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -41,6 +45,46 @@ const Cadets = () => {
 
     // Get unique companies
     const companies = [...new Set(cadets.map(c => c.company).filter(Boolean))];
+
+    // Analytics Data
+    const getAnalyticsData = () => {
+        // By Company
+        const companyCount = {};
+        cadets.forEach(c => {
+            const company = c.company || 'Unknown';
+            companyCount[company] = (companyCount[company] || 0) + 1;
+        });
+        const companyData = Object.keys(companyCount).map(key => ({
+            name: key,
+            count: companyCount[key]
+        }));
+
+        // By Rank
+        const rankCount = {};
+        cadets.forEach(c => {
+            const rank = c.rank || 'Unknown';
+            rankCount[rank] = (rankCount[rank] || 0) + 1;
+        });
+        const rankData = Object.keys(rankCount).map(key => ({
+            name: key,
+            count: rankCount[key]
+        }));
+
+        // By Status
+        const statusCount = {};
+        cadets.forEach(c => {
+            const status = c.status || 'Unknown';
+            statusCount[status] = (statusCount[status] || 0) + 1;
+        });
+        const statusData = Object.keys(statusCount).map(key => ({
+            name: key,
+            value: statusCount[key]
+        }));
+
+        return { companyData, rankData, statusData };
+    };
+
+    const { companyData, rankData, statusData } = getAnalyticsData();
 
     useEffect(() => {
         fetchCadets();
@@ -323,18 +367,18 @@ const Cadets = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded shadow overflow-x-auto">
+            <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
                 <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-gray-100 border-b">
-                            <th className="p-4 w-10">
+                    <thead className="bg-gray-100 sticky top-0 z-10">
+                        <tr className="border-b shadow-sm">
+                            <th className="p-4 w-10 bg-gray-100">
                                 <input type="checkbox" onChange={handleSelectAll} checked={selectedCadets.length === cadets.length && cadets.length > 0} />
                             </th>
-                            <th className="p-4">Name & Rank</th>
-                            <th className="p-4">Username</th>
-                            <th className="p-4 text-center">Unit (Coy/Plt)</th>
-                            <th className="p-4 text-center">Status</th>
-                            <th className="p-4 text-right">Actions</th>
+                            <th className="p-4 bg-gray-100">Name & Rank</th>
+                            <th className="p-4 bg-gray-100">Username</th>
+                            <th className="p-4 text-center bg-gray-100">Unit (Coy/Plt)</th>
+                            <th className="p-4 text-center bg-gray-100">Status</th>
+                            <th className="p-4 text-right bg-gray-100">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
