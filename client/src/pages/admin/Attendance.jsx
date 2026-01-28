@@ -436,7 +436,7 @@ const Attendance = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Option 1: Upload File</label>
                                 <input 
                                     type="file" 
-                                    accept=".csv, .xlsx, .xls, .pdf, .docx, .doc, .png, .jpg, .jpeg"
+                                    accept=".csv, .xlsx, .xls, .pdf, .docx, .doc, .png, .jpg, .jpeg, .webp, .bmp, .gif"
                                     className="w-full border p-2 rounded"
                                     onChange={e => {
                                         setImportFile(e.target.files[0]);

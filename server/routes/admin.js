@@ -272,16 +272,20 @@ const getDirectDownloadUrl = (url) => {
         // OneDrive / SharePoint / Office Online
         if (urlObj.hostname.includes('onedrive.live.com') || 
             urlObj.hostname.includes('sharepoint.com') || 
-            urlObj.hostname.includes('1drv.ms')) {
+            urlObj.hostname.includes('1drv.ms') ||
+            urlObj.hostname.includes('officeapps.live.com')) {
             
             // Case 1: /embed -> /download
             if (url.includes('/embed')) {
                 return url.replace('/embed', '/download');
             }
             
-            // Case 2: /view.aspx -> /download (Personal)
+            // Case 2: /view.aspx, /edit.aspx -> /download (Personal)
             if (url.includes('/view.aspx')) {
                 return url.replace('/view.aspx', '/download');
+            }
+            if (url.includes('/edit.aspx')) {
+                return url.replace('/edit.aspx', '/download');
             }
 
             // Case 3: /redir -> /download (Personal)
@@ -464,11 +468,22 @@ const processUrlImport = async (url) => {
 
             // Check if we got HTML (Viewer)
             const firstBytes = buffer.slice(0, 100).toString().trim().toLowerCase();
-            if (firstBytes.includes('<!doctype html') || firstBytes.includes('<html') || (contentType && contentType.includes('html'))) {
+            const isHtml = firstBytes.includes('<!doctype html') || 
+                           firstBytes.includes('<html') || 
+                           (contentType && contentType.toLowerCase().includes('html'));
+
+            if (isHtml) {
                 console.warn("Received HTML content. Checking heuristics...");
                 
                 // If we are at a OneDrive URL and got HTML, try appending download=1 if we haven't yet
-                if ((currentUrl.includes('onedrive') || currentUrl.includes('sharepoint')) && !currentUrl.includes('download=1')) {
+                if ((currentUrl.includes('onedrive') || 
+                     currentUrl.includes('sharepoint') || 
+                     currentUrl.includes('1drv.ms') || 
+                     currentUrl.includes('live.com')) && 
+                    !currentUrl.includes('download=1') &&
+                    !currentUrl.includes('export=download') &&
+                    !currentUrl.includes('action=download')) {
+                     
                      console.log("Got HTML from OneDrive. Trying to force download=1...");
                      currentUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'download=1';
                      redirectCount++;
@@ -507,7 +522,11 @@ const processUrlImport = async (url) => {
                 });
             } catch (err) {
                  console.error("Excel Parse Error:", err);
-                 throw new Error(`Failed to parse Excel file. content-type: ${contentType}. Error: ${err.message}`);
+                 let msg = `Failed to parse Excel file. content-type: ${contentType}. Error: ${err.message}`;
+                 if (err.message.includes('Invalid HTML')) {
+                     msg += " (The URL likely points to a webpage instead of the file itself. Please use a direct download link.)";
+                 }
+                 throw new Error(msg);
             }
         }
         

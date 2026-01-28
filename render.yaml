@@ -3,7 +3,7 @@ services:
     name: rotc-grading-system
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm run build
     startCommand: npm start
     autoDeploy: false
     envVars:

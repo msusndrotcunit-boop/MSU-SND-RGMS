@@ -191,7 +191,11 @@ const parseDocx = async (buffer) => {
 // Parse Image buffer to text rows using OCR
 const parseImage = async (buffer) => {
     try {
-        const { data: { text } } = await Tesseract.recognize(buffer, 'eng');
+        console.log("Starting OCR processing...");
+        const { data: { text } } = await Tesseract.recognize(buffer, 'eng', {
+            logger: m => console.log(m)
+        });
+        console.log("OCR Text Extracted:", text);
         return text.split('\n').map(line => ({ raw: line.trim() })).filter(l => l.raw);
     } catch (err) {
         console.error("Image OCR Error:", err);
@@ -202,20 +206,39 @@ const parseImage = async (buffer) => {
 // Extract data from raw text line
 const extractFromRaw = (line) => {
     const row = {};
-    // Regex for Student ID
-    const idMatch = line.match(/(\d{4}-\d{4,6}|\d{6,10})/); 
+    const rawLine = line.trim();
+    if (!rawLine) return row;
+
+    // Regex for Student ID (e.g., 2023-12345, 1234567)
+    const idMatch = rawLine.match(/(\d{4}-\d{4,6}|\d{6,10})/); 
     if (idMatch) row['Student ID'] = idMatch[0];
 
     // Regex for Email
-    const emailMatch = line.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/);
+    const emailMatch = rawLine.match(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/);
     if (emailMatch) row['Email'] = emailMatch[0];
 
     // Status keywords
-    const lowerLine = line.toLowerCase();
+    const lowerLine = rawLine.toLowerCase();
     if (lowerLine.includes('present')) row['Status'] = 'present';
     else if (lowerLine.includes('absent')) row['Status'] = 'absent';
     else if (lowerLine.includes('late')) row['Status'] = 'late';
     else if (lowerLine.includes('excused')) row['Status'] = 'excused';
+
+    // Name Extraction Strategy:
+    // If we haven't found ID or Email, assume the whole line might be a name
+    // But exclude lines that are just short noise
+    if (!row['Student ID'] && !row['Email'] && rawLine.length > 5) {
+        // Remove status keywords from the potential name
+        let cleanName = rawLine
+            .replace(/present|absent|late|excused/gi, '')
+            .replace(/[0-9]/g, '') // Remove numbers (often dates or scores)
+            .replace(/[^\w\s,.-]/g, '') // Remove special chars except , . -
+            .trim();
+        
+        if (cleanName.length > 3) {
+            row['Name'] = cleanName;
+        }
+    }
 
     return row;
 };
@@ -386,11 +409,11 @@ router.post('/import', authenticateToken, isAdmin, upload.single('file'), async 
         } else if (filename.endsWith('.docx') || filename.endsWith('.doc')) {
             const rawRows = await parseDocx(req.file.buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
-        } else if (filename.match(/\.(png|jpg|jpeg|bmp|webp)$/)) {
+        } else if (filename.match(/\.(png|jpg|jpeg|bmp|webp|gif|tiff)$/i)) { // Expanded image format support
             const rawRows = await parseImage(req.file.buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else {
-            return res.status(400).json({ message: 'Unsupported file format' });
+            return res.status(400).json({ message: 'Unsupported file format. Supported: Excel, PDF, Word, Images (PNG, JPG, WEBP, etc.)' });
         }
 
         const result = await processAttendanceData(data, dayId);
