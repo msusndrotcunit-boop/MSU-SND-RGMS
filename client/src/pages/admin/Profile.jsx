@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Camera, User, Mail, Shield, Info } from 'lucide-react';
+import { cacheSingleton, getSingleton } from '../../utils/db';
 
 const AdminProfile = () => {
     const { user } = useAuth();
@@ -19,8 +20,13 @@ const AdminProfile = () => {
         setLoading(true);
         setError(null);
         try {
+            try {
+                const cached = await getSingleton('profiles', 'admin');
+                if (cached) setProfile(cached);
+            } catch {}
             const response = await axios.get('/api/admin/profile');
             setProfile(response.data);
+            await cacheSingleton('profiles', 'admin', response.data);
         } catch (error) {
             console.error('Error fetching profile:', error);
             setError(error.response?.data?.message || 'Failed to load profile.');

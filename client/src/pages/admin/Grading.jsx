@@ -41,8 +41,16 @@ const Grading = () => {
 
     const fetchCadets = async () => {
         try {
+            try {
+                const cached = await getCachedData('cadets');
+                if (cached?.length) {
+                    setCadets(cached);
+                    setLoading(false);
+                }
+            } catch {}
             const res = await axios.get('/api/admin/cadets');
             setCadets(res.data);
+            await cacheData('cadets', res.data);
             setLoading(false);
             
             // If a cadet is selected, update their data in the view

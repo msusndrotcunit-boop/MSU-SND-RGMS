@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { cacheData, getCachedData } from '../../utils/db';
 
 const CadetHome = () => {
     const [activities, setActivities] = useState([]);
@@ -11,8 +12,13 @@ const CadetHome = () => {
     useEffect(() => {
         const fetchActivities = async () => {
             try {
+                try {
+                    const cached = await getCachedData('activities');
+                    if (cached?.length) setActivities(cached);
+                } catch {}
                 const res = await axios.get('/api/cadet/activities');
                 setActivities(res.data || []);
+                await cacheData('activities', res.data || []);
             } catch (err) {
                 console.error('Error fetching activities:', err);
             } finally {

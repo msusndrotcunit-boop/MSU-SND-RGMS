@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
 const COLORS = {
   Passed: '#22c55e', // Green
@@ -15,28 +16,58 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [cadetsRes, activitiesRes, analyticsRes] = await Promise.all([
+                try {
+                    const cachedCadets = await getCachedData('cadets');
+                    const cachedActivities = await getCachedData('activities');
+                    const cachedAnalytics = await getSingleton('analytics', 'dashboard');
+                    if (cachedCadets?.length) {
+                        setStats(s => ({ ...s, totalCadets: cachedCadets.length }));
+                    }
+                    if (cachedActivities?.length) {
+                        setStats(s => ({ ...s, totalActivities: cachedActivities.length }));
+                    }
+                    if (cachedAnalytics) {
+                        const gradeDataCached = [
+                            { name: 'Passed', value: cachedAnalytics.grades.passed },
+                            { name: 'Failed', value: cachedAnalytics.grades.failed },
+                            { name: 'Incomplete', value: cachedAnalytics.grades.incomplete }
+                        ].filter(item => item.value > 0);
+                        setAnalytics({
+                            attendance: cachedAnalytics.attendance || [],
+                            grades: gradeDataCached
+                        });
+                    }
+                } catch {}
+                
+                const [cadetsRes, activitiesRes, analyticsRes] = await Promise.allSettled([
                     axios.get('/api/admin/cadets'),
                     axios.get('/api/cadet/activities'),
                     axios.get('/api/admin/analytics')
                 ]);
 
-                setStats({
-                    totalCadets: cadetsRes.data.length,
-                    totalActivities: activitiesRes.data.length
-                });
+                if (cadetsRes.status === 'fulfilled') {
+                    setStats(s => ({ ...s, totalCadets: cadetsRes.value.data.length }));
+                    await cacheData('cadets', cadetsRes.value.data);
+                }
+                if (activitiesRes.status === 'fulfilled') {
+                    setStats(s => ({ ...s, totalActivities: activitiesRes.value.data.length }));
+                    await cacheData('activities', activitiesRes.value.data);
+                }
 
-                // Format grade data for Pie Chart
-                const gradeData = [
-                    { name: 'Passed', value: analyticsRes.data.grades.passed },
-                    { name: 'Failed', value: analyticsRes.data.grades.failed },
-                    { name: 'Incomplete', value: analyticsRes.data.grades.incomplete }
-                ].filter(item => item.value > 0);
+                if (analyticsRes.status === 'fulfilled') {
+                    const analyticsData = analyticsRes.value.data;
+                    const gradeData = [
+                        { name: 'Passed', value: analyticsData.grades.passed },
+                        { name: 'Failed', value: analyticsData.grades.failed },
+                        { name: 'Incomplete', value: analyticsData.grades.incomplete }
+                    ].filter(item => item.value > 0);
 
-                setAnalytics({
-                    attendance: analyticsRes.data.attendance,
-                    grades: gradeData
-                });
+                    setAnalytics({
+                        attendance: analyticsData.attendance,
+                        grades: gradeData
+                    });
+                    await cacheSingleton('analytics', 'dashboard', analyticsData);
+                }
 
             } catch (err) {
                 console.error(err);

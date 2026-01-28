@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, User, Moon, Sun, Camera } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { cacheSingleton, getSingleton } from '../../utils/db';
 import { 
     RANK_OPTIONS, 
     YEAR_LEVEL_OPTIONS, 
@@ -52,6 +53,40 @@ const Profile = () => {
 
     const fetchProfile = async () => {
         try {
+            try {
+                const cached = await getSingleton('profiles', 'cadet');
+                if (cached) {
+                    const data = cached;
+                    setProfile({
+                        rank: data.rank || '',
+                        firstName: data.first_name,
+                        middleName: data.middle_name || '',
+                        lastName: data.last_name,
+                        suffixName: data.suffix_name || '',
+                        email: data.email,
+                        contactNumber: data.contact_number || '',
+                        address: data.address || '',
+                        course: data.course || '',
+                        yearLevel: data.year_level || '',
+                        schoolYear: data.school_year || '',
+                        battalion: data.battalion || '',
+                        company: data.company || '',
+                        platoon: data.platoon || '',
+                        cadetCourse: data.cadet_course || 'MS1',
+                        semester: data.semester || '',
+                        status: data.status || 'Ongoing'
+                    });
+                    if (data.profile_pic) {
+                        if (data.profile_pic.startsWith('data:')) {
+                            setPreview(data.profile_pic);
+                        } else {
+                            const normalizedPath = data.profile_pic.replace(/\\/g, '/');
+                            setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+                        }
+                    }
+                    setLoading(false);
+                }
+            } catch {}
             const res = await axios.get('/api/cadet/profile');
             const data = res.data;
             setProfile({
@@ -81,6 +116,7 @@ const Profile = () => {
                     setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
                 }
             }
+            await cacheSingleton('profiles', 'cadet', data);
             setLoading(false);
         } catch (err) {
             console.error(err);

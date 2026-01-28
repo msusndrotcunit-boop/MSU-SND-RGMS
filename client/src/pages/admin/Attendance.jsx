@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
+import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
@@ -29,8 +30,16 @@ const Attendance = () => {
 
     const fetchDays = async () => {
         try {
+            try {
+                const cached = await getCachedData('training_days');
+                if (cached?.length) {
+                    setDays(cached);
+                    setLoading(false);
+                }
+            } catch {}
             const res = await axios.get('/api/attendance/days');
             setDays(res.data);
+            await cacheData('training_days', res.data);
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -66,8 +75,13 @@ const Attendance = () => {
         setSelectedDay(day);
         setLoading(true);
         try {
+            try {
+                const cached = await getSingleton('attendance_by_day', String(day.id));
+                if (cached?.length) setAttendanceRecords(cached);
+            } catch {}
             const res = await axios.get(`/api/attendance/records/${day.id}`);
             setAttendanceRecords(res.data);
+            await cacheSingleton('attendance_by_day', String(day.id), res.data);
             setLoading(false);
         } catch (err) {
             console.error(err);
