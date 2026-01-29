@@ -6,6 +6,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../utils/emailService');
 
 const router = express.Router();
@@ -95,9 +96,11 @@ const upsertUser = (cadetId, studentId, email, customUsername) => {
             const username = customUsername || studentId;
             
             if (!existingUser) {
-                const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED'; 
+                // Default password is the username (hashed)
+                const hashedPassword = await bcrypt.hash(username, 10);
+                
                 db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                    [username, dummyHash, 'cadet', cadetId, 1, email], 
+                    [username, hashedPassword, 'cadet', cadetId, 1, email], 
                     (err) => {
                         if (err) {
                             if (err.message.includes('UNIQUE constraint failed')) {
@@ -171,7 +174,9 @@ const processCadetData = async (data) => {
                 if (lName && fName) {
                     const cleanLast = lName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
                     const cleanFirst = fName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-                    studentId = `${cleanLast}.${cleanFirst}`;
+                    // Generate a unique ID: lastname.firstname.random4digits
+                    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+                    studentId = `${cleanLast}.${cleanFirst}.${randomSuffix}`;
                 }
             }
         }
@@ -1029,20 +1034,22 @@ router.post('/cadets', async (req, res) => {
 
                 // Create User Account (Auto-approved)
                 const username = cadet.studentId; // Default username
-                const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED';
                 
-                db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                    [username, dummyHash, 'cadet', newCadetId, 1, cadet.email || ''], 
-                    (err) => {
-                        if (err) console.error("Error creating user for new cadet:", err);
-                        
-                        // Initialize Grades
-                        db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [newCadetId], (err) => {
-                            if (err) console.error("Error initializing grades:", err);
-                            res.status(201).json({ message: 'Cadet created successfully', id: newCadetId });
-                        });
-                    }
-                );
+                // Hash the username as the default password
+                bcrypt.hash(username, 10).then(hashedPassword => {
+                    db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
+                        [username, hashedPassword, 'cadet', newCadetId, 1, cadet.email || ''], 
+                        (err) => {
+                            if (err) console.error("Error creating user for new cadet:", err);
+                            
+                            // Initialize Grades
+                            db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [newCadetId], (err) => {
+                                if (err) console.error("Error initializing grades:", err);
+                                res.status(201).json({ message: 'Cadet created successfully', id: newCadetId });
+                            });
+                        }
+                    );
+                });
             });
         });
     } catch (error) {

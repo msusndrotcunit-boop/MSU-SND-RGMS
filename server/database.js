@@ -211,7 +211,8 @@ function initPgDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            profile_completed INTEGER DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -351,7 +352,8 @@ function initSqliteDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            profile_completed INTEGER DEFAULT 0
         )`);
 
         // Users Table

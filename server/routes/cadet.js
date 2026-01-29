@@ -117,44 +117,54 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    const { 
-        firstName, middleName, lastName, suffixName,
-        email, contactNumber, address,
-        course, yearLevel, schoolYear,
-        battalion, company, platoon,
-        cadetCourse, semester
-    } = req.body;
-
-    let sql = `UPDATE cadets SET 
-        first_name=?, middle_name=?, last_name=?, suffix_name=?,
-        email=?, contact_number=?, address=?,
-        course=?, year_level=?, school_year=?,
-        battalion=?, company=?, platoon=?,
-        cadet_course=?, semester=?`;
-    
-    const params = [
-        firstName, middleName, lastName, suffixName,
-        email, contactNumber, address,
-        course, yearLevel, schoolYear,
-        battalion, company, platoon,
-        cadetCourse, semester
-    ];
-
-    if (req.file) {
-        sql += `, profile_pic=?`;
-        // Convert buffer to Base64 Data URI
-        const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        params.push(base64Image);
-    }
-
-    sql += ` WHERE id=?`;
-    params.push(cadetId);
-
-    db.run(sql, params, (err) => {
+    // Check if profile is already locked
+    db.get('SELECT profile_completed FROM cadets WHERE id = ?', [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json({ 
-            message: 'Profile updated', 
-            profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
+        if (row && row.profile_completed === 1) {
+            return res.status(403).json({ message: 'Profile is locked. You cannot edit it anymore.' });
+        }
+
+        const { 
+            firstName, middleName, lastName, suffixName,
+            email, contactNumber, address,
+            course, yearLevel, schoolYear,
+            battalion, company, platoon,
+            cadetCourse, semester
+        } = req.body;
+
+        let sql = `UPDATE cadets SET 
+            first_name=?, middle_name=?, last_name=?, suffix_name=?,
+            email=?, contact_number=?, address=?,
+            course=?, year_level=?, school_year=?,
+            battalion=?, company=?, platoon=?,
+            cadet_course=?, semester=?,
+            profile_completed=1`;
+        
+        const params = [
+            firstName, middleName, lastName, suffixName,
+            email, contactNumber, address,
+            course, yearLevel, schoolYear,
+            battalion, company, platoon,
+            cadetCourse, semester
+        ];
+
+        if (req.file) {
+            sql += `, profile_pic=?`;
+            // Convert buffer to Base64 Data URI
+            const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            params.push(base64Image);
+        }
+
+        sql += ` WHERE id=?`;
+        params.push(cadetId);
+
+        db.run(sql, params, (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ 
+                message: 'Profile updated', 
+                profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null,
+                profileCompleted: 1
+            });
         });
     });
 });

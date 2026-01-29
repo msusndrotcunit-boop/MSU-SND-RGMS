@@ -30,8 +30,15 @@ export const AuthProvider = ({ children }) => {
             const token = localStorage.getItem('token');
             const role = localStorage.getItem('role');
             const cadetId = localStorage.getItem('cadetId');
+            const profileCompleted = localStorage.getItem('profileCompleted');
+            
             if (token) {
-                setUser({ token, role, cadetId });
+                setUser({ 
+                    token, 
+                    role, 
+                    cadetId,
+                    profileCompleted: profileCompleted === 'true' || profileCompleted === '1'
+                });
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 // Attempt to sync Firebase on load
                 await syncFirebase();
@@ -46,6 +53,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('role', userData.role);
         if (userData.cadetId) localStorage.setItem('cadetId', userData.cadetId);
         
+        if (userData.profileCompleted !== undefined) {
+            localStorage.setItem('profileCompleted', userData.profileCompleted);
+        }
+
         setUser(userData);
         axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
         
@@ -57,6 +68,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('cadetId');
+        localStorage.removeItem('profileCompleted');
         setUser(null);
         delete axios.defaults.headers.common['Authorization'];
         try {

@@ -193,6 +193,14 @@ const processCadetData = async (data) => {
             continue;
         }
 
+        // Auto-generate Username (Student ID) if missing
+        if (!studentId && firstName && lastName) {
+            // Format: firstname.lastname (lowercase, no spaces)
+            const cleanFirst = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanLast = lastName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            studentId = `${cleanFirst}.${cleanLast}`;
+        }
+
         const cadetData = {
             student_id: studentId,
             last_name: lastName,
