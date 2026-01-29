@@ -8,6 +8,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
+import { 
+    CADET_COURSE_OPTIONS 
+} from '../../constants/options';
+
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
     const [selectedCadets, setSelectedCadets] = useState([]);
@@ -623,7 +627,10 @@ const Cadets = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})} placeholder="Cadet Course" />
+                                <select className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})}>
+                                    <option value="">Select Cadet Course</option>
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                                 <input className="border p-2 rounded" value={addForm.status} onChange={e => setAddForm({...addForm, status: e.target.value})} placeholder="Status" />
                             </div>
                             
@@ -691,7 +698,7 @@ const Cadets = () => {
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
                                     <option value="">Select Coy</option>
-                                    {['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Headquarters'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
                                     <option value="">Select Platoon</option>
@@ -702,7 +709,7 @@ const Cadets = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
                                     <option value="">Select Cadet Course</option>
-                                    {['MS1', 'MS2', 'COQC', 'MS32', 'MS42'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
                                     <option value="">Select Sem</option>

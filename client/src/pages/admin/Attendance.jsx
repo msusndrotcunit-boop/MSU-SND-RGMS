@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
+import { COMPANY_OPTIONS } from '../../constants/options';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
@@ -394,12 +395,14 @@ const Attendance = () => {
                                                         />
                                                         {attendanceType === 'cadet' && (
                                                             <>
-                                                                <input 
-                                                                    placeholder="Filter Company" 
+                                                                <select 
                                                                     className="border p-2 rounded text-sm w-full md:w-32"
                                                                     value={filterCompany}
                                                                     onChange={e => setFilterCompany(e.target.value)}
-                                                                />
+                                                                >
+                                                                    <option value="">All Companies</option>
+                                                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                                </select>
                                                                 <input 
                                                                     placeholder="Filter Platoon" 
                                                                     className="border p-2 rounded text-sm w-full md:w-32"

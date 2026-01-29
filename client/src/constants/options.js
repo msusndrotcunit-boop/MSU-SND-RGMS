@@ -59,7 +59,11 @@ export const COMPANY_OPTIONS = [
     "Bravo", 
     "Charlie", 
     "Delta", 
-    "HQSCOY"
+    "Echo", 
+    "Foxtrot", 
+    "Golf", 
+    "HQSCOY",
+    "Headquarters"
 ];
 
 export const PLATOON_OPTIONS = [
@@ -110,8 +114,11 @@ export const COURSE_OPTIONS = [
 ];
 
 export const CADET_COURSE_OPTIONS = [
-    "MS 1",
-    "MS 2",
-    "MS 3",
-    "MS 4"
+    "MS1",
+    "MS2",
+    "COQC",
+    "MS31",
+    "MS32",
+    "MS41",
+    "MS42"
 ];

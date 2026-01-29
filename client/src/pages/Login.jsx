@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { User, ShieldCheck, Briefcase } from 'lucide-react';
 
 const Login = () => {
+    const location = useLocation();
     const [loginType, setLoginType] = useState('cadet'); // 'cadet', 'staff', 'admin'
     const [formData, setFormData] = useState({ username: '', password: '', identifier: '', email: '' });
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (location.state?.type) {
+            setLoginType(location.state.type);
+        }
+    }, [location.state]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
