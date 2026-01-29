@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy Load Pages
 const Login = lazy(() => import('./pages/Login'));
+const Home = lazy(() => import('./pages/Home'));
 
 // Admin Pages
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
