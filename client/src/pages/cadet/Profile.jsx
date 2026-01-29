@@ -17,7 +17,7 @@ import {
 } from '../../constants/options';
 
 const Profile = () => {
-    const { login, user } = useAuth();
+    const { login, logout, user } = useAuth();
     const [profile, setProfile] = useState({
         rank: '',
         firstName: '',
@@ -35,7 +35,11 @@ const Profile = () => {
         platoon: '',
         cadetCourse: 'MS1',
         semester: '',
-        status: 'Ongoing'
+        status: 'Ongoing',
+        studentId: '',
+        username: '',
+        password: '',
+        confirmPassword: ''
     });
     const [profilePic, setProfilePic] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -89,7 +93,11 @@ const Profile = () => {
                 platoon: data.platoon || '',
                 cadetCourse: data.cadet_course || 'MS1',
                 semester: data.semester || '',
-                status: data.status || 'Ongoing'
+                status: data.status || 'Ongoing',
+                studentId: data.student_id || '',
+                username: '', // Do not pre-fill username for security/privacy unless needed
+                password: '',
+                confirmPassword: ''
             });
             if (data.profile_pic) {
                 if (data.profile_pic.startsWith('data:')) {
@@ -142,6 +150,19 @@ const Profile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate Password Match if provided
+        if (profile.password && profile.password !== profile.confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+
+        // Validate required fields for first-time completion
+        if (!isLocked && !profile.studentId) {
+            alert("Student ID is required!");
+            return;
+        }
+
         const formData = new FormData();
         
         // Append all text fields
@@ -158,30 +179,17 @@ const Profile = () => {
             const res = await axios.put('/api/cadet/profile', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            alert('Profile updated successfully!');
             
-            // Update Auth Context to unlock navigation
-            if (res.data.profileCompleted === 1) {
-                setIsLocked(true);
-                // We need to update the user in AuthContext
-                // But AuthContext doesn't expose a simple update function for just one field
-                // So we'll trigger a reload or re-login simulation, 
-                // OR we can manually update localStorage and reload window
-                
-                // Option A: Update Local Storage and use login() if we had the full user object
-                // Option B: Reload page to force AuthContext to re-init
-                
-                // Let's assume we can just update the user state if we exposed a setter, 
-                // but since we didn't, let's just use login() with the current user data + new flag
-                // Actually, let's just use the login function from useAuth to update the state
-                
-                if (user) {
-                    login({
-                        ...user,
-                        profileCompleted: true
-                    });
-                }
+            // Check if profile was just completed (transitioned from 0 to 1)
+            // The API returns profileCompleted: 1.
+            // We check our local isLocked state to see if it was previously unlocked.
+            if (res.data.profileCompleted === 1 && !isLocked) {
+                 alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials (Username/Email and Password).');
+                 logout();
+                 return;
             }
+            
+            alert('Profile updated successfully!');
 
             if (res.data.profilePic) {
                 setPreview(`${import.meta.env.VITE_API_URL || ''}${res.data.profilePic}`);
@@ -290,6 +298,61 @@ const Profile = () => {
 
                 {/* Right Column: Form Fields */}
                 <div className="md:col-span-2 bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
+                    
+                    {/* Account Settings - Only show if not locked (first time setup) or allow partial edits if needed */}
+                    {!isLocked && (
+                        <div className="mb-8 border-b pb-6 border-gray-200 dark:border-gray-700">
+                            <h3 className="text-xl font-bold mb-4 dark:text-white flex items-center">
+                                <Lock className="mr-2" size={20} />
+                                Account Settings
+                            </h3>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-4 text-sm text-blue-800 dark:text-blue-300">
+                                Please set your permanent Student ID, Username, and Password. You will use these to log in next time.
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID <span className="text-red-500">*</span></label>
+                                    <input 
+                                        required
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" 
+                                        value={profile.studentId} 
+                                        onChange={e => setProfile({...profile, studentId: e.target.value})} 
+                                        placeholder="e.g. 2023-1234"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username <span className="text-gray-500">(Optional)</span></label>
+                                    <input 
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" 
+                                        value={profile.username} 
+                                        onChange={e => setProfile({...profile, username: e.target.value})} 
+                                        placeholder="Leave blank to keep current"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                                    <input 
+                                        type="password"
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" 
+                                        value={profile.password} 
+                                        onChange={e => setProfile({...profile, password: e.target.value})} 
+                                        placeholder="Set new password"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
+                                    <input 
+                                        type="password"
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" 
+                                        value={profile.confirmPassword} 
+                                        onChange={e => setProfile({...profile, confirmPassword: e.target.value})} 
+                                        placeholder="Confirm new password"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <h3 className="text-xl font-bold mb-6 border-b pb-2 dark:text-white">Personal Information</h3>
                     
                     <div className="space-y-4">

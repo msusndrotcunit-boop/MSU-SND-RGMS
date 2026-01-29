@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const db = require('../database');
+const bcrypt = require('bcryptjs'); // Added bcrypt
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -129,7 +130,8 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
             email, contactNumber, address,
             course, yearLevel, schoolYear,
             battalion, company, platoon,
-            cadetCourse, semester
+            cadetCourse, semester,
+            studentId, username, password // New fields
         } = req.body;
 
         let sql = `UPDATE cadets SET 
@@ -148,6 +150,12 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
             cadetCourse, semester
         ];
 
+        // Update Student ID if provided
+        if (studentId) {
+            sql += `, student_id=?`;
+            params.push(studentId);
+        }
+
         if (req.file) {
             sql += `, profile_pic=?`;
             // Convert buffer to Base64 Data URI
@@ -158,8 +166,37 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
         sql += ` WHERE id=?`;
         params.push(cadetId);
 
-        db.run(sql, params, (err) => {
+        db.run(sql, params, async (err) => {
             if (err) return res.status(500).json({ message: err.message });
+
+            // Update Users Table (Username / Password)
+            if (username || password) {
+                let userSql = `UPDATE users SET email = ?`;
+                const userParams = [email]; // Always sync email
+
+                if (username) {
+                    userSql += `, username = ?`;
+                    userParams.push(username);
+                }
+
+                if (password) {
+                    try {
+                        const hashedPassword = await bcrypt.hash(password, 10);
+                        userSql += `, password = ?`;
+                        userParams.push(hashedPassword);
+                    } catch (hashErr) {
+                        console.error("Password hashing error", hashErr);
+                    }
+                }
+
+                userSql += ` WHERE cadet_id = ?`;
+                userParams.push(cadetId);
+
+                db.run(userSql, userParams, (uErr) => {
+                    if (uErr) console.error("Error updating user credentials:", uErr);
+                });
+            }
+
             res.json({ 
                 message: 'Profile updated', 
                 profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null,

@@ -11,3 +11,5 @@ logs/
 *.log
 package-lock.json
 **/package-lock.json
+
+.vscode/
