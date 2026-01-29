@@ -63,6 +63,9 @@ if (isPostgres) {
             }
         }
 
+        // Double-check if pool was created while we were awaiting DNS
+        if (pool) return pool;
+
         // Extract Endpoint ID for Neon/SNI support when using direct IP
         // Hostname format: ep-cold-base-ahn90yr2-pooler.c-3.us-east-1.aws.neon.tech
         const endpointId = params.hostname.split('.')[0];

@@ -35,18 +35,30 @@ router.get('/firebase-token', authenticateToken, async (req, res) => {
 // Login
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
+    console.log(`Login attempt for username: ${username}`);
 
     db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
-        if (err) return res.status(500).json({ message: err.message });
-        if (!user) return res.status(400).json({ message: 'User not found' });
+        if (err) {
+            console.error('Login DB Error:', err);
+            return res.status(500).json({ message: err.message });
+        }
+        if (!user) {
+            console.log('User not found');
+            return res.status(400).json({ message: 'User not found' });
+        }
 
         if (user.is_approved === 0) {
+            console.log('User not approved');
             return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!validPassword) {
+            console.log('Invalid password');
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
 
+        console.log('Login successful');
         const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
         
         res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id });
