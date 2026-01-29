@@ -1,7 +1,20 @@
 require('dotenv').config({ override: true });
 const dns = require('dns');
 
-// Force IPv4 for DNS resolution to prevent ENETUNREACH on IPv6-only Supabase addresses
+// Monkey-patch dns.lookup to force IPv4 globally
+// This resolves 'connect ENETUNREACH' errors on IPv6-enabled networks
+const originalLookup = dns.lookup;
+dns.lookup = (hostname, options, callback) => {
+    if (typeof options === 'function') {
+        callback = options;
+        options = {};
+    }
+    if (!options) options = {};
+    options.family = 4; // Force IPv4
+    return originalLookup(hostname, options, callback);
+};
+
+// Force IPv4 for DNS resolution (fallback)
 if (dns.setDefaultResultOrder) {
     dns.setDefaultResultOrder('ipv4first');
 }

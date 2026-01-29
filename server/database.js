@@ -24,39 +24,78 @@ if (isPostgres) {
     // console.log('Using DB URL:', connectionString.replace(/:[^:@]*@/, ':****@')); // Debug log
 
     const { URL } = require('url');
-    let poolConfig;
+    
+    // Lazy initialization of the pool with explicit IPv4 resolution
+    let pool = null;
+    const dns = require('dns').promises;
 
-    try {
+    const getPool = async () => {
+        if (pool) return pool;
+
         const params = new URL(dbUrl.trim());
-        poolConfig = {
+        let hostIp = params.hostname;
+
+        // Resolve Hostname to IPv4 explicitly
+        try {
+            console.log(`Attempting to resolve hostname: ${params.hostname}`);
+            const resolved = await dns.resolve4(params.hostname);
+            console.log(`DNS Resolution Result for ${params.hostname}:`, resolved);
+            
+            if (resolved && resolved.length > 0) {
+                hostIp = resolved[0];
+                console.log(`Resolved DB host ${params.hostname} to ${hostIp}`);
+            } else {
+                console.warn(`DNS resolve4 returned empty array for ${params.hostname}`);
+            }
+        } catch (dnsError) {
+            console.warn(`DNS resolution failed for ${params.hostname}, using hostname directly. Error: ${dnsError.message}`);
+            // Fallback: try lookup if resolve4 fails (though lookup is what we want to avoid usually, but as last resort)
+             try {
+                console.log('Attempting fallback to dns.lookup...');
+                const lookupResult = await require('dns').promises.lookup(params.hostname, { family: 4 });
+                console.log('Fallback lookup result:', lookupResult);
+                if (lookupResult && lookupResult.address) {
+                    hostIp = lookupResult.address;
+                    console.log(`Fallback resolved DB host ${params.hostname} to ${hostIp}`);
+                }
+            } catch (lookupError) {
+                console.error('Fallback lookup also failed:', lookupError.message);
+            }
+        }
+
+        // Extract Endpoint ID for Neon/SNI support when using direct IP
+        // Hostname format: ep-cold-base-ahn90yr2-pooler.c-3.us-east-1.aws.neon.tech
+        const endpointId = params.hostname.split('.')[0];
+        
+        const poolConfig = {
             user: params.username,
             password: params.password,
-            host: params.hostname,
+            host: hostIp,
             port: params.port,
             database: params.pathname.split('/')[1],
             ssl: { rejectUnauthorized: false },
-            family: 4, // Force IPv4 to resolve ENETUNREACH
+            options: `endpoint=${endpointId}`, // Crucial for Neon when using IP directly
         };
-    } catch (parseError) {
-        console.error('Error parsing DB URL:', parseError.message);
-        // Fallback to connection string if URL parsing fails (might miss family: 4 but avoids crash)
-        poolConfig = {
-            connectionString: dbUrl.trim(),
-            ssl: { rejectUnauthorized: false },
-        };
-    }
+        
+        console.log('Creating pg pool with config (password masked):', { ...poolConfig, password: '***' });
 
-    const pool = new Pool(poolConfig);
+        pool = new Pool(poolConfig);
+        
+        pool.on('error', (err, client) => {
+            console.error('Unexpected error on idle client', err);
+        });
 
-    pool.on('error', (err, client) => {
-        console.error('Unexpected error on idle client', err);
-        // Don't exit, just log. Connection might recover.
-    });
-
-    console.log('Connected to PostgreSQL database (IPv4 forced).');
+        console.log('Connected to PostgreSQL database (Lazy Init).');
+        return pool;
+    };
 
     db = {
-        pool: pool, // Expose pool if needed
+        // Expose query method for internal use (migrations)
+        query: async function(text, params) {
+            const p = await getPool();
+            return p.query(text, params);
+        },
+
         run: function(sql, params, callback) {
             if (typeof params === 'function') {
                 callback = params;
@@ -73,16 +112,20 @@ if (isPostgres) {
                 pgSql += ' RETURNING id';
             }
 
-            pool.query(pgSql, params, (err, res) => {
-                if (err) {
-                    if (callback) callback(err);
-                    return;
-                }
-                const context = {
-                    lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : 0,
-                    changes: res.rowCount
-                };
-                if (callback) callback.call(context, null);
+            getPool().then(p => {
+                p.query(pgSql, params, (err, res) => {
+                    if (err) {
+                        if (callback) callback(err);
+                        return;
+                    }
+                    const context = {
+                        lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : 0,
+                        changes: res.rowCount
+                    };
+                    if (callback) callback.call(context, null);
+                });
+            }).catch(err => {
+                if (callback) callback(err);
             });
         },
         all: function(sql, params, callback) {
@@ -93,8 +136,12 @@ if (isPostgres) {
             let paramIndex = 1;
             const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
             
-            pool.query(pgSql, params, (err, res) => {
-                if (callback) callback(err, res ? res.rows : []);
+            getPool().then(p => {
+                p.query(pgSql, params, (err, res) => {
+                    if (callback) callback(err, res ? res.rows : []);
+                });
+            }).catch(err => {
+                if (callback) callback(err, []);
             });
         },
         get: function(sql, params, callback) {
@@ -105,8 +152,12 @@ if (isPostgres) {
             let paramIndex = 1;
             const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
             
-            pool.query(pgSql, params, (err, res) => {
-                if (callback) callback(err, res && res.rows.length > 0 ? res.rows[0] : undefined);
+            getPool().then(p => {
+                p.query(pgSql, params, (err, res) => {
+                    if (callback) callback(err, res && res.rows.length > 0 ? res.rows[0] : undefined);
+                });
+            }).catch(err => {
+                if (callback) callback(err);
             });
         },
         serialize: function(callback) {
@@ -243,20 +294,20 @@ function initPgDb() {
     const runQueries = async () => {
         try {
             for (const q of queries) {
-                await db.pool.query(q);
+                await db.query(q);
             }
             
             // Migration: Add staff_id to users if not exists
             try {
-                await db.pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
+                await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
             } catch (e) { console.log('Migration note: staff_id column might already exist or error', e.message); }
 
             // Migration: Update role check constraint (Postgres)
             try {
                 // Drop old constraint
-                await db.pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+                await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
                 // Add new constraint
-                await db.pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'cadet', 'training_staff'))`);
+                await db.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'cadet', 'training_staff'))`);
             } catch (e) { console.log('Migration note: Could not update users_role_check constraint', e.message); }
 
             seedAdmin();
