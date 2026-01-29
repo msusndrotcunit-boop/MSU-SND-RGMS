@@ -55,17 +55,23 @@ router.post('/login', (req, res) => {
 
 // Cadet Login (No Password)
 router.post('/cadet-login', (req, res) => {
-    const { identifier } = req.body; // Can be Student ID or Email
+    const { identifier } = req.body; // Can be Student ID, Username, or Email
 
     if (!identifier) {
-        return res.status(400).json({ message: 'Please enter your Username or Email.' });
+        return res.status(400).json({ message: 'Please enter your Student ID, Username, or Email.' });
     }
 
-    // Check by Username (Student ID) or Email
+    // Check by Username, Email, OR Student ID (via join with cadets table)
     // Only for role = 'cadet'
-    const sql = `SELECT * FROM users WHERE (username = ? OR email = ?) AND role = 'cadet'`;
+    const sql = `
+        SELECT u.* 
+        FROM users u 
+        LEFT JOIN cadets c ON u.cadet_id = c.id 
+        WHERE (u.username = ? OR u.email = ? OR c.student_id = ?) 
+        AND u.role = 'cadet'
+    `;
     
-    db.get(sql, [identifier, identifier], (err, user) => {
+    db.get(sql, [identifier, identifier, identifier], (err, user) => {
         if (err) return res.status(500).json({ message: err.message });
         
         if (!user) {
@@ -73,12 +79,11 @@ router.post('/cadet-login', (req, res) => {
         }
 
         if (user.is_approved === 0) {
-            // Should be rare if imported, but safe check
             return res.status(403).json({ message: 'Your account is not authorized.' });
         }
 
         // Generate Token
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' }); // Longer session for cadets?
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' });
         
         res.json({ token, role: user.role, cadetId: user.cadet_id });
     });

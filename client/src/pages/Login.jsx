@@ -96,11 +96,11 @@ const Login = () => {
                 <form onSubmit={handleSubmit}>
                     {loginType === 'cadet' && (
                         <div className="mb-6">
-                            <label className="block text-gray-700 font-semibold mb-2">Username or Email Address</label>
+                            <label className="block text-gray-700 font-semibold mb-2">Login Credential</label>
                             <input
                                 type="text"
                                 name="identifier"
-                                placeholder="Enter your Username or Email"
+                                placeholder="Student ID, Username, or Email"
                                 className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
                                 onChange={handleChange}
                                 required
