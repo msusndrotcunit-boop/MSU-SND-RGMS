@@ -313,6 +313,11 @@ function initPgDb() {
                 await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
             } catch (e) { console.log('Migration note: staff_id column might already exist or error', e.message); }
 
+            // Migration: Add profile_completed to cadets if not exists
+            try {
+                await db.query(`ALTER TABLE cadets ADD COLUMN IF NOT EXISTS profile_completed INTEGER DEFAULT 0`);
+            } catch (e) { console.log('Migration note: profile_completed column might already exist or error', e.message); }
+
             // Migration: Update role check constraint (Postgres)
             try {
                 // Drop old constraint
@@ -458,6 +463,13 @@ function initSqliteDb() {
             profile_pic TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
+
+        // Migration: Add profile_completed column to cadets (SQLite)
+        db.run("ALTER TABLE cadets ADD COLUMN profile_completed INTEGER DEFAULT 0", (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                // console.log('Migration note (SQLite):', err.message);
+            }
+        });
 
         // Staff Attendance Records Table
         db.run(`CREATE TABLE IF NOT EXISTS staff_attendance_records (
