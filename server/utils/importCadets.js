@@ -443,21 +443,41 @@ const parsePdfBuffer = async (buffer) => {
     const text = pdfData.text;
     const lines = text.split('\n');
     lines.forEach(line => {
-        const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/);
+        // Match standard Student ID formats: YYYY-NNNNNN or just NNNNNN (at least 5 digits)
+        const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/) || line.match(/\b\d{5,}\b/);
+        
         if (idMatch) {
             const studentId = idMatch[0];
             const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
             const email = emailMatch ? emailMatch[0] : '';
             let cleanLine = line.replace(studentId, '').replace(email, '').trim();
-            let lastName = cleanLine;
+            
+            // Clean up any remaining non-name characters (like bullets, numbering) if they are at start
+            cleanLine = cleanLine.replace(/^[\d.)\-\s]+/, '');
+
+            let lastName = '';
             let firstName = '';
             let middleName = '';
+            
             if (cleanLine.includes(',')) {
+                // Format: Last Name, First Name Middle Name
                 const parts = cleanLine.split(',');
                 lastName = parts[0].trim();
                 const rest = parts.slice(1).join(' ').trim();
                 firstName = rest;
+            } else {
+                // Format: First Name Middle Name Last Name (Assumed if no comma)
+                // Or: Last Name First Name (Military style without comma? Risky. sticking to First Last)
+                const parts = cleanLine.split(/\s+/);
+                if (parts.length > 1) {
+                    lastName = parts.pop();
+                    firstName = parts.join(' ');
+                } else {
+                    lastName = cleanLine;
+                    firstName = 'Unknown';
+                }
             }
+            
             data.push({
                 'Student ID': studentId,
                 'Email': email,

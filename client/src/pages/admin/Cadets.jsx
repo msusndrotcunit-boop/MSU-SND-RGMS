@@ -529,7 +529,8 @@ const Cadets = () => {
                                 <div className="text-xs text-gray-500 mt-2 space-y-1">
                                     <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf</p>
                                     <p><strong>Excel/CSV:</strong> Required: "First Name", "Last Name". Optional: "Student ID", "Username", "Email".</p>
-                                    <p><strong>Note:</strong> If Student ID is missing, it will be auto-generated from the name. Login uses Username (defaults to Student ID) or Email.</p>
+                                    <p><strong>PDF:</strong> Requires lines with "Student ID" (e.g., 2023-1234) and "Name". Email is optional.</p>
+                                    <p><strong>Note:</strong> If Student ID is missing in Excel, it will be auto-generated. Login uses Username (defaults to Student ID) or Email.</p>
                                 </div>
                             </div>
                             
