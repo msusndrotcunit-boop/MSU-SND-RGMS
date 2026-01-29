@@ -1,4 +1,11 @@
 require('dotenv').config({ override: true });
+const dns = require('dns');
+
+// Force IPv4 for DNS resolution to prevent ENETUNREACH on IPv6-only Supabase addresses
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 // Force redeploy trigger
 const express = require('express');
 const cors = require('cors');
