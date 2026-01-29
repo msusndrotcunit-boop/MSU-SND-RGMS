@@ -3,7 +3,14 @@ const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const isPostgres = !!process.env.DATABASE_URL;
+// Check for various common Postgres environment variable names
+const dbUrl = process.env.DATABASE_URL || 
+              process.env.DATABASE_URL_INTERNAL || 
+              process.env.POSTGRES_URL || 
+              process.env.SUPABASE_URL ||
+              process.env.PG_CONNECTION_STRING;
+
+const isPostgres = !!dbUrl;
 
 // Removed strict placeholder check to prevent immediate crash on Render if env var is default.
 // The connection will fail naturally if the URL is invalid.
@@ -12,7 +19,7 @@ let db;
 
 // DB Adapter to unify SQLite and Postgres
 if (isPostgres) {
-    const connectionString = process.env.DATABASE_URL.trim();
+    const connectionString = dbUrl.trim();
     // console.log('Using DB URL:', connectionString.replace(/:[^:@]*@/, ':****@')); // Debug log
 
     const pool = new Pool({
