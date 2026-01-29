@@ -345,8 +345,18 @@ const parsePdfBuffer = async (buffer) => {
         // Extract Cadet Course / Unit (MS42, MS32, NST002, etc.)
         const courseMatch = line.match(/\b(MS\s?\d{1,2}|NSTP\s?\d|NST\s?\d{3}|CWTS|LTS)\b/i);
         
+        let cleanLineCheck = line.replace(/^[\d.)\-\s]+/, ''); 
+        const hasDigits = /\d/.test(cleanLineCheck);
+        const wordCount = cleanLineCheck.trim().split(/\s+/).length;
+        
+        const blacklist = ['department', 'university', 'college', 'school', 'list', 'section', 'page', 'schedule', 'report', 'officially', 'enrolled', 'student', 'cadet', 'cor', 'printed', 'republic', 'philippines'];
+        const lowerLine = cleanLineCheck.toLowerCase();
+        const isBlacklisted = blacklist.some(w => lowerLine.includes(w));
+
+        const likelyName = !hasDigits && wordCount >= 2 && wordCount < 6 && cleanLineCheck.trim().length > 5 && !isBlacklisted; // Heuristic for Name only
+
         // Skip lines that are too short or likely headers/footers if no ID/Course
-        if (!studentId && !courseMatch && (!hasComma || line.length < 5)) {
+        if (!studentId && !courseMatch && !hasComma && !likelyName) {
             return;
         }
 
