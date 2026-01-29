@@ -14,7 +14,13 @@ const isAdmin = (req, res, next) => {
 
 // GET All Staff (Admin)
 router.get('/', authenticateToken, isAdmin, (req, res) => {
-    db.all("SELECT * FROM training_staff ORDER BY last_name ASC", [], (err, rows) => {
+    const sql = `
+        SELECT ts.*, u.username 
+        FROM training_staff ts 
+        LEFT JOIN users u ON u.staff_id = ts.id 
+        ORDER BY ts.last_name ASC
+    `;
+    db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
     });
@@ -68,7 +74,7 @@ router.get('/:id', authenticateToken, (req, res) => {
 
 // CREATE Staff (Admin)
 router.post('/', authenticateToken, isAdmin, async (req, res) => {
-    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic } = req.body;
+    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic, username } = req.body;
     
     // 1. Create Staff Profile
     const sql = `INSERT INTO training_staff (rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic) 
@@ -86,7 +92,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
 
         // 2. Create User Account
         // Default password: 'staffpassword' (Should be changed)
-        const username = email || `${first_name.toLowerCase()}.${last_name.toLowerCase()}`;
+        const finalUsername = username || email || `${first_name.toLowerCase()}.${last_name.toLowerCase()}`;
         const defaultPassword = 'staffpassword'; 
         
         try {
@@ -96,7 +102,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
             // Note: role is 'training_staff'. This relies on the CHECK constraint being updated or ignored.
             const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
             
-            db.run(userSql, [username, hashedPassword, staffId, email, profile_pic], (uErr) => {
+            db.run(userSql, [finalUsername, hashedPassword, staffId, email, profile_pic], (uErr) => {
                 if (uErr) {
                     console.error('Error creating user for staff:', uErr);
                     // Don't fail the request, just warn
@@ -112,11 +118,19 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
 
 // UPDATE Staff
 router.put('/:id', authenticateToken, isAdmin, (req, res) => {
-    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic } = req.body;
+    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic, username } = req.body;
     const sql = `UPDATE training_staff SET rank = ?, first_name = ?, middle_name = ?, last_name = ?, suffix_name = ?, email = ?, contact_number = ?, role = ?, profile_pic = ? WHERE id = ?`;
     
     db.run(sql, [rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic, req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
+        
+        // Update username if provided
+        if (username) {
+            db.run("UPDATE users SET username = ? WHERE staff_id = ?", [username, req.params.id], (uErr) => {
+                if (uErr) console.error("Error updating staff username:", uErr);
+            });
+        }
+        
         res.json({ message: 'Staff updated successfully' });
     });
 });

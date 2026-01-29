@@ -165,7 +165,7 @@ const Cadets = () => {
             doc.setFontSize(11);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-            const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
+            const tableColumn = ["Rank", "Name", "Username", "Unit", "Email", "Phone"];
             
             const tableRows = [];
 
@@ -177,7 +177,7 @@ const Cadets = () => {
                 const cadetData = [
                     cadet.rank,
                     `${cadet.last_name}, ${cadet.first_name}`,
-                    cadet.student_id,
+                    cadet.username || cadet.student_id,
                     `${cadet.company || '-'}/${cadet.platoon || '-'}`,
                     cadet.email || '-',
                     cadet.contact_number || '-'
@@ -221,7 +221,7 @@ const Cadets = () => {
             middleName: cadet.middle_name || '',
             lastName: cadet.last_name || '',
             suffixName: cadet.suffix_name || '',
-            studentId: cadet.student_id || '',
+            username: cadet.username || cadet.student_id || '',
             email: cadet.email || '',
             contactNumber: cadet.contact_number || '',
             address: cadet.address || '',
@@ -599,11 +599,11 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={addForm.middleName} onChange={e => setAddForm({...addForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" required value={addForm.lastName} onChange={e => setAddForm({...addForm, lastName: e.target.value})} placeholder="Last Name *" />
                                 <input className="border p-2 rounded" value={addForm.suffixName} onChange={e => setAddForm({...addForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input className="border p-2 rounded" required value={addForm.studentId} onChange={e => setAddForm({...addForm, studentId: e.target.value})} placeholder="Student ID *" />
+                                <input className="border p-2 rounded" required value={addForm.username} onChange={e => setAddForm({...addForm, username: e.target.value})} placeholder="Username *" />
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} placeholder="Email (Login Username)" />
+                                <input className="border p-2 rounded" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} placeholder="Email" />
                                 <input className="border p-2 rounded" value={addForm.contactNumber} onChange={e => setAddForm({...addForm, contactNumber: e.target.value})} placeholder="Contact Number" />
                             </div>
 
@@ -663,7 +663,7 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
                                 <input className="border p-2 rounded" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
+                                <input className="border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

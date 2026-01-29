@@ -329,98 +329,102 @@ const parsePdfBuffer = async (buffer) => {
     lines.forEach(line => {
         // Match standard Student ID formats: YYYY-NNNNNN or just NNNNNN (at least 5 digits)
         const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/) || line.match(/\b\d{5,}\b/);
+        let studentId = '';
         
         if (idMatch) {
-            const studentId = idMatch[0];
+            studentId = idMatch[0];
+        }
+
+        // Heuristic: Valid line if it has ID OR (Comma for name AND length > 10) OR Course pattern
+        const hasComma = line.includes(',');
+        // Extract Cadet Course / Unit (MS42, MS32, NST002, etc.)
+        const courseMatch = line.match(/\b(MS\s?\d{1,2}|NSTP\s?\d|NST\s?\d{3}|CWTS|LTS)\b/i);
+        
+        // Skip lines that are too short or likely headers/footers if no ID/Course
+        if (!studentId && !courseMatch && (!hasComma || line.length < 5)) {
+            return;
+        }
+
+        // Extract Email
+        const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        const email = emailMatch ? emailMatch[0] : '';
+
+        const cadetCourse = courseMatch ? courseMatch[0].toUpperCase().replace(/\s/g, '') : '';
+
+        // Extract Academic Program (Course) e.g. Bachelor of Science in...
+        const academicMatch = line.match(/\b(Bachelor of [A-Za-z\s]+|BS\s?[A-Za-z\s]+|Associate in [A-Za-z\s]+|Diploma in [A-Za-z\s]+)\b/i);
+        const academicProgram = academicMatch ? academicMatch[0].trim() : '';
+
+        // Clean the line
+        let cleanLine = line;
+        if (studentId) cleanLine = cleanLine.replace(studentId, '');
+        if (email) cleanLine = cleanLine.replace(email, '');
+        if (courseMatch) cleanLine = cleanLine.replace(courseMatch[0], '');
+        if (academicMatch) cleanLine = cleanLine.replace(academicMatch[0], '');
+        
+        cleanLine = cleanLine
+            .replace(/Officially enrolled/i, '')
+            .replace(/No COR printed/i, '')
+            .replace(/Old Student/i, '')
+            .replace(/New Student/i, '')
+            .trim();
+        
+        // Clean up any remaining non-name characters (like bullets, numbering) if they are at start
+        cleanLine = cleanLine.replace(/^[\d.)\-\s]+/, '');
+
+        let lastName = '';
+        let firstName = '';
+        let middleName = '';
+        
+        if (cleanLine.includes(',')) {
+            // Format: Last Name, First Name Middle Name
+            const parts = cleanLine.split(',');
+            lastName = parts[0].trim();
+            const rest = parts.slice(1).join(' ').trim();
             
-            // Extract Email
-            const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-            const email = emailMatch ? emailMatch[0] : '';
-
-            // Extract Cadet Course / Unit (MS42, MS32, NST002, etc.)
-            // Looks for MS 1-4, MS11-42, NSTP 1-2, NST001-002
-            const courseMatch = line.match(/\b(MS\s?\d{1,2}|NSTP\s?\d|NST\s?\d{3}|CWTS|LTS)\b/i);
-            const cadetCourse = courseMatch ? courseMatch[0].toUpperCase().replace(/\s/g, '') : '';
-
-            // Extract Academic Program (Course) e.g. Bachelor of Science in...
-            const academicMatch = line.match(/\b(Bachelor of [A-Za-z\s]+|BS\s?[A-Za-z\s]+|Associate in [A-Za-z\s]+|Diploma in [A-Za-z\s]+)\b/i);
-            const academicProgram = academicMatch ? academicMatch[0].trim() : '';
-
-            // Clean the line
-            let cleanLine = line
-                .replace(studentId, '')
-                .replace(email, '')
-                .replace(courseMatch ? courseMatch[0] : '', '')
-                .replace(academicMatch ? academicMatch[0] : '', '')
-                .replace(/Officially enrolled/i, '')
-                .replace(/No COR printed/i, '')
-                .replace(/Old Student/i, '')
-                .replace(/New Student/i, '')
-                .trim();
-            
-            // Clean up any remaining non-name characters (like bullets, numbering) if they are at start
-            cleanLine = cleanLine.replace(/^[\d.)\-\s]+/, '');
-
-            let lastName = '';
-            let firstName = '';
-            let middleName = '';
-            
-            if (cleanLine.includes(',')) {
-                // Format: Last Name, First Name Middle Name
-                const parts = cleanLine.split(',');
-                lastName = parts[0].trim();
-                const rest = parts.slice(1).join(' ').trim();
-                
-                // Try to extract Middle Name from the end of the Rest part
-                // Heuristic: If last token is 1 letter or 1 letter + dot, it's Middle Initial
-                // Or if it looks like a middle name (e.g. Batoon, Omandam) in the context of "First Middle"
-                // But often "First Middle" is just treated as First Name in systems if not explicit.
-                // However, user specifically asked for Middle Name.
-                // In "Kent Jed Batoon", First: Kent Jed, Middle: Batoon.
-                const nameParts = rest.split(/\s+/);
-                if (nameParts.length > 1) {
-                    const lastToken = nameParts[nameParts.length - 1];
-                    // Check if last token is a suffix (Jr, III, etc) - if so, it belongs to First Name (or Suffix field, but we usually append to First/Last)
-                    if (['Jr.', 'Sr.', 'III', 'IV', 'V'].includes(lastToken)) {
-                        firstName = rest;
-                    } else {
-                        // Assume last word is Middle Name
-                        middleName = nameParts.pop(); 
-                        firstName = nameParts.join(' ');
-                    }
-                } else {
+            // Try to extract Middle Name from the end of the Rest part
+            const nameParts = rest.split(/\s+/);
+            if (nameParts.length > 1) {
+                const lastToken = nameParts[nameParts.length - 1];
+                if (['Jr.', 'Sr.', 'III', 'IV', 'V'].includes(lastToken)) {
                     firstName = rest;
+                } else {
+                    // Assume last word is Middle Name
+                    middleName = nameParts.pop(); 
+                    firstName = nameParts.join(' ');
                 }
             } else {
-                // Format: First Name Middle Name Last Name (Assumed if no comma)
-                const parts = cleanLine.split(/\s+/);
-                if (parts.length > 1) {
-                    lastName = parts.pop(); // Last token is Last Name
-                    // Check for Middle Initial before Last Name?
-                    // "Juan M. Dela Cruz" -> Last: Cruz, First: Juan M. Dela -> Wrong
-                    // "Juan Dela Cruz" -> Last: Cruz, First: Juan Dela -> Wrong
-                    // Without comma, it's very hard. Let's stick to simple logic or assume Last Name is last word.
-                    firstName = parts.join(' ');
-                } else {
-                    lastName = cleanLine;
-                    firstName = 'Unknown';
-                }
+                firstName = rest;
             }
-            
-            data.push({
-                'Student ID': studentId,
-                'Email': email,
-                'Last Name': lastName,
-                'First Name': firstName,
-                'Middle Name': middleName,
-                'Cadet Course': cadetCourse,
-                'Course': academicProgram
-            });
+        } else {
+            // Format: First Name Middle Name Last Name (Assumed if no comma)
+            // Without comma, this is risky, but if ID exists we can try.
+            const parts = cleanLine.split(/\s+/);
+            if (parts.length > 1) {
+                lastName = parts.pop(); // Last token is Last Name
+                firstName = parts.join(' ');
+            } else {
+                lastName = cleanLine;
+                firstName = 'Unknown';
+            }
         }
+        
+        // If we found essentially nothing, skip
+        if ((!lastName || lastName === 'Unknown') && !firstName) return;
+
+        data.push({
+            'Student ID': studentId,
+            'Email': email,
+            'Last Name': lastName,
+            'First Name': firstName,
+            'Middle Name': middleName,
+            'Cadet Course': cadetCourse,
+            'Course': academicProgram
+        });
     });
 
     if (data.length === 0) {
-        throw new Error("No cadet records detected in PDF. Ensure lines contain a valid Student ID (e.g., 2023-12345).");
+        throw new Error("No cadet records detected in PDF. Ensure lines contain a Name (Last, First) or valid Username/ID.");
     }
 
     return data;
@@ -985,9 +989,14 @@ router.get('/analytics', (req, res) => {
 router.post('/cadets', async (req, res) => {
     const cadet = req.body;
     
+    // Map username to studentId if studentId is missing
+    if (!cadet.studentId && cadet.username) {
+        cadet.studentId = cadet.username;
+    }
+
     // Validate required fields
     if (!cadet.studentId || !cadet.lastName || !cadet.firstName) {
-        return res.status(400).json({ message: 'Student ID, Last Name, and First Name are required' });
+        return res.status(400).json({ message: 'Username/Student ID, Last Name, and First Name are required' });
     }
 
     try {
@@ -995,7 +1004,7 @@ router.post('/cadets', async (req, res) => {
         const checkSql = 'SELECT id FROM cadets WHERE student_id = ?';
         db.get(checkSql, [cadet.studentId], (err, row) => {
             if (err) return res.status(500).json({ message: err.message });
-            if (row) return res.status(400).json({ message: 'Cadet with this Student ID already exists' });
+            if (row) return res.status(400).json({ message: 'Cadet with this Username/ID already exists' });
 
             // Insert Cadet
             const insertSql = `INSERT INTO cadets (
@@ -1100,11 +1109,14 @@ router.get('/cadets', (req, res) => {
 router.put('/cadets/:id', (req, res) => {
     const { 
         rank, firstName, middleName, lastName, suffixName, 
-        studentId, email, contactNumber, address, 
+        studentId, username, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
         cadetCourse, semester, status 
     } = req.body;
+
+    // Use username if studentId is not provided
+    const finalStudentId = studentId || username;
 
     const sql = `UPDATE cadets SET 
         rank=?, first_name=?, middle_name=?, last_name=?, suffix_name=?, 
@@ -1116,7 +1128,7 @@ router.put('/cadets/:id', (req, res) => {
 
     const params = [
         rank, firstName, middleName, lastName, suffixName, 
-        studentId, email, contactNumber, address, 
+        finalStudentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
         cadetCourse, semester, status, 
@@ -1125,6 +1137,14 @@ router.put('/cadets/:id', (req, res) => {
 
     db.run(sql, params, (err) => {
             if (err) return res.status(500).json({ message: err.message });
+            
+            // Also update username in users table
+            if (username) {
+                db.run("UPDATE users SET username = ? WHERE cadet_id = ?", [username, req.params.id], (uErr) => {
+                    if (uErr) console.error("Error updating user username:", uErr);
+                });
+            }
+
             res.json({ message: 'Cadet updated' });
         }
     );

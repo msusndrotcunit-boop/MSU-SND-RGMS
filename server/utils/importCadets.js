@@ -148,15 +148,18 @@ const processCadetData = async (data) => {
     let failCount = 0;
     const errors = [];
     for (const row of data) {
-        let studentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'StudentId', 'Username', 'username']);
-        const customUsername = findColumnValue(row, ['Username', 'username', 'User Name']);
         const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
+        let studentId = findColumnValue(row, ['Username', 'username', 'User Name']); // Priority 1: Username
         
-        // Priority 1: Student ID
+        // Priority 2: Student ID (fallback if username is missing)
         if (!studentId) {
-            if (customUsername) {
-                studentId = customUsername;
-            } else if (email) {
+            studentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'StudentId']);
+        }
+        
+        const customUsername = studentId; // Now effectively the same, but kept for logic consistency
+        
+        if (!studentId) {
+            if (email) {
                 studentId = email;
             }
         }

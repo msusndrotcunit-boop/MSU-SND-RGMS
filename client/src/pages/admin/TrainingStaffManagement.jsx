@@ -17,7 +17,7 @@ const TrainingStaffManagement = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addForm, setAddForm] = useState({
         rank: '', first_name: '', middle_name: '', last_name: '', suffix_name: '',
-        email: '', contact_number: '', role: 'Instructor'
+        email: '', contact_number: '', role: 'Instructor', username: ''
     });
     const [editForm, setEditForm] = useState({});
 
@@ -76,7 +76,7 @@ const TrainingStaffManagement = () => {
             fetchStaff();
             setAddForm({
                 rank: '', first_name: '', middle_name: '', last_name: '', suffix_name: '',
-                email: '', contact_number: '', role: 'Instructor'
+                email: '', contact_number: '', role: 'Instructor', username: ''
             });
         } catch (err) {
             console.error(err);
@@ -324,13 +324,17 @@ const TrainingStaffManagement = () => {
                                     <input className="w-full border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Role</label>
-                                    <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
-                                        <option value="Instructor">Instructor</option>
-                                        <option value="Admin">Admin</option>
-                                        <option value="Commandant">Commandant</option>
-                                    </select>
+                                    <label className="block text-sm font-medium text-gray-700">Username</label>
+                                    <input className="w-full border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Role</label>
+                                <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
+                                    <option value="Instructor">Instructor</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Commandant">Commandant</option>
+                                </select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
