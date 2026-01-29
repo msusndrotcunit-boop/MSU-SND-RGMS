@@ -327,34 +327,84 @@ const parsePdfBuffer = async (buffer) => {
     const lines = text.split('\n');
     
     lines.forEach(line => {
-        const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/);
+        // Match standard Student ID formats: YYYY-NNNNNN or just NNNNNN (at least 5 digits)
+        const idMatch = line.match(/\b\d{4}[-]?\d{3,}\b/) || line.match(/\b\d{5,}\b/);
+        
         if (idMatch) {
             const studentId = idMatch[0];
+            
+            // Extract Email
             const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
             const email = emailMatch ? emailMatch[0] : '';
-            let cleanLine = line.replace(studentId, '').replace(email, '').trim();
-            let lastName = cleanLine;
+
+            // Extract Cadet Course / Unit (MS42, MS32, NST002, etc.)
+            // Looks for MS 1-4, MS11-42, NSTP 1-2, NST001-002
+            const courseMatch = line.match(/\b(MS\s?\d{1,2}|NSTP\s?\d|NST\s?\d{3}|CWTS|LTS)\b/i);
+            const cadetCourse = courseMatch ? courseMatch[0].toUpperCase().replace(/\s/g, '') : '';
+
+            // Clean the line
+            let cleanLine = line
+                .replace(studentId, '')
+                .replace(email, '')
+                .replace(courseMatch ? courseMatch[0] : '', '')
+                .trim();
+            
+            // Clean up any remaining non-name characters (like bullets, numbering) if they are at start
+            cleanLine = cleanLine.replace(/^[\d.)\-\s]+/, '');
+
+            let lastName = '';
             let firstName = '';
             let middleName = '';
             
             if (cleanLine.includes(',')) {
+                // Format: Last Name, First Name Middle Name
                 const parts = cleanLine.split(',');
                 lastName = parts[0].trim();
                 const rest = parts.slice(1).join(' ').trim();
-                firstName = rest;
+                
+                // Try to extract Middle Name from the end of the Rest part
+                // Heuristic: If last token is 1 letter or 1 letter + dot, it's Middle Initial
+                const nameParts = rest.split(/\s+/);
+                if (nameParts.length > 1) {
+                    const lastToken = nameParts[nameParts.length - 1];
+                    if (lastToken.length <= 2 || (lastToken.length === 2 && lastToken.endsWith('.'))) {
+                         middleName = nameParts.pop(); // Remove middle name from parts
+                         firstName = nameParts.join(' ');
+                    } else {
+                        firstName = rest;
+                    }
+                } else {
+                    firstName = rest;
+                }
+            } else {
+                // Format: First Name Middle Name Last Name (Assumed if no comma)
+                const parts = cleanLine.split(/\s+/);
+                if (parts.length > 1) {
+                    lastName = parts.pop(); // Last token is Last Name
+                    // Check for Middle Initial before Last Name?
+                    // "Juan M. Dela Cruz" -> Last: Cruz, First: Juan M. Dela -> Wrong
+                    // "Juan Dela Cruz" -> Last: Cruz, First: Juan Dela -> Wrong
+                    // Without comma, it's very hard. Let's stick to simple logic or assume Last Name is last word.
+                    firstName = parts.join(' ');
+                } else {
+                    lastName = cleanLine;
+                    firstName = 'Unknown';
+                }
             }
+            
             data.push({
                 'Student ID': studentId,
                 'Email': email,
                 'Last Name': lastName,
                 'First Name': firstName,
-                'Middle Name': middleName
+                'Middle Name': middleName,
+                'Cadet Course': cadetCourse
             });
         }
     });
 
     if (data.length === 0) {
-        throw new Error("No cadet records detected in PDF.");
+        throw new Error("No cadet records detected in PDF. Ensure lines contain a valid Student ID (e.g., 2023-12345).");
     }
 
     return data;
