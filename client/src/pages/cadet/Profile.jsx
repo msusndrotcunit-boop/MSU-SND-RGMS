@@ -12,6 +12,7 @@ const Profile = () => {
         middleName: '',
         lastName: '',
         suffixName: '',
+        username: '',
         email: '',
         contactNumber: '',
         address: '',
@@ -52,6 +53,7 @@ const Profile = () => {
             middleName: data.middle_name || '',
             lastName: data.last_name,
             suffixName: data.suffix_name || '',
+            username: data.username || '',
             email: data.email,
             contactNumber: data.contact_number || '',
             address: data.address || '',
@@ -109,14 +111,18 @@ const Profile = () => {
         setSuccess('');
         try {
             await axios.put('/api/cadet/profile', profile);
-            setSuccess('Profile updated and locked successfully.');
-            setProfile(prev => ({ ...prev, profileCompleted: 1 }));
-            // Update cache
-            // We need to fetch fresh data or update cache manually, let's fetch
-            fetchProfile();
+            setSuccess('Profile updated. Logging out to apply changes...');
+            
+            // Logout and redirect to login
+            setTimeout(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('role');
+                // Force reload/redirect to login
+                window.location.href = '/login';
+            }, 1500);
+            
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update profile');
-        } finally {
             setSaving(false);
         }
     };
@@ -226,6 +232,14 @@ const Profile = () => {
                                 Personal Information
                             </h3>
                             <div className="space-y-4">
+                                <ProfileField 
+                                    label="Username" 
+                                    name="username" 
+                                    value={profile.username} 
+                                    isLocked={isLocked} 
+                                    onChange={handleChange} 
+                                    darkMode={darkMode} 
+                                />
                                 <ProfileField 
                                     label="First Name" 
                                     name="firstName" 

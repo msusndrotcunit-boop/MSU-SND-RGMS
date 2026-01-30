@@ -69,33 +69,50 @@ const updateCadet = (id, cadet) => {
     });
 };
 
-const upsertUser = (cadetId, studentId, email, customUsername) => {
+const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
     return new Promise(async (resolve, reject) => {
         try {
             const existingUser = await getUserByCadetId(cadetId);
-            const username = customUsername || studentId;
+            
+            // Generate username: Use customUsername (from CSV) -> firstName -> studentId
+            const generateBaseUsername = () => {
+                if (customUsername) return customUsername;
+                if (firstName) return firstName;
+                return studentId;
+            };
+            
+            const baseUsername = generateBaseUsername();
+
             if (!existingUser) {
                 const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED';
-                db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                    [username, dummyHash, 'cadet', cadetId, 1, email], 
-                    (err) => {
-                        if (err) {
-                            if (err.message.includes('UNIQUE constraint failed') || err.message.includes('duplicate key value violates unique constraint')) {
-                                resolve();
-                            } else {
-                                reject(err);
+                
+                const insertUser = (uName) => {
+                    db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
+                        [uName, dummyHash, 'cadet', cadetId, 1, email], 
+                        (err) => {
+                            if (err) {
+                                if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate key')) {
+                                    // If username taken, try appending random number
+                                    // If the collision was on studentId (if used as username), this also handles it
+                                    const newUsername = uName + Math.floor(Math.random() * 1000);
+                                    insertUser(newUsername);
+                                } else {
+                                    reject(err);
+                                }
+                            }
+                            else {
+                                db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (err) => {
+                                    resolve();
+                                });
                             }
                         }
-                        else {
-                            db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (err) => {
-                                resolve();
-                            });
-                        }
-                    }
-                );
+                    );
+                };
+                insertUser(baseUsername);
             } else {
                 let sql = `UPDATE users SET email = ?, is_approved = 1`;
                 const params = [email];
+                // Only update username if explicitly provided in CSV (customUsername)
                 if (customUsername && customUsername !== existingUser.username) {
                     sql += `, username = ?`;
                     params.push(customUsername);
@@ -150,14 +167,22 @@ const processCadetData = async (data) => {
     const errors = [];
     for (const row of data) {
         const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
-        let studentId = findColumnValue(row, ['Username', 'username', 'User Name']); // Priority 1: Username
+        let studentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'StudentId']);
         
-        // Priority 2: Student ID (fallback if username is missing)
-        if (!studentId) {
-            studentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'StudentId']);
+        // Check for explicit username in CSV
+        let csvUsername = findColumnValue(row, ['Username', 'username', 'User Name']);
+
+        // Fallback: If no Student ID found, check if Username column has it (legacy support)
+        if (!studentId && csvUsername) {
+            studentId = csvUsername;
+            // If we used the username column as student ID, we shouldn't treat it as a custom username
+            // unless we want to force them to be the same.
+            // But for this task, we want First Name to be default username if no explicit username.
+            // So let's keep csvUsername as is? 
+            // If the user provided "Username" column, they probably want that as username.
         }
         
-        const customUsername = studentId; // Now effectively the same, but kept for logic consistency
+        const customUsername = csvUsername;
         
         if (!studentId) {
             if (email) {
@@ -266,7 +291,7 @@ const processCadetData = async (data) => {
             // Use existing student_id if we have it
             const effectiveStudentId = existingCadet ? existingCadet.student_id : studentId;
             if (effectiveStudentId) {
-                 await upsertUser(cadetId, effectiveStudentId, cadetData.email, customUsername);
+                 await upsertUser(cadetId, effectiveStudentId, cadetData.email, customUsername, firstName);
             }
             
             successCount++;

@@ -106,7 +106,10 @@ router.get('/profile', (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    db.get(`SELECT * FROM cadets WHERE id = ?`, [cadetId], (err, row) => {
+    db.get(`SELECT c.*, u.username 
+            FROM cadets c 
+            LEFT JOIN users u ON u.cadet_id = c.id 
+            WHERE c.id = ?`, [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!row) return res.status(404).json({ message: 'Cadet not found' });
         res.json(row);
@@ -132,40 +135,71 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
             email, contactNumber, address, 
             course, yearLevel, schoolYear, 
             battalion, company, platoon, 
-            cadetCourse, semester 
+            cadetCourse, semester,
+            username
         } = req.body;
 
-        // Note: Rank, Student ID, Status are excluded from cadet self-update
-        const sql = `UPDATE cadets SET 
-            first_name = ?, middle_name = ?, last_name = ?, suffix_name = ?, 
-            email = ?, contact_number = ?, address = ?, 
-            course = ?, year_level = ?, school_year = ?, 
-            battalion = ?, company = ?, platoon = ?, 
-            cadet_course = ?, semester = ?,
-            profile_completed = 1
-            WHERE id = ?`;
+        const performUpdate = () => {
+            // Note: Rank, Student ID, Status are excluded from cadet self-update
+            const sql = `UPDATE cadets SET 
+                first_name = ?, middle_name = ?, last_name = ?, suffix_name = ?, 
+                email = ?, contact_number = ?, address = ?, 
+                course = ?, year_level = ?, school_year = ?, 
+                battalion = ?, company = ?, platoon = ?, 
+                cadet_course = ?, semester = ?,
+                profile_completed = 1
+                WHERE id = ?`;
 
-        const params = [
-            firstName, middleName || '', lastName, suffixName || '',
-            email, contactNumber || '', address || '',
-            course || '', yearLevel || '', schoolYear || '',
-            battalion || '', company || '', platoon || '',
-            cadetCourse || '', semester || '',
-            cadetId
-        ];
+            const params = [
+                firstName, middleName || '', lastName, suffixName || '',
+                email, contactNumber || '', address || '',
+                course || '', yearLevel || '', schoolYear || '',
+                battalion || '', company || '', platoon || '',
+                cadetCourse || '', semester || '',
+                cadetId
+            ];
 
-        db.run(sql, params, function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            
-            // Also update email in users table if changed
-            if (email) {
-                db.run("UPDATE users SET email = ? WHERE cadet_id = ?", [email, cadetId], (uErr) => {
-                    if (uErr) console.error("Error syncing email to users table:", uErr);
-                });
-            }
+            db.run(sql, params, function(err) {
+                if (err) return res.status(500).json({ message: err.message });
+                
+                // Update users table (email and username)
+                if (email || username) {
+                    let uSql = "UPDATE users SET ";
+                    let uParams = [];
+                    
+                    if (email) {
+                        uSql += "email = ?";
+                        uParams.push(email);
+                    }
+                    
+                    if (username) {
+                        if (email) uSql += ", ";
+                        uSql += "username = ?";
+                        uParams.push(username);
+                    }
+                    
+                    uSql += " WHERE cadet_id = ?";
+                    uParams.push(cadetId);
+                    
+                    db.run(uSql, uParams, (uErr) => {
+                        if (uErr) console.error("Error syncing users table:", uErr);
+                    });
+                }
 
-            res.json({ message: 'Profile updated and locked successfully.' });
-        });
+                res.json({ message: 'Profile updated and locked successfully.' });
+            });
+        };
+
+        if (username) {
+            // Check if username is taken by another user
+            db.get('SELECT id FROM users WHERE username = ? AND cadet_id != ?', [username, cadetId], (uErr, uRow) => {
+                if (uErr) return res.status(500).json({ message: uErr.message });
+                if (uRow) return res.status(400).json({ message: 'Username already taken.' });
+                performUpdate();
+            });
+        } else {
+            performUpdate();
+        }
     });
 });
 
