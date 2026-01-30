@@ -4,12 +4,19 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 // Check for various common Postgres environment variable names
-// Prioritize SUPABASE_URL if explicitly set by the user
-const dbUrl = process.env.SUPABASE_URL || 
-              process.env.DATABASE_URL || 
-              process.env.DATABASE_URL_INTERNAL || 
-              process.env.POSTGRES_URL || 
-              process.env.PG_CONNECTION_STRING;
+// We prefer DATABASE_URL if it's a valid postgres connection string.
+// SUPABASE_URL is often the API URL (https://...), so we only use it if it looks like a DB string.
+const getDbUrl = () => {
+    if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_URL.startsWith('postgres')) return process.env.SUPABASE_URL;
+    if (process.env.DATABASE_URL_INTERNAL) return process.env.DATABASE_URL_INTERNAL;
+    if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
+    if (process.env.PG_CONNECTION_STRING) return process.env.PG_CONNECTION_STRING;
+    return process.env.SUPABASE_URL; // Fallback
+};
+
+const dbUrl = getDbUrl();
+console.log(`Using Database Connection String from environment (Length: ${dbUrl ? dbUrl.length : 0})`);
 
 const isPostgres = !!dbUrl;
 
@@ -204,7 +211,8 @@ function initPgDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            profile_completed INTEGER DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -305,6 +313,11 @@ function initPgDb() {
                 await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
             } catch (e) { console.log('Migration note: staff_id column might already exist or error', e.message); }
 
+            // Migration: Add profile_completed to cadets if not exists
+            try {
+                await db.query(`ALTER TABLE cadets ADD COLUMN IF NOT EXISTS profile_completed INTEGER DEFAULT 0`);
+            } catch (e) { console.log('Migration note: profile_completed column might already exist or error', e.message); }
+
             // Migration: Update role check constraint (Postgres)
             try {
                 // Drop old constraint
@@ -344,7 +357,8 @@ function initSqliteDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            profile_completed INTEGER DEFAULT 0
         )`);
 
         // Users Table
@@ -450,6 +464,13 @@ function initSqliteDb() {
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        // Migration: Add profile_completed column to cadets (SQLite)
+        db.run("ALTER TABLE cadets ADD COLUMN profile_completed INTEGER DEFAULT 0", (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                // console.log('Migration note (SQLite):', err.message);
+            }
+        });
+
         // Staff Attendance Records Table
         db.run(`CREATE TABLE IF NOT EXISTS staff_attendance_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -477,12 +498,13 @@ function initSqliteDb() {
 }
 
 function seedAdmin() {
-    db.get("SELECT * FROM users WHERE username = 'msu-sndrotc_admin'", async (err, row) => {
+    const adminUsername = process.env.ADMIN_USERNAME || 'msu-sndrotc_admin';
+    db.get("SELECT * FROM users WHERE username = ?", [adminUsername], async (err, row) => {
         if (!row) {
             console.log('Admin not found. Seeding admin...');
-            const username = 'msu-sndrotc_admin';
-            const password = 'admingrading@2026';
-            const email = 'msusndrotcunit@gmail.com';
+            const username = adminUsername;
+            const password = process.env.ADMIN_PASSWORD || 'admingrading@2026';
+            const email = process.env.ADMIN_EMAIL || 'msusndrotcunit@gmail.com';
             
             try {
                 const hashedPassword = await bcrypt.hash(password, 10);

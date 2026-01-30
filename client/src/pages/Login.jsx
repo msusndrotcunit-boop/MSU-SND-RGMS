@@ -1,61 +1,93 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { User, ShieldCheck, Briefcase } from 'lucide-react';
+import { User, ShieldCheck, Briefcase, ChevronLeft } from 'lucide-react';
 
 const Login = () => {
-    const [loginType, setLoginType] = useState('cadet'); // 'cadet', 'staff', 'admin'
-    const [formData, setFormData] = useState({ username: '', password: '', identifier: '', email: '' });
-    const [error, setError] = useState('');
+    const location = useLocation();
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    // 'landing', 'cadet', 'staff'
+    const [view, setView] = useState('landing'); 
+    const [formData, setFormData] = useState({ username: '', password: '', identifier: '' });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (location.state?.type) {
+            if (location.state.type === 'cadet') setView('cadet');
+            else if (location.state.type === 'staff' || location.state.type === 'admin') setView('staff');
+        }
+    }, [location.state]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
+    const handleCadetLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         try {
-            let response;
-            if (loginType === 'cadet') {
-                response = await axios.post('/api/auth/cadet-login', { identifier: formData.identifier });
-            } else {
-                // Both Admin and Staff now use standard login
-                response = await axios.post('/api/auth/login', { username: formData.username, password: formData.password });
-            }
-
+            const response = await axios.post('/api/auth/cadet-login', { identifier: formData.identifier });
             login(response.data);
-            
+
             // Check for Default Cadet User for Onboarding
             if (response.data.role === 'cadet' && response.data.username === 'cadet@2026') {
                 navigate('/cadet/onboard');
                 return;
             }
 
+            navigate('/cadet/dashboard');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStaffLogin = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            // Use standard login for Staff and Admin (Username + Password)
+            const response = await axios.post('/api/auth/login', { 
+                username: formData.username, 
+                password: formData.password 
+            });
+            
+            const { role } = response.data;
+            login(response.data);
+
             // Check for Default Staff User for Onboarding
-            if (response.data.role === 'training_staff' && response.data.username === 'staff@2026') {
+            if (role === 'training_staff' && response.data.username === 'staff@2026') {
                 navigate('/staff/onboard');
                 return;
             }
 
-            if (response.data.role === 'admin') {
+            if (role === 'admin') {
                 navigate('/admin/dashboard');
-            } else if (response.data.role === 'training_staff') {
+            } else if (role === 'training_staff') {
                 navigate('/staff/dashboard');
-            } else {
+            } else if (role === 'cadet') {
+                // In case a cadet tries to login here (unlikely if they use the other form, but possible)
                 navigate('/cadet/dashboard');
+            } else {
+                setError('Unknown role');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-gray-900 overflow-hidden">
-            {/* Background Logo - Transparent RGMS Logo replacing the 3 logos */}
+            {/* Background Logo */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 overflow-hidden">
                 <img 
                     src="/assets/rgms_logo.png" 
@@ -64,121 +96,155 @@ const Login = () => {
                 />
             </div>
 
-            <div className="relative z-10 bg-white/90 backdrop-blur-md p-8 rounded-lg shadow-2xl w-full max-w-md border border-green-700/30">
-                <div className="flex justify-center items-center mb-6">
-                    {/* New RGMS Logo */}
+            <div className="relative z-10 bg-white/95 backdrop-blur-md p-8 rounded-lg shadow-2xl w-full max-w-md border border-green-700/30">
+                
+                {/* Header */}
+                <div className="flex flex-col items-center mb-8">
                     <img 
                         src="/assets/rgms_logo.png" 
                         alt="RGMS Logo" 
-                        className="w-32 h-32 object-contain drop-shadow-md"
+                        className="w-24 h-24 object-contain drop-shadow-md mb-4"
                     />
-                </div>
-                <h2 className="text-2xl font-bold mb-6 text-center text-green-900">MSU-SND ROTC UNIT Grading Management</h2>
-                
-                {/* Login Type Toggle */}
-                <div className="flex mb-6 bg-gray-200 rounded p-1">
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => setLoginType('cadet')}
-                    >
-                        <User size={18} className="mr-2" />
-                        Cadet
-                    </button>
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => setLoginType('staff')}
-                    >
-                        <Briefcase size={18} className="mr-2" />
-                        Staff
-                    </button>
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'admin' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => setLoginType('admin')}
-                    >
-                        <ShieldCheck size={18} className="mr-2" />
-                        Admin
-                    </button>
+                    <h2 className="text-xl font-bold text-center text-green-900 leading-tight">
+                        MSU-SND ROTC UNIT <br/> Grading Management System
+                    </h2>
                 </div>
 
-                {error && <p className="text-red-500 mb-4 text-center text-sm font-semibold bg-red-50 p-2 rounded border border-red-200">{error}</p>}
-                
-                <form onSubmit={handleSubmit}>
-                    {loginType === 'cadet' && (
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                        <p className="text-red-700 text-sm font-semibold">{error}</p>
+                    </div>
+                )}
+
+                {/* VIEW: Landing */}
+                {view === 'landing' && (
+                    <div className="space-y-4">
+                        <button 
+                            onClick={() => setView('cadet')}
+                            className="w-full group relative bg-white border-2 border-green-800 hover:bg-green-50 text-green-900 p-4 rounded-xl shadow-md transition-all duration-200 flex items-center"
+                        >
+                            <div className="bg-green-100 p-3 rounded-full mr-4 group-hover:bg-green-200 transition-colors">
+                                <User size={24} className="text-green-800" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-lg">Cadet Portal</h3>
+                                <p className="text-xs text-gray-500">Sign in with ID or Email</p>
+                            </div>
+                        </button>
+
+                        <button 
+                            onClick={() => setView('staff')}
+                            className="w-full group relative bg-green-900 hover:bg-green-800 text-white p-4 rounded-xl shadow-md transition-all duration-200 flex items-center"
+                        >
+                            <div className="bg-green-800 p-3 rounded-full mr-4 group-hover:bg-green-700 transition-colors">
+                                <Briefcase size={24} className="text-white" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-bold text-lg">Training Staff Portal</h3>
+                                <p className="text-xs text-green-200">Staff & Admin Access</p>
+                            </div>
+                        </button>
+                    </div>
+                )}
+
+                {/* VIEW: Cadet Login */}
+                {view === 'cadet' && (
+                    <form onSubmit={handleCadetLogin} className="animate-fade-in">
+                        <button 
+                            type="button" 
+                            onClick={() => { setView('landing'); setError(''); }}
+                            className="mb-4 text-sm text-gray-500 hover:text-green-800 flex items-center transition-colors"
+                        >
+                            <ChevronLeft size={16} className="mr-1" /> Back to Selection
+                        </button>
+                        
+                        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <User size={20} className="mr-2 text-green-700" /> Cadet Login
+                        </h3>
+
                         <div className="mb-6">
-                            <label className="block text-gray-700 font-semibold mb-2">Login Credential</label>
+                            <label className="block text-gray-700 font-semibold mb-2 text-sm">Login Credential</label>
                             <input
                                 type="text"
                                 name="identifier"
                                 placeholder="Student ID, Username, or Email"
-                                className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
+                                className="w-full border-gray-300 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-gray-50 shadow-inner"
+                                value={formData.identifier}
                                 onChange={handleChange}
                                 required
+                                autoFocus
                             />
                             <p className="text-xs text-gray-500 mt-2 italic">
-                                Note: You must be included in the official ROTCMIS list to login. No password required.
+                                Note: You must be in the official ROTCMIS list. No password required.
                             </p>
                         </div>
-                    )}
 
-                    {loginType === 'staff' && (
-                        <>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 font-semibold">Username</label>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full bg-green-800 text-white py-3 rounded font-bold uppercase tracking-wider hover:bg-green-900 transition shadow-lg ${loading ? 'opacity-70 cursor-wait' : ''}`}
+                        >
+                            {loading ? 'Verifying...' : 'Access Portal'}
+                        </button>
+                    </form>
+                )}
+
+                {/* VIEW: Staff/Admin Login */}
+                {view === 'staff' && (
+                    <form onSubmit={handleStaffLogin} className="animate-fade-in">
+                        <button 
+                            type="button" 
+                            onClick={() => { setView('landing'); setError(''); }}
+                            className="mb-4 text-sm text-gray-500 hover:text-green-800 flex items-center transition-colors"
+                        >
+                            <ChevronLeft size={16} className="mr-1" /> Back to Selection
+                        </button>
+
+                        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <ShieldCheck size={20} className="mr-2 text-green-700" /> Staff & Admin Login
+                        </h3>
+
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-1 text-sm">Username</label>
                                 <input
                                     type="text"
                                     name="username"
-                                    placeholder="Username"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
+                                    className="w-full border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-gray-50"
+                                    value={formData.username}
                                     onChange={handleChange}
                                     required
+                                    autoFocus
                                 />
                             </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 font-semibold">Password</label>
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-1 text-sm">Password</label>
                                 <input
                                     type="password"
                                     name="password"
-                                    placeholder="Password"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
+                                    className="w-full border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-gray-50"
+                                    value={formData.password}
                                     onChange={handleChange}
                                     required
                                 />
                             </div>
-                        </>
-                    )}
+                        </div>
 
-                    {loginType === 'admin' && (
-                        <>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 font-semibold">Username</label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 font-semibold">Password</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="w-full bg-green-800 text-white py-3 rounded font-bold uppercase tracking-wider hover:bg-green-900 transition shadow-lg mt-2"
-                    >
-                        {loginType === 'admin' ? 'Login as Admin' : 'Access Portal'}
-                    </button>
-                </form>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full bg-green-800 text-white py-3 rounded font-bold uppercase tracking-wider hover:bg-green-900 transition shadow-lg ${loading ? 'opacity-70 cursor-wait' : ''}`}
+                        >
+                            {loading ? 'Authenticating...' : 'Secure Login'}
+                        </button>
+                    </form>
+                )}
+            </div>
+            
+            {/* Footer */}
+            <div className="absolute bottom-4 text-green-100/40 text-xs">
+                &copy; 2026 MSU-SND ROTC UNIT
             </div>
         </div>
     );

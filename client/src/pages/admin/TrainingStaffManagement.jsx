@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
+import { Pencil, Trash2, X, Upload, Plus, UserCog, Key } from 'lucide-react';
 
 const TrainingStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
@@ -17,9 +17,13 @@ const TrainingStaffManagement = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addForm, setAddForm] = useState({
         rank: '', first_name: '', middle_name: '', last_name: '', suffix_name: '',
-        email: '', contact_number: '', role: 'Instructor'
+        email: '', contact_number: '', role: 'Instructor', username: ''
     });
     const [editForm, setEditForm] = useState({});
+
+    // Password Reset State
+    const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false);
+    const [passwordResetForm, setPasswordResetForm] = useState({ newPassword: '', confirmPassword: '' });
 
     useEffect(() => {
         fetchStaff();
@@ -28,11 +32,18 @@ const TrainingStaffManagement = () => {
     const fetchStaff = async () => {
         try {
             const res = await axios.get('/api/staff');
-            setStaffList(res.data);
+            if (Array.isArray(res.data)) {
+                setStaffList(res.data);
+            } else {
+                console.error("API returned non-array:", res.data);
+                setStaffList([]);
+                // alert("Error loading staff list: Invalid data format");
+            }
             setLoading(false);
         } catch (err) {
             console.error("Network request failed", err);
             setLoading(false);
+            setStaffList([]); 
         }
     };
 
@@ -76,7 +87,7 @@ const TrainingStaffManagement = () => {
             fetchStaff();
             setAddForm({
                 rank: '', first_name: '', middle_name: '', last_name: '', suffix_name: '',
-                email: '', contact_number: '', role: 'Instructor'
+                email: '', contact_number: '', role: 'Instructor', username: ''
             });
         } catch (err) {
             console.error(err);
@@ -94,7 +105,8 @@ const TrainingStaffManagement = () => {
             suffix_name: staff.suffix_name || '',
             email: staff.email || '',
             contact_number: staff.contact_number || '',
-            role: staff.role || 'Instructor'
+            role: staff.role || 'Instructor',
+            username: staff.username || ''
         });
         setIsEditModalOpen(true);
     };
@@ -118,6 +130,31 @@ const TrainingStaffManagement = () => {
             setStaffList(staffList.filter(s => s.id !== id));
         } catch (err) {
             alert('Error deleting staff: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
+    const openPasswordResetModal = (staff) => {
+        setCurrentStaff(staff);
+        setPasswordResetForm({ newPassword: '', confirmPassword: '' });
+        setIsPasswordResetModalOpen(true);
+    };
+
+    const handlePasswordResetSubmit = async (e) => {
+        e.preventDefault();
+        if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+        try {
+            await axios.post('/api/admin/reset-password', {
+                type: 'staff',
+                id: currentStaff.id,
+                newPassword: passwordResetForm.newPassword
+            });
+            alert('Password reset successfully');
+            setIsPasswordResetModalOpen(false);
+        } catch (err) {
+            alert('Failed to reset password: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -189,6 +226,13 @@ const TrainingStaffManagement = () => {
                                             title="Edit Info"
                                         >
                                             <Pencil size={18} />
+                                        </button>
+                                        <button 
+                                            onClick={() => openPasswordResetModal(staff)}
+                                            className="text-yellow-600 hover:bg-yellow-50 p-2 rounded"
+                                            title="Reset Password"
+                                        >
+                                            <Key size={18} />
                                         </button>
                                         <button 
                                             onClick={() => handleDelete(staff.id)}
@@ -324,13 +368,17 @@ const TrainingStaffManagement = () => {
                                     <input className="w-full border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Role</label>
-                                    <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
-                                        <option value="Instructor">Instructor</option>
-                                        <option value="Admin">Admin</option>
-                                        <option value="Commandant">Commandant</option>
-                                    </select>
+                                    <label className="block text-sm font-medium text-gray-700">Username</label>
+                                    <input className="w-full border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Role</label>
+                                <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
+                                    <option value="Instructor">Instructor</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Commandant">Commandant</option>
+                                </select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -363,6 +411,46 @@ const TrainingStaffManagement = () => {
                             <div className="pt-2">
                                 <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Save Changes</button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Password Reset Modal */}
+            {isPasswordResetModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-sm p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold">Reset Password</h3>
+                            <button onClick={() => setIsPasswordResetModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <p className="mb-4 text-sm text-gray-600">
+                            Resetting password for <strong>{currentStaff?.last_name}, {currentStaff?.first_name}</strong>
+                        </p>
+                        <form onSubmit={handlePasswordResetSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">New Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    className="w-full border p-2 rounded"
+                                    value={passwordResetForm.newPassword}
+                                    onChange={e => setPasswordResetForm({...passwordResetForm, newPassword: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    className="w-full border p-2 rounded"
+                                    value={passwordResetForm.confirmPassword}
+                                    onChange={e => setPasswordResetForm({...passwordResetForm, confirmPassword: e.target.value})}
+                                />
+                            </div>
+                            <button type="submit" className="w-full bg-yellow-600 text-white py-2 rounded hover:bg-yellow-700">
+                                Update Password
+                            </button>
                         </form>
                     </div>
                 </div>

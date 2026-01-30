@@ -2,18 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { User, Moon, Sun, Lock } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
-import { 
-    YEAR_LEVEL_OPTIONS, 
-    SCHOOL_YEAR_OPTIONS, 
-    BATTALION_OPTIONS, 
-    COMPANY_OPTIONS, 
-    PLATOON_OPTIONS, 
-    SEMESTER_OPTIONS, 
-    COURSE_OPTIONS,
-    CADET_COURSE_OPTIONS 
-} from '../../constants/options';
+import { useAuth } from '../../context/AuthContext';
 
 const Profile = () => {
+    const { user } = useAuth();
     const [profile, setProfile] = useState({
         rank: '',
         firstName: '',
@@ -49,25 +41,6 @@ const Profile = () => {
         }
     }, []);
 
-    const fetchProfile = async () => {
-        try {
-            try {
-                const cached = await getSingleton('profiles', 'cadet');
-                if (cached) {
-                    updateProfileState(cached);
-                    setLoading(false);
-                }
-            } catch {}
-            const res = await axios.get('/api/cadet/profile');
-            updateProfileState(res.data);
-            await cacheSingleton('profiles', 'cadet', res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
-    };
-
     const updateProfileState = (data) => {
         setProfile({
             rank: data.rank || '',
@@ -86,8 +59,10 @@ const Profile = () => {
             platoon: data.platoon || '',
             cadetCourse: data.cadet_course || 'MS1',
             semester: data.semester || '',
-            status: data.status || 'Ongoing'
+            status: data.status || 'Ongoing',
+            studentId: data.student_id || ''
         });
+
         if (data.profile_pic) {
             if (data.profile_pic.startsWith('data:')) {
                 setPreview(data.profile_pic);
@@ -95,6 +70,27 @@ const Profile = () => {
                 const normalizedPath = data.profile_pic.replace(/\\/g, '/');
                 setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
             }
+        }
+    };
+
+    const fetchProfile = async () => {
+        try {
+            // Try cache first
+            try {
+                const cached = await getSingleton('profiles', 'cadet');
+                if (cached) {
+                    updateProfileState(cached);
+                    setLoading(false);
+                }
+            } catch {}
+
+            const res = await axios.get('/api/cadet/profile');
+            updateProfileState(res.data);
+            await cacheSingleton('profiles', 'cadet', res.data);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error fetching profile:', err);
+            setLoading(false);
         }
     };
 
@@ -109,250 +105,129 @@ const Profile = () => {
         }
     };
 
-    if (loading) return <div className="text-center p-10 dark:text-white">Loading...</div>;
+    if (loading) return <div className="p-8 text-center dark:text-white">Loading profile...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-10">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">My Profile</h1>
-                <button 
-                    onClick={toggleDarkMode}
-                    className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-full transition"
-                >
-                    {darkMode ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-gray-600" size={20} />}
-                    <span className="text-sm font-medium dark:text-white">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                </button>
-            </div>
-
-            {/* About the App Section */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-lg border border-indigo-100 dark:border-indigo-800 mb-8">
-                <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-300 mb-2">About the App</h2>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                    The ROTC Grading Management System is the official platform for the MSU-SND ROTC Unit. 
-                    This system streamlines the management of cadet records, attendance tracking, grading, and merit/demerit points.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Version:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">2.3.18</span>
-                    </div>
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Developer:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">MSU-SND ROTC Unit</span>
-                    </div>
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Contact:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">msusndrotcunit@gmail.com</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Left Column: Photo & Settings */}
-                <div className="md:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center">
-                        <div className="relative inline-block">
-                            <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-100 mx-auto border-4 border-white dark:border-gray-700 shadow-lg">
+        <div className={`max-w-4xl mx-auto p-6 transition-colors duration-200 ${darkMode ? 'dark:bg-gray-900' : ''}`}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                {/* Header / Banner */}
+                <div className="bg-gradient-to-r from-green-800 to-green-900 p-6 text-white relative">
+                    <button 
+                        onClick={toggleDarkMode}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition"
+                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                    
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                        <div className="relative">
+                            <div className="w-32 h-32 rounded-full bg-white/10 border-4 border-white overflow-hidden flex items-center justify-center">
                                 {preview ? (
-                                    <img src={preview} alt="Profile" className="w-full h-full object-cover" />
+                                    <img 
+                                        src={preview} 
+                                        alt="Profile" 
+                                        className="w-full h-full object-cover"
+                                    />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <User size={64} />
-                                    </div>
+                                    <User size={64} className="text-green-200" />
                                 )}
                             </div>
+                            <div className="absolute bottom-0 right-0 bg-gray-500 p-2 rounded-full border-2 border-white cursor-not-allowed" title="Editing Disabled">
+                                <Lock size={16} className="text-white" />
+                            </div>
                         </div>
-                        <h2 className="mt-4 text-xl font-bold dark:text-white">{profile.lastName}, {profile.firstName}</h2>
-                        <p className="text-gray-500 dark:text-gray-400">{profile.rank || 'Cadet'}</p>
-                    </div>
-
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-                         <h3 className="font-bold mb-4 dark:text-white">Account Status</h3>
-                         <div className={`text-center p-3 rounded font-bold ${
-                             profile.status === 'Ongoing' ? 'bg-green-100 text-green-800' :
-                             profile.status === 'Failed' || profile.status === 'Drop' ? 'bg-red-100 text-red-800' :
-                             'bg-gray-100 text-gray-800'
-                         }`}>
-                             {profile.status}
-                         </div>
+                        <div className="text-center md:text-left">
+                            <h1 className="text-3xl font-bold">{profile.rank} {profile.firstName} {profile.lastName} {profile.suffixName}</h1>
+                            <p className="text-green-200 text-lg mt-1">{profile.studentId}</p>
+                            <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-green-700/50 text-sm border border-green-600">
+                                <Lock size={14} className="mr-2" />
+                                <span>Profile Locked</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Right Column: Form Fields */}
-                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
-                    <div className="flex justify-between items-center mb-6 border-b pb-2">
-                        <h3 className="text-xl font-bold dark:text-white">Personal Information</h3>
-                        <div className="flex items-center text-amber-600 bg-amber-50 px-3 py-1 rounded-full text-xs font-bold border border-amber-200">
-                            <Lock size={12} className="mr-1" />
-                            Read Only
+                {/* Profile Details */}
+                <div className="p-8">
+                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 mb-8">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <Lock className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                            </div>
+                            <div className="ml-3">
+                                <p className="text-sm text-yellow-700 dark:text-yellow-200">
+                                    Your profile is locked. To update your information, please contact your Training Staff or Administrator.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.rank} disabled />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Suffix</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.suffixName} disabled />
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.firstName} disabled />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Middle Name</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.middleName} disabled />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.lastName} disabled />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.email} disabled />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-                                <input className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.contactNumber} disabled />
-                            </div>
-                        </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Personal Info */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                            <textarea className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" rows="2" value={profile.address} disabled></textarea>
-                        </div>
-
-                        <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2 dark:text-white">Military &amp; School Info</h3>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.course}
-                                    disabled
-                                >
-                                    <option value="">Select Course</option>
-                                    {COURSE_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.yearLevel}
-                                    disabled
-                                >
-                                    <option value="">Select Year Level</option>
-                                    {YEAR_LEVEL_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.schoolYear}
-                                    disabled
-                                >
-                                    <option value="">Select School Year</option>
-                                    {SCHOOL_YEAR_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b dark:border-gray-700 pb-2 flex items-center">
+                                <User className="mr-2 text-green-700 dark:text-green-400" size={20} />
+                                Personal Information
+                            </h3>
+                            <div className="space-y-4">
+                                <ProfileField label="Full Name" value={`${profile.firstName} ${profile.middleName} ${profile.lastName} ${profile.suffixName}`} darkMode={darkMode} />
+                                <ProfileField label="Email Address" value={profile.email} darkMode={darkMode} />
+                                <ProfileField label="Contact Number" value={profile.contactNumber} darkMode={darkMode} />
+                                <ProfileField label="Address" value={profile.address} darkMode={darkMode} />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.battalion}
-                                    disabled
-                                >
-                                    <option value="">Select Battalion</option>
-                                    {BATTALION_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.company}
-                                    disabled
-                                >
-                                    <option value="">Select Company</option>
-                                    {COMPANY_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.platoon}
-                                    disabled
-                                >
-                                    <option value="">Select Platoon</option>
-                                    {PLATOON_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        
-                         <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.cadetCourse}
-                                    disabled
-                                >
-                                    {CADET_COURSE_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
-                                <select
-                                    className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed"
-                                    value={profile.semester}
-                                    disabled
-                                >
-                                    {SEMESTER_OPTIONS.map(option => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
+                        {/* Military Info */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b dark:border-gray-700 pb-2 flex items-center">
+                                <ShieldIcon className="mr-2 text-green-700 dark:text-green-400" size={20} />
+                                Military Unit Information
+                            </h3>
+                            <div className="space-y-4">
+                                <ProfileField label="Battalion" value={profile.battalion} darkMode={darkMode} />
+                                <ProfileField label="Company" value={profile.company} darkMode={darkMode} />
+                                <ProfileField label="Platoon" value={profile.platoon} darkMode={darkMode} />
+                                <ProfileField label="Cadet Course" value={profile.cadetCourse} darkMode={darkMode} />
+                                <ProfileField label="Status" value={profile.status} darkMode={darkMode} />
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-200">
-                        <p className="font-bold mb-1 flex items-center"><Lock size={14} className="mr-1"/> Profile Locked</p>
-                        <p>To update your information, please contact your Training Staff or Administrator.</p>
+                    {/* Academic Info */}
+                    <div className="mt-8">
+                         <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b dark:border-gray-700 pb-2 flex items-center">
+                            <BookIcon className="mr-2 text-green-700 dark:text-green-400" size={20} />
+                            Academic Information
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <ProfileField label="Course" value={profile.course} darkMode={darkMode} />
+                            <ProfileField label="Year Level" value={profile.yearLevel} darkMode={darkMode} />
+                            <ProfileField label="School Year" value={profile.schoolYear} darkMode={darkMode} />
+                            <ProfileField label="Semester" value={profile.semester} darkMode={darkMode} />
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
+const ProfileField = ({ label, value, darkMode }) => (
+    <div>
+        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</label>
+        <p className={`mt-1 font-medium ${darkMode ? 'text-gray-200' : 'text-gray-900'} bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600`}>
+            {value || 'N/A'}
+        </p>
+    </div>
+);
+
+// Helper Icons
+const ShieldIcon = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+);
+const BookIcon = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+);
 
 export default Profile;

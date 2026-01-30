@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { Users, Briefcase, ClipboardCheck, GraduationCap, Calendar, UserCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
@@ -249,6 +251,37 @@ const Dashboard = () => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            {/* Quick Links Section */}
+            <div className="bg-white p-6 rounded shadow mt-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Quick Links</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <Link to="/admin/cadets" className="flex flex-col items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                        <Users className="text-blue-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Cadets</span>
+                    </Link>
+                    <Link to="/admin/staff" className="flex flex-col items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition">
+                        <Briefcase className="text-green-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Staff</span>
+                    </Link>
+                    <Link to="/admin/attendance" className="flex flex-col items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition">
+                        <ClipboardCheck className="text-purple-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Attendance</span>
+                    </Link>
+                    <Link to="/admin/grading" className="flex flex-col items-center p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition">
+                        <GraduationCap className="text-yellow-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Grading</span>
+                    </Link>
+                    <Link to="/admin/activities" className="flex flex-col items-center p-4 bg-red-50 hover:bg-red-100 rounded-lg transition">
+                        <Calendar className="text-red-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Activities</span>
+                    </Link>
+                    <Link to="/admin/profile" className="flex flex-col items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition">
+                        <UserCircle className="text-gray-600 mb-2" size={24} />
+                        <span className="text-sm font-medium text-gray-700">Profile</span>
+                    </Link>
                 </div>
             </div>
         </div>

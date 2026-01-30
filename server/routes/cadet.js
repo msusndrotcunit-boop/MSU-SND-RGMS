@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const db = require('../database');
+const bcrypt = require('bcryptjs'); // Added bcrypt
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -63,12 +64,11 @@ router.get('/my-grades', (req, res) => {
             // Calculate Grades
             const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
             const attendanceScore = (gradeData.attendance_present / safeTotalDays) * 30;
-            
-            // Aptitude: Base 100 + Merits - Demerits (Capped at 100)
-            let rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
-            if (rawAptitude > 100) rawAptitude = 100;
-            if (rawAptitude < 0) rawAptitude = 0;
-            const aptitudeScore = rawAptitude * 0.3;
+
+            // Aptitude: (Merit - Demerit) * 30% (Merit capped at 100)
+            const cappedMerit = Math.min(gradeData.merit_points || 0, 100);
+            const rawAptitude = cappedMerit - (gradeData.demerit_points || 0);
+            const aptitudeScore = Math.max(0, rawAptitude * 0.3);
 
             // Subject: (Sum / 300) * 40%
             const subjectScore = ((gradeData.prelim_score + gradeData.midterm_score + gradeData.final_score) / 300) * 40;

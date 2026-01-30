@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, FileDown, Upload, Plus, RefreshCw, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { Pencil, Trash2, X, FileDown, Upload, Plus, RefreshCw, PieChart as PieChartIcon, BarChart3, Key } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+import { 
+    CADET_COURSE_OPTIONS,
+    COMPANY_OPTIONS
+} from '../../constants/options';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -15,6 +20,8 @@ const Cadets = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [currentCadet, setCurrentCadet] = useState(null);
     const [showAnalytics, setShowAnalytics] = useState(false);
+    const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false);
+    const [passwordResetForm, setPasswordResetForm] = useState({ newPassword: '', confirmPassword: '' });
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -165,7 +172,7 @@ const Cadets = () => {
             doc.setFontSize(11);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-            const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
+            const tableColumn = ["Rank", "Name", "Username", "Unit", "Email", "Phone"];
             
             const tableRows = [];
 
@@ -177,7 +184,7 @@ const Cadets = () => {
                 const cadetData = [
                     cadet.rank,
                     `${cadet.last_name}, ${cadet.first_name}`,
-                    cadet.student_id,
+                    cadet.username || cadet.student_id,
                     `${cadet.company || '-'}/${cadet.platoon || '-'}`,
                     cadet.email || '-',
                     cadet.contact_number || '-'
@@ -221,7 +228,7 @@ const Cadets = () => {
             middleName: cadet.middle_name || '',
             lastName: cadet.last_name || '',
             suffixName: cadet.suffix_name || '',
-            studentId: cadet.student_id || '',
+            username: cadet.username || cadet.student_id || '',
             email: cadet.email || '',
             contactNumber: cadet.contact_number || '',
             address: cadet.address || '',
@@ -246,6 +253,31 @@ const Cadets = () => {
             setIsEditModalOpen(false);
         } catch (err) {
             alert('Error updating cadet');
+        }
+    };
+
+    const openPasswordResetModal = (cadet) => {
+        setCurrentCadet(cadet);
+        setPasswordResetForm({ newPassword: '', confirmPassword: '' });
+        setIsPasswordResetModalOpen(true);
+    };
+
+    const handlePasswordResetSubmit = async (e) => {
+        e.preventDefault();
+        if (passwordResetForm.newPassword !== passwordResetForm.confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+        try {
+            await axios.post('/api/admin/reset-password', {
+                type: 'cadet',
+                id: currentCadet.id,
+                newPassword: passwordResetForm.newPassword
+            });
+            alert('Password reset successfully');
+            setIsPasswordResetModalOpen(false);
+        } catch (err) {
+            alert('Failed to reset password: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -323,7 +355,7 @@ const Cadets = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">Cadet Management</h2>
                 <div className="flex space-x-2 w-full md:w-auto">
-                    {linkedUrl && (
+                            {linkedUrl && (
                         <button 
                             onClick={handleSync}
                             disabled={syncing}
@@ -416,6 +448,13 @@ const Cadets = () => {
                                         title="Edit Info"
                                     >
                                         <Pencil size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={() => openPasswordResetModal(cadet)}
+                                        className="text-yellow-600 hover:bg-yellow-50 p-2 rounded"
+                                        title="Reset Password"
+                                    >
+                                        <Key size={18} />
                                     </button>
                                 </td>
                             </tr>
@@ -599,11 +638,11 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={addForm.middleName} onChange={e => setAddForm({...addForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" required value={addForm.lastName} onChange={e => setAddForm({...addForm, lastName: e.target.value})} placeholder="Last Name *" />
                                 <input className="border p-2 rounded" value={addForm.suffixName} onChange={e => setAddForm({...addForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input className="border p-2 rounded" required value={addForm.studentId} onChange={e => setAddForm({...addForm, studentId: e.target.value})} placeholder="Student ID *" />
+                                <input className="border p-2 rounded" required value={addForm.username} onChange={e => setAddForm({...addForm, username: e.target.value})} placeholder="Username *" />
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} placeholder="Email (Login Username)" />
+                                <input className="border p-2 rounded" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} placeholder="Email" />
                                 <input className="border p-2 rounded" value={addForm.contactNumber} onChange={e => setAddForm({...addForm, contactNumber: e.target.value})} placeholder="Contact Number" />
                             </div>
 
@@ -623,7 +662,10 @@ const Cadets = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})} placeholder="Cadet Course" />
+                                <select className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})}>
+                                    <option value="">Select Cadet Course</option>
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                                 <input className="border p-2 rounded" value={addForm.status} onChange={e => setAddForm({...addForm, status: e.target.value})} placeholder="Status" />
                             </div>
                             
@@ -663,7 +705,7 @@ const Cadets = () => {
                                 <input className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
                                 <input className="border p-2 rounded" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
+                                <input className="border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -691,7 +733,7 @@ const Cadets = () => {
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
                                     <option value="">Select Coy</option>
-                                    {['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Headquarters'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
                                     <option value="">Select Platoon</option>
@@ -702,7 +744,7 @@ const Cadets = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
                                     <option value="">Select Cadet Course</option>
-                                    {['MS1', 'MS2', 'COQC', 'MS32', 'MS42'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
                                     <option value="">Select Sem</option>
@@ -718,6 +760,45 @@ const Cadets = () => {
                             </div>
 
                             <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Update Cadet</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Password Reset Modal */}
+            {isPasswordResetModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-sm p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold">Reset Password</h3>
+                            <button onClick={() => setIsPasswordResetModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <p className="mb-4 text-sm text-gray-600">
+                            Resetting password for <strong>{currentCadet?.last_name}, {currentCadet?.first_name}</strong>
+                        </p>
+                        <form onSubmit={handlePasswordResetSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">New Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    className="w-full border p-2 rounded"
+                                    value={passwordResetForm.newPassword}
+                                    onChange={e => setPasswordResetForm({...passwordResetForm, newPassword: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    className="w-full border p-2 rounded"
+                                    value={passwordResetForm.confirmPassword}
+                                    onChange={e => setPasswordResetForm({...passwordResetForm, confirmPassword: e.target.value})}
+                                />
+                            </div>
+                            <button type="submit" className="w-full bg-yellow-600 text-white py-2 rounded hover:bg-yellow-700">
+                                Update Password
+                            </button>
                         </form>
                     </div>
                 </div>

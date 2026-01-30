@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm run build
     startCommand: npm start
-    autoDeploy: true
+    autoDeploy: false
     envVars:
       - key: NODE_VERSION
         value: 18.17.0

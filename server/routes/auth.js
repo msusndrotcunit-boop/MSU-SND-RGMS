@@ -37,7 +37,14 @@ router.post('/login', (req, res) => {
     const { username, password } = req.body;
     console.log(`Login attempt for username: ${username}`);
 
-    db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+    const sql = `
+        SELECT u.*, c.profile_completed 
+        FROM users u 
+        LEFT JOIN cadets c ON u.cadet_id = c.id 
+        WHERE u.username = ?
+    `;
+
+    db.get(sql, [username], async (err, user) => {
         if (err) {
             console.error('Login DB Error:', err);
             return res.status(500).json({ message: err.message });
@@ -59,9 +66,22 @@ router.post('/login', (req, res) => {
         }
 
         console.log('Login successful');
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ 
+            id: user.id, 
+            role: user.role, 
+            cadetId: user.cadet_id, 
+            staffId: user.staff_id,
+            profileCompleted: user.profile_completed 
+        }, SECRET_KEY, { expiresIn: '1h' });
         
-        res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, username: user.username });
+        res.json({ 
+            token, 
+            role: user.role, 
+            cadetId: user.cadet_id, 
+            staffId: user.staff_id,
+            profileCompleted: user.profile_completed,
+            username: user.username
+        });
     });
 });
 
@@ -76,7 +96,7 @@ router.post('/cadet-login', (req, res) => {
     // Check by Username, Email, OR Student ID (via join with cadets table)
     // Only for role = 'cadet'
     const sql = `
-        SELECT u.* 
+        SELECT u.*, c.profile_completed 
         FROM users u 
         LEFT JOIN cadets c ON u.cadet_id = c.id 
         WHERE (u.username = ? OR u.email = ? OR c.student_id = ?) 
@@ -95,9 +115,23 @@ router.post('/cadet-login', (req, res) => {
         }
 
         // Generate Token
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' });
+        const token = jwt.sign({ 
+            id: user.id, 
+            role: user.role, 
+            cadetId: user.cadet_id, 
+            profileCompleted: user.profile_completed 
+        }, SECRET_KEY, { expiresIn: '24h' });
         
+<<<<<<< HEAD
         res.json({ token, role: user.role, cadetId: user.cadet_id, username: user.username });
+=======
+        res.json({ 
+            token, 
+            role: user.role, 
+            cadetId: user.cadet_id, 
+            profileCompleted: user.profile_completed 
+        });
+>>>>>>> db12a25087328a012d9548d89b92c2e8eb837731
     });
 });
 

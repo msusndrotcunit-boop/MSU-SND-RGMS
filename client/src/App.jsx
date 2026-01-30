@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy Load Pages
 const Login = lazy(() => import('./pages/Login'));
+const Home = lazy(() => import('./pages/Home'));
 
 // Admin Pages
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
@@ -49,7 +50,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Home />} />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

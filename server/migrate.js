@@ -14,7 +14,8 @@ const columnsToAdd = [
     "ADD COLUMN cadet_course TEXT",
     "ADD COLUMN semester TEXT",
     "ADD COLUMN status TEXT DEFAULT 'Ongoing'",
-    "ADD COLUMN profile_pic TEXT"
+    "ADD COLUMN profile_pic TEXT",
+    "ADD COLUMN profile_completed INTEGER DEFAULT 0"
 ];
 
 console.log('Migrating database...');

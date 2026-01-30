@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
+import { COMPANY_OPTIONS } from '../../constants/options';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
@@ -16,6 +17,7 @@ const Attendance = () => {
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
     
     // Import State
+    // Fix: Added handleDownloadReport for report generation
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
     const [importUrl, setImportUrl] = useState('');
@@ -170,6 +172,28 @@ const Attendance = () => {
         }
     };
 
+    const handleDownloadReport = async (type) => {
+        const targetType = type || attendanceType;
+        try {
+            const endpoint = targetType === 'cadet' 
+                ? '/api/admin/reports/attendance/cadets' 
+                : '/api/admin/reports/attendance/staff';
+            
+            const response = await axios.get(endpoint, { responseType: 'blob' });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${attendanceType === 'cadet' ? 'Cadet' : 'Staff'}_Attendance_Report.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error("Download failed", err);
+            alert("Failed to download report");
+        }
+    };
+
     const handleRemarkChange = async (id, remarks) => {
         const updatedRecords = attendanceRecords.map(r => 
             (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, remarks: remarks } : r
@@ -222,14 +246,7 @@ const Attendance = () => {
         return acc;
     }, {});
 
-    const handleDownloadReport = (type) => {
-        const url = type === 'cadet' 
-            ? '/api/admin/reports/attendance/cadets' 
-            : '/api/admin/reports/attendance/staff';
-        
-        // Trigger download
-        window.open(url, '_blank');
-    };
+
 
     return (
         <div className="h-full flex flex-col gap-4">
@@ -378,12 +395,14 @@ const Attendance = () => {
                                                         />
                                                         {attendanceType === 'cadet' && (
                                                             <>
-                                                                <input 
-                                                                    placeholder="Filter Company" 
+                                                                <select 
                                                                     className="border p-2 rounded text-sm w-full md:w-32"
                                                                     value={filterCompany}
                                                                     onChange={e => setFilterCompany(e.target.value)}
-                                                                />
+                                                                >
+                                                                    <option value="">All Companies</option>
+                                                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                                </select>
                                                                 <input 
                                                                     placeholder="Filter Platoon" 
                                                                     className="border p-2 rounded text-sm w-full md:w-32"
