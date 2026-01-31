@@ -121,7 +121,7 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
     // 1. Check if profile is already locked
-    db.get('SELECT profile_completed FROM cadets WHERE id = ?', [cadetId], (err, row) => {
+    db.get('SELECT profile_completed, profile_pic FROM cadets WHERE id = ?', [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!row) return res.status(404).json({ message: 'Cadet not found' });
         
@@ -139,25 +139,43 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
             username
         } = req.body;
 
+        // Check completion status
+        const hasProfilePic = req.file || row.profile_pic;
+        const requiredFields = [
+            firstName, lastName, email, contactNumber, address, 
+            course, yearLevel, schoolYear, 
+            battalion, company, platoon, 
+            cadetCourse, semester, username
+        ];
+        
+        // Ensure all required fields are present and not empty strings
+        const isComplete = hasProfilePic && requiredFields.every(f => f && f.toString().trim().length > 0);
+
         const performUpdate = () => {
-            // Note: Rank, Student ID, Status are excluded from cadet self-update
-            const sql = `UPDATE cadets SET 
+            let sql = `UPDATE cadets SET 
                 first_name = ?, middle_name = ?, last_name = ?, suffix_name = ?, 
                 email = ?, contact_number = ?, address = ?, 
                 course = ?, year_level = ?, school_year = ?, 
                 battalion = ?, company = ?, platoon = ?, 
                 cadet_course = ?, semester = ?,
-                profile_completed = 1
-                WHERE id = ?`;
-
+                profile_completed = ?`;
+            
             const params = [
                 firstName, middleName || '', lastName, suffixName || '',
                 email, contactNumber || '', address || '',
                 course || '', yearLevel || '', schoolYear || '',
                 battalion || '', company || '', platoon || '',
                 cadetCourse || '', semester || '',
-                cadetId
+                isComplete ? 1 : 0
             ];
+
+            if (req.file) {
+                sql += `, profile_pic = ?`;
+                params.push(req.file.filename); // Assuming storage engine gives filename
+            }
+
+            sql += ` WHERE id = ?`;
+            params.push(cadetId);
 
             db.run(sql, params, function(err) {
                 if (err) return res.status(500).json({ message: err.message });
@@ -186,7 +204,11 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
                     });
                 }
 
-                res.json({ message: 'Profile updated and locked successfully.' });
+                if (isComplete) {
+                    res.json({ message: 'Profile updated and locked successfully. You must now login with your new credentials.' });
+                } else {
+                    res.json({ message: 'Profile updated. Please complete all fields and upload a profile picture to finalize registration.' });
+                }
             });
         };
 

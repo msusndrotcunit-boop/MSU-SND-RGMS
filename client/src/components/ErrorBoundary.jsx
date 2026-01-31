@@ -23,7 +23,10 @@ class ErrorBoundary extends React.Component {
             {this.state.error?.message || "An unexpected error occurred."}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              window.sessionStorage.removeItem('retry-lazy-refreshed');
+              window.location.reload();
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
           >
             Reload Page

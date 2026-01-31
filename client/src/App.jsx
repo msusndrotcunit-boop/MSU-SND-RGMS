@@ -1,37 +1,38 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import { lazyRetry } from './utils/lazyRetry';
 
 // Lazy Load Pages
-const Login = lazy(() => import('./pages/Login'));
-const Home = lazy(() => import('./pages/Home'));
+const Login = lazyRetry(() => import('./pages/Login'));
+const Home = lazyRetry(() => import('./pages/Home'));
 
 // Admin Pages
-const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
-const AdminCadets = lazy(() => import('./pages/admin/Cadets'));
-const AdminGrading = lazy(() => import('./pages/admin/Grading'));
-const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
-const AdminActivities = lazy(() => import('./pages/admin/Activities'));
-const AdminProfile = lazy(() => import('./pages/admin/Profile'));
-const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
+const AdminLayout = lazyRetry(() => import('./layouts/AdminLayout'));
+const AdminDashboard = lazyRetry(() => import('./pages/admin/Dashboard'));
+const AdminCadets = lazyRetry(() => import('./pages/admin/Cadets'));
+const AdminGrading = lazyRetry(() => import('./pages/admin/Grading'));
+const AdminAttendance = lazyRetry(() => import('./pages/admin/Attendance'));
+const AdminActivities = lazyRetry(() => import('./pages/admin/Activities'));
+const AdminProfile = lazyRetry(() => import('./pages/admin/Profile'));
+const AdminStaff = lazyRetry(() => import('./pages/admin/TrainingStaffManagement'));
 
 // Cadet Pages
-const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
-const CadetHome = lazy(() => import('./pages/cadet/Home'));
-const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
-const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
-const CadetAbout = lazy(() => import('./pages/cadet/About'));
-const CadetOnboarding = lazy(() => import('./pages/cadet/Onboarding'));
+const CadetLayout = lazyRetry(() => import('./layouts/CadetLayout'));
+const CadetHome = lazyRetry(() => import('./pages/cadet/Home'));
+const CadetDashboard = lazyRetry(() => import('./pages/cadet/Dashboard'));
+const CadetProfile = lazyRetry(() => import('./pages/cadet/Profile'));
+const CadetAbout = lazyRetry(() => import('./pages/cadet/About'));
+const CadetOnboarding = lazyRetry(() => import('./pages/cadet/Onboarding'));
 
 // Staff Pages
-const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
-const StaffHome = lazy(() => import('./pages/staff/Home'));
-const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
-const StaffProfile = lazy(() => import('./pages/staff/Profile'));
-const StaffOnboarding = lazy(() => import('./pages/staff/Onboarding'));
+const StaffLayout = lazyRetry(() => import('./layouts/StaffLayout'));
+const StaffHome = lazyRetry(() => import('./pages/staff/Home'));
+const StaffDashboard = lazyRetry(() => import('./pages/staff/Dashboard'));
+const StaffProfile = lazyRetry(() => import('./pages/staff/Profile'));
+const StaffOnboarding = lazyRetry(() => import('./pages/staff/Onboarding'));
 
 // Loading Fallback
 const LoadingSpinner = () => (
@@ -41,7 +42,13 @@ const LoadingSpinner = () => (
 );
 
 function App() {
-  console.log("App Version: 2.3.18 (OneDrive Fix & Activities UI)");
+  console.log("App Version: 2.3.19 (Lazy Load Retry Fix)");
+
+  // Clear the retry flag on successful app load
+  useEffect(() => {
+    window.sessionStorage.removeItem('retry-lazy-refreshed');
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
