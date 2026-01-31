@@ -5,7 +5,6 @@ const path = require('path');
 const dbPath = path.resolve(__dirname, 'rotc.db');
 const db = new sqlite3.Database(dbPath);
 require('dotenv').config();
-
 const username = process.env.ADMIN_USERNAME || 'msu-sndrotc_admin';
 const password = process.env.ADMIN_PASSWORD || 'admingrading@2026';
 const email = process.env.ADMIN_EMAIL || 'msusndrotcunit@gmail.com';

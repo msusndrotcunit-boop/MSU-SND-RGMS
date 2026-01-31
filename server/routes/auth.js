@@ -90,31 +90,43 @@ router.post('/login', (req, res) => {
 
 // Cadet Login (No Password)
 router.post('/cadet-login', (req, res) => {
-    const { identifier } = req.body; // Can be Student ID, Username, or Email
+    const { identifier } = req.body; // Can be Student ID, Username, Email, or First Name
 
     if (!identifier) {
-        return res.status(400).json({ message: 'Please enter your Student ID, Username, or Email.' });
+        return res.status(400).json({ message: 'Please enter your Student ID, Username, Email, or First Name.' });
     }
 
-    // Check by Username, Email, OR Student ID (via join with cadets table)
+    // Check by Username, Email, Student ID, or First Name (via join with cadets table)
     // Only for role = 'cadet'
     const sql = `
         SELECT u.*, c.profile_completed 
         FROM users u 
         LEFT JOIN cadets c ON u.cadet_id = c.id 
-        WHERE (u.username = ? OR u.email = ? OR c.student_id = ?) 
+        WHERE (u.username = ? OR u.email = ? OR c.student_id = ? OR lower(c.first_name) = lower(?)) 
         AND u.role = 'cadet'
     `;
     
-    db.get(sql, [identifier, identifier, identifier], (err, user) => {
+    // Use db.all to check for duplicates (e.g. common First Name)
+    db.all(sql, [identifier, identifier, identifier, identifier], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         
-        if (!user) {
+        if (!rows || rows.length === 0) {
             return res.status(400).json({ message: 'User not found. Please contact your administrator if you believe this is an error.' });
         }
 
+        if (rows.length > 1) {
+            return res.status(409).json({ message: 'Multiple users found with this First Name. Please use your Student ID instead.' });
+        }
+
+        const user = rows[0];
+
         if (user.is_approved === 0) {
             return res.status(403).json({ message: 'Your account is not authorized.' });
+        }
+
+        // If profile is already completed, force them to use the standard login (with password)
+        if (user.profile_completed === 1) {
+             return res.status(403).json({ message: 'Profile already completed. Please login with your new credentials (Username/Password).' });
         }
 
         // Generate Token

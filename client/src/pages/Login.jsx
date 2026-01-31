@@ -129,7 +129,7 @@ const Login = () => {
                             </div>
                             <div className="text-left">
                                 <h3 className="font-bold text-lg">Cadet Portal</h3>
-                                <p className="text-xs text-gray-500">Sign in with ID or Email</p>
+                                <p className="text-xs text-gray-500">Sign in with ID, Email, or First Name</p>
                             </div>
                         </button>
 
@@ -168,7 +168,7 @@ const Login = () => {
                             <input
                                 type="text"
                                 name="identifier"
-                                placeholder="Student ID, Username, or Email"
+                                placeholder="Student ID, Username, Email, or First Name"
                                 className="w-full border-gray-300 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-gray-50 shadow-inner"
                                 value={formData.identifier}
                                 onChange={handleChange}
