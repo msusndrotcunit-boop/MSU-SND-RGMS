@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Moon, Sun, Lock, Save, Edit } from 'lucide-react';
+import { User, Moon, Sun, Lock, Save, Edit, Camera } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { useAuth } from '../../context/AuthContext';
+import imageCompression from 'browser-image-compression';
 
 const Profile = () => {
     const { user } = useAuth();
@@ -29,6 +30,8 @@ const Profile = () => {
         profileCompleted: 0
     });
     const [preview, setPreview] = useState(null);
+    const [file, setFile] = useState(null);
+    const fileInputRef = useRef(null);
     const [loading, setLoading] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -105,12 +108,42 @@ const Profile = () => {
         setProfile({ ...profile, [e.target.name]: e.target.value });
     };
 
+    const handleFileChange = async (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            try {
+                const options = {
+                    maxSizeMB: 0.5,
+                    maxWidthOrHeight: 800,
+                    useWebWorker: true
+                };
+                const compressedFile = await imageCompression(selectedFile, options);
+                setFile(compressedFile);
+                setPreview(URL.createObjectURL(compressedFile));
+            } catch (error) {
+                console.error('Image compression failed:', error);
+                setFile(selectedFile);
+                setPreview(URL.createObjectURL(selectedFile));
+            }
+        }
+    };
+
     const handleSave = async () => {
         setSaving(true);
         setError('');
         setSuccess('');
         try {
-            await axios.put('/api/cadet/profile', profile);
+            const formData = new FormData();
+            Object.keys(profile).forEach(key => {
+                formData.append(key, profile[key]);
+            });
+            if (file) {
+                formData.append('profilePic', file);
+            }
+
+            await axios.put('/api/cadet/profile', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             setSuccess('Profile updated. Logging out to apply changes...');
             
             // Logout and redirect to login
@@ -168,8 +201,19 @@ const Profile = () => {
                                     <User size={64} className="text-green-200" />
                                 )}
                             </div>
-                            <div className={`absolute bottom-0 right-0 p-2 rounded-full border-2 border-white ${isLocked ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500 cursor-pointer'}`} title={isLocked ? "Editing Disabled" : "Edit Profile"}>
-                                {isLocked ? <Lock size={16} className="text-white" /> : <Edit size={16} className="text-white" />}
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileChange} 
+                                className="hidden" 
+                                accept="image/*"
+                            />
+                            <div 
+                                className={`absolute bottom-0 right-0 p-2 rounded-full border-2 border-white ${isLocked ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500 cursor-pointer hover:bg-green-600'}`} 
+                                title={isLocked ? "Editing Disabled" : "Edit Profile Picture"}
+                                onClick={() => !isLocked && fileInputRef.current.click()}
+                            >
+                                {isLocked ? <Lock size={16} className="text-white" /> : <Camera size={16} className="text-white" />}
                             </div>
                         </div>
                         <div className="text-center md:text-left">

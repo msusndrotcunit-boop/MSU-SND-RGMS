@@ -405,14 +405,6 @@ const Cadets = () => {
                         <FileDown size={18} />
                         <span>Export PDF</span>
                     </button>
-                    <button 
-                        onClick={handleDeleteAll}
-                        className="flex-1 md:flex-none bg-red-800 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-900"
-                        title="Delete ALL Cadets"
-                    >
-                        <Trash2 size={18} />
-                        <span>Delete All</span>
-                    </button>
                     {selectedCadets.length > 0 && (
                         <button 
                             onClick={handleBulkDelete}

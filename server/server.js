@@ -21,6 +21,7 @@ if (dns.setDefaultResultOrder) {
 
 // Force redeploy trigger
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
@@ -53,6 +54,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
 console.log('Starting ROTC Grading System Server V2.3.16 (Supabase Keep-Alive)...'); // Version bump for deployment trigger
 
 // Middleware
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

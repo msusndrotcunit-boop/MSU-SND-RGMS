@@ -101,7 +101,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                         <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center cursor-pointer hover:bg-gray-50 transition relative">
                             <input 
                                 type="file" 
-                                onChange={(e) => setFile(e.target.files[0])} 
+                                onChange={handleFileChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 accept="image/*,application/pdf"
                             />
