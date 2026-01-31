@@ -85,19 +85,13 @@ const Attendance = () => {
         setSelectedDay(day);
         setLoading(true);
         try {
-            const cacheKey = `${day.id}_${attendanceType}`;
-            try {
-                const cached = await getSingleton('attendance_by_day', cacheKey);
-                if (cached?.length) setAttendanceRecords(cached);
-            } catch {}
-            
+            // Removed caching to ensure real-time sync with Cadet/Staff management list
             const endpoint = attendanceType === 'cadet' 
                 ? `/api/attendance/records/${day.id}`
                 : `/api/attendance/records/staff/${day.id}`;
 
             const res = await axios.get(endpoint);
             setAttendanceRecords(res.data);
-            await cacheSingleton('attendance_by_day', cacheKey, res.data);
             setLoading(false);
         } catch (err) {
             console.error(err);

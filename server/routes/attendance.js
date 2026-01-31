@@ -61,8 +61,9 @@ router.get('/records/:dayId', authenticateToken, isAdmin, (req, res) => {
             ar.status, 
             ar.remarks
         FROM cadets c
+        JOIN users u ON u.cadet_id = c.id
         LEFT JOIN attendance_records ar ON c.id = ar.cadet_id AND ar.training_day_id = ?
-        WHERE 1=1
+        WHERE u.is_approved = 1
     `;
     const params = [dayId];
 
