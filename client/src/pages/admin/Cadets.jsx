@@ -4,6 +4,18 @@ import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search } from 'lucide-rea
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
+import { 
+    RANK_OPTIONS, 
+    YEAR_LEVEL_OPTIONS, 
+    SCHOOL_YEAR_OPTIONS, 
+    BATTALION_OPTIONS, 
+    COMPANY_OPTIONS, 
+    PLATOON_OPTIONS, 
+    SEMESTER_OPTIONS, 
+    COURSE_OPTIONS,
+    CADET_COURSE_OPTIONS,
+    STATUS_OPTIONS
+} from '../../constants/options';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -533,7 +545,10 @@ const Cadets = () => {
                         </div>
                         <form onSubmit={handleAddSubmit} className="space-y-4 overflow-y-auto pr-2">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input className="border p-2 rounded" value={addForm.rank} onChange={e => setAddForm({...addForm, rank: e.target.value})} placeholder="Rank" />
+                                <select className="border p-2 rounded" value={addForm.rank} onChange={e => setAddForm({...addForm, rank: e.target.value})}>
+                                    <option value="">Select Rank</option>
+                                    {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                                 <input className="border p-2 rounded" required value={addForm.firstName} onChange={e => setAddForm({...addForm, firstName: e.target.value})} placeholder="First Name *" />
                                 <input className="border p-2 rounded" value={addForm.middleName} onChange={e => setAddForm({...addForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" required value={addForm.lastName} onChange={e => setAddForm({...addForm, lastName: e.target.value})} placeholder="Last Name *" />
@@ -549,21 +564,48 @@ const Cadets = () => {
                             <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})} placeholder="Course" />
-                                <input className="border p-2 rounded" value={addForm.yearLevel} onChange={e => setAddForm({...addForm, yearLevel: e.target.value})} placeholder="Year Level" />
-                                <input className="border p-2 rounded" value={addForm.schoolYear} onChange={e => setAddForm({...addForm, schoolYear: e.target.value})} placeholder="School Year" />
-                                <input className="border p-2 rounded" value={addForm.semester} onChange={e => setAddForm({...addForm, semester: e.target.value})} placeholder="Semester" />
+                                <select className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})}>
+                                    <option value="">Select Course</option>
+                                    {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.yearLevel} onChange={e => setAddForm({...addForm, yearLevel: e.target.value})}>
+                                    <option value="">Select Year Level</option>
+                                    {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.schoolYear} onChange={e => setAddForm({...addForm, schoolYear: e.target.value})}>
+                                    <option value="">Select School Year</option>
+                                    {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.semester} onChange={e => setAddForm({...addForm, semester: e.target.value})}>
+                                    <option value="">Select Semester</option>
+                                    {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input className="border p-2 rounded" value={addForm.battalion} onChange={e => setAddForm({...addForm, battalion: e.target.value})} placeholder="Battalion" />
-                                <input className="border p-2 rounded" value={addForm.company} onChange={e => setAddForm({...addForm, company: e.target.value})} placeholder="Company" />
-                                <input className="border p-2 rounded" value={addForm.platoon} onChange={e => setAddForm({...addForm, platoon: e.target.value})} placeholder="Platoon" />
+                                <select className="border p-2 rounded" value={addForm.battalion} onChange={e => setAddForm({...addForm, battalion: e.target.value})}>
+                                    <option value="">Select Battalion</option>
+                                    {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.company} onChange={e => setAddForm({...addForm, company: e.target.value})}>
+                                    <option value="">Select Company</option>
+                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.platoon} onChange={e => setAddForm({...addForm, platoon: e.target.value})}>
+                                    <option value="">Select Platoon</option>
+                                    {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})} placeholder="Cadet Course" />
-                                <input className="border p-2 rounded" value={addForm.status} onChange={e => setAddForm({...addForm, status: e.target.value})} placeholder="Status" />
+                                <select className="border p-2 rounded" value={addForm.cadetCourse} onChange={e => setAddForm({...addForm, cadetCourse: e.target.value})}>
+                                    <option value="">Select Cadet Course</option>
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.status} onChange={e => setAddForm({...addForm, status: e.target.value})}>
+                                    <option value="">Select Status</option>
+                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                             </div>
                             
                             <div className="pt-4 flex space-x-3">
@@ -597,7 +639,10 @@ const Cadets = () => {
                         </div>
                         <form onSubmit={handleEditSubmit} className="space-y-4 overflow-y-auto pr-2">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} placeholder="Rank" />
+                                <select className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
+                                    <option value="">Select Rank</option>
+                                    {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
                                 <input className="border p-2 rounded" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="First Name" />
                                 <input className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
                                 <input className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
@@ -615,44 +660,45 @@ const Cadets = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
                                     <option value="">Select Course</option>
-                                    {['BSCS', 'BSIT', 'BSCrim', 'BEEd', 'BSEd', 'BSHM', 'BSTM', 'BSBA', 'BSN', 'Other'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
                                     <option value="">Select Year Level</option>
-                                    {['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={editForm.schoolYear} onChange={e => setEditForm({...editForm, schoolYear: e.target.value})}>
+                                    <option value="">Select School Year</option>
+                                    {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
-                                    <option value="">Select BN</option>
-                                    <option value="1st BN">1st BN</option>
+                                    <option value="">Select Battalion</option>
+                                    {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
-                                    <option value="">Select Coy</option>
-                                    {['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Headquarters'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    <option value="">Select Company</option>
+                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
                                     <option value="">Select Platoon</option>
-                                    {['1st PLT', '2nd PLT', '3rd PLT'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
                                     <option value="">Select Cadet Course</option>
-                                    {['MS1', 'MS2', 'COQC', 'MS32', 'MS42'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
-                                    <option value="">Select Sem</option>
-                                    <option value="1st Semester">1st Semester</option>
-                                    <option value="2nd Semester">2nd Semester</option>
-                                    <option value="Summer">Summer</option>
+                                    <option value="">Select Semester</option>
+                                    {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                                 <select className="border p-2 rounded" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
-                                    <option value="Ongoing">Ongoing</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Dropped">Dropped</option>
+                                    <option value="">Select Status</option>
+                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 

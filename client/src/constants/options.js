@@ -13,7 +13,7 @@ export const YEAR_LEVEL_OPTIONS = [
     "2nd Year", 
     "3rd Year", 
     "4th Year", 
-    "Irregular"
+    "5th Year"
 ];
 
 export const SCHOOL_YEAR_OPTIONS = [
@@ -76,36 +76,101 @@ export const PLATOON_OPTIONS = [
 export const SEMESTER_OPTIONS = [
     "1st Semester", 
     "2nd Semester", 
-    "3rd Semester", 
-    "Summer"
+    "Summer/OJT"
+];
+
+export const STATUS_OPTIONS = [
+    "Ongoing",
+    "Completed",
+    "Incomplete",
+    "Failed",
+    "Drop"
 ];
 
 export const COURSE_OPTIONS = [
-    "Bachelor of Science in Information Technology (BSIT)",
-    "Bachelor of Science in Computer Science (BSCS)",
+    // Engineering & Technology
     "Bachelor of Science in Civil Engineering (BSCE)",
-    "Bachelor of Science in Mechanical Engineering (BSME)",
+    "Bachelor of Science in Computer Engineering (BSCpE)",
     "Bachelor of Science in Electrical Engineering (BSEE)",
     "Bachelor of Science in Electronics Engineering (BSECE)",
-    "Bachelor of Science in Nursing (BSN)",
-    "Bachelor of Science in Biology",
-    "Bachelor of Science in Psychology",
-    "Bachelor of Science in Mathematics",
-    "Bachelor of Science in Architecture",
+    "Bachelor of Science in Industrial Engineering (BSIE)",
+    "Bachelor of Science in Mechanical Engineering (BSME)",
+    "Bachelor of Science in Geodetic Engineering (BSGE)",
+    "Bachelor of Science in Computer Science (BSCS)",
+    "Bachelor of Science in Information Technology (BSIT)",
+    "Bachelor of Science in Information Systems (BSIS)",
+    "Bachelor of Library and Information Science (BLIS)",
+
+    // Business & Management
     "Bachelor of Science in Accountancy (BSA)",
+    "Bachelor of Science in Accounting Technology (BSAcT)",
     "Bachelor of Science in Business Administration (BSBA)",
-    "Bachelor of Science in Criminology",
-    "Bachelor of Science in Hospitality Management (BSHM)",
+    "Bachelor of Science in Entrepreneurship (BS Entrep)",
+    "Bachelor of Science in Office Administration (BSOA)",
+    "Bachelor of Science in Real Estate Management (BS REM)",
     "Bachelor of Science in Tourism Management (BSTM)",
-    "Bachelor of Secondary Education (BSED)",
+    "Bachelor of Science in Hospitality Management (BSHM)",
+    "Bachelor of Science in Hotel and Restaurant Management (BSHRM)",
+    "Bachelor of Science in Customs Administration (BSCA)",
+
+    // Education
     "Bachelor of Elementary Education (BEED)",
-    "Bachelor of Arts in English Language",
-    "Bachelor of Arts in Political Science",
-    "Bachelor of Arts in Communication",
+    "Bachelor of Secondary Education (BSED)",
+    "Bachelor of Early Childhood Education (BECEd)",
+    "Bachelor of Special Needs Education (BSNEd)",
     "Bachelor of Physical Education (BPEd)",
-    "Bachelor of Science in Agriculture",
-    "Bachelor of Science in Forestry",
-    "Bachelor of Science in Fisheries",
+    "Bachelor of Technology and Livelihood Education (BTLEd)",
+    "Bachelor of Technical-Vocational Teacher Education (BTVTEd)",
+
+    // Health Sciences
+    "Bachelor of Science in Nursing (BSN)",
+    "Bachelor of Science in Medical Technology (BSMT)",
+    "Bachelor of Science in Pharmacy (BSPharm)",
+    "Bachelor of Science in Radiologic Technology (BSRT)",
+    "Bachelor of Science in Physical Therapy (BSPT)",
+    "Bachelor of Science in Occupational Therapy (BSOT)",
+    "Bachelor of Science in Nutrition and Dietetics (BSND)",
+    "Bachelor of Science in Midwifery (BSM)",
+    "Doctor of Dental Medicine (DMD)",
+    "Doctor of Optometry (OD)",
+
+    // Arts & Sciences
+    "Bachelor of Arts in Communication (BA Comm)",
+    "Bachelor of Arts in English Language (AB English)",
+    "Bachelor of Arts in Filipino (AB Filipino)",
+    "Bachelor of Arts in History (AB History)",
+    "Bachelor of Arts in Philosophy (AB Philosophy)",
+    "Bachelor of Arts in Political Science (AB PolSci)",
+    "Bachelor of Arts in Psychology (AB Psych)",
+    "Bachelor of Arts in Sociology (AB Socio)",
+    "Bachelor of Science in Biology (BS Bio)",
+    "Bachelor of Science in Chemistry (BS Chem)",
+    "Bachelor of Science in Mathematics (BS Math)",
+    "Bachelor of Science in Psychology (BS Psych)",
+    "Bachelor of Science in Social Work (BSSW)",
+    "Bachelor of Science in Environmental Science (BSES)",
+
+    // Criminal Justice
+    "Bachelor of Science in Criminology (BSCrim)",
+    "Bachelor of Forensic Science (BFS)",
+    "Bachelor of Science in Industrial Security Management (BSISM)",
+
+    // Agriculture & Forestry
+    "Bachelor of Science in Agriculture (BSA)",
+    "Bachelor of Science in Agribusiness (BSAgrib)",
+    "Bachelor of Science in Agroforestry (BSAgro)",
+    "Bachelor of Science in Forestry (BSF)",
+    "Bachelor of Science in Fisheries (BSFi)",
+
+    // Maritime
+    "Bachelor of Science in Marine Engineering (BSMarE)",
+    "Bachelor of Science in Marine Transportation (BSMT)",
+
+    // Architecture & Design
+    "Bachelor of Science in Architecture (BSArch)",
+    "Bachelor of Fine Arts (BFA)",
+    "Bachelor of Science in Interior Design (BSID)",
+    
     "Other"
 ];
 

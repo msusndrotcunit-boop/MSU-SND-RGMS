@@ -390,7 +390,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course</label>
                                 <select
@@ -413,6 +413,19 @@ const Profile = () => {
                                 >
                                     <option value="">Select Semester</option>
                                     {SEMESTER_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    value={profile.status}
+                                    onChange={e => setProfile({ ...profile, status: e.target.value })}
+                                >
+                                    <option value="">Select Status</option>
+                                    {STATUS_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
