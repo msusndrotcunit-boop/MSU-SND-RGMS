@@ -37,13 +37,13 @@ export const SettingsProvider = ({ children }) => {
             if (res.data) {
                 setSettings({
                     notifications: {
-                        emailAlerts: res.data.email_alerts === 1,
-                        pushNotifications: res.data.push_notifications === 1,
-                        activityUpdates: res.data.activity_updates === 1
+                        emailAlerts: !!res.data.email_alerts,
+                        pushNotifications: !!res.data.push_notifications,
+                        activityUpdates: !!res.data.activity_updates
                     },
                     display: {
-                        darkMode: res.data.dark_mode === 1,
-                        compactMode: res.data.compact_mode === 1
+                        darkMode: !!res.data.dark_mode,
+                        compactMode: !!res.data.compact_mode
                     },
                     theme: {
                         primaryColor: res.data.primary_color || 'blue'
