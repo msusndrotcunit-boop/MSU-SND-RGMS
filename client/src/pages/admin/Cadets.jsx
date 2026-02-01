@@ -42,6 +42,9 @@ const Cadets = () => {
         cadetCourse: '', semester: '', status: 'Ongoing'
     });
     const [editForm, setEditForm] = useState({});
+    
+    // Filter State
+    const [selectedCadetCourse, setSelectedCadetCourse] = useState('All');
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportOptions, setExportOptions] = useState({
@@ -237,6 +240,13 @@ const Cadets = () => {
 
     const handleAddSubmit = async (e) => {
         e.preventDefault();
+
+        // Check if limit reached
+        if (cadets.length >= 500) {
+            alert('Cannot add more cadets. The maximum limit of 500 cadets has been reached.');
+            return;
+        }
+
         try {
             await axios.post('/api/admin/cadets', addForm);
             alert('Cadet added successfully');
@@ -256,6 +266,11 @@ const Cadets = () => {
     };
 
     const filteredCadets = cadets.filter(cadet => {
+        // Filter by Cadet Course
+        if (selectedCadetCourse !== 'All' && cadet.cadet_course !== selectedCadetCourse) {
+            return false;
+        }
+
         if (!searchTerm) return true;
         const lowerTerm = searchTerm.toLowerCase();
         return (
@@ -307,7 +322,13 @@ const Cadets = () => {
                         <span>Import</span>
                     </button>
                     <button 
-                        onClick={() => setIsAddModalOpen(true)}
+                        onClick={() => {
+                            if (cadets.length >= 500) {
+                                alert('Cannot add more cadets. The maximum limit of 500 cadets has been reached.');
+                                return;
+                            }
+                            setIsAddModalOpen(true);
+                        }}
                         className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-700"
                     >
                         <Plus size={18} />
@@ -321,6 +342,33 @@ const Cadets = () => {
                         <span>PDF</span>
                     </button>
                 </div>
+            </div>
+
+            {/* Cadet Course Tabs */}
+            <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                    onClick={() => setSelectedCadetCourse('All')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                        selectedCadetCourse === 'All'
+                            ? 'bg-blue-600 text-white shadow'
+                            : 'bg-white text-gray-600 border hover:bg-gray-50'
+                    }`}
+                >
+                    All Cadets
+                </button>
+                {CADET_COURSE_OPTIONS.map(course => (
+                    <button
+                        key={course}
+                        onClick={() => setSelectedCadetCourse(course)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                            selectedCadetCourse === course
+                                ? 'bg-blue-600 text-white shadow'
+                                : 'bg-white text-gray-600 border hover:bg-gray-50'
+                        }`}
+                    >
+                        {course}
+                    </button>
+                ))}
             </div>
 
             <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">

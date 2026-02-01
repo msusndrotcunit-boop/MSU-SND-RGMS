@@ -41,9 +41,9 @@ router.post('/cadet-login', (req, res) => {
 
     // Check by Username (Student ID) or Email
     // Only for role = 'cadet'
-    // Join with cadets to get is_profile_completed status
+    // Join with cadets to get is_profile_completed status and Name
     const sql = `
-        SELECT u.*, c.is_profile_completed 
+        SELECT u.*, c.is_profile_completed, c.first_name, c.last_name
         FROM users u 
         LEFT JOIN cadets c ON u.cadet_id = c.id 
         WHERE (u.username = ? OR u.email = ?) AND u.role = 'cadet'
@@ -64,6 +64,16 @@ router.post('/cadet-login', (req, res) => {
         // Generate Token
         const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' }); // Longer session for cadets?
         
+        // Notify Admin of Login
+        const displayName = (user.first_name && user.last_name) ? `${user.first_name} ${user.last_name}` : user.username;
+        const notifMsg = `${displayName} has accessed the portal.`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
+            [notifMsg, 'login'], 
+            (nErr) => {
+                if (nErr) console.error("Error creating login notification:", nErr);
+            }
+        );
+
         res.json({ 
             token, 
             role: user.role, 

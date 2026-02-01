@@ -1175,4 +1175,32 @@ router.delete('/merit-logs/:id', (req, res) => {
     });
 });
 
+// --- Notifications ---
+
+// Get Notifications (Admin)
+router.get('/notifications', (req, res) => {
+    // Fetch notifications where user_id is NULL (system/admin) or matches admin's ID
+    const sql = `SELECT * FROM notifications WHERE user_id IS NULL OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Mark Notification as Read
+router.put('/notifications/:id/read', (req, res) => {
+    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Marked as read' });
+    });
+});
+
+// Clear All Notifications
+router.delete('/notifications', (req, res) => {
+    db.run(`DELETE FROM notifications WHERE user_id IS NULL OR user_id = ?`, [req.user.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notifications cleared' });
+    });
+});
+
 module.exports = router;

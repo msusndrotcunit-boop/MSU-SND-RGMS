@@ -204,6 +204,15 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
     
             db.run(sql, params, (err) => {
                 if (err) return res.status(500).json({ message: err.message });
+
+                // Notify Admin
+                const notifMsg = `${firstName} ${lastName} has updated their profile.`;
+                db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
+                    [notifMsg, 'profile_update'], 
+                    (nErr) => {
+                         if (nErr) console.error("Error creating profile update notification:", nErr);
+                    }
+                );
     
                 // 3. Update Users Table (Username/Email sync)
                 if (username && email) {

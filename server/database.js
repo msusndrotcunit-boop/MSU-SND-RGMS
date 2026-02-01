@@ -222,6 +222,14 @@ function initPgDb() {
             status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
             remarks TEXT,
             UNIQUE(training_day_id, staff_id)
+        )`,
+        `CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            message TEXT NOT NULL,
+            type TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 
@@ -392,6 +400,17 @@ function initSqliteDb() {
             UNIQUE(training_day_id, staff_id),
             FOREIGN KEY(training_day_id) REFERENCES training_days(id) ON DELETE CASCADE,
             FOREIGN KEY(staff_id) REFERENCES training_staff(id) ON DELETE CASCADE
+        )`);
+
+        // Notifications Table
+        db.run(`CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            message TEXT NOT NULL,
+            type TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
         )`);
 
         // Migration for SQLite: Add staff_id to users

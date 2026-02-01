@@ -25,6 +25,7 @@ export const SCHOOL_YEAR_OPTIONS = [
 ];
 
 export const BATTALION_OPTIONS = [
+    ". . . . . . . .",
     "CORP CMDR", 
     "Troop Adjutant", 
     "BDE S1", 
@@ -55,6 +56,7 @@ export const BATTALION_OPTIONS = [
 ];
 
 export const COMPANY_OPTIONS = [
+    ". . . . . . . .",
     "Alpha", 
     "Bravo", 
     "Charlie", 
@@ -63,6 +65,7 @@ export const COMPANY_OPTIONS = [
 ];
 
 export const PLATOON_OPTIONS = [
+    ". . . . . . . .",
     "1st Platoon", 
     "2nd Platoon", 
     "Colors", 
