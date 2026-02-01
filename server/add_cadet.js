@@ -1,8 +1,8 @@
-const db = require('./server/database');
+const db = require('./database');
 // Attempt to load bcrypt from server modules or use dummy
 let bcrypt;
 try {
-    bcrypt = require('./server/node_modules/bcryptjs');
+    bcrypt = require('./node_modules/bcryptjs');
 } catch (e) {
     try {
         bcrypt = require('bcryptjs');
