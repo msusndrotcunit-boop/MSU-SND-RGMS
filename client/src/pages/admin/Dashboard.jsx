@@ -17,6 +17,8 @@ const Dashboard = () => {
     const [cadets, setCadets] = useState([]);
     const [onlineCount, setOnlineCount] = useState(0);
 
+    console.log('AdminDashboard rendered. onlineCount:', onlineCount);
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
