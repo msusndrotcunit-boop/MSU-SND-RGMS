@@ -203,6 +203,9 @@ const processCadetData = async (data) => {
             lastName = lastName.split(' ').map(capitalize).join(' ');
         }
 
+        // Clean First Name for Temporary Username
+        const tempUsername = firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
         const cadetData = {
             student_id: studentId,
             last_name: lastName,
@@ -234,7 +237,7 @@ const processCadetData = async (data) => {
                 cadetId = await insertCadet(cadetData);
             }
 
-            await upsertUser(cadetId, studentId, cadetData.email, customUsername, firstName);
+            await upsertUser(cadetId, studentId, cadetData.email, customUsername, tempUsername);
             successCount++;
         } catch (err) {
             console.error(`Error processing ${studentId}:`, err);
