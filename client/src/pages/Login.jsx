@@ -30,15 +30,29 @@ const Login = () => {
                 response = await axios.post('/api/auth/login', { username: formData.username, password: formData.password });
             }
 
-            const { token, user } = response.data;
-            login(user, token);
+            const data = response.data;
+            // Construct user object consistent with what AuthContext expects
+            const user = {
+                token: data.token,
+                role: data.role,
+                cadetId: data.cadetId,
+                staffId: data.staffId,
+                isProfileCompleted: data.isProfileCompleted
+            };
+            
+            login(user);
 
             if (user.role === 'admin') {
                 navigate('/admin/dashboard');
             } else if (user.role === 'training_staff') {
                 navigate('/staff/dashboard');
             } else if (user.role === 'cadet') {
-                navigate('/cadet/dashboard');
+                // Check if profile is completed (0 or false means incomplete)
+                if (!user.isProfileCompleted) {
+                    navigate('/cadet/profile');
+                } else {
+                    navigate('/cadet/dashboard');
+                }
             } else {
                 navigate('/');
             }

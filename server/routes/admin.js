@@ -88,11 +88,12 @@ const updateCadet = (id, cadet) => {
     });
 };
 
-const upsertUser = (cadetId, studentId, email, customUsername) => {
+const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
     return new Promise(async (resolve, reject) => {
         try {
             const existingUser = await getUserByCadetId(cadetId);
-            const username = customUsername || studentId;
+            // Priority: Custom Username -> First Name -> Student ID
+            const username = customUsername || firstName || studentId;
             
             if (!existingUser) {
                 const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED'; 
@@ -233,7 +234,7 @@ const processCadetData = async (data) => {
                 cadetId = await insertCadet(cadetData);
             }
 
-            await upsertUser(cadetId, studentId, cadetData.email, customUsername);
+            await upsertUser(cadetId, studentId, cadetData.email, customUsername, firstName);
             successCount++;
         } catch (err) {
             console.error(`Error processing ${studentId}:`, err);
@@ -792,7 +793,7 @@ router.post('/cadets', async (req, res) => {
                 const newCadetId = this.lastID;
 
                 // Create User Account (Auto-approved)
-                const username = cadet.studentId; // Default username
+                const username = cadet.firstName || cadet.studentId; // Default to First Name
                 const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED';
                 
                 db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
@@ -898,6 +899,16 @@ router.put('/cadets/:id', (req, res) => {
 
     db.run(sql, params, (err) => {
             if (err) return res.status(500).json({ message: err.message });
+            
+            // Sync with Users table (Email/Username)
+            // If email or first name changed, we might want to update user credentials,
+            // but for now, let's at least sync the email so they can login with it.
+            if (email) {
+                db.run(`UPDATE users SET email = ? WHERE cadet_id = ?`, [email, req.params.id], (uErr) => {
+                    if (uErr) console.error("Error syncing user email:", uErr);
+                });
+            }
+
             res.json({ message: 'Cadet updated' });
         }
     );

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, User, Moon, Sun, Camera } from 'lucide-react';
+import { Save, User, Moon, Sun, Camera, Lock, AlertTriangle } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { useAuth } from '../../context/AuthContext';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { 
     RANK_OPTIONS, 
@@ -12,11 +14,15 @@ import {
     PLATOON_OPTIONS, 
     SEMESTER_OPTIONS, 
     COURSE_OPTIONS,
-    CADET_COURSE_OPTIONS 
+    CADET_COURSE_OPTIONS,
+    STATUS_OPTIONS
 } from '../../constants/options';
 
 const Profile = () => {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState({
+        username: '',
         rank: '',
         firstName: '',
         middleName: '',
@@ -40,6 +46,11 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
 
+    // If profile is completed, it's locked.
+    // However, we rely on user.isProfileCompleted from context which might be stale if we just updated it.
+    // But since we logout immediately after completion, the next login will have it true.
+    const isLocked = user?.isProfileCompleted;
+
     useEffect(() => {
         fetchProfile();
         
@@ -53,74 +64,57 @@ const Profile = () => {
 
     const fetchProfile = async () => {
         try {
+            // Try cache first
             try {
                 const cached = await getSingleton('profiles', 'cadet');
                 if (cached) {
                     const data = cached;
-                    setProfile({
-                        rank: data.rank || '',
-                        firstName: data.first_name,
-                        middleName: data.middle_name || '',
-                        lastName: data.last_name,
-                        suffixName: data.suffix_name || '',
-                        email: data.email,
-                        contactNumber: data.contact_number || '',
-                        address: data.address || '',
-                        course: data.course || '',
-                        yearLevel: data.year_level || '',
-                        schoolYear: data.school_year || '',
-                        battalion: data.battalion || '',
-                        company: data.company || '',
-                        platoon: data.platoon || '',
-                        cadetCourse: data.cadet_course || 'MS1',
-                        semester: data.semester || '',
-                        status: data.status || 'Ongoing'
-                    });
-                    if (data.profile_pic) {
-                        if (data.profile_pic.startsWith('data:')) {
-                            setPreview(data.profile_pic);
-                        } else {
-                            const normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                            setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
-                        }
-                    }
+                    updateProfileState(data);
                     setLoading(false);
                 }
             } catch {}
+            
+            // Fetch fresh
             const res = await axios.get('/api/cadet/profile');
             const data = res.data;
-            setProfile({
-                rank: data.rank || '',
-                firstName: data.first_name,
-                middleName: data.middle_name || '',
-                lastName: data.last_name,
-                suffixName: data.suffix_name || '',
-                email: data.email,
-                contactNumber: data.contact_number || '',
-                address: data.address || '',
-                course: data.course || '',
-                yearLevel: data.year_level || '',
-                schoolYear: data.school_year || '',
-                battalion: data.battalion || '',
-                company: data.company || '',
-                platoon: data.platoon || '',
-                cadetCourse: data.cadet_course || 'MS1',
-                semester: data.semester || '',
-                status: data.status || 'Ongoing'
-            });
-            if (data.profile_pic) {
-                if (data.profile_pic.startsWith('data:')) {
-                    setPreview(data.profile_pic);
-                } else {
-                    const normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                    setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
-                }
-            }
+            updateProfileState(data);
+            
             await cacheSingleton('profiles', 'cadet', data);
             setLoading(false);
         } catch (err) {
             console.error(err);
             setLoading(false);
+        }
+    };
+
+    const updateProfileState = (data) => {
+        setProfile({
+            username: data.username || '',
+            rank: data.rank || '',
+            firstName: data.first_name,
+            middleName: data.middle_name || '',
+            lastName: data.last_name,
+            suffixName: data.suffix_name || '',
+            email: data.email,
+            contactNumber: data.contact_number || '',
+            address: data.address || '',
+            course: data.course || '',
+            yearLevel: data.year_level || '',
+            schoolYear: data.school_year || '',
+            battalion: data.battalion || '',
+            company: data.company || '',
+            platoon: data.platoon || '',
+            cadetCourse: data.cadet_course || 'MS1',
+            semester: data.semester || '',
+            status: data.status || 'Ongoing'
+        });
+        if (data.profile_pic) {
+            if (data.profile_pic.startsWith('data:')) {
+                setPreview(data.profile_pic);
+            } else {
+                const normalizedPath = data.profile_pic.replace(/\\/g, '/');
+                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+            }
         }
     };
 
@@ -136,6 +130,7 @@ const Profile = () => {
     };
 
     const handleFileChange = async (e) => {
+        if (isLocked) return;
         const file = e.target.files[0];
         if (file) {
             const options = {
@@ -158,6 +153,27 @@ const Profile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (isLocked) return;
+
+        // Validation for First Time Completion
+        if (!isLocked) {
+            // Check if all required fields are filled
+            const requiredFields = ['username', 'firstName', 'lastName', 'email', 'contactNumber', 'address', 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon', 'cadetCourse', 'semester'];
+            const missingFields = requiredFields.filter(field => !profile[field]);
+            
+            if (missingFields.length > 0) {
+                alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+                return;
+            }
+
+            // Check Profile Pic
+            if (!preview && !profilePic) {
+                alert('Profile Picture is required.');
+                return;
+            }
+        }
+
         const formData = new FormData();
         
         // Append all text fields
@@ -170,17 +186,29 @@ const Profile = () => {
             formData.append('profilePic', profilePic);
         }
 
+        // If not locked, we are completing the profile
+        if (!isLocked) {
+            formData.append('is_profile_completed', 'true');
+        }
+
         try {
             const res = await axios.put('/api/cadet/profile', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            alert('Profile updated successfully!');
-            if (res.data.profilePic) {
-                setPreview(`${import.meta.env.VITE_API_URL || ''}${res.data.profilePic}`);
+            
+            if (!isLocked) {
+                alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials.');
+                logout();
+                navigate('/login');
+            } else {
+                alert('Profile updated successfully!');
+                if (res.data.profilePic) {
+                    setPreview(`${import.meta.env.VITE_API_URL || ''}${res.data.profilePic}`);
+                }
             }
         } catch (err) {
             console.error(err);
-            alert('Error updating profile');
+            alert('Error updating profile: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -190,37 +218,45 @@ const Profile = () => {
         <div className="max-w-4xl mx-auto space-y-6 pb-10">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">My Profile</h1>
-                <button 
-                    onClick={toggleDarkMode}
-                    className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-full transition"
-                >
-                    {darkMode ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-gray-600" size={20} />}
-                    <span className="text-sm font-medium dark:text-white">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                </button>
-            </div>
-
-            {/* About the App Section */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-lg border border-indigo-100 dark:border-indigo-800 mb-8">
-                <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-300 mb-2">About the App</h2>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                    The ROTC Grading Management System is the official platform for the MSU-SND ROTC Unit. 
-                    This system streamlines the management of cadet records, attendance tracking, grading, and merit/demerit points.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Version:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">2.3.18</span>
-                    </div>
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Developer:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">MSU-SND ROTC Unit</span>
-                    </div>
-                    <div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-200">Contact:</span> 
-                        <span className="text-gray-600 dark:text-gray-400 ml-2">msusndrotcunit@gmail.com</span>
-                    </div>
+                <div className="flex space-x-2">
+                    <button 
+                        onClick={toggleDarkMode}
+                        className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-full transition"
+                    >
+                        {darkMode ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-gray-600" size={20} />}
+                        <span className="text-sm font-medium dark:text-white">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                    </button>
+                    <button 
+                        onClick={logout}
+                        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                    >
+                        Logout
+                    </button>
                 </div>
             </div>
+
+            {/* Profile Status Banner */}
+            {!isLocked ? (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div className="flex items-center">
+                        <AlertTriangle className="text-yellow-500 mr-2" />
+                        <div>
+                            <p className="font-bold text-yellow-700">Profile Completion Required</p>
+                            <p className="text-sm text-yellow-600">Please complete all fields and upload a profile picture to secure your account. Once saved, your profile will be locked.</p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <div className="flex items-center">
+                        <Lock className="text-blue-500 mr-2" />
+                        <div>
+                            <p className="font-bold text-blue-700">Profile Locked</p>
+                            <p className="text-sm text-blue-600">Your profile is verified and locked. Contact your administrator for any changes.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Left Column: Photo & Settings */}
@@ -236,10 +272,12 @@ const Profile = () => {
                                     </div>
                                 )}
                             </div>
-                            <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md">
-                                <Camera size={18} />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                            </label>
+                            {!isLocked && (
+                                <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md">
+                                    <Camera size={18} />
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                </label>
+                            )}
                         </div>
                         <h2 className="mt-4 text-xl font-bold dark:text-white">{profile.lastName}, {profile.firstName}</h2>
                         <p className="text-gray-500 dark:text-gray-400">{profile.rank || 'Cadet'}</p>
@@ -262,6 +300,35 @@ const Profile = () => {
                     <h3 className="text-xl font-bold mb-6 border-b pb-2 dark:text-white">Personal Information</h3>
                     
                     <div className="space-y-4">
+                        {/* Credentials Section */}
+                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded border border-green-100 dark:border-green-800 mb-4">
+                            <h4 className="font-bold text-green-800 dark:text-green-300 mb-3 text-sm uppercase tracking-wide">Login Credentials</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username <span className="text-red-500">*</span></label>
+                                    <input 
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" 
+                                        value={profile.username} 
+                                        onChange={e => setProfile({...profile, username: e.target.value})}
+                                        disabled={isLocked}
+                                        required
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Used for login (no password needed)</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="email"
+                                        className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" 
+                                        value={profile.email} 
+                                        onChange={e => setProfile({...profile, email: e.target.value})}
+                                        disabled={isLocked}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank <span className="text-xs text-red-500">(Read-only)</span></label>
@@ -269,50 +336,48 @@ const Profile = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Suffix</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.suffixName} onChange={e => setProfile({...profile, suffixName: e.target.value})} />
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.suffixName} onChange={e => setProfile({...profile, suffixName: e.target.value})} disabled={isLocked} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.firstName} onChange={e => setProfile({...profile, firstName: e.target.value})} />
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name <span className="text-red-500">*</span></label>
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.firstName} onChange={e => setProfile({...profile, firstName: e.target.value})} disabled={isLocked} required />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Middle Name</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.middleName} onChange={e => setProfile({...profile, middleName: e.target.value})} />
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.middleName} onChange={e => setProfile({...profile, middleName: e.target.value})} disabled={isLocked} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.lastName} onChange={e => setProfile({...profile, lastName: e.target.value})} />
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name <span className="text-red-500">*</span></label>
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.lastName} onChange={e => setProfile({...profile, lastName: e.target.value})} disabled={isLocked} required />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.email} onChange={e => setProfile({...profile, email: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} />
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number <span className="text-red-500">*</span></label>
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} disabled={isLocked} required />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                            <textarea className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500" rows="2" value={profile.address} onChange={e => setProfile({...profile, address: e.target.value})}></textarea>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address <span className="text-red-500">*</span></label>
+                            <textarea className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" rows="2" value={profile.address} onChange={e => setProfile({...profile, address: e.target.value})} disabled={isLocked} required></textarea>
                         </div>
 
                         <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2 dark:text-white">Military &amp; School Info</h3>
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.course}
                                     onChange={e => setProfile({ ...profile, course: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Course</option>
                                     {COURSE_OPTIONS.map(option => (
@@ -321,11 +386,13 @@ const Profile = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.yearLevel}
                                     onChange={e => setProfile({ ...profile, yearLevel: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Year Level</option>
                                     {YEAR_LEVEL_OPTIONS.map(option => (
@@ -334,11 +401,13 @@ const Profile = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.schoolYear}
                                     onChange={e => setProfile({ ...profile, schoolYear: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select School Year</option>
                                     {SCHOOL_YEAR_OPTIONS.map(option => (
@@ -350,11 +419,13 @@ const Profile = () => {
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.battalion}
                                     onChange={e => setProfile({ ...profile, battalion: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Battalion</option>
                                     {BATTALION_OPTIONS.map(option => (
@@ -363,11 +434,13 @@ const Profile = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.company}
                                     onChange={e => setProfile({ ...profile, company: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Company</option>
                                     {COMPANY_OPTIONS.map(option => (
@@ -376,11 +449,13 @@ const Profile = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.platoon}
                                     onChange={e => setProfile({ ...profile, platoon: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Platoon</option>
                                     {PLATOON_OPTIONS.map(option => (
@@ -392,11 +467,13 @@ const Profile = () => {
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.cadetCourse}
                                     onChange={e => setProfile({ ...profile, cadetCourse: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Cadet Course</option>
                                     {CADET_COURSE_OPTIONS.map(option => (
@@ -405,11 +482,13 @@ const Profile = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester <span className="text-red-500">*</span></label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.semester}
                                     onChange={e => setProfile({ ...profile, semester: e.target.value })}
+                                    disabled={isLocked}
+                                    required
                                 >
                                     <option value="">Select Semester</option>
                                     {SEMESTER_OPTIONS.map(option => (
@@ -420,9 +499,10 @@ const Profile = () => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                                 <select
-                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={profile.status}
                                     onChange={e => setProfile({ ...profile, status: e.target.value })}
+                                    disabled={isLocked}
                                 >
                                     <option value="">Select Status</option>
                                     {STATUS_OPTIONS.map(option => (
@@ -433,10 +513,12 @@ const Profile = () => {
                         </div>
 
                         <div className="pt-4">
-                            <button type="submit" className="flex items-center justify-center w-full bg-green-700 text-white py-3 rounded hover:bg-green-800 transition shadow">
-                                <Save className="mr-2" size={20} />
-                                Save Profile
-                            </button>
+                            {!isLocked && (
+                                <button type="submit" className="flex items-center justify-center w-full bg-green-700 text-white py-3 rounded hover:bg-green-800 transition shadow">
+                                    <Save className="mr-2" size={20} />
+                                    Complete Profile & Logout
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -444,5 +526,7 @@ const Profile = () => {
         </div>
     );
 };
+
+export default Profile;
 
 export default Profile;

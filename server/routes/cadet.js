@@ -106,7 +106,14 @@ router.get('/profile', (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    db.get(`SELECT * FROM cadets WHERE id = ?`, [cadetId], (err, row) => {
+    const sql = `
+        SELECT c.*, u.username 
+        FROM cadets c 
+        LEFT JOIN users u ON u.cadet_id = c.id 
+        WHERE c.id = ?
+    `;
+
+    db.get(sql, [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!row) return res.status(404).json({ message: 'Cadet not found' });
         res.json(row);
@@ -117,45 +124,108 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    const { 
-        firstName, middleName, lastName, suffixName,
-        email, contactNumber, address,
-        course, yearLevel, schoolYear,
-        battalion, company, platoon,
-        cadetCourse, semester
-    } = req.body;
-
-    let sql = `UPDATE cadets SET 
-        first_name=?, middle_name=?, last_name=?, suffix_name=?,
-        email=?, contact_number=?, address=?,
-        course=?, year_level=?, school_year=?,
-        battalion=?, company=?, platoon=?,
-        cadet_course=?, semester=?`;
-    
-    const params = [
-        firstName, middleName, lastName, suffixName,
-        email, contactNumber, address,
-        course, yearLevel, schoolYear,
-        battalion, company, platoon,
-        cadetCourse, semester
-    ];
-
-    if (req.file) {
-        sql += `, profile_pic=?`;
-        // Convert buffer to Base64 Data URI
-        const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        params.push(base64Image);
-    }
-
-    sql += ` WHERE id=?`;
-    params.push(cadetId);
-
-    db.run(sql, params, (err) => {
+    // 1. Check if profile is already locked
+    db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json({ 
-            message: 'Profile updated', 
-            profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
-        });
+        if (row && row.is_profile_completed) {
+            return res.status(403).json({ message: 'Profile is locked and cannot be edited. Contact your administrator.' });
+        }
+
+        const { 
+            username, // New credential
+            firstName, middleName, lastName, suffixName,
+            email, contactNumber, address,
+            course, yearLevel, schoolYear,
+            battalion, company, platoon,
+            cadetCourse, semester,
+            is_profile_completed // Frontend sends this as 'true'
+        } = req.body;
+
+        // 2. Mandatory Field Validation (Only if completing profile)
+        if (is_profile_completed === 'true') {
+            const requiredFields = [
+                'username', 'firstName', 'lastName', 'email', 'contactNumber', 'address',
+                'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon',
+                'cadetCourse', 'semester'
+            ];
+            
+            const missing = requiredFields.filter(field => !req.body[field]);
+            if (missing.length > 0) {
+                return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
+            }
+
+            // Check for duplicate username/email BEFORE updating
+            // We need to check if the NEW username/email is already taken by ANOTHER user
+            const checkSql = `SELECT id, cadet_id FROM users WHERE (username = ? OR email = ?)`;
+            db.all(checkSql, [username, email], (checkErr, rows) => {
+                if (checkErr) return res.status(500).json({ message: checkErr.message });
+                
+                const conflict = rows.find(r => r.cadet_id != cadetId);
+                if (conflict) {
+                    return res.status(400).json({ message: 'Username or Email is already taken by another user.' });
+                }
+
+                proceedWithUpdate();
+            });
+        } else {
+            proceedWithUpdate();
+        }
+
+        function proceedWithUpdate() {
+            let sql = `UPDATE cadets SET 
+                first_name=?, middle_name=?, last_name=?, suffix_name=?,
+                email=?, contact_number=?, address=?,
+                course=?, year_level=?, school_year=?,
+                battalion=?, company=?, platoon=?,
+                cadet_course=?, semester=?`;
+            
+            const params = [
+                firstName, middleName, lastName, suffixName,
+                email, contactNumber, address,
+                course, yearLevel, schoolYear,
+                battalion, company, platoon,
+                cadetCourse, semester
+            ];
+
+            if (req.file) {
+                sql += `, profile_pic=?`;
+                const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+                params.push(base64Image);
+            }
+    
+            // Set completion status if requested
+            if (is_profile_completed === 'true') {
+                sql += `, is_profile_completed=?`;
+                params.push(true);
+            }
+            
+            sql += ` WHERE id=?`;
+            params.push(cadetId);
+    
+            db.run(sql, params, (err) => {
+                if (err) return res.status(500).json({ message: err.message });
+    
+                // 3. Update Users Table (Username/Email sync)
+                if (username && email) {
+                    const userSql = `UPDATE users SET username=?, email=? WHERE cadet_id=?`;
+                    db.run(userSql, [username, email, cadetId], (uErr) => {
+                        if (uErr) console.error("Error updating user credentials:", uErr);
+                        // If this fails now, it's likely a DB constraint we missed or connection issue.
+                        // Since we checked for conflicts, it should pass.
+                        
+                        res.json({ 
+                            message: 'Profile updated successfully', 
+                            profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
+                        });
+                    });
+                } else {
+                    res.json({ 
+                        message: 'Profile updated successfully', 
+                        profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
+                    });
+                }
+            });
+        }
     });
 });
 

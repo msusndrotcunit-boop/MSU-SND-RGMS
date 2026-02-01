@@ -5,10 +5,17 @@ import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon } from '
 import clsx from 'clsx';
 
 const CadetLayout = () => {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Redirect to profile if not completed
+    React.useEffect(() => {
+        if (user && user.role === 'cadet' && !user.isProfileCompleted && location.pathname !== '/cadet/profile') {
+            navigate('/cadet/profile', { replace: true });
+        }
+    }, [user, location.pathname, navigate]);
 
     const handleLogout = () => {
         logout();

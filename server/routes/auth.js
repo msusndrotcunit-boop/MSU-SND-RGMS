@@ -41,7 +41,13 @@ router.post('/cadet-login', (req, res) => {
 
     // Check by Username (Student ID) or Email
     // Only for role = 'cadet'
-    const sql = `SELECT * FROM users WHERE (username = ? OR email = ?) AND role = 'cadet'`;
+    // Join with cadets to get is_profile_completed status
+    const sql = `
+        SELECT u.*, c.is_profile_completed 
+        FROM users u 
+        LEFT JOIN cadets c ON u.cadet_id = c.id 
+        WHERE (u.username = ? OR u.email = ?) AND u.role = 'cadet'
+    `;
     
     db.get(sql, [identifier, identifier], (err, user) => {
         if (err) return res.status(500).json({ message: err.message });
@@ -58,7 +64,12 @@ router.post('/cadet-login', (req, res) => {
         // Generate Token
         const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' }); // Longer session for cadets?
         
-        res.json({ token, role: user.role, cadetId: user.cadet_id });
+        res.json({ 
+            token, 
+            role: user.role, 
+            cadetId: user.cadet_id,
+            isProfileCompleted: user.is_profile_completed // Return this flag
+        });
     });
 });
 

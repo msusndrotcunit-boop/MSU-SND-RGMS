@@ -84,6 +84,16 @@ if (isPostgres) {
     // Initialize Postgres Tables
     initPgDb();
 
+    // Migration: Add is_profile_completed if missing
+    pool.query(`
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='cadets' AND column_name='is_profile_completed') THEN 
+                ALTER TABLE cadets ADD COLUMN is_profile_completed BOOLEAN DEFAULT FALSE; 
+            END IF; 
+        END $$;
+    `).catch(err => console.log('Migration info:', err.message));
+
 } else {
     const dbPath = path.resolve(__dirname, 'rotc.db');
     db = new sqlite3.Database(dbPath, (err) => {
@@ -91,6 +101,13 @@ if (isPostgres) {
         else {
             console.log('Connected to SQLite database.');
             initSqliteDb();
+            
+            // Migration: Add is_profile_completed if missing
+            db.run("ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0", (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.log('Migration info:', err.message);
+                }
+            });
         }
     });
 }
@@ -117,7 +134,8 @@ function initPgDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            is_profile_completed BOOLEAN DEFAULT FALSE
         )`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -257,7 +275,8 @@ function initSqliteDb() {
             semester TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
-            profile_pic TEXT
+            profile_pic TEXT,
+            is_profile_completed INTEGER DEFAULT 0
         )`);
 
         // Users Table
