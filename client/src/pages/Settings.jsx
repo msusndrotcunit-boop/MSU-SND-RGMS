@@ -51,7 +51,7 @@ const Settings = ({ role }) => {
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={settings.notifications.emailAlerts}
+                                checked={localSettings.notifications.emailAlerts}
                                 onChange={(e) => handleChange('notifications', 'emailAlerts', e.target.checked)}
                                 className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                             />
@@ -60,7 +60,7 @@ const Settings = ({ role }) => {
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={settings.notifications.pushNotifications}
+                                checked={localSettings.notifications.pushNotifications}
                                 onChange={(e) => handleChange('notifications', 'pushNotifications', e.target.checked)}
                                 className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                             />
@@ -69,7 +69,7 @@ const Settings = ({ role }) => {
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={settings.notifications.activityUpdates}
+                                checked={localSettings.notifications.activityUpdates}
                                 onChange={(e) => handleChange('notifications', 'activityUpdates', e.target.checked)}
                                 className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                             />
@@ -88,7 +88,7 @@ const Settings = ({ role }) => {
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={settings.display.darkMode}
+                                checked={localSettings.display.darkMode}
                                 onChange={(e) => handleChange('display', 'darkMode', e.target.checked)}
                                 className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                             />
@@ -97,7 +97,7 @@ const Settings = ({ role }) => {
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={settings.display.compactMode}
+                                checked={localSettings.display.compactMode}
                                 onChange={(e) => handleChange('display', 'compactMode', e.target.checked)}
                                 className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                             />

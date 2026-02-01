@@ -110,6 +110,9 @@ if (isPostgres) {
         if (err) console.error('Error opening database', err.message);
         else {
             console.log('Connected to SQLite database.');
+            // Enable Foreign Keys for ON DELETE CASCADE
+            db.run("PRAGMA foreign_keys = ON");
+            
             initSqliteDb();
             
             // Migration: Add is_profile_completed if missing

@@ -120,6 +120,12 @@ const CadetDashboard = () => {
 
 
 
+            {/* Secure Documents / Excuse Letters */}
+            <div className="bg-white rounded shadow p-6">
+                <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
+                <ExcuseLetterSubmission />
+            </div>
+
             {/* Quick Links */}
             <div className="bg-white rounded shadow p-6">
                 <h2 className="text-xl font-bold mb-4 border-b pb-2">Quick Links</h2>
@@ -202,12 +208,6 @@ const CadetDashboard = () => {
                     </div>
                 </div>
             )}
-
-            {/* Secure Documents / Excuse Letters */}
-            <div className="bg-white rounded shadow p-6">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
-                <ExcuseLetterSubmission />
-            </div>
 
             {/* Logs Modal */}
             {isLogsModalOpen && (
