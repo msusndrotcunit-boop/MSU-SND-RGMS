@@ -376,9 +376,9 @@ const Grading = () => {
                                                         <tr key={log.id} className="border-b hover:bg-gray-50">
                                                             <td className="p-3 text-gray-600">{new Date(log.created_at).toLocaleDateString()}</td>
                                                             <td className="p-3">
-                                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${log.type === 'merit' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                                                                    {log.type.toUpperCase()}
-                                                                </span>
+                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.type === 'merit' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {log.type ? log.type.toUpperCase() : 'UNKNOWN'}
+                                                    </span>
                                                             </td>
                                                             <td className="p-3 font-mono">{log.points}</td>
                                                             <td className="p-3">{log.reason}</td>
