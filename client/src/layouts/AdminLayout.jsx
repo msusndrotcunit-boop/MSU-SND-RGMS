@@ -36,7 +36,7 @@ const AdminLayout = () => {
     }, []);
 
     const markAsRead = async (id, e) => {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         try {
             const token = localStorage.getItem('token');
             await axios.put(`/api/admin/notifications/${id}/read`, {}, {
@@ -181,7 +181,11 @@ const AdminLayout = () => {
                                     ) : (
                                         <div className="max-h-96 overflow-y-auto">
                                             {notifications.map(notif => (
-                                                <div key={notif.id} className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${notif.is_read ? 'opacity-60' : 'bg-blue-50'}`}>
+                                                <div 
+                                                    key={notif.id} 
+                                                    onClick={(e) => !notif.is_read && markAsRead(notif.id, e)}
+                                                    className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${notif.is_read ? 'opacity-60' : 'bg-blue-50'}`}
+                                                >
                                                     <div className="flex justify-between items-start">
                                                         <p className="text-sm text-gray-800">{notif.message}</p>
                                                         {!notif.is_read && (
