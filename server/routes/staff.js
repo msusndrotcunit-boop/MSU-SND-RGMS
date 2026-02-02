@@ -24,7 +24,13 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
 router.get('/me', authenticateToken, (req, res) => {
     if (!req.user.staffId) return res.status(404).json({ message: 'Not logged in as staff' });
     
-    db.get("SELECT * FROM training_staff WHERE id = ?", [req.user.staffId], (err, row) => {
+    // Join with users table to get username
+    const sql = `SELECT s.*, u.username 
+                 FROM training_staff s 
+                 LEFT JOIN users u ON u.staff_id = s.id 
+                 WHERE s.id = ?`;
+
+    db.get(sql, [req.user.staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!row) return res.status(404).json({ message: 'Staff profile not found' });
         res.json(row);
@@ -40,7 +46,7 @@ router.put('/profile', authenticateToken, (req, res) => {
         profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
         address, civil_status, nationality, gender, language_spoken, 
         combat_boots_size, uniform_size, bullcap_size, facebook_link, 
-        rotc_unit, mobilization_center
+        rotc_unit, mobilization_center, username
     } = req.body;
 
     // Build the SQL dynamically based on provided fields, but include the core profile fields
@@ -87,11 +93,32 @@ router.put('/profile', authenticateToken, (req, res) => {
     db.run(sql, params, function(err) {
         if (err) return res.status(500).json({ message: err.message });
         
-        // Also update users table email and profile_pic if changed
-        if (email || profile_pic) {
-            db.run("UPDATE users SET email = ?, profile_pic = ? WHERE staff_id = ?", [email, profile_pic, req.user.staffId], (uErr) => {
-               // ignore error
-            });
+        // Also update users table email, profile_pic, and username if changed
+        if (email || profile_pic || username) {
+            let updateFields = [];
+            let updateParams = [];
+            
+            if (email) {
+                updateFields.push("email = ?");
+                updateParams.push(email);
+            }
+            if (profile_pic) {
+                updateFields.push("profile_pic = ?");
+                updateParams.push(profile_pic);
+            }
+            if (username) {
+                updateFields.push("username = ?");
+                updateParams.push(username);
+            }
+            
+            if (updateFields.length > 0) {
+                const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE staff_id = ?`;
+                updateParams.push(req.user.staffId);
+                
+                db.run(userSql, updateParams, (uErr) => {
+                   if (uErr) console.error("Error updating user table:", uErr);
+                });
+            }
         }
         
         res.json({ message: 'Profile updated successfully', isProfileCompleted: true });

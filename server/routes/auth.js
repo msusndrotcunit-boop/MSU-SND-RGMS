@@ -135,7 +135,7 @@ router.post('/login', (req, res) => {
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
 
-        res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id });
+        res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
     });
 });
 

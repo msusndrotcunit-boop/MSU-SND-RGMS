@@ -39,28 +39,43 @@ const StaffLayout = () => {
                     </button>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
+                    {/* Home - Locked if profile incomplete */}
                     <Link
-                        to="/staff/home"
-                        onClick={() => setIsSidebarOpen(false)}
+                        to={user?.isProfileCompleted ? "/staff/home" : "#"}
+                        onClick={(e) => {
+                            if (!user?.isProfileCompleted) e.preventDefault();
+                            setIsSidebarOpen(false);
+                        }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                            location.pathname === '/staff/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
                         <HomeIcon size={20} />
                         <span>Home</span>
+                        {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
+
+                    {/* My Portal - Locked if profile incomplete */}
                     <Link
-                        to="/staff/dashboard"
-                        onClick={() => setIsSidebarOpen(false)}
+                        to={user?.isProfileCompleted ? "/staff/dashboard" : "#"}
+                        onClick={(e) => {
+                            if (!user?.isProfileCompleted) e.preventDefault();
+                            setIsSidebarOpen(false);
+                        }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                            location.pathname === '/staff/dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
                         <LayoutDashboard size={20} />
                         <span>My Portal</span>
+                        {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
+
+                    {/* Profile - Always Accessible */}
                     <Link
                         to="/staff/profile"
                         onClick={() => setIsSidebarOpen(false)}
@@ -71,17 +86,25 @@ const StaffLayout = () => {
                     >
                         <User size={20} />
                         <span>My Profile</span>
+                        {!user?.isProfileCompleted && <div className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
                     </Link>
+
+                    {/* Settings - Locked if profile incomplete */}
                     <Link
-                        to="/staff/settings"
-                        onClick={() => setIsSidebarOpen(false)}
+                        to={user?.isProfileCompleted ? "/staff/settings" : "#"}
+                        onClick={(e) => {
+                            if (!user?.isProfileCompleted) e.preventDefault();
+                            setIsSidebarOpen(false);
+                        }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/settings' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                            location.pathname === '/staff/settings' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
                         <Settings size={20} />
                         <span>Settings</span>
+                        {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
                 </nav>
                 <div className="p-4 border-t border-green-800">
