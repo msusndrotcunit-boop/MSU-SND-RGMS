@@ -25,7 +25,7 @@ const Login = () => {
             if (loginType === 'cadet') {
                 response = await axios.post('/api/auth/cadet-login', { identifier: formData.identifier });
             } else if (loginType === 'staff') {
-                response = await axios.post('/api/auth/staff-login-no-pass', { identifier: formData.email });
+                response = await axios.post('/api/auth/staff-login-no-pass', { identifier: formData.identifier });
             } else {
                 response = await axios.post('/api/auth/login', { username: formData.username, password: formData.password });
             }
