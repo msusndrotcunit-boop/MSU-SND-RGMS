@@ -31,20 +31,24 @@
     "recharts": "^3.7.0",
     "tailwind-merge": "^1.14.0",
     "tailwindcss": "^3.3.3",
-    "vite": "^4.4.5"
+    "vite": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "concurrently": "^8.2.2",
-    "electron": "^28.2.0",
+    "electron": "^40.1.0",
     "electron-builder": "^24.9.1",
-    "eslint": "^8.45.0",
+    "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
     "vite-plugin-pwa": "^0.16.5",
     "wait-on": "^7.2.0"
+  },
+  "overrides": {
+    "tar": "^7.5.7",
+    "esbuild": "^0.25.0"
   },
   "build": {
     "appId": "com.msusnd.rotc.grading",
