@@ -19,6 +19,7 @@ const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
 const AdminActivities = lazy(() => import('./pages/admin/Activities'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
+const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 
 // Cadet Pages
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
@@ -32,6 +33,7 @@ const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
 const StaffHome = lazy(() => import('./pages/staff/Home'));
 const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
 const StaffProfile = lazy(() => import('./pages/staff/Profile'));
+const StaffOnboarding = lazy(() => import('./pages/staff/Onboarding'));
 
 // Loading Fallback
 const LoadingSpinner = () => (
@@ -61,6 +63,7 @@ function App() {
                 <Route path="staff" element={<AdminStaff />} />
                 <Route path="grading" element={<AdminGrading />} />
                 <Route path="attendance" element={<AdminAttendance />} />
+                <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="activities" element={<AdminActivities />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="settings" element={<Settings role="admin" />} />
@@ -86,6 +89,7 @@ function App() {
                 <Route path="home" element={<StaffHome />} />
                 <Route path="dashboard" element={<StaffDashboard />} />
                 <Route path="profile" element={<StaffProfile />} />
+                <Route path="profile-completion" element={<StaffOnboarding />} />
                 <Route path="settings" element={<Settings role="staff" />} />
                 <Route index element={<Navigate to="home" replace />} />
               </Route>

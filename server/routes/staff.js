@@ -31,25 +31,69 @@ router.get('/me', authenticateToken, (req, res) => {
     });
 });
 
-// UPDATE Current Staff Profile (Me)
+// UPDATE Current Staff Profile (Me) - Complete Profile
 router.put('/profile', authenticateToken, (req, res) => {
     if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
     
-    const { email, contact_number, profile_pic } = req.body;
-    // Staff can only update contact info and picture
-    const sql = `UPDATE training_staff SET email = ?, contact_number = ?, profile_pic = ? WHERE id = ?`;
+    const { 
+        rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
+        profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
+        address, civil_status, nationality, gender, language_spoken, 
+        combat_boots_size, uniform_size, bullcap_size, facebook_link, 
+        rotc_unit, mobilization_center
+    } = req.body;
+
+    // Build the SQL dynamically based on provided fields, but include the core profile fields
+    const sql = `UPDATE training_staff SET 
+        rank = COALESCE(?, rank), 
+        first_name = COALESCE(?, first_name), 
+        middle_name = COALESCE(?, middle_name), 
+        last_name = COALESCE(?, last_name), 
+        suffix_name = COALESCE(?, suffix_name), 
+        email = COALESCE(?, email), 
+        contact_number = COALESCE(?, contact_number), 
+        profile_pic = COALESCE(?, profile_pic),
+        afpsn = COALESCE(?, afpsn),
+        birthdate = COALESCE(?, birthdate),
+        birthplace = COALESCE(?, birthplace),
+        age = COALESCE(?, age),
+        height = COALESCE(?, height),
+        weight = COALESCE(?, weight),
+        blood_type = COALESCE(?, blood_type),
+        address = COALESCE(?, address),
+        civil_status = COALESCE(?, civil_status),
+        nationality = COALESCE(?, nationality),
+        gender = COALESCE(?, gender),
+        language_spoken = COALESCE(?, language_spoken),
+        combat_boots_size = COALESCE(?, combat_boots_size),
+        uniform_size = COALESCE(?, uniform_size),
+        bullcap_size = COALESCE(?, bullcap_size),
+        facebook_link = COALESCE(?, facebook_link),
+        rotc_unit = COALESCE(?, rotc_unit),
+        mobilization_center = COALESCE(?, mobilization_center),
+        is_profile_completed = 1
+        WHERE id = ?`;
     
-    db.run(sql, [email, contact_number, profile_pic, req.user.staffId], function(err) {
+    const params = [
+        rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
+        profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
+        address, civil_status, nationality, gender, language_spoken, 
+        combat_boots_size, uniform_size, bullcap_size, facebook_link, 
+        rotc_unit, mobilization_center,
+        req.user.staffId
+    ];
+    
+    db.run(sql, params, function(err) {
         if (err) return res.status(500).json({ message: err.message });
         
-        // Also update users table email if changed
+        // Also update users table email and profile_pic if changed
         if (email || profile_pic) {
             db.run("UPDATE users SET email = ?, profile_pic = ? WHERE staff_id = ?", [email, profile_pic, req.user.staffId], (uErr) => {
                // ignore error
             });
         }
         
-        res.json({ message: 'Profile updated successfully' });
+        res.json({ message: 'Profile updated successfully', isProfileCompleted: true });
     });
 });
 

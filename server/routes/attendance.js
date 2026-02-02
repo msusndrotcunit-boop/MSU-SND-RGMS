@@ -713,4 +713,47 @@ router.get('/my-history/staff', authenticateToken, (req, res) => {
     });
 });
 
+// Scan Staff QR Code
+router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
+    const { dayId, qrData } = req.body;
+
+    if (!dayId || !qrData) {
+        return res.status(400).json({ message: 'Day ID and QR Data are required' });
+    }
+
+    let parsedData;
+    try {
+        parsedData = JSON.parse(qrData);
+    } catch (e) {
+        return res.status(400).json({ message: 'Invalid QR Data format' });
+    }
+
+    // Validate QR Data
+    if (!parsedData.id || parsedData.role !== 'training_staff') {
+        return res.status(400).json({ message: 'Invalid QR Code. Not a training staff QR.' });
+    }
+
+    const staffId = parsedData.id;
+    const status = 'present'; // Default to present on scan
+
+    // Check if record exists
+    db.get('SELECT id, status FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+
+        if (row) {
+             // Already exists. Return success but mention it was already marked.
+             return res.json({ message: 'Already marked present', staff: parsedData, status: row.status });
+        } else {
+            // Insert
+            db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status) VALUES (?, ?, ?)', 
+                [dayId, staffId, status], 
+                (err) => {
+                    if (err) return res.status(500).json({ message: err.message });
+                    res.json({ message: 'Attendance recorded', staff: parsedData, status: 'present' });
+                }
+            );
+        }
+    });
+});
+
 module.exports = router;

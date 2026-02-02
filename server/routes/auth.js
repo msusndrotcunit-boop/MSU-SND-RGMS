@@ -204,7 +204,12 @@ router.post('/staff-login-no-pass', (req, res) => {
         return res.status(400).json({ message: 'Please enter your Username or Email.' });
     }
 
-    const sql = `SELECT * FROM users WHERE (username = ? OR email = ?) AND role = 'training_staff'`;
+    const sql = `
+        SELECT u.*, s.is_profile_completed, s.first_name, s.last_name
+        FROM users u 
+        LEFT JOIN training_staff s ON u.staff_id = s.id 
+        WHERE (u.username = ? OR u.email = ?) AND u.role = 'training_staff'
+    `;
     
     db.get(sql, [identifier, identifier], (err, user) => {
         if (err) return res.status(500).json({ message: err.message });
@@ -219,7 +224,12 @@ router.post('/staff-login-no-pass', (req, res) => {
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
 
-        res.json({ token, role: user.role, staffId: user.staff_id });
+        res.json({ 
+            token, 
+            role: user.role, 
+            staffId: user.staff_id,
+            isProfileCompleted: user.is_profile_completed
+        });
     });
 });
 

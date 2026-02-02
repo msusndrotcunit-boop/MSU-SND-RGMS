@@ -120,13 +120,13 @@ const Login = () => {
 
                     {loginType === 'staff' && (
                         <div className="mb-6">
-                            <label className="block text-gray-700 font-semibold mb-2">Email Address</label>
+                            <label className="block text-gray-700 font-semibold mb-2">Username or Email</label>
                             <input
-                                type="email"
-                                name="email"
-                                placeholder="Enter your Email"
+                                type="text"
+                                name="identifier"
+                                placeholder="Enter your Username or Email"
                                 className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
-                                value={formData.email}
+                                value={formData.identifier}
                                 onChange={handleChange}
                                 required
                             />

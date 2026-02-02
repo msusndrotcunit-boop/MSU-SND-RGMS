@@ -84,6 +84,37 @@ if (isPostgres) {
     // Initialize Postgres Tables
     initPgDb();
 
+    // Migration: Add extra columns to training_staff if missing
+    const staffColumns = [
+        { name: 'afpsn', type: 'TEXT' },
+        { name: 'birthdate', type: 'TEXT' },
+        { name: 'birthplace', type: 'TEXT' },
+        { name: 'age', type: 'INTEGER' },
+        { name: 'height', type: 'TEXT' },
+        { name: 'weight', type: 'TEXT' },
+        { name: 'blood_type', type: 'TEXT' },
+        { name: 'address', type: 'TEXT' },
+        { name: 'civil_status', type: 'TEXT' },
+        { name: 'nationality', type: 'TEXT' },
+        { name: 'gender', type: 'TEXT' },
+        { name: 'language_spoken', type: 'TEXT' },
+        { name: 'combat_boots_size', type: 'TEXT' },
+        { name: 'uniform_size', type: 'TEXT' },
+        { name: 'bullcap_size', type: 'TEXT' },
+        { name: 'facebook_link', type: 'TEXT' },
+        { name: 'rotc_unit', type: 'TEXT' },
+        { name: 'mobilization_center', type: 'TEXT' },
+        { name: 'is_profile_completed', type: 'INTEGER DEFAULT 0' }
+    ];
+
+    staffColumns.forEach(col => {
+        db.run(`ALTER TABLE training_staff ADD COLUMN ${col.name} ${col.type}`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                // console.log(`Migration info: ${err.message}`);
+            }
+        });
+    });
+
     // Migration: Add is_profile_completed if missing
     pool.query(`
         DO $$ 
@@ -115,6 +146,37 @@ if (isPostgres) {
             
             initSqliteDb();
             
+            // Migration: Add extra columns to training_staff if missing
+            const staffColumns = [
+                { name: 'afpsn', type: 'TEXT' },
+                { name: 'birthdate', type: 'TEXT' },
+                { name: 'birthplace', type: 'TEXT' },
+                { name: 'age', type: 'INTEGER' },
+                { name: 'height', type: 'TEXT' },
+                { name: 'weight', type: 'TEXT' },
+                { name: 'blood_type', type: 'TEXT' },
+                { name: 'address', type: 'TEXT' },
+                { name: 'civil_status', type: 'TEXT' },
+                { name: 'nationality', type: 'TEXT' },
+                { name: 'gender', type: 'TEXT' },
+                { name: 'language_spoken', type: 'TEXT' },
+                { name: 'combat_boots_size', type: 'TEXT' },
+                { name: 'uniform_size', type: 'TEXT' },
+                { name: 'bullcap_size', type: 'TEXT' },
+                { name: 'facebook_link', type: 'TEXT' },
+                { name: 'rotc_unit', type: 'TEXT' },
+                { name: 'mobilization_center', type: 'TEXT' },
+                { name: 'is_profile_completed', type: 'INTEGER DEFAULT 0' }
+            ];
+
+            staffColumns.forEach(col => {
+                db.run(`ALTER TABLE training_staff ADD COLUMN ${col.name} ${col.type}`, (err) => {
+                    if (err && !err.message.includes('duplicate column')) {
+                        // console.log(`Migration info: ${err.message}`);
+                    }
+                });
+            });
+
             // Migration: Add is_profile_completed if missing
             db.run("ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0", (err) => {
                 if (err && !err.message.includes('duplicate column')) {
@@ -233,6 +295,25 @@ function initPgDb() {
             contact_number TEXT,
             role TEXT DEFAULT 'Instructor',
             profile_pic TEXT,
+            afpsn TEXT,
+            birthdate TEXT,
+            birthplace TEXT,
+            age INTEGER,
+            height TEXT,
+            weight TEXT,
+            blood_type TEXT,
+            address TEXT,
+            civil_status TEXT,
+            nationality TEXT,
+            gender TEXT,
+            language_spoken TEXT,
+            combat_boots_size TEXT,
+            uniform_size TEXT,
+            bullcap_size TEXT,
+            facebook_link TEXT,
+            rotc_unit TEXT,
+            mobilization_center TEXT,
+            is_profile_completed BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS staff_attendance_records (
@@ -416,6 +497,25 @@ function initSqliteDb() {
             contact_number TEXT,
             role TEXT DEFAULT 'Instructor',
             profile_pic TEXT,
+            afpsn TEXT,
+            birthdate TEXT,
+            birthplace TEXT,
+            age INTEGER,
+            height TEXT,
+            weight TEXT,
+            blood_type TEXT,
+            address TEXT,
+            civil_status TEXT,
+            nationality TEXT,
+            gender TEXT,
+            language_spoken TEXT,
+            combat_boots_size TEXT,
+            uniform_size TEXT,
+            bullcap_size TEXT,
+            facebook_link TEXT,
+            rotc_unit TEXT,
+            mobilization_center TEXT,
+            is_profile_completed INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
