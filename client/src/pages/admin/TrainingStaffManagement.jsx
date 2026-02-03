@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { STAFF_RANK_OPTIONS } from '../../constants/options';
 
 const TrainingStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
@@ -126,6 +127,14 @@ const TrainingStaffManagement = () => {
 
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
+    const sortedStaffList = [...staffList].sort((a, b) => {
+        const rankA = STAFF_RANK_OPTIONS.indexOf(a.rank);
+        const rankB = STAFF_RANK_OPTIONS.indexOf(b.rank);
+        const valA = rankA === -1 ? -1 : rankA;
+        const valB = rankB === -1 ? -1 : rankB;
+        return valB - valA;
+    });
+
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -161,14 +170,14 @@ const TrainingStaffManagement = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {staffList.length === 0 ? (
+                        {sortedStaffList.length === 0 ? (
                             <tr>
                                 <td colSpan="4" className="p-8 text-center text-gray-500">
                                     No training staff found. Import or add one.
                                 </td>
                             </tr>
                         ) : (
-                            staffList.map(staff => (
+                            sortedStaffList.map(staff => (
                                 <tr key={staff.id} className="border-b hover:bg-gray-50">
                                     <td className="p-4">
                                         <div className="font-medium">

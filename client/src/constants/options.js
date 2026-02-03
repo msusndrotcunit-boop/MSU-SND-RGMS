@@ -8,6 +8,26 @@ export const RANK_OPTIONS = [
     "CDT COL"
 ];
 
+export const STAFF_RANK_OPTIONS = [
+    "Pvt",
+    "PFc", 
+    "Cpl",
+    "Sgt",
+    "SSg",
+    "TSg",
+    "MSg",
+    "2LT",
+    "1LT",
+    "CPT",
+    "MAJ",
+    "LTC",
+    "COL",
+    "BGEN",
+    "MGEN",
+    "LTGEN",
+    "GEN"
+];
+
 export const YEAR_LEVEL_OPTIONS = [
     "1st Year", 
     "2nd Year", 

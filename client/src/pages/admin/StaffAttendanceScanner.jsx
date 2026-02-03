@@ -124,7 +124,7 @@ const StaffAttendanceScanner = () => {
                 console.error("QR Parse Error", e);
                 // For now, if it's not JSON, we can't easily display a name unless we fetch it.
                 // But let's wrap it in an object to pass through.
-                data = { id: decodedText, name: 'Unknown Staff' }; 
+                data = { id: decodedText, name: 'Unverified Staff' }; 
             }
 
             setScannedData({ ...data, rawQr: decodedText });

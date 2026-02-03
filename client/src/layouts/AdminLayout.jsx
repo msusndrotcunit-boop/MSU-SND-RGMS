@@ -94,20 +94,20 @@ const AdminLayout = () => {
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { 
+            label: 'Grading Management', 
+            icon: Calculator,
+            children: [
+                { path: '/admin/grading', label: 'Grading' },
+                { path: '/admin/attendance', label: 'Attendance' }
+            ]
+        },
+        { 
             label: 'Training Staff', 
             icon: UserCog,
             children: [
                 { path: '/admin/staff', label: 'Manage Staff' },
                 { path: '/admin/staff-scanner', label: 'Staff Scanner' },
                 { path: '/admin/staff-analytics', label: 'Analytics' }
-            ]
-        },
-        { 
-            label: 'Grading Management', 
-            icon: Calculator,
-            children: [
-                { path: '/admin/grading', label: 'Grading' },
-                { path: '/admin/attendance', label: 'Attendance' }
             ]
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },

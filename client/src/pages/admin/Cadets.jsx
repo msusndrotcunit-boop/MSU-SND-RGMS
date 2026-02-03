@@ -285,6 +285,13 @@ const Cadets = () => {
             (cadet.rank && cadet.rank.toLowerCase().includes(lowerTerm)) ||
             (cadet.company && cadet.company.toLowerCase().includes(lowerTerm))
         );
+    }).sort((a, b) => {
+        const rankA = RANK_OPTIONS.indexOf(a.rank);
+        const rankB = RANK_OPTIONS.indexOf(b.rank);
+        // Put unknown ranks at the end
+        const valA = rankA === -1 ? -1 : rankA;
+        const valB = rankB === -1 ? -1 : rankB;
+        return valB - valA;
     });
 
     // Bulk Selection Handlers

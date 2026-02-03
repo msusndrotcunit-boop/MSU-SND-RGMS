@@ -1,15 +1,21 @@
 import React, { useState, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, Bell, Check } from 'lucide-react';
 import clsx from 'clsx';
 import { Toaster } from 'react-hot-toast';
+import axios from 'axios';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Notification State
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     // Redirect to profile if not completed
     React.useEffect(() => {
@@ -24,6 +30,67 @@ const CadetLayout = () => {
     };
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+    // Notification Logic
+    const isNotifRead = (n) => n.is_read === 1 || n.is_read === '1' || n.is_read === true;
+
+    const fetchNotifications = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            
+            const res = await axios.get('/api/cadet/notifications', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setNotifications(res.data);
+            setUnreadCount(res.data.filter(n => !isNotifRead(n)).length);
+        } catch (err) {
+            console.error("Error fetching notifications", err);
+        }
+    };
+
+    React.useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+            return () => clearInterval(interval);
+        }
+    }, [user]);
+
+    const toggleNotifications = () => setShowNotifications(!showNotifications);
+
+    const markAsRead = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`/api/cadet/notifications/${id}/read`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Update local state
+            setNotifications(notifications.map(n => 
+                n.id === id ? { ...n, is_read: 1 } : n
+            ));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error("Error marking notification as read", err);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put('/api/cadet/notifications/read-all', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Update local state
+            setNotifications(notifications.map(n => ({ ...n, is_read: 1 })));
+            setUnreadCount(0);
+        } catch (err) {
+            console.error("Error marking all notifications as read", err);
+        }
+    };
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">

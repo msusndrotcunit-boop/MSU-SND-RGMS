@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
 const COLORS = {
@@ -95,7 +95,12 @@ const Dashboard = () => {
         // By Company
         const companyCount = {};
         cadets.forEach(c => {
-            const company = c.company || 'Unknown';
+            let company = c.company?.trim();
+            if (company === '. . . . . . . .') {
+                company = 'Advance Officer';
+            } else if (!company) {
+                company = 'Unverified';
+            }
             companyCount[company] = (companyCount[company] || 0) + 1;
         });
         const companyData = Object.keys(companyCount).map(key => ({
@@ -106,7 +111,7 @@ const Dashboard = () => {
         // By Rank
         const rankCount = {};
         cadets.forEach(c => {
-            const rank = c.rank || 'Unknown';
+            const rank = c.rank?.trim() || 'Unverified';
             rankCount[rank] = (rankCount[rank] || 0) + 1;
         });
         const rankData = Object.keys(rankCount).map(key => ({
@@ -117,7 +122,7 @@ const Dashboard = () => {
         // By Status
         const statusCount = {};
         cadets.forEach(c => {
-            const status = c.status || 'Unknown';
+            const status = c.status?.trim() || 'Unverified';
             statusCount[status] = (statusCount[status] || 0) + 1;
         });
         const statusData = Object.keys(statusCount).map(key => ({
@@ -163,7 +168,9 @@ const Dashboard = () => {
                                     <XAxis dataKey="name" />
                                     <YAxis />
                                     <Tooltip />
-                                    <Bar dataKey="count" fill="#3b82f6" name="Cadets" />
+                                    <Bar dataKey="count" fill="#3b82f6" name="Cadets">
+                                        <LabelList dataKey="count" position="top" />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -179,7 +186,9 @@ const Dashboard = () => {
                                     <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{fontSize: 10}} />
                                     <YAxis />
                                     <Tooltip />
-                                    <Bar dataKey="count" fill="#10b981" name="Cadets" />
+                                    <Bar dataKey="count" fill="#10b981" name="Cadets">
+                                        <LabelList dataKey="count" position="top" />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>

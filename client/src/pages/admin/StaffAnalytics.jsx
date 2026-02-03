@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts';
 import { Users, UserCheck, UserX, Clock } from 'lucide-react';
 
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6']; // Green, Red, Amber, Blue
@@ -101,13 +101,26 @@ const StaffAnalytics = () => {
                     {stats.staffByRank.length > 0 ? (
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats.staffByRank}>
+                                <BarChart data={useMemo(() => {
+                                    // Normalize and merge duplicate ranks (trim + title case)
+                                    const merged = {};
+                                    stats.staffByRank.forEach(r => {
+                                        const keyRaw = (r.rank || 'Unverified').trim();
+                                        const key = keyRaw.split(' ')
+                                            .filter(Boolean)
+                                            .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+                                            .join(' ');
+                                        merged[key] = (merged[key] || 0) + (r.count || 0);
+                                    });
+                                    return Object.entries(merged).map(([rank, count]) => ({ rank, count }));
+                                }, [stats.staffByRank])}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="rank" />
                                     <YAxis />
                                     <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="count" fill="#3b82f6" name="Staff Count" />
+                                    <Bar dataKey="count" fill="#3b82f6" name="Staff Count">
+                                        <LabelList dataKey="count" position="top" />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
