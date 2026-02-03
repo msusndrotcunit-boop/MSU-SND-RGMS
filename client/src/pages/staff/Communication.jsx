@@ -67,15 +67,15 @@ const Communication = () => {
   };
  
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-2 md:p-6 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-4">
         <MessageCircle className="text-green-700" />
-        <h2 className="text-2xl font-bold">Staff Communication</h2>
+        <h2 className="text-xl md:text-2xl font-bold">Staff Communication</h2>
       </div>
- 
-      <div className="bg-white rounded shadow p-4">
+
+      <div className="bg-white rounded shadow p-2 md:p-4 flex-1 flex flex-col">
         {/* Messages List */}
-        <div ref={listRef} className="h-96 overflow-y-auto space-y-3 border rounded p-3 bg-gray-50">
+        <div ref={listRef} className="flex-1 h-[calc(100vh-250px)] md:h-[30rem] overflow-y-auto space-y-3 border rounded p-3 bg-gray-50">
           {loading ? (
             <div className="text-center text-gray-500">Loading messages...</div>
           ) : messages.length === 0 ? (
@@ -89,7 +89,7 @@ const Communication = () => {
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] p-3 rounded-lg shadow-sm ${
+                    className={`max-w-[85%] md:max-w-[70%] p-3 rounded-lg shadow-sm ${
                       isMine ? 'bg-green-600 text-white' : 'bg-white'
                     }`}
                   >
@@ -100,14 +100,14 @@ const Communication = () => {
                         {new Date(m.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                    <div className="whitespace-pre-wrap break-words text-sm md:text-base">{m.content}</div>
                   </div>
                 </div>
               );
             })
           )}
         </div>
- 
+
         {/* Composer */}
         <form onSubmit={sendMessage} className="mt-4 flex gap-2">
           <input
@@ -120,12 +120,12 @@ const Communication = () => {
           <button
             type="submit"
             disabled={posting || !input.trim()}
-            className={`px-4 py-2 rounded text-white flex items-center gap-2 ${
+            className={`px-4 py-2 rounded text-white flex items-center justify-center gap-2 ${
               posting || !input.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'
             }`}
           >
             <Send size={18} />
-            <span>{posting ? 'Sending...' : 'Send'}</span>
+            <span className="hidden md:inline">{posting ? 'Sending...' : 'Send'}</span>
           </button>
         </form>
       </div>
