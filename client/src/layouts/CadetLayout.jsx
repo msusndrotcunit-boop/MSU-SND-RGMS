@@ -116,19 +116,82 @@ const CadetLayout = () => {
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow p-4 flex items-center md:hidden">
-                    <button 
-                        onClick={toggleSidebar} 
-                        className="mr-4 text-gray-600 hover:text-gray-900"
-                    >
-                        <Menu size={24} />
-                    </button>
-                    <h1 className="text-xl font-semibold text-gray-800">
-                        {location.pathname.includes('/cadet/home') && 'Home'}
-                        {location.pathname.includes('/cadet/dashboard') && 'My Portal'}
-                        {location.pathname.includes('/cadet/profile') && 'My Profile'}
-                        {location.pathname.includes('/cadet/about') && 'About'}
-                    </h1>
+                <header className="bg-white shadow p-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                        <button 
+                            onClick={toggleSidebar} 
+                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <h1 className="text-xl font-semibold text-gray-800">
+                            {location.pathname.includes('/cadet/home') && 'Home'}
+                            {location.pathname.includes('/cadet/dashboard') && 'My Portal'}
+                            {location.pathname.includes('/cadet/profile') && 'My Profile'}
+                            {location.pathname.includes('/cadet/about') && 'About'}
+                            {location.pathname.includes('/cadet/settings') && 'Settings'}
+                        </h1>
+                    </div>
+
+                    {/* Notification Bell */}
+                    <div className="relative mr-4">
+                        <button 
+                            onClick={toggleNotifications}
+                            className="p-2 text-gray-600 hover:text-gray-900 relative"
+                        >
+                            <Bell size={24} />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
+                                <div className="py-2">
+                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700 flex justify-between items-center">
+                                        <span>Notifications</span>
+                                        {unreadCount > 0 && (
+                                            <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-800 font-normal">
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
+                                    {notifications.length === 0 ? (
+                                        <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
+                                    ) : (
+                                        <div className="max-h-96 overflow-y-auto">
+                                            {notifications.map(notif => {
+                                                const isRead = isNotifRead(notif);
+                                                return (
+                                                    <div 
+                                                        key={notif.id} 
+                                                        onClick={(e) => !isRead && markAsRead(notif.id, e)}
+                                                        className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${isRead ? 'opacity-60' : 'bg-blue-50'}`}
+                                                    >
+                                                        <div className="flex justify-between items-start">
+                                                            <p className="text-sm text-gray-800">{notif.message}</p>
+                                                            {!isRead && (
+                                                                <button 
+                                                                    onClick={(e) => markAsRead(notif.id, e)}
+                                                                    className="text-blue-600 hover:text-blue-800 ml-2"
+                                                                    title="Mark as read"
+                                                                >
+                                                                    <Check size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </header>
                 <main className="flex-1 overflow-auto p-6">
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>

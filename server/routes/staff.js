@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const webpush = require('web-push');
 
 // Configure Multer for image upload
 const storage = multer.diskStorage({
@@ -378,6 +379,35 @@ router.post('/acknowledge-guide', authenticateToken, (req, res) => {
     });
 });
 
+// --- Notifications ---
+
+// Get Notifications (Staff)
+router.get('/notifications', authenticateToken, (req, res) => {
+    // Fetch notifications where user_id is NULL (system/global) or matches staff's user ID
+    const sql = `SELECT * FROM notifications WHERE user_id IS NULL OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Mark Notification as Read
+router.put('/notifications/:id/read', authenticateToken, (req, res) => {
+    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Marked as read' });
+    });
+});
+
+// Mark All as Read
+router.put('/notifications/read-all', authenticateToken, (req, res) => {
+    // Updates both global (NULL) and personal notifications visible to this user
+    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All marked as read' });
+    });
+});
+
 module.exports = router;
  
 // --- Communication Panel for Training Staff ---
@@ -442,5 +472,42 @@ router.post('/chat/messages', authenticateToken, (req, res) => {
     db.run(`INSERT INTO staff_messages (sender_staff_id, content) VALUES (?, ?)`, [senderId, content.trim()], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ id: this.lastID, message: 'Message posted' });
+
+        // Send Push Notifications
+        db.get(`SELECT rank, last_name FROM training_staff WHERE id = ?`, [senderId], (err, sender) => {
+            if (err || !sender) return;
+
+            const notificationPayload = JSON.stringify({
+                title: `${sender.rank} ${sender.last_name}`,
+                body: content.trim(),
+                url: '/staff/communication',
+                icon: '/pwa-192x192.png'
+            });
+
+            // Get all subscriptions except the sender
+            db.all(`SELECT * FROM push_subscriptions WHERE user_id != ?`, [req.user.id], (err, subscriptions) => {
+                if (err) return console.error('Error fetching subscriptions:', err);
+
+                subscriptions.forEach(sub => {
+                    let pushSubscription;
+                    try {
+                        pushSubscription = {
+                            endpoint: sub.endpoint,
+                            keys: JSON.parse(sub.keys)
+                        };
+                    } catch (e) {
+                        return;
+                    }
+
+                    webpush.sendNotification(pushSubscription, notificationPayload)
+                        .catch(error => {
+                            // console.error('Error sending notification:', error);
+                            if (error.statusCode === 410 || error.statusCode === 404) {
+                                db.run('DELETE FROM push_subscriptions WHERE id = ?', [sub.id]);
+                            }
+                        });
+                });
+            });
+        });
     });
 });

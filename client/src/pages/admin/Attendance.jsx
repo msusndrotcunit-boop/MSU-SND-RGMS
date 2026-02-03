@@ -142,6 +142,11 @@ const Attendance = () => {
     };
 
     const handleMarkAttendance = async (id, status) => {
+        const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+        const currentRemarks = record?.remarks || '';
+        const currentTimeIn = record?.time_in || '';
+        const currentTimeOut = record?.time_out || '';
+
         // Optimistic update
         const updatedRecords = attendanceRecords.map(r => 
             (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, status: status } : r
@@ -149,21 +154,17 @@ const Attendance = () => {
         setAttendanceRecords(updatedRecords);
 
         try {
-            if (attendanceType === 'cadet') {
-                await axios.post('/api/attendance/mark', {
-                    dayId: selectedDay.id,
-                    cadetId: id,
-                    status,
-                    remarks: ''
-                });
-            } else {
-                await axios.post('/api/attendance/mark/staff', {
-                    dayId: selectedDay.id,
-                    staffId: id,
-                    status,
-                    remarks: ''
-                });
-            }
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status,
+                remarks: currentRemarks,
+                time_in: currentTimeIn,
+                time_out: currentTimeOut
+            };
+
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
         } catch (err) {
             console.error('Failed to save attendance', err);
         }
@@ -177,24 +178,48 @@ const Attendance = () => {
     };
     
     const saveRemark = async (id, remarks, status) => {
-         try {
-            if (attendanceType === 'cadet') {
-                await axios.post('/api/attendance/mark', {
-                    dayId: selectedDay.id,
-                    cadetId: id,
-                    status: status || 'present', 
-                    remarks
-                });
-            } else {
-                await axios.post('/api/attendance/mark/staff', {
-                    dayId: selectedDay.id,
-                    staffId: id,
-                    status: status || 'present',
-                    remarks
-                });
-            }
+        try {
+            const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status: status || record?.status || 'present',
+                remarks: record?.remarks || '',
+                time_in: record?.time_in || '',
+                time_out: record?.time_out || ''
+            };
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
         } catch (err) {
-            console.error('Failed to save remark', err);
+            console.error('Failed to save time fields', err);
+        }
+    };
+
+    const handleTimeChange = (id, field, value) => {
+        const updatedRecords = attendanceRecords.map(r => {
+            if (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) {
+                return { ...r, [field]: value };
+            }
+            return r;
+        });
+        setAttendanceRecords(updatedRecords);
+    };
+
+    const saveTime = async (id, field, value) => {
+        try {
+            const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status: record?.status || 'present',
+                remarks: record?.remarks || '',
+                time_in: field === 'time_in' ? value : (record?.time_in || ''),
+                time_out: field === 'time_out' ? value : (record?.time_out || '')
+            };
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
+        } catch (err) {
+            console.error('Failed to save time', err);
         }
     };
 
@@ -368,7 +393,8 @@ const Attendance = () => {
                                     <tr>
                                         <th className="p-3 border-b">{attendanceType === 'cadet' ? 'Cadet' : 'Staff Member'}</th>
                                         <th className="p-3 border-b text-center">Status</th>
-                                        <th className="p-3 border-b">Remarks</th>
+                                        <th className="p-3 border-b">Time In</th>
+                                        <th className="p-3 border-b">Time Out</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -415,21 +441,22 @@ const Attendance = () => {
                                                 </div>
                                             </td>
                                             <td className="p-3">
-                                                <div className="flex items-center">
-                                                    <input 
-                                                        className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
-                                                        placeholder="Add remark..."
-                                                        value={record.remarks || ''}
-                                                        onChange={(e) => handleRemarkChange(id, e.target.value)}
-                                                        onBlur={(e) => saveRemark(id, e.target.value, record.status)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                saveRemark(id, e.target.value, record.status);
-                                                                e.target.blur();
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
+                                                <input 
+                                                    type="time"
+                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
+                                                    value={record.time_in || ''}
+                                                    onChange={(e) => handleTimeChange(id, 'time_in', e.target.value)}
+                                                    onBlur={(e) => saveTime(id, 'time_in', e.target.value)}
+                                                />
+                                            </td>
+                                            <td className="p-3">
+                                                <input 
+                                                    type="time"
+                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
+                                                    value={record.time_out || ''}
+                                                    onChange={(e) => handleTimeChange(id, 'time_out', e.target.value)}
+                                                    onBlur={(e) => saveTime(id, 'time_out', e.target.value)}
+                                                />
                                             </td>
                                         </tr>
                                     )})}

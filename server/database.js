@@ -278,6 +278,8 @@ function initPgDb() {
             cadet_id INTEGER NOT NULL REFERENCES cadets(id) ON DELETE CASCADE,
             status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
             remarks TEXT,
+            time_in TEXT,
+            time_out TEXT,
             UNIQUE(training_day_id, cadet_id)
         )`,
         `CREATE TABLE IF NOT EXISTS excuse_letters (
@@ -334,6 +336,8 @@ function initPgDb() {
             staff_id INTEGER NOT NULL REFERENCES training_staff(id) ON DELETE CASCADE,
             status TEXT CHECK(status IN ('present', 'absent', 'late', 'excused')) NOT NULL,
             remarks TEXT,
+            time_in TEXT,
+            time_out TEXT,
             UNIQUE(training_day_id, staff_id)
         )`,
         `CREATE TABLE IF NOT EXISTS notifications (
@@ -358,6 +362,13 @@ function initPgDb() {
             dark_mode BOOLEAN DEFAULT FALSE,
             compact_mode BOOLEAN DEFAULT FALSE,
             primary_color TEXT DEFAULT 'blue'
+        )`,
+        `CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER,
+            endpoint TEXT NOT NULL UNIQUE,
+            keys TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 
@@ -575,6 +586,14 @@ function initSqliteDb() {
         db.run(`ALTER TABLE users ADD COLUMN staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`, (err) => {
             // Ignore error if column exists
         });
+
+        // Migration: Add time_in and time_out to attendance_records
+        db.run(`ALTER TABLE attendance_records ADD COLUMN time_in TEXT`, (err) => {});
+        db.run(`ALTER TABLE attendance_records ADD COLUMN time_out TEXT`, (err) => {});
+
+        // Migration: Add time_in and time_out to staff_attendance_records
+        db.run(`ALTER TABLE staff_attendance_records ADD COLUMN time_in TEXT`, (err) => {});
+        db.run(`ALTER TABLE staff_attendance_records ADD COLUMN time_out TEXT`, (err) => {});
         
         // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
         // Ensure new users table creation has correct check.
@@ -590,6 +609,15 @@ function initSqliteDb() {
             compact_mode INTEGER DEFAULT 0,
             primary_color TEXT DEFAULT 'blue',
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`);
+
+        // Push Subscriptions Table
+        db.run(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            endpoint TEXT NOT NULL UNIQUE,
+            keys TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
         seedAdmin();

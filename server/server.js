@@ -12,11 +12,23 @@ const attendanceRoutes = require('./routes/attendance');
 const excuseRoutes = require('./routes/excuse');
 const staffRoutes = require('./routes/staff');
 const integrationRoutes = require('./routes/integration');
+const notificationRoutes = require('./routes/notifications');
+const webpush = require('web-push');
 const { processUrlImport } = require('./utils/importCadets');
 const dbSettingsKey = 'cadet_list_source_url';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Web Push Configuration
+const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BC0F3z4K3yN-eZ4oG296w3VzJ51WSVbze3RnebuSqaO0J2c3ORYOe1wDQCZWL7cmgEX_iq3WCmuDag8';
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || 'G_tM3pdZUobx2V3C70UIU5ZYbxbq-fzyf0aqu2VC8JI';
+
+webpush.setVapidDetails(
+    'mailto:msusndrotcunit@gmail.com',
+    publicVapidKey,
+    privateVapidKey
+);
 
 // Keep-Alive Mechanism for Render Free Tier
 // Pings the server every 14 minutes to prevent sleep
@@ -47,6 +59,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/excuse', excuseRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/integration', integrationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Create uploads directory if not exists
 const fs = require('fs');

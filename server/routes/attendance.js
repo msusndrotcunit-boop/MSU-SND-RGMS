@@ -146,7 +146,7 @@ router.get('/cadet/:cadetId', authenticateToken, isAdmin, (req, res) => {
 
 // Mark attendance (Upsert)
 router.post('/mark', authenticateToken, isAdmin, (req, res) => {
-    const { dayId, cadetId, status, remarks } = req.body;
+    const { dayId, cadetId, status, remarks, time_in, time_out } = req.body;
 
     // Check if record exists
     db.get('SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
@@ -154,8 +154,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
 
         if (row) {
             // Update
-            db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                [status, remarks, row.id], 
+            db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
+                [status, remarks, time_in, time_out, row.id], 
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
@@ -163,8 +163,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
             );
         } else {
             // Insert
-            db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                [dayId, cadetId, status, remarks], 
+            db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                [dayId, cadetId, status, remarks, time_in, time_out], 
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
@@ -775,15 +775,15 @@ router.get('/records/staff/:dayId', authenticateToken, isAdmin, (req, res) => {
 
 // Mark Staff Attendance (Upsert)
 router.post('/mark/staff', authenticateToken, isAdmin, (req, res) => {
-    const { dayId, staffId, status, remarks } = req.body;
+    const { dayId, staffId, status, remarks, time_in, time_out } = req.body;
 
     db.get('SELECT id FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
 
         if (row) {
             // Update
-            db.run('UPDATE staff_attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                [status, remarks, row.id], 
+            db.run('UPDATE staff_attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
+                [status, remarks, time_in, time_out, row.id], 
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     res.json({ message: 'Updated' });
@@ -791,8 +791,8 @@ router.post('/mark/staff', authenticateToken, isAdmin, (req, res) => {
             );
         } else {
             // Insert
-            db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                [dayId, staffId, status, remarks], 
+            db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                [dayId, staffId, status, remarks, time_in, time_out], 
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     res.json({ message: 'Marked' });
