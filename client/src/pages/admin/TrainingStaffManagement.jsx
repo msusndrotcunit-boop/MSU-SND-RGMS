@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const TrainingStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
@@ -55,13 +56,13 @@ const TrainingStaffManagement = () => {
                 message += '\n\nErrors encountered:\n' + res.data.errors.join('\n');
             }
             
-            alert(message);
+            toast.success(message);
             setIsImportModalOpen(false);
             setImportFile(null);
             fetchStaff();
         } catch (err) {
             console.error(err);
-            alert('Import failed: ' + (err.response?.data?.message || err.message));
+            toast.error('Import failed: ' + (err.response?.data?.message || err.message));
         } finally {
             setImporting(false);
         }
@@ -71,7 +72,7 @@ const TrainingStaffManagement = () => {
         e.preventDefault();
         try {
             await axios.post('/api/staff', addForm);
-            alert('Staff added successfully');
+            toast.success('Staff added successfully');
             setIsAddModalOpen(false);
             fetchStaff();
             setAddForm({
@@ -80,7 +81,8 @@ const TrainingStaffManagement = () => {
             });
         } catch (err) {
             console.error(err);
-            alert('Failed to add staff: ' + (err.response?.data?.message || err.message));
+            const msg = err.response?.data?.message || err.message;
+            toast.error('Failed to add staff: ' + msg);
         }
     };
 
@@ -106,9 +108,9 @@ const TrainingStaffManagement = () => {
             await axios.put(`/api/staff/${currentStaff.id}`, editForm);
             fetchStaff();
             setIsEditModalOpen(false);
-            alert('Staff updated successfully');
+            toast.success('Staff updated successfully');
         } catch (err) {
-            alert('Error updating staff: ' + (err.response?.data?.message || err.message));
+            toast.error('Error updating staff: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -118,7 +120,7 @@ const TrainingStaffManagement = () => {
             await axios.delete(`/api/staff/${id}`);
             setStaffList(staffList.filter(s => s.id !== id));
         } catch (err) {
-            alert('Error deleting staff: ' + (err.response?.data?.message || err.message));
+            toast.error('Error deleting staff: ' + (err.response?.data?.message || err.message));
         }
     };
 

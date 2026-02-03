@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Bell, Check, Settings, QrCode, ChevronDown, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
+import { Toaster } from 'react-hot-toast';
 
 const AdminLayout = () => {
     const { logout } = useAuth();
@@ -117,6 +118,7 @@ const AdminLayout = () => {
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
+            <Toaster position="top-right" reverseOrder={false} />
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div 

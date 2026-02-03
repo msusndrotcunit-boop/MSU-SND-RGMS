@@ -4,6 +4,7 @@ import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2 } from 'lu
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { cacheData, getCachedData } from '../../utils/db';
+import { toast } from 'react-hot-toast';
 import { 
     RANK_OPTIONS, 
     YEAR_LEVEL_OPTIONS, 
@@ -79,11 +80,11 @@ const Cadets = () => {
         setSyncing(true);
         try {
             const res = await axios.post('/api/admin/sync-cadets');
-            alert(res.data.message);
+            toast.success(res.data.message);
             fetchCadets();
         } catch (err) {
             console.error("Sync failed", err);
-            alert(err.response?.data?.message || 'Sync failed');
+            toast.error(err.response?.data?.message || 'Sync failed');
         } finally {
             setSyncing(false);
         }
@@ -155,7 +156,7 @@ const Cadets = () => {
             doc.save('ROTC_Cadet_List.pdf');
         } catch (err) {
             console.error("PDF Export Error:", err);
-            alert(`Failed to generate PDF: ${err.message}`);
+            toast.error(`Failed to generate PDF: ${err.message}`);
         }
     };
 
@@ -220,7 +221,7 @@ const Cadets = () => {
                 message += '\n\nErrors encountered:\n' + res.data.errors.join('\n');
             }
             
-            alert(message);
+            toast.success(message);
             setIsImportModalOpen(false);
             setImportFile(null);
             setImportUrl('');
@@ -232,10 +233,10 @@ const Cadets = () => {
             const isAuthError = status === 401 || status === 403 || err.message.includes('401') || err.message.includes('403');
 
             if (isAuthError) {
-                alert('Session expired. Please log in again.');
+                toast.error('Session expired. Please log in again.');
                 window.location.href = '/login';
             } else {
-                alert('Import failed: ' + (err.response?.data?.message || err.message));
+                toast.error('Import failed: ' + (err.response?.data?.message || err.message));
             }
         } finally {
             setImporting(false);
@@ -253,7 +254,7 @@ const Cadets = () => {
 
         try {
             await axios.post('/api/admin/cadets', addForm);
-            alert('Cadet added successfully');
+            toast.success('Cadet added successfully');
             setIsAddModalOpen(false);
             fetchCadets();
             setAddForm({
@@ -265,7 +266,7 @@ const Cadets = () => {
             });
         } catch (err) {
             console.error(err);
-            alert('Failed to add cadet: ' + (err.response?.data?.message || err.message));
+            toast.error('Failed to add cadet: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -308,12 +309,12 @@ const Cadets = () => {
 
         try {
             await axios.post('/api/admin/cadets/delete', { ids: selectedCadets });
-            alert('Cadets deleted successfully');
+            toast.success('Cadets deleted successfully');
             setSelectedCadets([]);
             fetchCadets();
         } catch (err) {
             console.error(err);
-            alert('Failed to delete cadets');
+            toast.error('Failed to delete cadets');
         }
     };
 

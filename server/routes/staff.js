@@ -244,75 +244,72 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
     // 1. Create Staff Profile
     const sql = `INSERT INTO training_staff (rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const params = [rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role || 'Instructor', profile_pic];
+    let params = [rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role || 'Instructor', profile_pic];
 
-    db.run(sql, params, async function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        
-        const staffId = this.lastID;
-
-        // 2. Create User Account
-        // Check for First Name collision to determine credentials
-        db.get("SELECT COUNT(*) as count FROM training_staff WHERE first_name = ? COLLATE NOCASE", [first_name], async (err, row) => {
-            if (err) {
-                console.error("Error checking name collision:", err);
-                // Fallback to default behavior if check fails
-            }
-
-            const nameCount = row ? row.count : 1;
-            const cleanFirst = first_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            const cleanLast = last_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-
-            // Credential Rule: 
-            // If First Name is unique (count == 1, just the one we added), use First Name.
-            // If First Name is NOT unique (count > 1), use Last Name.
-            let passwordStr = (nameCount > 1) ? cleanLast : cleanFirst;
-            let usernameBase = (nameCount > 1) ? cleanLast : cleanFirst;
-
-            try {
-                const hashedPassword = await bcrypt.hash(passwordStr, 10);
-                
-                // Recursive function to handle username collisions
-                // We start with the determined usernameBase.
-                // If that fails, we fallback to standard patterns (First.Last, etc.)
-                const tryInsertUser = (attemptStage, currentUsername) => {
-                    const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
-                    
-                    db.run(userSql, [currentUsername, hashedPassword, staffId, email, profile_pic], (uErr) => {
-                        if (uErr) {
-                             if (uErr.message.includes('UNIQUE constraint') || uErr.message.includes('duplicate key')) {
-                                 console.log(`Username ${currentUsername} taken. Trying next option...`);
-                                 
-                                 // Fallback strategies
-                                 if (attemptStage === 1) {
-                                     // If preference failed, try First.Last
-                                     tryInsertUser(2, `${cleanFirst}.${cleanLast}`);
-                                 } else if (attemptStage === 2) {
-                                     // Try Last.First
-                                     tryInsertUser(3, `${cleanLast}.${cleanFirst}`);
-                                 } else {
-                                     // Append random number to base
-                                     const newUsername = usernameBase + Math.floor(Math.random() * 1000);
-                                     tryInsertUser(4, newUsername);
-                                 }
-                             } else {
-                                console.error('Error creating user for staff:', uErr);
-                                return res.json({ message: 'Staff profile created, but user account creation failed. ' + uErr.message, id: staffId });
-                             }
-                        } else {
-                            res.json({ message: `Staff created successfully. Username: ${currentUsername}, Password: "${passwordStr}"`, id: staffId });
-                        }
-                    });
-                };
-
-                // Start with determined base (Stage 1)
-                tryInsertUser(1, usernameBase);
-
-            } catch (hashErr) {
-                res.status(500).json({ message: 'Error hashing password' });
-            }
+    const insertStaff = () => new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) return reject(err);
+            resolve(this.lastID);
         });
     });
+    
+    let staffId;
+    try {
+        staffId = await insertStaff();
+    } catch (e) {
+        const msg = e.message || '';
+        const isUniqueEmail = msg.includes('UNIQUE') || msg.includes('duplicate key') || msg.includes('unique constraint');
+        if (isUniqueEmail) {
+            params[5] = null;
+            try {
+                staffId = await insertStaff();
+            } catch (e2) {
+                return res.status(500).json({ message: e2.message });
+            }
+        } else {
+            return res.status(500).json({ message: msg });
+        }
+    }
+        
+    db.get("SELECT COUNT(*) as count FROM training_staff WHERE first_name = ? COLLATE NOCASE", [first_name], async (err, row) => {
+        if (err) {}
+
+        const nameCount = row ? row.count : 1;
+        const cleanFirst = first_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const cleanLast = last_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+        let passwordStr = (nameCount > 1) ? cleanLast : cleanFirst;
+        let usernameBase = (nameCount > 1) ? cleanLast : cleanFirst;
+
+        try {
+            const hashedPassword = await bcrypt.hash(passwordStr, 10);
+            const tryInsertUser = (attemptStage, currentUsername) => {
+                const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
+                db.run(userSql, [currentUsername, hashedPassword, staffId, params[5] || null, profile_pic], (uErr) => {
+                    if (uErr) {
+                         if (uErr.message.includes('UNIQUE') || uErr.message.includes('duplicate key')) {
+                             if (attemptStage === 1) {
+                                 tryInsertUser(2, `${cleanFirst}.${cleanLast}`);
+                             } else if (attemptStage === 2) {
+                                 tryInsertUser(3, `${cleanLast}.${cleanFirst}`);
+                             } else {
+                                 const newUsername = usernameBase + Math.floor(Math.random() * 1000);
+                                 tryInsertUser(4, newUsername);
+                             }
+                         } else {
+                            return res.json({ message: 'Staff profile created, but user account creation failed. ' + uErr.message, id: staffId });
+                         }
+                    } else {
+                        res.json({ message: `Staff created successfully. Username: ${currentUsername}, Password: "${passwordStr}"`, id: staffId });
+                    }
+                });
+            };
+            tryInsertUser(1, usernameBase);
+        } catch (hashErr) {
+            res.status(500).json({ message: 'Error hashing password' });
+        }
+    });
+
 });
 
 // UPDATE Staff
