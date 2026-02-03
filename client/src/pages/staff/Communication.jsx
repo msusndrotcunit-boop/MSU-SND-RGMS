@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { Send, MessageCircle, User } from 'lucide-react';
+import { Send, MessageCircle, User, Edit2, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Communication = () => {
@@ -10,6 +10,7 @@ const Communication = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
   const listRef = useRef(null);
 
   const fetchMe = async () => {
@@ -58,14 +59,40 @@ const Communication = () => {
     if (!input.trim()) return;
     setPosting(true);
     try {
-      await axios.post('/api/staff/chat/messages', { content: input.trim() });
+      if (editingMessage) {
+        await axios.put(`/api/staff/chat/messages/${editingMessage.id}`, { content: input.trim() });
+        setEditingMessage(null);
+      } else {
+        await axios.post('/api/staff/chat/messages', { content: input.trim() });
+      }
       setInput('');
       await fetchMessages();
     } catch (err) {
-      console.error('Failed to send message', err);
+      console.error('Failed to send/update message', err);
       // alert(err.response?.data?.message || 'Failed to send message');
     } finally {
       setPosting(false);
+    }
+  };
+
+  const startEdit = (msg) => {
+    setEditingMessage(msg);
+    setInput(msg.content);
+    // Optional: focus input
+  };
+
+  const cancelEdit = () => {
+    setEditingMessage(null);
+    setInput('');
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Delete this message?")) return;
+    try {
+        await axios.delete(`/api/staff/chat/messages/${id}`);
+        await fetchMessages();
+    } catch (err) {
+        console.error("Failed to delete", err);
     }
   };
 
@@ -76,7 +103,9 @@ const Communication = () => {
 
   const getProfileSrc = (path) => {
     if (!path) return null;
-    return path; // Proxy handles /uploads
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    if (path.startsWith('http')) return path;
+    return `${apiUrl}${path}`;
   };
 
   return (
@@ -107,7 +136,7 @@ const Communication = () => {
             return (
               <div
                 key={m.id}
-                className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
+                className={`flex items-end gap-2 group ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0 mb-1">
@@ -116,12 +145,18 @@ const Communication = () => {
                             src={profileSrc} 
                             alt="Avatar" 
                             className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                                e.target.onerror = null; // Prevent infinite loop
+                                e.target.style.display = 'none'; // Hide broken image
+                                e.target.nextSibling.style.display = 'flex'; // Show fallback
+                            }}
                         />
-                    ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border border-gray-300">
-                            <User size={14} />
-                        </div>
-                    )}
+                    ) : null}
+                    <div 
+                        className={`w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border border-gray-300 ${profileSrc ? 'hidden' : 'flex'}`}
+                    >
+                        <User size={14} />
+                    </div>
                 </div>
 
                 {/* Bubble */}
@@ -142,6 +177,26 @@ const Communication = () => {
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
+
+                {/* Actions (Only if mine) */}
+                {isMine && (
+                    <div className="opacity-0 group-hover:opacity-100 flex flex-col gap-1 transition-opacity self-center mb-2">
+                        <button 
+                            onClick={() => startEdit(m)} 
+                            className="p-1.5 text-gray-400 hover:text-blue-500 bg-gray-100 hover:bg-blue-50 rounded-full shadow-sm" 
+                            title="Edit"
+                        >
+                            <Edit2 size={12} />
+                        </button>
+                        <button 
+                            onClick={() => handleDelete(m.id)} 
+                            className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full shadow-sm" 
+                            title="Delete"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    </div>
+                )}
               </div>
             );
           })
@@ -150,6 +205,14 @@ const Communication = () => {
 
       {/* Input Area - Fixed/Sticky Bottom Look */}
       <div className="bg-white p-3 border-t shrink-0">
+        {editingMessage && (
+            <div className="flex items-center justify-between bg-blue-50 px-4 py-2 text-xs text-blue-600 mb-2 rounded-lg border border-blue-100">
+                <span>Editing message...</span>
+                <button onClick={cancelEdit} className="text-blue-400 hover:text-blue-700">
+                    <X size={14} />
+                </button>
+            </div>
+        )}
         <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-4xl mx-auto">
           <input
             type="text"

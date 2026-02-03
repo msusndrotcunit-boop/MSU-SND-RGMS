@@ -59,6 +59,49 @@ router.get('/analytics/overview', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Edit a message
+router.put('/chat/messages/:id', authenticateToken, (req, res) => {
+    const { content } = req.body;
+    const messageId = req.params.id;
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: 'Message content is required.' });
+    }
+
+    db.get('SELECT sender_staff_id FROM staff_messages WHERE id = ?', [messageId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!row) return res.status(404).json({ message: 'Message not found.' });
+
+        if (req.user.role !== 'admin' && row.sender_staff_id !== req.user.staffId) {
+             return res.status(403).json({ message: 'You can only edit your own messages.' });
+        }
+
+        db.run('UPDATE staff_messages SET content = ? WHERE id = ?', [content.trim(), messageId], (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Message updated' });
+        });
+    });
+});
+
+// Delete a message
+router.delete('/chat/messages/:id', authenticateToken, (req, res) => {
+    const messageId = req.params.id;
+
+    db.get('SELECT sender_staff_id FROM staff_messages WHERE id = ?', [messageId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!row) return res.status(404).json({ message: 'Message not found.' });
+
+        if (req.user.role !== 'admin' && row.sender_staff_id !== req.user.staffId) {
+             return res.status(403).json({ message: 'You can only delete your own messages.' });
+        }
+
+        db.run('DELETE FROM staff_messages WHERE id = ?', [messageId], (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Message deleted' });
+        });
+    });
+});
+
 // GET All Staff (Admin)
 router.get('/', authenticateToken, isAdmin, (req, res) => {
     const sql = `
