@@ -105,16 +105,28 @@ router.put('/settings', authenticateToken, (req, res) => {
 // Login
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
+    console.log('Login attempt:', { username, password: '***' });
 
     db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
-        if (err) return res.status(500).json({ message: err.message });
-        if (!user) return res.status(400).json({ message: 'User not found' });
+        if (err) {
+            console.error('Login DB error:', err);
+            return res.status(500).json({ message: err.message });
+        }
+        if (!user) {
+            console.log('Login failed: User not found for', username);
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        console.log('User found:', { id: user.id, role: user.role, is_approved: user.is_approved });
 
         if (user.is_approved === 0) {
+            console.log('Login failed: User not approved');
             return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
+        console.log('Password valid:', validPassword);
+        
         if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
 
         const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
@@ -134,6 +146,8 @@ router.post('/login', (req, res) => {
         // Update last_seen
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
+
+        const isProfileCompleted = user.role === 'cadet' ? user.is_profile_completed : true; // Default to true for admin/staff if not applicable
 
         res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
     });
