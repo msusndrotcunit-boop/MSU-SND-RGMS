@@ -35,6 +35,7 @@ const StaffHome = lazy(() => import('./pages/staff/Home'));
 const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
 const StaffProfile = lazy(() => import('./pages/staff/Profile'));
 const StaffOnboarding = lazy(() => import('./pages/staff/Onboarding'));
+const StaffCommunication = lazy(() => import('./pages/staff/Communication'));
 
 // Loading Fallback
 const LoadingSpinner = () => (
@@ -92,6 +93,7 @@ function App() {
                 <Route path="dashboard" element={<StaffDashboard />} />
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="profile-completion" element={<StaffOnboarding />} />
+                <Route path="communication" element={<StaffCommunication />} />
                 <Route path="settings" element={<Settings role="staff" />} />
                 <Route index element={<Navigate to="home" replace />} />
               </Route>

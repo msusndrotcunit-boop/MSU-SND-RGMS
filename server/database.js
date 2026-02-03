@@ -344,6 +344,12 @@ function initPgDb() {
             is_read BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
+        `CREATE TABLE IF NOT EXISTS staff_messages (
+            id SERIAL PRIMARY KEY,
+            sender_staff_id INTEGER NOT NULL REFERENCES training_staff(id) ON DELETE CASCADE,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
         `CREATE TABLE IF NOT EXISTS user_settings (
             user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
             email_alerts BOOLEAN DEFAULT TRUE,
@@ -553,6 +559,15 @@ function initSqliteDb() {
             is_read INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
+        )`);
+        
+        // Staff Messages (Communication Panel)
+        db.run(`CREATE TABLE IF NOT EXISTS staff_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_staff_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(sender_staff_id) REFERENCES training_staff(id) ON DELETE CASCADE
         )`);
 
         // Migration for SQLite: Add staff_id to users

@@ -382,3 +382,49 @@ router.post('/acknowledge-guide', authenticateToken, (req, res) => {
 });
 
 module.exports = router;
+ 
+// --- Communication Panel for Training Staff ---
+// List recent messages (last 100)
+router.get('/chat/messages', authenticateToken, (req, res) => {
+    // Allow admins and training_staff to read
+    if (req.user.role !== 'training_staff' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied.' });
+    }
+    const sql = `
+        SELECT m.id, m.content, m.created_at, 
+               s.id as staff_id, s.first_name, s.last_name, s.rank
+        FROM staff_messages m
+        JOIN training_staff s ON s.id = m.sender_staff_id
+        ORDER BY m.id DESC
+        LIMIT 100
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        // Return in ascending order by time for UI display
+        res.json(rows.reverse());
+    });
+});
+
+// Post a new message
+router.post('/chat/messages', authenticateToken, (req, res) => {
+    if (req.user.role !== 'training_staff' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied.' });
+    }
+    const { content } = req.body || {};
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: 'Message content is required.' });
+    }
+    if (!req.user.staffId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Staff identity required.' });
+    }
+    const senderId = req.user.staffId || null;
+    if (!senderId && req.user.role === 'admin') {
+        // For admin messages, we can optionally store sender_staff_id as NULL
+        // But schema requires NOT NULL, so disallow admin without staffId for now
+        return res.status(403).json({ message: 'Admin must have a staff profile to post.' });
+    }
+    db.run(`INSERT INTO staff_messages (sender_staff_id, content) VALUES (?, ?)`, [senderId, content.trim()], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ id: this.lastID, message: 'Message posted' });
+    });
+});

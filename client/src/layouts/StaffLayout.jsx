@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, Lock } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, Lock, MessageCircle } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -81,6 +81,24 @@ const StaffLayout = () => {
                     >
                         <LayoutDashboard size={20} />
                         <span>My Portal</span>
+                        {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                    </Link>
+
+                    {/* Communication - Locked if profile incomplete */}
+                    <Link
+                        to={user?.isProfileCompleted ? "/staff/communication" : "#"}
+                        onClick={(e) => {
+                            if (!user?.isProfileCompleted) e.preventDefault();
+                            setIsSidebarOpen(false);
+                        }}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/staff/communication' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                        )}
+                    >
+                        <MessageCircle size={20} />
+                        <span>Communication</span>
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
 
