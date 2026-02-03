@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Lock, Mail, Phone, Shield, QrCode, MapPin, Calendar, Ruler, Activity, Flag, Globe, Facebook, Briefcase, Edit, Save, X, Printer, AlertTriangle } from 'lucide-react';
+import { User, Lock, Mail, Phone, Shield, QrCode, MapPin, Calendar, Ruler, Activity, Flag, Globe, Facebook, Briefcase, Edit, Save, X, Printer, AlertTriangle, Camera } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,61 @@ const UNIFORM_SIZE_OPTIONS = ["Small Short", "Small Regular", "Small Long", "Med
 const BULLCAP_SIZE_OPTIONS = ["56", "57", "58", "59", "60"];
 const AGE_OPTIONS = Array.from({ length: 48 }, (_, i) => (i + 18).toString());
 
+const InfoItem = ({ icon: Icon, label, value, name, type = "text", options = null, multi = false, isEditing, formData, handleInputChange, toggleLanguage }) => {
+    return (
+        <div className="flex flex-col">
+            <span className="text-xs text-gray-500 flex items-center gap-1 mb-1">
+                {Icon && <Icon size={12} />} {label}
+            </span>
+            {isEditing ? (
+                options ? (
+                    multi ? (
+                        <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded bg-white">
+                            {options.map(opt => (
+                                <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => toggleLanguage(opt)}
+                                    className={`px-2 py-1 text-xs rounded-full border ${
+                                        (formData[name] || '').includes(opt)
+                                            ? 'bg-green-600 text-white border-green-600'
+                                            : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <select
+                            name={name}
+                            value={formData[name] || ''}
+                            onChange={handleInputChange}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:border-green-500 bg-white"
+                        >
+                            <option value="">Select {label}</option>
+                            {options.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    )
+                ) : (
+                     <input
+                        type={type}
+                        name={name}
+                        value={formData[name] || ''}
+                        onChange={handleInputChange}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:border-green-500"
+                        placeholder={label}
+                    />
+                )
+            ) : (
+                <span className="font-medium text-gray-900 break-words">{value || '-'}</span>
+            )}
+        </div>
+    );
+};
+
 const StaffProfile = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
@@ -31,6 +86,8 @@ const StaffProfile = () => {
     
     // For printing QR
     const qrRef = useRef(null);
+    // For file upload
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         fetchProfile();
@@ -160,6 +217,34 @@ const StaffProfile = () => {
         }
     };
 
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const uploadData = new FormData();
+        uploadData.append('image', file);
+
+        try {
+            const toastId = toast.loading('Uploading profile picture...');
+            const res = await axios.post('/api/staff/profile/photo', uploadData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            toast.dismiss(toastId);
+            toast.success('Profile picture updated');
+            
+            // Update profile with new image path
+            setProfile(prev => ({ ...prev, profile_pic: res.data.filePath }));
+            setFormData(prev => ({ ...prev, profile_pic: res.data.filePath }));
+            
+        } catch (err) {
+            console.error('Error uploading image:', err);
+            toast.error('Failed to upload image');
+        }
+    };
+
     const handlePrintQR = () => {
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -194,67 +279,18 @@ const StaffProfile = () => {
     const getProfileImage = () => {
         if (profile.profile_pic) {
              if (profile.profile_pic.startsWith('data:')) return profile.profile_pic;
+             // Ensure correct path format
              const normalizedPath = profile.profile_pic.replace(/\\/g, '/');
              return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
         }
         return null;
     };
 
-    const InfoItem = ({ icon: Icon, label, value, name, type = "text", options = null, multi = false }) => {
-        const isEditMode = isEditing;
-        
-        return (
-            <div className="flex flex-col">
-                <span className="text-xs text-gray-500 flex items-center gap-1 mb-1">
-                    {Icon && <Icon size={12} />} {label}
-                </span>
-                {isEditMode ? (
-                    options ? (
-                        multi ? (
-                            <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded bg-white">
-                                {options.map(opt => (
-                                    <button
-                                        key={opt}
-                                        type="button"
-                                        onClick={() => toggleLanguage(opt)}
-                                        className={`px-2 py-1 text-xs rounded-full border ${
-                                            (formData[name] || '').includes(opt)
-                                                ? 'bg-green-600 text-white border-green-600'
-                                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <select
-                                name={name}
-                                value={formData[name] || ''}
-                                onChange={handleInputChange}
-                                className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:border-green-500 bg-white"
-                            >
-                                <option value="">Select {label}</option>
-                                {options.map(opt => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                            </select>
-                        )
-                    ) : (
-                         <input
-                            type={type}
-                            name={name}
-                            value={formData[name] || ''}
-                            onChange={handleInputChange}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:border-green-500"
-                            placeholder={label}
-                        />
-                    )
-                ) : (
-                    <span className="font-medium text-gray-900 break-words">{value || '-'}</span>
-                )}
-            </div>
-        );
+    const commonProps = {
+        isEditing,
+        formData,
+        handleInputChange,
+        toggleLanguage
     };
 
     return (
@@ -300,7 +336,7 @@ const StaffProfile = () => {
 
                     <div className="flex flex-col md:flex-row items-center gap-8">
                         <div className="relative group">
-                            <div className="w-40 h-40 rounded-full bg-white/10 border-4 border-white overflow-hidden flex items-center justify-center shadow-xl">
+                            <div className="w-40 h-40 rounded-full bg-white/10 border-4 border-white overflow-hidden flex items-center justify-center shadow-xl relative">
                                 {getProfileImage() ? (
                                     <img 
                                         src={getProfileImage()} 
@@ -310,7 +346,22 @@ const StaffProfile = () => {
                                 ) : (
                                     <User size={64} className="text-green-200" />
                                 )}
+                                
+                                {/* Camera Overlay */}
+                                <div 
+                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                    onClick={() => fileInputRef.current.click()}
+                                >
+                                    <Camera className="text-white" size={32} />
+                                </div>
                             </div>
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                            />
                         </div>
                         <div className="text-center md:text-left flex-1 w-full">
                             {isEditing ? (
@@ -392,20 +443,20 @@ const StaffProfile = () => {
                                 <User className="mr-2" size={20} /> Personal Information
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
-                                <InfoItem icon={Calendar} label="Birthdate" value={profile.birthdate} name="birthdate" type="date" />
-                                <InfoItem icon={MapPin} label="Birthplace" value={profile.birthplace} name="birthplace" />
-                                <InfoItem icon={Activity} label="Age" value={profile.age} name="age" type="number" />
+                                <InfoItem {...commonProps} icon={Calendar} label="Birthdate" value={profile.birthdate} name="birthdate" type="date" />
+                                <InfoItem {...commonProps} icon={MapPin} label="Birthplace" value={profile.birthplace} name="birthplace" />
+                                <InfoItem {...commonProps} icon={Activity} label="Age" value={profile.age} name="age" type="number" />
                                 
-                                <InfoItem icon={Flag} label="Nationality" value={profile.nationality} name="nationality" options={NATIONALITY_OPTIONS} />
-                                <InfoItem icon={User} label="Gender" value={profile.gender} name="gender" options={GENDER_OPTIONS} />
-                                <InfoItem icon={User} label="Civil Status" value={profile.civil_status} name="civil_status" options={CIVIL_STATUS_OPTIONS} />
+                                <InfoItem {...commonProps} icon={Flag} label="Nationality" value={profile.nationality} name="nationality" options={NATIONALITY_OPTIONS} />
+                                <InfoItem {...commonProps} icon={User} label="Gender" value={profile.gender} name="gender" options={GENDER_OPTIONS} />
+                                <InfoItem {...commonProps} icon={User} label="Civil Status" value={profile.civil_status} name="civil_status" options={CIVIL_STATUS_OPTIONS} />
                                 
-                                <InfoItem icon={Ruler} label="Height (cm)" value={profile.height} name="height" />
-                                <InfoItem icon={Activity} label="Weight (kg)" value={profile.weight} name="weight" />
-                                <InfoItem icon={Activity} label="Blood Type" value={profile.blood_type} name="blood_type" options={BLOOD_TYPE_OPTIONS} />
+                                <InfoItem {...commonProps} icon={Ruler} label="Height (cm)" value={profile.height} name="height" />
+                                <InfoItem {...commonProps} icon={Activity} label="Weight (kg)" value={profile.weight} name="weight" />
+                                <InfoItem {...commonProps} icon={Activity} label="Blood Type" value={profile.blood_type} name="blood_type" options={BLOOD_TYPE_OPTIONS} />
                                 
                                 <div className="col-span-2 md:col-span-3">
-                                    <InfoItem icon={Globe} label="Language Spoken" value={profile.language_spoken} name="language_spoken" options={LANGUAGE_OPTIONS} multi={true} />
+                                    <InfoItem {...commonProps} icon={Globe} label="Language Spoken" value={profile.language_spoken} name="language_spoken" options={LANGUAGE_OPTIONS} multi={true} />
                                 </div>
                             </div>
                         </div>
@@ -415,9 +466,9 @@ const StaffProfile = () => {
                                 <Shield className="mr-2" size={20} /> Logistics & Sizes
                             </h3>
                             <div className="grid grid-cols-3 gap-6">
-                                <InfoItem label="Combat Boots" value={profile.combat_boots_size} name="combat_boots_size" options={COMBAT_BOOTS_OPTIONS} />
-                                <InfoItem label="Uniform Size" value={profile.uniform_size} name="uniform_size" options={UNIFORM_SIZE_OPTIONS} />
-                                <InfoItem label="Bullcap Size" value={profile.bullcap_size} name="bullcap_size" options={BULLCAP_SIZE_OPTIONS} />
+                                <InfoItem {...commonProps} label="Combat Boots" value={profile.combat_boots_size} name="combat_boots_size" options={COMBAT_BOOTS_OPTIONS} />
+                                <InfoItem {...commonProps} label="Uniform Size" value={profile.uniform_size} name="uniform_size" options={UNIFORM_SIZE_OPTIONS} />
+                                <InfoItem {...commonProps} label="Bullcap Size" value={profile.bullcap_size} name="bullcap_size" options={BULLCAP_SIZE_OPTIONS} />
                             </div>
                         </div>
                     </div>
@@ -429,10 +480,10 @@ const StaffProfile = () => {
                                 <Phone className="mr-2" size={20} /> Contact Information
                             </h3>
                             <div className="space-y-4">
-                                <InfoItem icon={MapPin} label="Address" value={profile.address} name="address" />
-                                <InfoItem icon={Mail} label="Email Address" value={profile.email} name="email" type="email" />
-                                <InfoItem icon={Phone} label="Mobile Number" value={profile.contact_number} name="contact_number" />
-                                <InfoItem icon={Facebook} label="Facebook" value={profile.facebook_link} name="facebook_link" />
+                                <InfoItem {...commonProps} icon={MapPin} label="Address" value={profile.address} name="address" />
+                                <InfoItem {...commonProps} icon={Mail} label="Email Address" value={profile.email} name="email" type="email" />
+                                <InfoItem {...commonProps} icon={Phone} label="Mobile Number" value={profile.contact_number} name="contact_number" />
+                                <InfoItem {...commonProps} icon={Facebook} label="Facebook" value={profile.facebook_link} name="facebook_link" />
                             </div>
                         </div>
 

@@ -3,6 +3,30 @@ const router = express.Router();
 const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+
+// Configure Multer for image upload
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'staff-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const filetypes = /jpeg|jpg|png|gif/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        if (mimetype && extname) return cb(null, true);
+        cb(new Error('Only images are allowed (jpeg, jpg, png, gif)'));
+    }
+});
 
 // Middleware to check if admin
 const isAdmin = (req, res, next) => {
@@ -17,6 +41,28 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
     db.all("SELECT * FROM training_staff ORDER BY last_name ASC", [], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
+    });
+});
+
+// UPLOAD Profile Picture (Me)
+router.post('/profile/photo', authenticateToken, upload.single('image'), (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const filePath = `/uploads/${req.file.filename}`;
+
+    // Update both training_staff and users table
+    db.run("UPDATE training_staff SET profile_pic = ? WHERE id = ?", [filePath, req.user.staffId], (err) => {
+        if (err) {
+            console.error("Error updating staff profile pic:", err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        db.run("UPDATE users SET profile_pic = ? WHERE staff_id = ?", [filePath, req.user.staffId], (uErr) => {
+             if (uErr) console.error("Error updating user profile pic:", uErr);
+             
+             res.json({ message: 'Profile picture updated', filePath });
+        });
     });
 });
 
