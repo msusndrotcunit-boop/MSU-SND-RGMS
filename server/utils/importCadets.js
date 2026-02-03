@@ -278,26 +278,37 @@ const insertTrainingStaff = (staff) => {
 
 const upsertStaffUser = (staffId, email, customUsername, firstName, lastName) => {
     return new Promise(async (resolve, reject) => {
-        const generateUsername = () => {
-            if (customUsername) return customUsername;
-            return firstName;
-        };
+        // Clean names for username generation
+        const cleanLast = lastName ? lastName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
+        const cleanFirst = firstName ? firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
         
-        const username = generateUsername();
         const dummyHash = await bcrypt.hash('staff@2026', 10);
         
         db.get('SELECT * FROM users WHERE staff_id = ?', [staffId], (err, row) => {
             if (err) return reject(err);
             
             if (!row) {
-                const insertUser = (uName) => {
-                    db.run(`INSERT INTO users (username, password, role, staff_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                        [uName, dummyHash, 'training_staff', staffId, 1, email], 
+                // Recursive function to handle username collisions
+                // Priority: Last Name -> First Name -> Last.First -> Last + Random
+                const tryInsertUser = (attemptStage, currentUsername) => {
+                    db.run(`INSERT INTO users (username, password, role, staff_id, is_approved, email) VALUES (?, ?, 'training_staff', ?, 1, ?)`, 
+                        [currentUsername, dummyHash, staffId, email], 
                         (err) => {
                             if (err) {
                                 if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate key')) {
-                                    const newUsername = uName + Math.floor(Math.random() * 1000);
-                                    insertUser(newUsername);
+                                    console.log(`Username ${currentUsername} taken. Trying next option...`);
+                                    
+                                    if (attemptStage === 1) {
+                                        // Failed Last Name, try First Name
+                                        tryInsertUser(2, cleanFirst);
+                                    } else if (attemptStage === 2) {
+                                        // Failed First Name, try First.Last
+                                        tryInsertUser(3, `${cleanFirst}.${cleanLast}`);
+                                    } else {
+                                        // Failed all standard options, append random number to Last Name
+                                        const newUsername = cleanLast + Math.floor(Math.random() * 1000);
+                                        tryInsertUser(4, newUsername);
+                                    }
                                 } else {
                                     reject(err);
                                 }
@@ -307,7 +318,12 @@ const upsertStaffUser = (staffId, email, customUsername, firstName, lastName) =>
                         }
                     );
                 };
-                insertUser(username);
+                
+                // Start with Last Name (Stage 1)
+                // Use custom username if provided in import, otherwise use Last Name
+                const initialUsername = customUsername || cleanLast;
+                tryInsertUser(customUsername ? 4 : 1, initialUsername);
+                
             } else {
                 if (email) {
                      db.run(`UPDATE users SET email = ? WHERE id = ?`, [email, row.id], (err) => {

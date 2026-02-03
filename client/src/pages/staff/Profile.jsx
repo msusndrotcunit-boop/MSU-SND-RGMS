@@ -114,7 +114,7 @@ const StaffProfile = () => {
         e.preventDefault();
         
         // Basic validation
-        const requiredFields = ['first_name', 'last_name', 'afpsn', 'address', 'contact_number'];
+        const requiredFields = ['first_name', 'last_name', 'afpsn', 'address', 'contact_number', 'email', 'birthdate', 'gender'];
         const missing = requiredFields.filter(field => !formData[field]);
         if (missing.length > 0) {
             toast.error(`Please fill in required fields: ${missing.join(', ')}`);
@@ -123,16 +123,18 @@ const StaffProfile = () => {
 
         try {
             // Check if this is a completion event (transition from 0 to 1)
-            // Or if user checked the box.
-            // Requirement: "After filling up and saving... automatically log out"
-            // We'll enforce completion if they check the box OR if we want to force it.
-            // User requirement says "When the training staff account was succesfully added... When he login first he will be ask for his profile to update... After filling up... log out"
+            // If profile is currently incomplete, we FORCE completion on save.
+            let isMarkingComplete = formData.is_profile_completed == 1;
             
-            // We will ask confirmation if they are marking it as complete
-            const isMarkingComplete = formData.is_profile_completed == 1;
+            if (!profile.is_profile_completed) {
+                // Force completion for first-time setup
+                isMarkingComplete = true;
+                formData.is_profile_completed = 1;
+            }
             
             if (isMarkingComplete && !profile.is_profile_completed) {
-                if (!window.confirm("You are about to mark your profile as complete. You will be logged out to apply changes. Continue?")) {
+                // Warn user about logout
+                if (!window.confirm("Saving your profile will complete the setup and log you out. You will need to login again with your Email. Continue?")) {
                     return;
                 }
             }
@@ -140,11 +142,12 @@ const StaffProfile = () => {
             const res = await axios.put('/api/staff/profile', formData);
             
             if (isMarkingComplete && !profile.is_profile_completed) {
-                toast.success('Profile completed! Logging out...');
+                toast.success('Profile setup complete! Your username has been updated to your Email. Please login again using your Email.', { duration: 5000 });
+                // Short delay to show toast
                 setTimeout(() => {
                     logout();
                     navigate('/login');
-                }, 1500);
+                }, 3000);
             } else {
                 setProfile(prev => ({ ...prev, ...formData }));
                 setIsEditing(false);
@@ -322,21 +325,14 @@ const StaffProfile = () => {
                                         <input name="afpsn" value={formData.afpsn || ''} onChange={handleInputChange} placeholder="AFPSN" className="p-1 rounded w-full" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <input name="username" value={formData.username || ''} onChange={handleInputChange} placeholder="Username" className="p-1 rounded w-full bg-yellow-50" />
+                                        <input name="username" value={formData.username || ''} onChange={handleInputChange} placeholder="Username" className="p-1 rounded w-full bg-yellow-50" disabled title="Username will be updated to Email upon save" />
                                     </div>
-                                    <div className="mt-2 flex items-center gap-2 bg-green-800/50 p-2 rounded">
-                                        <input 
-                                            type="checkbox" 
-                                            id="is_profile_completed"
-                                            name="is_profile_completed"
-                                            checked={formData.is_profile_completed == 1}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, is_profile_completed: e.target.checked ? 1 : 0 }))}
-                                            className="w-4 h-4 text-green-300 rounded focus:ring-green-500 cursor-pointer"
-                                        />
-                                        <label htmlFor="is_profile_completed" className="text-sm text-white font-medium cursor-pointer">
-                                            Mark Profile as Complete (Required to access portal)
-                                        </label>
-                                    </div>
+                                    {/* Auto-completion notice */}
+                                    {!profile.is_profile_completed && (
+                                        <div className="mt-2 bg-blue-600/50 p-2 rounded text-xs text-white">
+                                            <p>Completing this profile will update your username to your email address and require a re-login.</p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <>

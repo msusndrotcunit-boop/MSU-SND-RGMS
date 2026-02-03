@@ -19,7 +19,7 @@
     "nodemailer": "^7.0.13",
     "pdf-parse": "1.1.1",
     "pg": "^8.11.3",
-    "sqlite3": "^5.0.2",
+    "sqlite3": "^5.1.7",
     "tesseract.js": "^5.0.3",
     "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
   },

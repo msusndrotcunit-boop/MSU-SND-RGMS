@@ -217,6 +217,50 @@ const StaffAttendanceScanner = () => {
                     )}
                 </div>
             </div>
+
+            {/* Modal for Present/Absent Selection */}
+            {showModal && scannedData && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-scale-in">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Mark Attendance</h3>
+                        
+                        <div className="bg-gray-50 p-4 rounded mb-6 text-center">
+                            <p className="text-sm text-gray-500 mb-1">Scanned Staff</p>
+                            <p className="font-bold text-lg text-gray-800">{scannedData.name || 'Staff Member'}</p>
+                            <p className="text-xs text-gray-400 break-all truncate">{scannedData.id || scannedData.rawQr}</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => handleAttendanceAction('present')}
+                                className="flex flex-col items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition border border-green-200"
+                            >
+                                <span className="text-2xl mb-1">✅</span>
+                                <span className="font-bold">PRESENT</span>
+                            </button>
+                            
+                            <button
+                                onClick={() => handleAttendanceAction('absent')}
+                                className="flex flex-col items-center justify-center p-4 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition border border-red-200"
+                            >
+                                <span className="text-2xl mb-1">❌</span>
+                                <span className="font-bold">ABSENT</span>
+                            </button>
+                        </div>
+                        
+                        <button
+                            onClick={() => {
+                                setShowModal(false);
+                                setScannedData(null);
+                                if (scannerRef.current) scannerRef.current.resume();
+                            }}
+                            className="mt-6 w-full py-2 text-gray-500 hover:text-gray-700 text-sm font-medium"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

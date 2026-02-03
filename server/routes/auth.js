@@ -107,7 +107,7 @@ router.post('/login', (req, res) => {
     const { username, password } = req.body;
     console.log('Login attempt:', { username, password: '***' });
 
-    db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+    db.get(`SELECT * FROM users WHERE username = ? OR email = ?`, [username, username], async (err, user) => {
         if (err) {
             console.error('Login DB error:', err);
             return res.status(500).json({ message: err.message });
@@ -147,9 +147,23 @@ router.post('/login', (req, res) => {
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
 
-        const isProfileCompleted = user.role === 'cadet' ? user.is_profile_completed : true; // Default to true for admin/staff if not applicable
-
-        res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+        let isProfileCompleted = true;
+        
+        if (user.role === 'cadet') {
+             // Fetch from cadets table
+             db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [user.cadet_id], (err, row) => {
+                 if (!err && row) isProfileCompleted = !!row.is_profile_completed;
+                 res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+             });
+        } else if (user.role === 'training_staff') {
+             // Fetch from training_staff table
+             db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [user.staff_id], (err, row) => {
+                 if (!err && row) isProfileCompleted = !!row.is_profile_completed;
+                 res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+             });
+        } else {
+             res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+        }
     });
 });
 

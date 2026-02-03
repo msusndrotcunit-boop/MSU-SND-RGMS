@@ -46,83 +46,108 @@ router.put('/profile', authenticateToken, (req, res) => {
         profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
         address, civil_status, nationality, gender, language_spoken, 
         combat_boots_size, uniform_size, bullcap_size, facebook_link, 
-        rotc_unit, mobilization_center, username
+        rotc_unit, mobilization_center, username, is_profile_completed
     } = req.body;
 
-    // Build the SQL dynamically based on provided fields, but include the core profile fields
-    const sql = `UPDATE training_staff SET 
-        rank = COALESCE(?, rank), 
-        first_name = COALESCE(?, first_name), 
-        middle_name = COALESCE(?, middle_name), 
-        last_name = COALESCE(?, last_name), 
-        suffix_name = COALESCE(?, suffix_name), 
-        email = COALESCE(?, email), 
-        contact_number = COALESCE(?, contact_number), 
-        profile_pic = COALESCE(?, profile_pic),
-        afpsn = COALESCE(?, afpsn),
-        birthdate = COALESCE(?, birthdate),
-        birthplace = COALESCE(?, birthplace),
-        age = COALESCE(?, age),
-        height = COALESCE(?, height),
-        weight = COALESCE(?, weight),
-        blood_type = COALESCE(?, blood_type),
-        address = COALESCE(?, address),
-        civil_status = COALESCE(?, civil_status),
-        nationality = COALESCE(?, nationality),
-        gender = COALESCE(?, gender),
-        language_spoken = COALESCE(?, language_spoken),
-        combat_boots_size = COALESCE(?, combat_boots_size),
-        uniform_size = COALESCE(?, uniform_size),
-        bullcap_size = COALESCE(?, bullcap_size),
-        facebook_link = COALESCE(?, facebook_link),
-        rotc_unit = COALESCE(?, rotc_unit),
-        mobilization_center = COALESCE(?, mobilization_center),
-        is_profile_completed = COALESCE(?, is_profile_completed)
-        WHERE id = ?`;
-    
-    const params = [
-        rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
-        profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
-        address, civil_status, nationality, gender, language_spoken, 
-        combat_boots_size, uniform_size, bullcap_size, facebook_link, 
-        rotc_unit, mobilization_center,
-        req.body.is_profile_completed !== undefined ? req.body.is_profile_completed : null,
-        req.user.staffId
-    ];
-    
-    db.run(sql, params, function(err) {
-        if (err) return res.status(500).json({ message: err.message });
+    // Helper to proceed with update
+    const proceedUpdate = () => {
+        // Build the SQL dynamically based on provided fields
+        const sql = `UPDATE training_staff SET 
+            rank = COALESCE(?, rank), 
+            first_name = COALESCE(?, first_name), 
+            middle_name = COALESCE(?, middle_name), 
+            last_name = COALESCE(?, last_name), 
+            suffix_name = COALESCE(?, suffix_name), 
+            email = COALESCE(?, email), 
+            contact_number = COALESCE(?, contact_number), 
+            profile_pic = COALESCE(?, profile_pic),
+            afpsn = COALESCE(?, afpsn),
+            birthdate = COALESCE(?, birthdate),
+            birthplace = COALESCE(?, birthplace),
+            age = COALESCE(?, age),
+            height = COALESCE(?, height),
+            weight = COALESCE(?, weight),
+            blood_type = COALESCE(?, blood_type),
+            address = COALESCE(?, address),
+            civil_status = COALESCE(?, civil_status),
+            nationality = COALESCE(?, nationality),
+            gender = COALESCE(?, gender),
+            language_spoken = COALESCE(?, language_spoken),
+            combat_boots_size = COALESCE(?, combat_boots_size),
+            uniform_size = COALESCE(?, uniform_size),
+            bullcap_size = COALESCE(?, bullcap_size),
+            facebook_link = COALESCE(?, facebook_link),
+            rotc_unit = COALESCE(?, rotc_unit),
+            mobilization_center = COALESCE(?, mobilization_center),
+            is_profile_completed = COALESCE(?, is_profile_completed)
+            WHERE id = ?`;
         
-        // Also update users table email, profile_pic, and username if changed
-        if (email || profile_pic || username) {
-            let updateFields = [];
-            let updateParams = [];
+        const params = [
+            rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
+            profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
+            address, civil_status, nationality, gender, language_spoken, 
+            combat_boots_size, uniform_size, bullcap_size, facebook_link, 
+            rotc_unit, mobilization_center,
+            is_profile_completed !== undefined ? is_profile_completed : null,
+            req.user.staffId
+        ];
+        
+        db.run(sql, params, function(err) {
+            if (err) return res.status(500).json({ message: err.message });
             
-            if (email) {
-                updateFields.push("email = ?");
-                updateParams.push(email);
-            }
-            if (profile_pic) {
-                updateFields.push("profile_pic = ?");
-                updateParams.push(profile_pic);
-            }
-            if (username) {
-                updateFields.push("username = ?");
-                updateParams.push(username);
-            }
-            
-            if (updateFields.length > 0) {
-                const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE staff_id = ?`;
-                updateParams.push(req.user.staffId);
+            // Also update users table email, profile_pic, and username if changed
+            if (email || profile_pic || username) {
+                let updateFields = [];
+                let updateParams = [];
                 
-                db.run(userSql, updateParams, (uErr) => {
-                   if (uErr) console.error("Error updating user table:", uErr);
-                });
+                if (email) {
+                    updateFields.push("email = ?");
+                    updateParams.push(email);
+                    
+                    // FORCE Username to be Email when updating profile
+                    updateFields.push("username = ?");
+                    updateParams.push(email);
+                }
+                if (profile_pic) {
+                    updateFields.push("profile_pic = ?");
+                    updateParams.push(profile_pic);
+                }
+                // Ignore provided username if email is present, otherwise use it (fallback)
+                if (username && !email) {
+                    updateFields.push("username = ?");
+                    updateParams.push(username);
+                }
+                
+                if (updateFields.length > 0) {
+                    const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE staff_id = ?`;
+                    updateParams.push(req.user.staffId);
+                    
+                    db.run(userSql, updateParams, (uErr) => {
+                       if (uErr) {
+                           console.error("Error updating user table:", uErr);
+                           // If unique constraint failed here, it's problematic because staff table is already updated.
+                           // ideally we check before, which we do below.
+                       }
+                    });
+                }
             }
-        }
-        
-        res.json({ message: 'Profile updated successfully', isProfileCompleted: true });
-    });
+            
+            res.json({ message: 'Profile updated successfully', isProfileCompleted: is_profile_completed });
+        });
+    };
+
+    // Check email uniqueness if email is changing
+    if (email) {
+        db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row) {
+                return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
+            }
+            proceedUpdate();
+        });
+    } else {
+        proceedUpdate();
+    }
 });
 
 // GET Single Staff
@@ -157,25 +182,50 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
         const staffId = this.lastID;
 
         // 2. Create User Account
-        // Default password: 'staffpassword' (Should be changed)
-        const username = email || `${first_name.toLowerCase()}.${last_name.toLowerCase()}`;
         const defaultPassword = 'staffpassword'; 
         
         try {
             const hashedPassword = await bcrypt.hash(defaultPassword, 10);
             
-            // Insert into users
-            // Note: role is 'training_staff'. This relies on the CHECK constraint being updated or ignored.
-            const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
-            
-            db.run(userSql, [username, hashedPassword, staffId, email, profile_pic], (uErr) => {
-                if (uErr) {
-                    console.error('Error creating user for staff:', uErr);
-                    // Don't fail the request, just warn
-                    return res.json({ message: 'Staff profile created, but user account creation failed. ' + uErr.message, id: staffId });
-                }
-                res.json({ message: 'Staff created successfully. Default password is "staffpassword".', id: staffId });
-            });
+            // Clean names for username generation
+            const cleanLast = last_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+            const cleanFirst = first_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+            // Recursive function to handle username collisions
+            // Priority: Last Name -> First Name -> Last.First -> Last + Random
+            const tryInsertUser = (attemptStage, currentUsername) => {
+                const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
+                
+                db.run(userSql, [currentUsername, hashedPassword, staffId, email, profile_pic], (uErr) => {
+                    if (uErr) {
+                         if (uErr.message.includes('UNIQUE constraint') || uErr.message.includes('duplicate key')) {
+                             console.log(`Username ${currentUsername} taken. Trying next option...`);
+                             
+                             if (attemptStage === 1) {
+                                 // Failed Last Name, try First Name
+                                 tryInsertUser(2, cleanFirst);
+                             } else if (attemptStage === 2) {
+                                 // Failed First Name, try First.Last
+                                 tryInsertUser(3, `${cleanFirst}.${cleanLast}`);
+                             } else {
+                                 // Failed all standard options, append random number to Last Name
+                                 const newUsername = cleanLast + Math.floor(Math.random() * 1000);
+                                 tryInsertUser(4, newUsername);
+                             }
+                         } else {
+                            console.error('Error creating user for staff:', uErr);
+                            // Don't fail the request, just warn
+                            return res.json({ message: 'Staff profile created, but user account creation failed. ' + uErr.message, id: staffId });
+                         }
+                    } else {
+                        res.json({ message: `Staff created successfully. Username: ${currentUsername}, Password: "${defaultPassword}"`, id: staffId });
+                    }
+                });
+            };
+
+            // Start with Last Name (Stage 1)
+            tryInsertUser(1, cleanLast);
+
         } catch (hashErr) {
             res.status(500).json({ message: 'Error hashing password' });
         }

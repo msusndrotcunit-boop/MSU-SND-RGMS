@@ -7,6 +7,7 @@ const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
+const { processStaffData } = require('../utils/importCadets');
 
 const router = express.Router();
 
