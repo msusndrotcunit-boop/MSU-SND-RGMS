@@ -1,5 +1,5 @@
 require('dotenv').config({ override: true });
-// Force redeploy trigger: V2.4.8 (Logging Added)
+// Force redeploy trigger: V2.4.9 (SPA Routing Fix)
 const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
@@ -20,13 +20,13 @@ const dbSettingsKey = 'cadet_list_source_url';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// LOGGING MIDDLEWARE - CRITICAL FOR DEBUGGING RENDER
+// LOGGING MIDDLEWARE
 app.use((req, res, next) => {
     console.log(`[Request] ${req.method} ${req.url}`);
     next();
 });
 
-// Health Check Routes (Must be first to avoid shadowing by other routes)
+// Health Check Routes
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
@@ -41,21 +41,21 @@ webpush.setVapidDetails(
     privateVapidKey
 );
 
-// Keep-Alive Mechanism for Render Free Tier
+// Keep-Alive Mechanism
 if (process.env.RENDER_EXTERNAL_URL) {
     const https = require('https');
     setInterval(() => {
         https.get(`${process.env.RENDER_EXTERNAL_URL}/api/auth/login`, (resp) => {
-            console.log('Self-ping successful');
+            // console.log('Self-ping successful');
         }).on('error', (err) => {
             console.error('Self-ping failed:', err.message);
         });
     }, 14 * 60 * 1000); // 14 minutes
 }
 
-console.log('Starting ROTC Grading System Server V2.4.8 (Non-Blocking Init)...'); 
+console.log('Starting ROTC Grading System Server V2.4.9 (SPA Fix)...'); 
 
-// Global Error Handlers to prevent crash loops
+// Global Error Handlers
 process.on('uncaughtException', (err) => {
     console.error('UNCAUGHT EXCEPTION:', err);
 });
@@ -81,49 +81,45 @@ app.use('/api/integration', integrationRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Create uploads directory if not exists
-const fs = require('fs');
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
 }
 
-// Serve static files from client/dist (React Build) with caching
-const clientBuildPath = path.join(__dirname, '../client/dist');
-console.log(`[Startup] Looking for client build at: ${clientBuildPath}`);
+// DETERMINING CLIENT BUILD PATH DYNAMICALLY
+// Try multiple common locations
+const possibleBuildPaths = [
+    path.join(__dirname, '../client/dist'),
+    path.join(__dirname, 'client/dist'),
+    path.join(process.cwd(), 'client/dist'),
+    path.join(process.cwd(), '../client/dist')
+];
 
-// DEBUG: Check file system on startup
-if (fs.existsSync(clientBuildPath)) {
-    console.log(`[Startup] Client build directory FOUND.`);
-    try {
-        const contents = fs.readdirSync(clientBuildPath);
-        console.log(`[Startup] Client build directory contents: ${contents.join(', ')}`);
-    } catch (e) {
-        console.error(`[Startup] Failed to list client build directory: ${e.message}`);
-    }
-} else {
-    console.error(`[Startup] Client build directory NOT FOUND at ${clientBuildPath}`);
-    // Check if client directory exists at all
-    const clientPath = path.join(__dirname, '../client');
-    if (fs.existsSync(clientPath)) {
-        try {
-            console.log(`[Startup] ../client directory exists. Contents: ${fs.readdirSync(clientPath).join(', ')}`);
-        } catch (e) {
-             console.log(`[Startup] ../client directory exists but cannot list.`);
-        }
-    } else {
-        console.log(`[Startup] ../client directory NOT FOUND.`);
+let clientBuildPath = possibleBuildPaths[0];
+let foundBuild = false;
+
+for (const p of possibleBuildPaths) {
+    if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
+        clientBuildPath = p;
+        foundBuild = true;
+        console.log(`[Startup] Found React build at: ${clientBuildPath}`);
+        break;
     }
 }
 
+if (!foundBuild) {
+    console.error('[Startup] WARNING: Could not find React build directory in common locations.');
+    console.error(`[Startup] Checked: ${possibleBuildPaths.join(', ')}`);
+}
+
+// Serve static files
 app.use(express.static(clientBuildPath, {
-    maxAge: '1d', // Cache static assets for 1 day
+    maxAge: '1d',
     setHeaders: (res, path) => {
         if (path.endsWith('.html')) {
-            // Never cache index.html so updates are seen immediately
             res.setHeader('Cache-Control', 'no-cache');
         } else {
-            // Aggressively cache images, js, css
-            res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+            res.setHeader('Cache-Control', 'public, max-age=31536000');
         }
     }
 }));
@@ -133,34 +129,41 @@ app.get('/debug-deployment', (req, res) => {
     const info = {
         cwd: process.cwd(),
         dirname: __dirname,
-        clientBuildPath,
-        buildExists: fs.existsSync(clientBuildPath),
-        rootContents: fs.existsSync(path.join(__dirname, '..')) ? fs.readdirSync(path.join(__dirname, '..')) : 'parent dir not found',
-        clientContents: fs.existsSync(path.join(__dirname, '../client')) ? fs.readdirSync(path.join(__dirname, '../client')) : 'client dir not found',
-        distContents: fs.existsSync(clientBuildPath) ? fs.readdirSync(clientBuildPath) : 'dist dir not found'
+        selectedBuildPath: clientBuildPath,
+        foundBuild,
+        possiblePaths: possibleBuildPaths,
+        buildContents: foundBuild ? fs.readdirSync(clientBuildPath) : 'N/A'
     };
     res.json(info);
 });
 
-app.get('/', (req, res) => {
+// SPA FALLBACK HANDLER - ROBUST VERSION
+// Explicitly handle index.html serving for ANY unmatched route
+const serveIndex = (req, res) => {
     const indexPath = path.join(clientBuildPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(200).send('OK - Server Running (Client Build Not Found)');
-    }
-});
+    
+    // Explicitly set content type to avoid confusion
+    res.setHeader('Content-Type', 'text/html');
 
-// Handle React Routing, return all requests to React app
-app.get('*', (req, res) => {
-    const indexPath = path.join(clientBuildPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        console.error(`Build not found at: ${indexPath}`);
-        res.status(404).send('App is running, but the React build was not found. Please ensure "npm run build" ran successfully.');
-    }
-});
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error(`[SPA Fallback] Error serving index.html: ${err.message}`);
+            if (!res.headersSent) {
+                res.status(500).send(`
+                    <h1>Server Error</h1>
+                    <p>Failed to serve the application.</p>
+                    <p>Error details: ${err.message}</p>
+                    <p>Build Path: ${clientBuildPath}</p>
+                `);
+            }
+        }
+    });
+};
+
+app.get('/', serveIndex);
+app.get('/login', serveIndex); // Explicit login route
+app.get('/dashboard', serveIndex); // Explicit dashboard route
+app.get('*', serveIndex); // Catch-all
 
 const enableAutoSync = process.env.ENABLE_CADET_AUTO_SYNC !== 'false';
 const syncIntervalMinutes = parseInt(process.env.CADET_SYNC_INTERVAL_MINUTES || '10', 10);
@@ -185,7 +188,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         
-        // Initialize DB *after* server starts to prevent Render timeout
+        // Initialize DB *after* server starts
         if (db.initialize) {
             console.log('Initializing database in background...');
             db.initialize()
