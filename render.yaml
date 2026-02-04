@@ -7,7 +7,5 @@
     autoDeploy: true
     healthCheckPath: /health
     envVars:
-      - key: NODE_VERSION
-        value: 20.10.0
       - key: ENABLE_CADET_AUTO_SYNC
         value: "false"
