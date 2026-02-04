@@ -1,0 +1,13 @@
+﻿services:
+  - type: web
+    name: rotc-grading-system
+    env: node
+    buildCommand: npm run build
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.10.0
+      - key: ENABLE_CADET_AUTO_SYNC
+        value: "false"
