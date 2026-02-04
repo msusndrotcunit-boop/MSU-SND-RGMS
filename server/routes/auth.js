@@ -148,6 +148,7 @@ router.get('/system-settings', authenticateToken, (req, res) => {
 // Login
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: 'Username and password are required.' });
     console.log('Login attempt:', { username, password: '***' });
 
     db.get(`SELECT * FROM users WHERE username = ? OR email = ?`, [username, username], async (err, user) => {
