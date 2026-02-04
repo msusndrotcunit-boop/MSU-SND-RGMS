@@ -159,6 +159,17 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+
+                    // Notify Cadet
+                    db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
+                        if (uRow) {
+                            db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                const message = `Your attendance for ${dayTitle} has been marked as ${status}.`;
+                                db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                            });
+                        }
+                    });
                 }
             );
         } else {
@@ -168,6 +179,17 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+
+                    // Notify Cadet
+                    db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
+                        if (uRow) {
+                            db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                const message = `Your attendance for ${dayTitle} has been marked as ${status}.`;
+                                db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                            });
+                        }
+                    });
                 }
             );
         }
@@ -209,6 +231,18 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         [status, remarks, row.id], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
+                            
+                            // Notify Staff
+                            db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
+                                if (uRow) {
+                                    db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                        const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                        const message = `Your attendance for ${dayTitle} has been recorded as ${status}.`;
+                                        db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                                    });
+                                }
+                            });
+
                             res.json({ 
                                 message: 'Staff attendance updated', 
                                 status: status,
@@ -225,6 +259,18 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         [dayId, staffId, status, remarks], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
+                            
+                            // Notify Staff
+                            db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
+                                if (uRow) {
+                                    db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                        const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                        const message = `Your attendance for ${dayTitle} has been recorded as ${status}.`;
+                                        db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                                    });
+                                }
+                            });
+
                             res.json({ 
                                 message: 'Staff attendance recorded', 
                                 status: status,

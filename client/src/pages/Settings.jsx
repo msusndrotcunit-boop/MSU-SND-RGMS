@@ -37,15 +37,10 @@ const Settings = ({ role }) => {
         <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
                 <PaintBucket className="text-blue-600" />
-                System Settings ({role})
+                My Settings
             </h2>
 
             <div className="space-y-8">
-                {role !== 'admin' && (
-                    <div className="p-3 rounded bg-yellow-50 text-yellow-800 text-sm">
-                        Only administrators can save system settings. Changes here affect all users.
-                    </div>
-                )}
                 {/* Notifications Settings */}
                 <section>
                     <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">

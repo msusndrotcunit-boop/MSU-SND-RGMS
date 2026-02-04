@@ -426,8 +426,8 @@ router.post('/acknowledge-guide', authenticateToken, (req, res) => {
 
 // Get Notifications (Staff)
 router.get('/notifications', authenticateToken, (req, res) => {
-    // Fetch notifications where user_id is NULL (system/global) or matches staff's user ID
-    const sql = `SELECT * FROM notifications WHERE user_id IS NULL OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+    // Fetch notifications where user_id is NULL (system/global) BUT EXCLUDE login logs, or matches staff's user ID
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type != 'login') OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
     db.all(sql, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
