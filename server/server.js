@@ -1,5 +1,5 @@
 require('dotenv').config({ override: true });
-// Force redeploy trigger: V2.6.0 (Refined Config)
+// Force redeploy trigger: V2.7.0 (Auto-Build Fix)
 const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
@@ -126,20 +126,20 @@ for (const p of possibleBuildPaths) {
 }
 
 if (!foundBuild) {
-    console.error('[Startup] WARNING: Could not find React build directory.');
-}
-
-// Serve static files
-app.use(express.static(clientBuildPath, {
-    maxAge: '1d',
-    setHeaders: (res, path) => {
-        if (path.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache');
-        } else {
-            res.setHeader('Cache-Control', 'public, max-age=31536000');
+    console.error('[Startup] WARNING: Could not find React build directory. The app will serve a fallback page.');
+} else {
+    // Serve static files ONLY if found
+    app.use(express.static(clientBuildPath, {
+        maxAge: '1d',
+        setHeaders: (res, path) => {
+            if (path.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-cache');
+            } else {
+                res.setHeader('Cache-Control', 'public, max-age=31536000');
+            }
         }
-    }
-}));
+    }));
+}
 
 // DEBUG ROUTE
 app.get('/debug-deployment', (req, res) => {
@@ -160,13 +160,30 @@ const serveIndex = (req, res) => {
         return res.status(404).send('API endpoint not found');
     }
 
+    if (!foundBuild) {
+        // Fallback HTML if build is missing
+        res.status(200).send(`
+            <html>
+                <head><title>System Initializing</title></head>
+                <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                    <h1>System Update in Progress</h1>
+                    <p>The application is currently rebuilding its frontend assets.</p>
+                    <p>Please refresh this page in 1-2 minutes.</p>
+                    <hr>
+                    <p style="color: gray; font-size: 0.8em;">Debug info: Client build not found at startup.</p>
+                </body>
+            </html>
+        `);
+        return;
+    }
+
     const indexPath = path.join(clientBuildPath, 'index.html');
     res.setHeader('Content-Type', 'text/html');
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error(`[SPA Fallback] Error serving index.html: ${err.message}`);
             if (!res.headersSent) {
-                res.status(500).send('Server Error: Client build not found.');
+                 res.status(500).send('Server Error: Client build file missing.');
             }
         }
     });
