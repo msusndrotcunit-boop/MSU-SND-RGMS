@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Cloud, Sun, CloudRain, Wind, Thermometer } from 'lucide-react';
+import { Cloud, Sun, CloudRain, Wind, Thermometer, MapPin } from 'lucide-react';
 
 const WeatherAdvisory = () => {
     const [weather, setWeather] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [locationName, setLocationName] = useState('Sultan Naga Dimaporo');
+    const [isUsingCurrentLocation, setIsUsingCurrentLocation] = useState(false);
 
-    // Coordinates for Sultan Naga Dimaporo, Lanao del Norte (MSU-SND)
-    const LAT = 7.808;
-    const LON = 123.736;
+    // Default Coordinates for Sultan Naga Dimaporo, Lanao del Norte (MSU-SND)
+    const DEFAULT_LAT = 7.808;
+    const DEFAULT_LON = 123.736;
 
     useEffect(() => {
-        const fetchWeather = async () => {
+        const fetchWeather = async (lat, lon) => {
             try {
                 const response = await axios.get(
-                    `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
+                    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
                 );
                 setWeather(response.data);
                 setLoading(false);
@@ -26,7 +28,28 @@ const WeatherAdvisory = () => {
             }
         };
 
-        fetchWeather();
+        const getLocation = () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        setLocationName('Current Location');
+                        setIsUsingCurrentLocation(true);
+                        fetchWeather(latitude, longitude);
+                    },
+                    (error) => {
+                        console.warn("Geolocation permission denied or error:", error);
+                        // Fallback to default
+                        fetchWeather(DEFAULT_LAT, DEFAULT_LON);
+                    }
+                );
+            } else {
+                // Fallback if geolocation is not supported
+                fetchWeather(DEFAULT_LAT, DEFAULT_LON);
+            }
+        };
+
+        getLocation();
     }, []);
 
     const getWeatherIcon = (code) => {
@@ -77,7 +100,10 @@ const WeatherAdvisory = () => {
                     <div>
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             Weather Advisory
-                            <span className="text-xs bg-blue-800 px-2 py-0.5 rounded text-blue-100">Sultan Naga Dimaporo</span>
+                            <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${isUsingCurrentLocation ? 'bg-green-600 text-green-100' : 'bg-blue-800 text-blue-100'}`}>
+                                <MapPin size={10} />
+                                {locationName}
+                            </span>
                         </h3>
                         <p className="text-blue-100 text-sm">{getWeatherDescription(current.weather_code)}</p>
                     </div>
