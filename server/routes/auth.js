@@ -25,8 +25,12 @@ router.post('/heartbeat', authenticateToken, (req, res) => {
 router.get('/settings', authenticateToken, (req, res) => {
     const userId = req.user.id;
     db.get("SELECT * FROM user_settings WHERE user_id = ?", [userId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
+        if (err) {
+            console.error("Error fetching settings:", err);
+            return res.status(500).json({ message: err.message });
+        }
         if (!row) {
+            console.log(`No settings found for user ${userId}, returning defaults`);
             // Return defaults if no settings found
             return res.json({
                 email_alerts: true,
@@ -47,6 +51,7 @@ router.get('/settings', authenticateToken, (req, res) => {
             compact_mode: !!row.compact_mode,
             primary_color: row.primary_color
         };
+        // console.log(`Settings for user ${userId}:`, settings);
         res.json(settings);
     });
 });
@@ -63,6 +68,8 @@ router.put('/settings', authenticateToken, (req, res) => {
         primary_color 
     } = req.body;
 
+    console.log(`Updating settings for user ${userId}:`, req.body);
+
     // Pass booleans directly. 
     // SQLite driver converts true/false to 1/0.
     // Postgres driver converts true/false to BOOLEAN true/false.
@@ -75,7 +82,10 @@ router.put('/settings', authenticateToken, (req, res) => {
     const col = primary_color || 'blue';
 
     db.get("SELECT 1 FROM user_settings WHERE user_id = ?", [userId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
+        if (err) {
+            console.error("Error checking settings existence:", err);
+            return res.status(500).json({ message: err.message });
+        }
         
         if (row) {
             // Update
@@ -88,14 +98,20 @@ router.put('/settings', authenticateToken, (req, res) => {
                 primary_color = ? 
                 WHERE user_id = ?`;
             db.run(sql, [e, p, a, d, c, col, userId], (updateErr) => {
-                if (updateErr) return res.status(500).json({ message: updateErr.message });
+                if (updateErr) {
+                    console.error("Error updating settings:", updateErr);
+                    return res.status(500).json({ message: updateErr.message });
+                }
                 res.json({ message: 'Settings updated' });
             });
         } else {
             // Insert
             const sql = `INSERT INTO user_settings (user_id, email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?)`;
             db.run(sql, [userId, e, p, a, d, c, col], (insertErr) => {
-                if (insertErr) return res.status(500).json({ message: insertErr.message });
+                if (insertErr) {
+                    console.error("Error creating settings:", insertErr);
+                    return res.status(500).json({ message: insertErr.message });
+                }
                 res.json({ message: 'Settings created' });
             });
         }

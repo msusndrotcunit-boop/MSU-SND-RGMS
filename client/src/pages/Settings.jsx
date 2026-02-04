@@ -24,12 +24,12 @@ const Settings = ({ role }) => {
 
     const handleSave = async () => {
         setSaving(true);
-        const success = await updateSettings(localSettings);
+        const result = await updateSettings(localSettings);
         setSaving(false);
-        if (success) {
+        if (result.success) {
             alert('Settings saved and applied successfully');
         } else {
-            alert('Failed to save settings');
+            alert(result.message || 'Failed to save settings');
         }
     };
 

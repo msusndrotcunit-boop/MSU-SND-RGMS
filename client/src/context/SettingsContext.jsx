@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const SettingsContext = createContext();
 
 export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
+    const navigate = useNavigate();
     const [settings, setSettings] = useState({
         notifications: {
             emailAlerts: true,
@@ -91,10 +93,13 @@ export const SettingsProvider = ({ children }) => {
 
     const updateSettings = async (newSettings) => {
         // Optimistic update
+        const previousSettings = settings;
         setSettings(newSettings);
         
         try {
             const token = localStorage.getItem('token');
+            if (!token) throw new Error("Authentication expired. Please login again.");
+
             const payload = {
                 email_alerts: newSettings.notifications.emailAlerts,
                 push_notifications: newSettings.notifications.pushNotifications,
@@ -107,11 +112,20 @@ export const SettingsProvider = ({ children }) => {
             await axios.put('/api/auth/settings', payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            return true;
+            return { success: true };
         } catch (error) {
             console.error('Error saving settings:', error);
-            // Revert on error? For now, just log it.
-            return false;
+            // Revert on error
+            setSettings(previousSettings);
+
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                localStorage.removeItem('token');
+                navigate('/login');
+                return { success: false, message: 'Session expired. Please login again.' };
+            }
+
+            const msg = error.response?.data?.message || error.message || 'Failed to save settings';
+            return { success: false, message: msg };
         }
     };
 
