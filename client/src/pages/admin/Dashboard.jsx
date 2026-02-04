@@ -14,8 +14,11 @@ const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#8
 
 const Dashboard = () => {
     const [stats, setStats] = useState({ totalCadets: 0, totalActivities: 0 });
-    const [analytics, setAnalytics] = useState({ attendance: [], grades: [] });
-    const [cadets, setCadets] = useState([]);
+    const [analytics, setAnalytics] = useState({ 
+        attendance: [], 
+        grades: [],
+        demographics: { company: [], rank: [], status: [], totalCadets: 0 }
+    });
     const [onlineCount, setOnlineCount] = useState(0);
 
     console.log('AdminDashboard rendered. onlineCount:', onlineCount);
@@ -24,13 +27,9 @@ const Dashboard = () => {
         const fetchStats = async () => {
             try {
                 try {
-                    const cachedCadets = await getCachedData('cadets');
                     const cachedActivities = await getCachedData('activities');
                     const cachedAnalytics = await getSingleton('analytics', 'dashboard');
-                    if (cachedCadets?.length) {
-                        setStats(s => ({ ...s, totalCadets: cachedCadets.length }));
-                        setCadets(cachedCadets);
-                    }
+                    
                     if (cachedActivities?.length) {
                         setStats(s => ({ ...s, totalActivities: cachedActivities.length }));
                     }
@@ -42,23 +41,21 @@ const Dashboard = () => {
                         ].filter(item => item.value > 0);
                         setAnalytics({
                             attendance: cachedAnalytics.attendance || [],
-                            grades: gradeDataCached
+                            grades: gradeDataCached,
+                            demographics: cachedAnalytics.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
                         });
+                        if (cachedAnalytics.demographics?.totalCadets) {
+                            setStats(s => ({ ...s, totalCadets: cachedAnalytics.demographics.totalCadets }));
+                        }
                     }
                 } catch {}
                 
-                const [cadetsRes, activitiesRes, analyticsRes, onlineRes] = await Promise.allSettled([
-                    axios.get('/api/admin/cadets'),
+                const [activitiesRes, analyticsRes, onlineRes] = await Promise.allSettled([
                     axios.get('/api/cadet/activities'),
                     axios.get('/api/admin/analytics'),
                     axios.get('/api/admin/online-users')
                 ]);
 
-                if (cadetsRes.status === 'fulfilled') {
-                    setStats(s => ({ ...s, totalCadets: cadetsRes.value.data.length }));
-                    setCadets(cadetsRes.value.data);
-                    await cacheData('cadets', cadetsRes.value.data);
-                }
                 if (activitiesRes.status === 'fulfilled') {
                     setStats(s => ({ ...s, totalActivities: activitiesRes.value.data.length }));
                     await cacheData('activities', activitiesRes.value.data);
@@ -77,8 +74,14 @@ const Dashboard = () => {
 
                     setAnalytics({
                         attendance: analyticsData.attendance,
-                        grades: gradeData
+                        grades: gradeData,
+                        demographics: analyticsData.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
                     });
+                    
+                    if (analyticsData.demographics?.totalCadets) {
+                        setStats(s => ({ ...s, totalCadets: analyticsData.demographics.totalCadets }));
+                    }
+
                     await cacheSingleton('analytics', 'dashboard', analyticsData);
                 }
 
@@ -89,50 +92,12 @@ const Dashboard = () => {
         fetchStats();
     }, []);
 
-    // Analytics Data Computation
-    const { companyData, rankData, statusData } = useMemo(() => {
-        if (!cadets.length) return { companyData: [], rankData: [], statusData: [] };
-
-        // By Company
-        const companyCount = {};
-        cadets.forEach(c => {
-            let company = c.company?.trim();
-            if (company === '. . . . . . . .') {
-                company = 'Advance Officer';
-            } else if (!company) {
-                company = 'Unverified';
-            }
-            companyCount[company] = (companyCount[company] || 0) + 1;
-        });
-        const companyData = Object.keys(companyCount).map(key => ({
-            name: key,
-            count: companyCount[key]
-        }));
-
-        // By Rank
-        const rankCount = {};
-        cadets.forEach(c => {
-            const rank = c.rank?.trim() || 'Unverified';
-            rankCount[rank] = (rankCount[rank] || 0) + 1;
-        });
-        const rankData = Object.keys(rankCount).map(key => ({
-            name: key,
-            count: rankCount[key]
-        }));
-
-        // By Status
-        const statusCount = {};
-        cadets.forEach(c => {
-            const status = c.status?.trim() || 'Unverified';
-            statusCount[status] = (statusCount[status] || 0) + 1;
-        });
-        const statusData = Object.keys(statusCount).map(key => ({
-            name: key,
-            value: statusCount[key]
-        }));
-
-        return { companyData, rankData, statusData };
-    }, [cadets]);
+    // Analytics Data Computation (Replaced by Backend Demographics)
+    const { companyData, rankData, statusData } = {
+        companyData: analytics.demographics.company,
+        rankData: analytics.demographics.rank,
+        statusData: analytics.demographics.status
+    };
 
     return (
         <div className="space-y-6">

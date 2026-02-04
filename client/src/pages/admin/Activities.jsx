@@ -99,20 +99,24 @@ const Activities = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {activities.map(activity => (
                     <div key={activity.id} className="bg-white rounded shadow overflow-hidden">
-                        {activity.image_path && (
-                            <img 
-                                src={activity.image_path.startsWith('data:') ? activity.image_path : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`} 
-                                alt={activity.title} 
-                                className="w-full h-48 object-cover"
-                            />
-                        )}
                         <div className="p-4">
-                            <h3 className="text-lg font-bold mb-2">{activity.title}</h3>
-                            <div className="flex items-center text-gray-500 text-sm mb-2">
+                            <h3 className="font-bold text-xl mb-2">{activity.title}</h3>
+                            <div className="flex items-center text-gray-500 text-sm mb-3">
                                 <Calendar size={14} className="mr-1" />
-                                {activity.date}
+                                {new Date(activity.date).toLocaleDateString()}
                             </div>
-                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{activity.description}</p>
+                            
+                            {/* Image served via caching route */}
+                            <div className="w-full h-48 mb-4 bg-gray-200 rounded overflow-hidden">
+                                <img 
+                                    src={`/api/images/activities/${activity.id}`} 
+                                    alt={activity.title}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => e.target.style.display = 'none'} // Hide if no image
+                                />
+                            </div>
+
+                            <p className="text-gray-600 mb-4 line-clamp-3">{activity.description}</p>
                             <button 
                                 onClick={() => handleDelete(activity.id)}
                                 className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center"
