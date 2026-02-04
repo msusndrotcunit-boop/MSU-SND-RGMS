@@ -85,6 +85,32 @@ if (!fs.existsSync(uploadDir)){
 
 // Serve static files from client/dist (React Build) with caching
 const clientBuildPath = path.join(__dirname, '../client/dist');
+console.log(`[Startup] Looking for client build at: ${clientBuildPath}`);
+
+// DEBUG: Check file system on startup
+if (fs.existsSync(clientBuildPath)) {
+    console.log(`[Startup] Client build directory FOUND.`);
+    try {
+        const contents = fs.readdirSync(clientBuildPath);
+        console.log(`[Startup] Client build directory contents: ${contents.join(', ')}`);
+    } catch (e) {
+        console.error(`[Startup] Failed to list client build directory: ${e.message}`);
+    }
+} else {
+    console.error(`[Startup] Client build directory NOT FOUND at ${clientBuildPath}`);
+    // Check if client directory exists at all
+    const clientPath = path.join(__dirname, '../client');
+    if (fs.existsSync(clientPath)) {
+        try {
+            console.log(`[Startup] ../client directory exists. Contents: ${fs.readdirSync(clientPath).join(', ')}`);
+        } catch (e) {
+             console.log(`[Startup] ../client directory exists but cannot list.`);
+        }
+    } else {
+        console.log(`[Startup] ../client directory NOT FOUND.`);
+    }
+}
+
 app.use(express.static(clientBuildPath, {
     maxAge: '1d', // Cache static assets for 1 day
     setHeaders: (res, path) => {
@@ -98,12 +124,26 @@ app.use(express.static(clientBuildPath, {
     }
 }));
 
+// DEBUG ROUTE
+app.get('/debug-deployment', (req, res) => {
+    const info = {
+        cwd: process.cwd(),
+        dirname: __dirname,
+        clientBuildPath,
+        buildExists: fs.existsSync(clientBuildPath),
+        rootContents: fs.existsSync(path.join(__dirname, '..')) ? fs.readdirSync(path.join(__dirname, '..')) : 'parent dir not found',
+        clientContents: fs.existsSync(path.join(__dirname, '../client')) ? fs.readdirSync(path.join(__dirname, '../client')) : 'client dir not found',
+        distContents: fs.existsSync(clientBuildPath) ? fs.readdirSync(clientBuildPath) : 'dist dir not found'
+    };
+    res.json(info);
+});
+
 app.get('/', (req, res) => {
     const indexPath = path.join(clientBuildPath, 'index.html');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        res.status(200).send('OK');
+        res.status(200).send('OK - Server Running (Client Build Not Found)');
     }
 });
 
