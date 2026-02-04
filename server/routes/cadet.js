@@ -260,8 +260,9 @@ router.post('/acknowledge-guide', (req, res) => {
 
 // Get Notifications (Cadet)
 router.get('/notifications', (req, res) => {
-    // Fetch notifications where user_id is NULL (system/global) BUT EXCLUDE login logs, or matches cadet's user ID
-    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type != 'login') OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+    // Fetch notifications where user_id is NULL (system/global) BUT only for relevant types (activity, announcement)
+    // OR matches cadet's user ID (attendance, grades, etc.)
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
     db.all(sql, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
@@ -278,7 +279,7 @@ router.put('/notifications/:id/read', (req, res) => {
 
 // Mark All as Read
 router.put('/notifications/read-all', (req, res) => {
-    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
+    db.run(`UPDATE notifications SET is_read = 1 WHERE ((user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'All marked as read' });
     });

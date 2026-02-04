@@ -268,6 +268,36 @@ router.put('/profile', authenticateToken, (req, res) => {
     }
 });
 
+// --- Notifications ---
+
+// Get Notifications (Staff)
+router.get('/notifications', authenticateToken, (req, res) => {
+    // Fetch notifications where user_id is NULL (system/global) BUT only for relevant types (activity, announcement)
+    // OR matches staff's user ID
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [req.user.id], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Mark Notification as Read
+router.put('/notifications/:id/read', authenticateToken, (req, res) => {
+    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Marked as read' });
+    });
+});
+
+// Mark All as Read
+router.put('/notifications/read-all', authenticateToken, (req, res) => {
+    // Updates both global (NULL) and personal notifications visible to this user
+    db.run(`UPDATE notifications SET is_read = 1 WHERE ((user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All marked as read' });
+    });
+});
+
 // GET Single Staff
 router.get('/:id', authenticateToken, (req, res) => {
     // Check permissions: Admin or Self
@@ -419,35 +449,6 @@ router.post('/acknowledge-guide', authenticateToken, (req, res) => {
     db.run("UPDATE training_staff SET has_seen_guide = 1 WHERE id = ?", [req.user.staffId], (err) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'User guide acknowledged' });
-    });
-});
-
-// --- Notifications ---
-
-// Get Notifications (Staff)
-router.get('/notifications', authenticateToken, (req, res) => {
-    // Fetch notifications where user_id is NULL (system/global) BUT EXCLUDE login logs, or matches staff's user ID
-    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type != 'login') OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
-    db.all(sql, [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
-});
-
-// Mark Notification as Read
-router.put('/notifications/:id/read', authenticateToken, (req, res) => {
-    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'Marked as read' });
-    });
-});
-
-// Mark All as Read
-router.put('/notifications/read-all', authenticateToken, (req, res) => {
-    // Updates both global (NULL) and personal notifications visible to this user
-    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'All marked as read' });
     });
 });
 
