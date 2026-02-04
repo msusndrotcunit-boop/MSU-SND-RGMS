@@ -1,10 +1,9 @@
 {
   "name": "rotc-grading-system",
-  "version": "2.4.7",
+  "version": "2.4.8",
   "private": true,
   "scripts": {
-    "postinstall": "npm install --prefix server && cd client && npm install && npm run build",
-    "build": "echo 'Build handled by postinstall'",
+    "build": "npm install --prefix server && cd client && npm install && npm run build",
     "start": "cd server && node server.js"
   }
 }
