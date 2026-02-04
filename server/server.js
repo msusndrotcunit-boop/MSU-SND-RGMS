@@ -1,5 +1,5 @@
 require('dotenv').config({ override: true });
-// Force redeploy trigger: 2026-02-01 15:48
+// Force redeploy trigger: V2.4.6
 const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
@@ -19,6 +19,11 @@ const dbSettingsKey = 'cadet_list_source_url';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Health Check Routes (Must be first to avoid shadowing by other routes) - Verified Fix
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 // Web Push Configuration
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BD2dXhUwhD5lQGW7ZJcuRji6ZyNeGo7T4VoX1DK2mCcsXs8ZpvYFM_t5KE2DyHAcVchDecw2kPpZZtNsL5BlgH8';
@@ -43,7 +48,7 @@ if (process.env.RENDER_EXTERNAL_URL) {
     }, 14 * 60 * 1000); // 14 minutes
 }
 
-console.log('Starting ROTC Grading System Server V2.4.1 (Fix Render Loop)...'); // Version bump for deployment trigger
+console.log('Starting ROTC Grading System Server V2.4.3 (Non-Blocking Init)...'); // Version bump for deployment trigger
 
 // Global Error Handlers to prevent crash loops
 process.on('uncaughtException', (err) => {
@@ -93,6 +98,15 @@ app.use(express.static(clientBuildPath, {
     }
 }));
 
+app.get('/', (req, res) => {
+    const indexPath = path.join(clientBuildPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(200).send('OK');
+    }
+});
+
 // Handle React Routing, return all requests to React app
 app.get('*', (req, res) => {
     const indexPath = path.join(clientBuildPath, 'index.html');
@@ -123,6 +137,18 @@ if (enableAutoSync && syncIntervalMinutes > 0) {
     }, syncIntervalMinutes * 60 * 1000);
 }
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        
+        // Initialize DB *after* server starts to prevent Render timeout
+        if (db.initialize) {
+            console.log('Initializing database in background...');
+            db.initialize()
+                .then(() => console.log('Database initialized successfully.'))
+                .catch(err => console.error('Database initialization failed (NON-FATAL):', err));
+        }
+    });
+};
+
+startServer();

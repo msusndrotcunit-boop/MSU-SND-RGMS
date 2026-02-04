@@ -28,14 +28,35 @@ const WeatherAdvisory = () => {
             }
         };
 
+        const fetchLocationName = async (lat, lon) => {
+            try {
+                // Using OpenStreetMap Nominatim for reverse geocoding
+                const response = await axios.get(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+                );
+                if (response.data && response.data.address) {
+                    const { city, town, village, municipality, county, state } = response.data.address;
+                    const specificLoc = city || town || village || municipality || county;
+                    const broadLoc = state;
+                    if (specificLoc) {
+                        setLocationName(`${specificLoc}${broadLoc ? `, ${broadLoc}` : ''}`);
+                    }
+                }
+            } catch (err) {
+                console.warn("Error fetching location name:", err);
+                // Keep default or previous name
+            }
+        };
+
         const getLocation = () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const { latitude, longitude } = position.coords;
-                        setLocationName('Current Location');
+                        setLocationName('Current Location'); // Temporary while fetching
                         setIsUsingCurrentLocation(true);
                         fetchWeather(latitude, longitude);
+                        fetchLocationName(latitude, longitude);
                     },
                     (error) => {
                         console.warn("Geolocation permission denied or error:", error);
@@ -68,9 +89,16 @@ const WeatherAdvisory = () => {
             51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
             61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
             80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
-            95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail"
+            71: "Thunderstorm", 95: "Thunderstorm", 96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail"
         };
         return codes[code] || "Variable";
+    };
+
+    const getSkyCondition = (code) => {
+        if (code <= 1) return "Sunny Day";
+        if (code <= 3) return "Cloudy Day";
+        if (code >= 51) return "Rainy Day";
+        return "Cloudy Day"; // Default
     };
 
     if (loading) return (
@@ -82,25 +110,24 @@ const WeatherAdvisory = () => {
     if (error) return null;
 
     const current = weather?.current;
-    const daily = weather?.daily;
-
+    
     if (!current) return null;
 
     return (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg shadow-lg relative overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-lg shadow-lg relative overflow-hidden mb-6">
             <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Cloud size={100} />
             </div>
             
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
+                    <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm shadow-inner">
                         {getWeatherIcon(current.weather_code)}
                     </div>
                     <div>
                         <h3 className="text-lg font-bold flex items-center gap-2">
-                            Weather Advisory
-                            <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${isUsingCurrentLocation ? 'bg-green-600 text-green-100' : 'bg-blue-800 text-blue-100'}`}>
+                            {getSkyCondition(current.weather_code)}
+                            <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${isUsingCurrentLocation ? 'bg-green-500/80 text-white' : 'bg-blue-900/50 text-blue-100'}`}>
                                 <MapPin size={10} />
                                 {locationName}
                             </span>
@@ -109,29 +136,33 @@ const WeatherAdvisory = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <div className="text-center">
+                <div className="flex items-center gap-6 bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                    <div className="text-center px-2">
                         <div className="flex items-center justify-center gap-1">
-                            <Thermometer size={16} className="text-blue-200" />
+                            <Thermometer size={18} className="text-yellow-300" />
                             <span className="text-2xl font-bold">{current.temperature_2m}°C</span>
                         </div>
-                        <p className="text-xs text-blue-200">Temp</p>
+                        <p className="text-xs text-blue-200 uppercase tracking-wider">Temperature</p>
                     </div>
                     
-                    <div className="text-center hidden sm:block">
+                    <div className="w-px h-8 bg-blue-400/30 hidden sm:block"></div>
+
+                    <div className="text-center hidden sm:block px-2">
                         <div className="flex items-center justify-center gap-1">
-                            <Wind size={16} className="text-blue-200" />
+                            <Wind size={18} className="text-gray-300" />
                             <span className="text-xl font-semibold">{current.wind_speed_10m} <span className="text-xs">km/h</span></span>
                         </div>
-                        <p className="text-xs text-blue-200">Wind</p>
+                        <p className="text-xs text-blue-200 uppercase tracking-wider">Wind</p>
                     </div>
 
-                    <div className="text-center hidden sm:block">
+                    <div className="w-px h-8 bg-blue-400/30 hidden sm:block"></div>
+
+                    <div className="text-center hidden sm:block px-2">
                         <div className="flex items-center justify-center gap-1">
-                            <CloudRain size={16} className="text-blue-200" />
+                            <CloudRain size={18} className="text-blue-300" />
                             <span className="text-xl font-semibold">{current.relative_humidity_2m}%</span>
                         </div>
-                        <p className="text-xs text-blue-200">Humidity</p>
+                        <p className="text-xs text-blue-200 uppercase tracking-wider">Humidity</p>
                     </div>
                 </div>
             </div>

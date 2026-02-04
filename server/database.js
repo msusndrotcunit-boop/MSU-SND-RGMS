@@ -82,62 +82,7 @@ if (isPostgres) {
     };
     
     // Initialize Postgres Tables
-    initPgDb();
-
-    // Migration: Add extra columns to training_staff if missing
-    const staffColumns = [
-        { name: 'afpsn', type: 'TEXT' },
-        { name: 'birthdate', type: 'TEXT' },
-        { name: 'birthplace', type: 'TEXT' },
-        { name: 'age', type: 'INTEGER' },
-        { name: 'height', type: 'TEXT' },
-        { name: 'weight', type: 'TEXT' },
-        { name: 'blood_type', type: 'TEXT' },
-        { name: 'address', type: 'TEXT' },
-        { name: 'civil_status', type: 'TEXT' },
-        { name: 'nationality', type: 'TEXT' },
-        { name: 'gender', type: 'TEXT' },
-        { name: 'language_spoken', type: 'TEXT' },
-        { name: 'combat_boots_size', type: 'TEXT' },
-        { name: 'uniform_size', type: 'TEXT' },
-        { name: 'bullcap_size', type: 'TEXT' },
-        { name: 'facebook_link', type: 'TEXT' },
-        { name: 'rotc_unit', type: 'TEXT' },
-        { name: 'mobilization_center', type: 'TEXT' },
-        { name: 'is_profile_completed', type: 'INTEGER DEFAULT 0' },
-        { name: 'has_seen_guide', type: 'INTEGER DEFAULT 0' }
-    ];
-
-    staffColumns.forEach(col => {
-        db.run(`ALTER TABLE training_staff ADD COLUMN ${col.name} ${col.type}`, (err) => {
-            if (err && !err.message.includes('duplicate column')) {
-                // console.log(`Migration info: ${err.message}`);
-            }
-        });
-    });
-
-    // Migration: Add is_profile_completed if missing
-    pool.query(`
-        DO $$ 
-        BEGIN 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='cadets' AND column_name='is_profile_completed') THEN 
-                ALTER TABLE cadets ADD COLUMN is_profile_completed BOOLEAN DEFAULT FALSE; 
-            END IF; 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='cadets' AND column_name='has_seen_guide') THEN 
-                ALTER TABLE cadets ADD COLUMN has_seen_guide BOOLEAN DEFAULT FALSE; 
-            END IF;
-        END $$;
-    `).catch(err => console.log('Migration info:', err.message));
-
-    // Migration: Add last_seen to users
-    pool.query(`
-        DO $$ 
-        BEGIN 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='last_seen') THEN 
-                ALTER TABLE users ADD COLUMN last_seen TIMESTAMP; 
-            END IF; 
-        END $$;
-    `).catch(err => console.log('Migration info:', err.message));
+    db.initialize = initPgDb;
 
 } else {
     sqlite3 = require('sqlite3').verbose();
@@ -204,9 +149,10 @@ if (isPostgres) {
             });
         }
     });
+    db.initialize = async () => {};
 }
 
-function initPgDb() {
+async function initPgDb() {
     const queries = [
         `CREATE TABLE IF NOT EXISTS cadets (
             id SERIAL PRIMARY KEY,
@@ -373,31 +319,83 @@ function initPgDb() {
         )`
     ];
 
-    const runQueries = async () => {
-        try {
-            for (const q of queries) {
+    try {
+        console.log(`Starting Postgres initialization with ${queries.length} tables...`);
+        for (const q of queries) {
+            try {
+                // Log table creation to identify which one hangs/fails
+                const tableName = q.match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
+                // console.log(`Creating table: ${tableName}`);
                 await db.pool.query(q);
+            } catch (err) {
+                console.error(`Error creating table (query: ${q.substring(0, 50)}...):`, err);
+                throw err; // Re-throw to stop init if critical table fails
             }
-            
-            // Migration: Add staff_id to users if not exists
-            try {
-                await db.pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`);
-            } catch (e) { console.log('Migration note: staff_id column might already exist or error', e.message); }
-
-            // Migration: Update role check constraint (Postgres)
-            try {
-                // Drop old constraint
-                await db.pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
-                // Add new constraint
-                await db.pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'cadet', 'training_staff'))`);
-            } catch (e) { console.log('Migration note: Could not update users_role_check constraint', e.message); }
-
-            seedAdmin();
-        } catch (err) {
-            console.error('Error initializing PG DB:', err);
         }
-    };
-    runQueries();
+        console.log('Tables created successfully.');
+
+        // Consolidated Migrations
+        console.log('Running consolidated migrations...');
+        const staffColumns = [
+            { name: 'afpsn', type: 'TEXT' },
+            { name: 'birthdate', type: 'TEXT' },
+            { name: 'birthplace', type: 'TEXT' },
+            { name: 'age', type: 'INTEGER' },
+            { name: 'height', type: 'TEXT' },
+            { name: 'weight', type: 'TEXT' },
+            { name: 'blood_type', type: 'TEXT' },
+            { name: 'address', type: 'TEXT' },
+            { name: 'civil_status', type: 'TEXT' },
+            { name: 'nationality', type: 'TEXT' },
+            { name: 'gender', type: 'TEXT' },
+            { name: 'language_spoken', type: 'TEXT' },
+            { name: 'combat_boots_size', type: 'TEXT' },
+            { name: 'uniform_size', type: 'TEXT' },
+            { name: 'bullcap_size', type: 'TEXT' },
+            { name: 'facebook_link', type: 'TEXT' },
+            { name: 'rotc_unit', type: 'TEXT' },
+            { name: 'mobilization_center', type: 'TEXT' },
+            { name: 'is_profile_completed', type: 'INTEGER DEFAULT 0' },
+            { name: 'has_seen_guide', type: 'INTEGER DEFAULT 0' }
+        ];
+
+        for (const col of staffColumns) {
+            try {
+                // Use safe ADD COLUMN
+                await db.pool.query(`ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+            } catch (err) { 
+                console.warn(`Migration warning (staff col ${col.name}):`, err.message);
+            }
+        }
+
+        const simpleMigrations = [
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_profile_completed BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS has_seen_guide BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`
+        ];
+
+        for (const query of simpleMigrations) {
+            try { await db.pool.query(query); } catch (e) { 
+                console.warn(`Migration warning (simple):`, e.message);
+            }
+        }
+
+        // Migration: Update role check constraint
+        try {
+            await db.pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+            await db.pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'cadet', 'training_staff'))`);
+        } catch (e) { 
+            console.warn(`Migration warning (role check):`, e.message);
+        }
+
+        console.log('Seeding admin...');
+        seedAdmin();
+        console.log('PostgreSQL initialized successfully.');
+    } catch (err) {
+        console.error('Error initializing PG DB:', err);
+        throw err; // Propagate to server.js
+    }
 }
 
 function initSqliteDb() {

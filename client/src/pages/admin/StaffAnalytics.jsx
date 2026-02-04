@@ -42,7 +42,7 @@ const StaffAnalytics = () => {
                 .filter(Boolean)
                 .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
                 .join(' ');
-            merged[key] = (merged[key] || 0) + (r.count || 0);
+            merged[key] = (merged[key] || 0) + parseInt(r.count || 0, 10);
         });
         return Object.entries(merged).map(([rank, count]) => ({ rank, count }));
     }, [stats.staffByRank]);
