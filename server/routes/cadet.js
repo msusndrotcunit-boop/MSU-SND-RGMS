@@ -1,17 +1,13 @@
 const express = require('express');
-const multer = require('multer');
+const { upload } = require('../utils/cloudinary');
+// const multer = require('multer'); // Removed local multer
 const path = require('path');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Multer Config
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // Limit 5MB
-});
+// Multer Config Removed (Handled in utils/cloudinary)
 
 router.use(authenticateToken);
 
@@ -189,8 +185,9 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
 
             if (req.file) {
                 sql += `, profile_pic=?`;
-                const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-                params.push(base64Image);
+                // Use Cloudinary URL if available, otherwise fallback (though middleware ensures it's uploaded)
+                const imageUrl = req.file.path; 
+                params.push(imageUrl);
             }
     
             // Set completion status if requested
@@ -224,13 +221,13 @@ router.put('/profile', upload.single('profilePic'), (req, res) => {
                         
                         res.json({ 
                             message: 'Profile updated successfully', 
-                            profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
+                            profilePic: req.file ? req.file.path : null 
                         });
                     });
                 } else {
                     res.json({ 
                         message: 'Profile updated successfully', 
-                        profilePic: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null 
+                        profilePic: req.file ? req.file.path : null 
                     });
                 }
             });

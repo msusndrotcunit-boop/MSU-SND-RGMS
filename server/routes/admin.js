@@ -975,7 +975,7 @@ router.get('/cadets', (req, res) => {
             FROM cadets c
             JOIN users u ON u.cadet_id = c.id
             LEFT JOIN grades g ON c.id = g.cadet_id
-            WHERE u.is_approved = 1
+            WHERE u.is_approved = 1 AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
         `;
         db.all(sql, [], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
@@ -1418,6 +1418,113 @@ router.get('/online-users', (req, res) => {
     db.get(sql, [fiveMinutesAgo], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ count: row.count || 0 });
+    });
+});
+
+// --- Backup & Archiving ---
+
+// 1. Download Full Database Backup (JSON)
+router.get('/backup/download', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const backup = {
+            timestamp: new Date().toISOString(),
+            data: {}
+        };
+        
+        const tables = [
+            'cadets', 'users', 'grades', 'activities', 'merit_demerit_logs', 
+            'training_days', 'attendance_records', 'training_staff', 'staff_attendance_records',
+            'notifications', 'staff_messages'
+        ];
+        
+        // Fetch all tables sequentially
+        for (const table of tables) {
+            backup.data[table] = await new Promise((resolve, reject) => {
+                db.all(`SELECT * FROM ${table}`, [], (err, rows) => {
+                    if (err) resolve([]); // Ignore errors (e.g. table missing)
+                    else resolve(rows);
+                });
+            });
+        }
+        
+        const fileName = `rotc-backup-${new Date().toISOString().split('T')[0]}.json`;
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(backup, null, 2));
+    } catch (err) {
+        console.error("Backup error:", err);
+        res.status(500).json({ message: 'Backup failed: ' + err.message });
+    }
+});
+
+// 2. Archive Cadets
+router.post('/cadets/archive', authenticateToken, isAdmin, (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid IDs' });
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE cadets SET is_archived = TRUE WHERE id IN (${placeholders})`, ids, function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: `Archived ${this.changes} cadets` });
+    });
+});
+
+// 3. Restore Cadets
+router.post('/cadets/restore', authenticateToken, isAdmin, (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid IDs' });
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE cadets SET is_archived = FALSE WHERE id IN (${placeholders})`, ids, function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: `Restored ${this.changes} cadets` });
+    });
+});
+
+// 4. Get Archived Cadets
+router.get('/cadets/archived', authenticateToken, isAdmin, (req, res) => {
+    const sql = `
+        SELECT c.*, u.username
+        FROM cadets c
+        LEFT JOIN users u ON u.cadet_id = c.id
+        WHERE c.is_archived = TRUE
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// 5. Archive Staff
+router.post('/staff/archive', authenticateToken, isAdmin, (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid IDs' });
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE training_staff SET is_archived = TRUE WHERE id IN (${placeholders})`, ids, function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: `Archived ${this.changes} staff` });
+    });
+});
+
+// 6. Restore Staff
+router.post('/staff/restore', authenticateToken, isAdmin, (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid IDs' });
+
+    const placeholders = ids.map(() => '?').join(',');
+    db.run(`UPDATE training_staff SET is_archived = FALSE WHERE id IN (${placeholders})`, ids, function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: `Restored ${this.changes} staff` });
+    });
+});
+
+// 7. Get Archived Staff
+router.get('/staff/archived', authenticateToken, isAdmin, (req, res) => {
+    const sql = `SELECT * FROM training_staff WHERE is_archived = TRUE`;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
     });
 });
 

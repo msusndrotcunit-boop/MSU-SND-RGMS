@@ -3,31 +3,11 @@ const router = express.Router();
 const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken } = require('../middleware/auth');
-const multer = require('multer');
+const { upload } = require('../utils/cloudinary');
 const path = require('path');
 const webpush = require('web-push');
 
-// Configure Multer for image upload
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, 'staff-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|gif|webp/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        if (mimetype && extname) return cb(null, true);
-        cb(new Error('Only images are allowed (jpeg, jpg, png, gif, webp)'));
-    }
-});
+// Multer (local disk storage) removed in favor of Cloudinary
 
 // Middleware to check if admin
 const isAdmin = (req, res, next) => {
@@ -117,6 +97,7 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
         SELECT s.*, u.username 
         FROM training_staff s 
         LEFT JOIN users u ON u.staff_id = s.id 
+        WHERE s.is_archived IS FALSE OR s.is_archived IS NULL
         ORDER BY s.last_name ASC
     `;
     db.all(sql, [], (err, rows) => {
@@ -130,7 +111,8 @@ router.post('/profile/photo', authenticateToken, upload.single('image'), (req, r
     if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const filePath = `/uploads/${req.file.filename}`;
+    // Cloudinary returns the URL in req.file.path
+    const filePath = req.file.path;
 
     // Update both training_staff and users table
     db.run("UPDATE training_staff SET profile_pic = ? WHERE id = ?", [filePath, req.user.staffId], (err) => {

@@ -175,7 +175,8 @@ async function initPgDb() {
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
-            is_profile_completed BOOLEAN DEFAULT FALSE
+            is_profile_completed BOOLEAN DEFAULT FALSE,
+            is_archived BOOLEAN DEFAULT FALSE
         )`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -275,7 +276,8 @@ async function initPgDb() {
             mobilization_center TEXT,
             is_profile_completed BOOLEAN DEFAULT FALSE,
             has_seen_guide BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_archived BOOLEAN DEFAULT FALSE
         )`,
         `CREATE TABLE IF NOT EXISTS staff_attendance_records (
             id SERIAL PRIMARY KEY,
@@ -372,7 +374,9 @@ async function initPgDb() {
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_profile_completed BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS has_seen_guide BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP`,
-            `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`
         ];
 
         for (const query of simpleMigrations) {

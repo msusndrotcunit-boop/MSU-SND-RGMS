@@ -16,6 +16,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      manifestFilename: 'manifest.json',
       devOptions: {
         enabled: true,
         type: 'module',
@@ -25,16 +26,22 @@ export default defineConfig({
         short_name: 'ROTC GSMS',
         description: 'ROTC Grading and Management System',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
         icons: [
           {
             src: 'pwa-192x192.webp',
             sizes: '192x192',
-            type: 'image/webp'
+            type: 'image/webp',
+            purpose: 'any maskable'
           },
           {
             src: 'pwa-512x512.webp',
             sizes: '512x512',
-            type: 'image/webp'
+            type: 'image/webp',
+            purpose: 'any maskable'
           }
         ]
       },

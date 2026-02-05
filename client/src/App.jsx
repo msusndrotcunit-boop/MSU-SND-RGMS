@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import ReloadPrompt from './components/ReloadPrompt';
+import { Toaster } from 'react-hot-toast';
 
 // Lazy Load Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -51,6 +53,8 @@ function App() {
       <Router>
         <AuthProvider>
           <SettingsProvider>
+            <Toaster position="top-center" />
+            <ReloadPrompt />
             <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes */}
