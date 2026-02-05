@@ -5,6 +5,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import ReloadPrompt from './components/ReloadPrompt';
+import KeepAlive from './components/KeepAlive';
 import { Toaster } from 'react-hot-toast';
 
 // Lazy Load Pages
@@ -55,6 +56,7 @@ function App() {
           <SettingsProvider>
             <Toaster position="top-center" />
             <ReloadPrompt />
+            <KeepAlive />
             <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes */}

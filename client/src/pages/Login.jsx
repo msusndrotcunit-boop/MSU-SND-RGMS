@@ -94,13 +94,13 @@ const Login = () => {
 
             <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
                 {/* Header Section */}
-                <div className="bg-green-900 p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
-                    <div className="w-24 h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
-                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-2" />
+                <div className="bg-green-900 p-6 md:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
+                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-1.5 md:translate-y-2" />
                     </div>
-                    <h2 className="text-4xl font-extrabold text-white tracking-widest mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
-                    <h1 className="text-lg font-bold text-white tracking-wider leading-tight">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
-                    <p className="text-gray-300 text-xs mt-1 uppercase tracking-wide font-medium">
+                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
                         integrated with Training Staff Attendance System
                     </p>
                 </div>
