@@ -678,7 +678,7 @@ function seedDefaultCadet() {
             try {
                 const hashedPassword = await bcrypt.hash(password, 10);
 
-                db.run("INSERT INTO cadets (first_name, last_name, rank, company, platoon, status) VALUES ('Default', 'Cadet', 'Cdt', 'Alpha', '1', 'Active')", [], function(err) {
+                db.run("INSERT INTO cadets (first_name, last_name, rank, company, platoon, status, student_id) VALUES ('Default', 'Cadet', 'Cdt', 'Alpha', '1', 'Active', 'DEFAULT-001')", [], function(err) {
                     if (err) {
                         console.error('Error inserting default cadet profile:', err);
                         return;
