@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 
 const StaffDashboard = () => {
     const [attendanceLogs, setAttendanceLogs] = useState([]);
@@ -9,10 +10,35 @@ const StaffDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Try cache first
+                const cached = await getSingleton('dashboard', 'staff_history');
+                if (cached) {
+                     let data = cached;
+                     let timestamp = 0;
+                     if (cached.data && cached.timestamp) {
+                         data = cached.data;
+                         timestamp = cached.timestamp;
+                     }
+                     
+                     setAttendanceLogs(data);
+                     setLoading(false);
+                     
+                     // If fresh (< 5 mins), skip fetch
+                     if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                         return;
+                     }
+                }
+
                 const attendanceRes = await axios.get('/api/attendance/my-history/staff');
                 setAttendanceLogs(attendanceRes.data);
+                
+                await cacheSingleton('dashboard', 'staff_history', {
+                    data: attendanceRes.data,
+                    timestamp: Date.now()
+                });
             } catch (err) {
                 console.error("Fetch error:", err);
+                // If we have data from cache, suppress error for user
             } finally {
                 setLoading(false);
             }

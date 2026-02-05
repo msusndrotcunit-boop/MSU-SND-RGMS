@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { User, ShieldCheck, Briefcase } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Smartphone, ShieldCheck, Briefcase, HelpCircle } from 'lucide-react';
 import rgmsLogo from '../assets/rgms_logo.webp';
 
 const Login = () => {
     const [loginType, setLoginType] = useState('cadet'); // 'cadet', 'staff', 'admin'
-    const [formData, setFormData] = useState({ username: '', password: '', identifier: '', email: '' });
+    const [formData, setFormData] = useState({ username: '', password: '', identifier: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
@@ -34,7 +36,6 @@ const Login = () => {
             }
 
             const data = response.data;
-            // Construct user object consistent with what AuthContext expects
             const user = {
                 token: data.token,
                 role: data.role,
@@ -50,7 +51,6 @@ const Login = () => {
             } else if (user.role === 'training_staff') {
                 navigate('/staff/dashboard');
             } else if (user.role === 'cadet') {
-                // Check if profile is completed (0 or false means incomplete)
                 if (!user.isProfileCompleted) {
                     navigate('/cadet/profile');
                 } else {
@@ -61,126 +61,208 @@ const Login = () => {
             }
         } catch (err) {
             console.error("Login error:", err);
-            const status = err.response?.status || 'Network Error';
-            const url = err.config?.url || 'unknown URL';
             const serverMsg = err.response?.data?.message;
-            
-            setError(serverMsg || `Login failed. (${status}) at ${url}`);
+            setError(serverMsg || `Login failed. Please check your credentials.`);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleHelpClick = (type) => {
+        if (type === 'access') {
+            toast('Please contact your Platoon Leader or the ROTC Office to get your account credentials.', {
+                icon: 'ℹ️',
+                duration: 4000
+            });
+        } else if (type === 'mobile') {
+            toast('The mobile app is currently under development. Please check back later!', {
+                icon: '📱',
+                duration: 4000
+            });
+        }
+    };
+
     return (
-        <div className="flex items-center justify-center min-h-screen bg-cover bg-center relative" style={{ backgroundImage: `url(${rgmsLogo})`, backgroundBlendMode: 'overlay', backgroundColor: 'rgba(20, 83, 45, 0.9)' }}>
-            <div className="bg-white/90 backdrop-blur-md p-8 rounded-lg shadow-2xl w-full max-w-md border border-green-700/30 relative z-10">
-                <div className="flex justify-center items-center mb-6">
-                    <img src={rgmsLogo} alt="RGMS Logo" className="w-32 h-32 object-contain" />
+        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
+            {/* Background Overlay */}
+            <div className="absolute inset-0 z-0 opacity-20" style={{ 
+                backgroundImage: `url(${rgmsLogo})`, 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center',
+                filter: 'blur(8px)'
+            }}></div>
+
+            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
+                {/* Header Section */}
+                <div className="bg-green-900 p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
+                    <div className="w-24 h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-2" />
+                    </div>
+                    <h2 className="text-4xl font-extrabold text-white tracking-widest mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-lg font-bold text-white tracking-wider leading-tight">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-xs mt-1 uppercase tracking-wide font-medium">
+                        integrated with Training Staff Attendance System
+                    </p>
                 </div>
 
-                <h2 className="text-2xl font-bold mb-6 text-center text-green-900">MSU-SND ROTC UNIT Grading Management</h2>
-                
-                <div className="flex mb-6 bg-gray-200 rounded p-1">
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => { setLoginType('cadet'); setError(''); }}
-                    >
-                        <User size={18} className="mr-2" />
-                        Cadet
-                    </button>
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => { setLoginType('staff'); setError(''); }}
-                    >
-                        <Briefcase size={18} className="mr-2" />
-                        Staff
-                    </button>
-                    <button
-                        className={`flex-1 flex items-center justify-center py-2 rounded text-sm font-semibold transition ${loginType === 'admin' ? 'bg-white shadow text-green-800' : 'text-gray-600 hover:text-green-800'}`}
-                        onClick={() => { setLoginType('admin'); setError(''); }}
-                    >
-                        <ShieldCheck size={18} className="mr-2" />
-                        Admin
-                    </button>
-                </div>
+                {/* Body Section */}
+                <div className="p-8 pt-6">
+                    {/* Role Selector */}
+                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
+                        <button
+                            onClick={() => { setLoginType('cadet'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <User size={14} /> Cadet
+                        </button>
+                        <button
+                            onClick={() => { setLoginType('staff'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <Briefcase size={14} /> Staff
+                        </button>
+                        <button
+                            onClick={() => { setLoginType('admin'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <ShieldCheck size={14} /> Admin
+                        </button>
+                    </div>
 
-                {error && <p className="text-red-500 mb-4 text-center text-sm font-semibold bg-red-50 p-2 rounded border border-red-200">{error}</p>}
-                
-                <form onSubmit={handleSubmit} className="animate-fade-in">
-                    {loginType === 'cadet' && (
-                        <div className="mb-6">
-                            <label className="block text-gray-700 font-semibold mb-2">Username or Email Address</label>
-                            <input
-                                type="text"
-                                name="identifier"
-                                placeholder="Enter your Username or Email"
-                                className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
-                                value={formData.identifier}
-                                onChange={handleChange}
-                                required
-                            />
-                            <p className="text-xs text-gray-500 mt-2 italic">
-                                Note: You must be included in the official ROTCMIS list to login. No password required.
-                            </p>
+                    {error && (
+                        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded">
+                            {error}
                         </div>
                     )}
 
-                    {loginType === 'staff' && (
-                        <div className="mb-6">
-                            <label className="block text-gray-700 font-semibold mb-2">Username or Email</label>
-                            <input
-                                type="text"
-                                name="identifier"
-                                placeholder="Enter your Username or Email"
-                                className="w-full border-gray-300 rounded px-3 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent bg-white shadow-inner"
-                                value={formData.identifier}
-                                onChange={handleChange}
-                                required
-                            />
-                            <p className="text-xs text-gray-500 mt-2 italic">
-                                Note: Training Staff login. No password required.
-                            </p>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Input Fields */}
+                        {(loginType === 'cadet' || loginType === 'staff') && (
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Username or Email
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <User size={18} className="text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="identifier"
+                                        value={formData.identifier}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                        placeholder={loginType === 'cadet' ? "Enter Student ID or Email" : "Enter Staff Username"}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {loginType === 'admin' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                        Username
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <User size={18} className="text-gray-400" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            value={formData.username}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            placeholder="Enter Admin Username"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                        Password
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Lock size={18} className="text-gray-400" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            placeholder="••••••••"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Extras: Remember Me / Forgot Password */}
+                        <div className="flex items-center justify-between text-sm">
+                            <label className="flex items-center text-gray-600 cursor-pointer">
+                                <input type="checkbox" className="form-checkbox h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500" />
+                                <span className="ml-2">Remember me</span>
+                            </label>
+                            <button type="button" className="text-green-600 hover:text-green-800 font-medium">
+                                Forgot Email/Username?
+                            </button>
                         </div>
-                    )}
 
-                    {loginType === 'admin' && (
-                        <>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 font-semibold mb-1 text-sm">Username</label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 font-semibold mb-1 text-sm">Password</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    className="w-full border-gray-300 rounded px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                        </>
-                    )}
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-75 cursor-wait' : ''}`}
+                        >
+                            {loading ? (
+                                <span>Authenticating...</span>
+                            ) : (
+                                <>
+                                    Sign In
+                                </>
+                            )}
+                        </button>
+                    </form>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className={`w-full bg-green-800 text-white py-3 rounded font-bold uppercase tracking-wider hover:bg-green-900 transition shadow-lg ${loading ? 'opacity-70 cursor-wait' : ''}`}
-                    >
-                        {loading ? 'Authenticating...' : (loginType === 'admin' ? 'Login as Admin' : 'Access Portal')}
-                    </button>
-                </form>
-
-                <div className="absolute bottom-4 text-green-100/40 text-xs left-0 right-0 text-center">
-                    &copy; 2026 MSU-SND ROTC UNIT
+                    {/* New Footer Links */}
+                    <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
+                        <button 
+                            type="button"
+                            onClick={() => handleHelpClick('access')}
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                        >
+                            <HelpCircle size={16} className="text-gray-400 group-hover:text-green-600" />
+                            How to access the app
+                        </button>
+                        
+                        <button 
+                            type="button"
+                            onClick={() => handleHelpClick('mobile')}
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                        >
+                            <Smartphone size={16} className="text-gray-400 group-hover:text-green-600" />
+                            How to download it in mobile
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

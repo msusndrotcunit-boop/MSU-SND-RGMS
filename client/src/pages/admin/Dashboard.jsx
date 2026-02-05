@@ -26,35 +26,66 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
+                let shouldFetchAnalytics = true;
+                
                 try {
                     const cachedActivities = await getCachedData('activities');
-                    const cachedAnalytics = await getSingleton('analytics', 'dashboard');
+                    const cachedAnalyticsWrapper = await getSingleton('analytics', 'dashboard');
                     
                     if (cachedActivities?.length) {
                         setStats(s => ({ ...s, totalActivities: cachedActivities.length }));
                     }
-                    if (cachedAnalytics) {
+
+                    if (cachedAnalyticsWrapper) {
+                        let analyticsData = cachedAnalyticsWrapper;
+                        let timestamp = 0;
+
+                        // Check for new format { data, timestamp }
+                        if (cachedAnalyticsWrapper.data && cachedAnalyticsWrapper.timestamp) {
+                            analyticsData = cachedAnalyticsWrapper.data;
+                            timestamp = cachedAnalyticsWrapper.timestamp;
+                        }
+
                         const gradeDataCached = [
-                            { name: 'Passed', value: cachedAnalytics.grades.passed },
-                            { name: 'Failed', value: cachedAnalytics.grades.failed },
-                            { name: 'Incomplete', value: cachedAnalytics.grades.incomplete }
+                            { name: 'Passed', value: analyticsData.grades.passed },
+                            { name: 'Failed', value: analyticsData.grades.failed },
+                            { name: 'Incomplete', value: analyticsData.grades.incomplete }
                         ].filter(item => item.value > 0);
+                        
                         setAnalytics({
-                            attendance: cachedAnalytics.attendance || [],
+                            attendance: analyticsData.attendance || [],
                             grades: gradeDataCached,
-                            demographics: cachedAnalytics.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
+                            demographics: analyticsData.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
                         });
-                        if (cachedAnalytics.demographics?.totalCadets) {
-                            setStats(s => ({ ...s, totalCadets: cachedAnalytics.demographics.totalCadets }));
+                        
+                        if (analyticsData.demographics?.totalCadets) {
+                            setStats(s => ({ ...s, totalCadets: analyticsData.demographics.totalCadets }));
+                        }
+
+                        // If fresh (< 5 mins), skip fetch
+                        if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                            shouldFetchAnalytics = false;
                         }
                     }
-                } catch {}
+                } catch (e) {
+                    console.warn("Cache read error", e);
+                }
                 
-                const [activitiesRes, analyticsRes, onlineRes] = await Promise.allSettled([
+                const promises = [
                     axios.get('/api/cadet/activities'),
-                    axios.get('/api/admin/analytics'),
                     axios.get('/api/admin/online-users')
-                ]);
+                ];
+
+                if (shouldFetchAnalytics) {
+                    promises.push(axios.get('/api/admin/analytics'));
+                }
+
+                const results = await Promise.allSettled(promises);
+                
+                // Map results back to variables
+                const activitiesRes = results[0];
+                const onlineRes = results[1];
+                const analyticsRes = shouldFetchAnalytics ? results[2] : null;
 
                 if (activitiesRes.status === 'fulfilled') {
                     setStats(s => ({ ...s, totalActivities: activitiesRes.value.data.length }));
@@ -64,7 +95,7 @@ const Dashboard = () => {
                     setOnlineCount(onlineRes.value.data.count);
                 }
 
-                if (analyticsRes.status === 'fulfilled') {
+                if (analyticsRes && analyticsRes.status === 'fulfilled') {
                     const analyticsData = analyticsRes.value.data;
                     const gradeData = [
                         { name: 'Passed', value: analyticsData.grades.passed },
@@ -82,7 +113,7 @@ const Dashboard = () => {
                         setStats(s => ({ ...s, totalCadets: analyticsData.demographics.totalCadets }));
                     }
 
-                    await cacheSingleton('analytics', 'dashboard', analyticsData);
+                    await cacheSingleton('analytics', 'dashboard', { data: analyticsData, timestamp: Date.now() });
                 }
 
             } catch (err) {

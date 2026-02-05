@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { cacheData, getCachedData } from '../../utils/db';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 import { toast } from 'react-hot-toast';
 import { 
     RANK_OPTIONS, 
@@ -81,7 +81,7 @@ const Cadets = () => {
         try {
             const res = await axios.post('/api/admin/sync-cadets');
             toast.success(res.data.message);
-            fetchCadets();
+            fetchCadets(true);
         } catch (err) {
             console.error("Sync failed", err);
             toast.error(err.response?.data?.message || 'Sync failed');
@@ -90,22 +90,47 @@ const Cadets = () => {
         }
     };
 
-    const fetchCadets = async () => {
-        try {
-            const cachedCadets = await getCachedData('cadets');
-            if (cachedCadets && cachedCadets.length > 0) {
-                setCadets(cachedCadets);
-                setLoading(false);
+    const fetchCadets = async (forceRefresh = false) => {
+        if (!forceRefresh) {
+            try {
+                const cached = await getSingleton('admin', 'cadets_list');
+                if (cached) {
+                    // Handle both new { data, timestamp } and old formats
+                    let data = cached;
+                    let timestamp = 0;
+                    
+                    if (cached.data && cached.timestamp) {
+                        data = cached.data;
+                        timestamp = cached.timestamp;
+                    } else if (Array.isArray(cached)) {
+                        // Handle legacy array format
+                        data = cached;
+                    }
+                    
+                    if (Array.isArray(data)) {
+                        setCadets(data);
+                        setLoading(false);
+                        
+                        // If fresh (< 2 mins), skip fetch
+                        if (timestamp && (Date.now() - timestamp < 2 * 60 * 1000)) {
+                            return;
+                        }
+                    }
+                }
+            } catch (cacheErr) {
+                console.warn("Failed to load from cache", cacheErr);
             }
-        } catch (cacheErr) {
-            console.warn("Failed to load from cache", cacheErr);
         }
 
         try {
             const res = await axios.get('/api/admin/cadets');
             setCadets(res.data);
-            await cacheData('cadets', res.data);
             setLoading(false);
+            
+            await cacheSingleton('admin', 'cadets_list', {
+                data: res.data,
+                timestamp: Date.now()
+            });
         } catch (err) {
             console.error("Network request failed", err);
             setLoading(false);
@@ -190,7 +215,7 @@ const Cadets = () => {
         e.preventDefault();
         try {
             await axios.put(`/api/admin/cadets/${currentCadet.id}`, editForm);
-            fetchCadets();
+            fetchCadets(true);
             setIsEditModalOpen(false);
         } catch (err) {
             alert('Error updating cadet');
@@ -225,7 +250,7 @@ const Cadets = () => {
             setIsImportModalOpen(false);
             setImportFile(null);
             setImportUrl('');
-            fetchCadets();
+            fetchCadets(true);
             fetchSettings();
         } catch (err) {
             console.error(err);
@@ -256,7 +281,7 @@ const Cadets = () => {
             await axios.post('/api/admin/cadets', addForm);
             toast.success('Cadet added successfully');
             setIsAddModalOpen(false);
-            fetchCadets();
+            fetchCadets(true);
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',

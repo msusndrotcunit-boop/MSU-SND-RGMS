@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
 
 const TrainingStaffManagement = () => {
@@ -107,7 +108,7 @@ const TrainingStaffManagement = () => {
         e.preventDefault();
         try {
             await axios.put(`/api/staff/${currentStaff.id}`, editForm);
-            fetchStaff();
+            fetchStaff(true);
             setIsEditModalOpen(false);
             toast.success('Staff updated successfully');
         } catch (err) {

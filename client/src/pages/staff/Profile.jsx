@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 
 // Dropdown Options
 const UNIT_OPTIONS = ["MSU-SND ROTC UNIT"];
@@ -95,11 +96,40 @@ const StaffProfile = () => {
 
     const fetchProfile = async () => {
         try {
+            // Try cache first
+            const cached = await getSingleton('profiles', 'staff');
+            if (cached) {
+                // Handle both new { data, timestamp } and old formats
+                let data = cached;
+                let timestamp = 0;
+                
+                if (cached.data && cached.timestamp) {
+                    data = cached.data;
+                    timestamp = cached.timestamp;
+                }
+                
+                setProfile(data);
+                setFormData(data);
+                generateQRCode(data);
+                setLoading(false);
+
+                // If cache is fresh (< 5 mins), skip fetch
+                if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                    return;
+                }
+            }
+
             const res = await axios.get('/api/staff/me');
             setProfile(res.data);
             setFormData(res.data);
             generateQRCode(res.data);
             setLoading(false);
+            
+            // Update cache with timestamp
+            await cacheSingleton('profiles', 'staff', {
+                data: res.data,
+                timestamp: Date.now()
+            });
             
             // Check if profile is incomplete, if so, enable editing automatically
             if (!res.data.is_profile_completed) {
@@ -108,8 +138,11 @@ const StaffProfile = () => {
             }
         } catch (err) {
             console.error('Error fetching profile:', err);
-            setError('Failed to load profile data.');
-            setLoading(false);
+            // If we have cached data, don't show error, just rely on cache
+            if (!profile) {
+                setError('Failed to load profile data.');
+                setLoading(false);
+            }
         }
     };
 
@@ -206,7 +239,15 @@ const StaffProfile = () => {
                     navigate('/login');
                 }, 3000);
             } else {
-                setProfile(prev => ({ ...prev, ...formData }));
+                const updatedData = { ...profile, ...formData };
+                setProfile(updatedData);
+                
+                // Update cache
+                await cacheSingleton('profiles', 'staff', {
+                    data: updatedData,
+                    timestamp: Date.now()
+                });
+                
                 setIsEditing(false);
                 toast.success('Profile updated successfully');
             }
@@ -236,8 +277,15 @@ const StaffProfile = () => {
             toast.success('Profile picture updated');
             
             // Update profile with new image path
-            setProfile(prev => ({ ...prev, profile_pic: res.data.filePath }));
+            const updatedProfile = { ...profile, profile_pic: res.data.filePath };
+            setProfile(updatedProfile);
             setFormData(prev => ({ ...prev, profile_pic: res.data.filePath }));
+            
+            // Update cache
+            await cacheSingleton('profiles', 'staff', {
+                data: updatedProfile,
+                timestamp: Date.now()
+            });
             
         } catch (err) {
             console.error('Error uploading image:', err);

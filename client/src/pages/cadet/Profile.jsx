@@ -68,9 +68,22 @@ const Profile = () => {
             try {
                 const cached = await getSingleton('profiles', 'cadet');
                 if (cached) {
-                    const data = cached;
+                    // Handle both new { data, timestamp } and old (direct data) formats
+                    let data = cached;
+                    let timestamp = 0;
+                    
+                    if (cached.data && cached.timestamp) {
+                        data = cached.data;
+                        timestamp = cached.timestamp;
+                    }
+
                     updateProfileState(data);
                     setLoading(false);
+                    
+                    // If cache is less than 5 minutes old, don't fetch fresh
+                    if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                        return;
+                    }
                 }
             } catch {}
             
@@ -79,7 +92,7 @@ const Profile = () => {
             const data = res.data;
             updateProfileState(data);
             
-            await cacheSingleton('profiles', 'cadet', data);
+            await cacheSingleton('profiles', 'cadet', { data, timestamp: Date.now() });
             setLoading(false);
         } catch (err) {
             console.error(err);

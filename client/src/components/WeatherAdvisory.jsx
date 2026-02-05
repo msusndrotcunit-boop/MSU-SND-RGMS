@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Cloud, Sun, CloudRain, Wind, Thermometer, MapPin } from 'lucide-react';
+import { cacheSingleton, getSingleton } from '../utils/db';
 
 const WeatherAdvisory = () => {
     const [weather, setWeather] = useState(null);
@@ -12,66 +13,97 @@ const WeatherAdvisory = () => {
     // Default Coordinates for Sultan Naga Dimaporo, Lanao del Norte (MSU-SND)
     const DEFAULT_LAT = 7.808;
     const DEFAULT_LON = 123.736;
+    const CACHE_KEY = 'weather_data';
+    const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
     useEffect(() => {
-        const fetchWeather = async (lat, lon) => {
+        const loadWeather = async () => {
             try {
-                const response = await axios.get(
-                    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
-                );
-                setWeather(response.data);
-                setLoading(false);
-            } catch (err) {
-                console.error("Error fetching weather:", err);
-                setError("Unable to load weather data.");
-                setLoading(false);
-            }
-        };
-
-        const fetchLocationName = async (lat, lon) => {
-            try {
-                // Using OpenStreetMap Nominatim for reverse geocoding
-                const response = await axios.get(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-                );
-                if (response.data && response.data.address) {
-                    const { city, town, village, municipality, county, state } = response.data.address;
-                    const specificLoc = city || town || village || municipality || county;
-                    const broadLoc = state;
-                    if (specificLoc) {
-                        setLocationName(`${specificLoc}${broadLoc ? `, ${broadLoc}` : ''}`);
-                    }
+                // Try cache first
+                const cached = await getSingleton('analytics', CACHE_KEY);
+                if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                    setWeather(cached.data);
+                    setLocationName(cached.locationName);
+                    setIsUsingCurrentLocation(cached.isUsingCurrentLocation);
+                    setLoading(false);
+                    return;
                 }
-            } catch (err) {
-                console.warn("Error fetching location name:", err);
-                // Keep default or previous name
+            } catch (e) {
+                console.warn("Weather cache read error", e);
             }
+
+            getLocation();
         };
 
-        const getLocation = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const { latitude, longitude } = position.coords;
-                        setLocationName('Current Location'); // Temporary while fetching
-                        setIsUsingCurrentLocation(true);
-                        fetchWeather(latitude, longitude);
-                        fetchLocationName(latitude, longitude);
-                    },
-                    (error) => {
-                        console.warn("Geolocation permission denied or error:", error);
-                        // Fallback to default
-                        fetchWeather(DEFAULT_LAT, DEFAULT_LON);
-                    }
-                );
-            } else {
-                // Fallback if geolocation is not supported
-                fetchWeather(DEFAULT_LAT, DEFAULT_LON);
-            }
-        };
-
-        getLocation();
+        loadWeather();
     }, []);
+
+    const fetchWeather = async (lat, lon, locName, isCurrentLoc) => {
+        try {
+            const response = await axios.get(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
+            );
+            
+            const weatherData = response.data;
+            setWeather(weatherData);
+            setLoading(false);
+
+            // Cache the result
+            await cacheSingleton('analytics', CACHE_KEY, {
+                data: weatherData,
+                locationName: locName,
+                isUsingCurrentLocation: isCurrentLoc,
+                timestamp: Date.now()
+            });
+
+        } catch (err) {
+            console.error("Error fetching weather:", err);
+            setError("Unable to load weather data.");
+            setLoading(false);
+        }
+    };
+
+    const fetchLocationName = async (lat, lon) => {
+        try {
+            // Using OpenStreetMap Nominatim for reverse geocoding
+            const response = await axios.get(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+            );
+            if (response.data && response.data.address) {
+                const { city, town, village, municipality, county, state } = response.data.address;
+                const specificLoc = city || town || village || municipality || county;
+                const broadLoc = state;
+                if (specificLoc) {
+                    return `${specificLoc}${broadLoc ? `, ${broadLoc}` : ''}`;
+                }
+            }
+        } catch (err) {
+            console.warn("Error fetching location name:", err);
+        }
+        return 'Sultan Naga Dimaporo'; // Fallback or previous default
+    };
+
+    const getLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setIsUsingCurrentLocation(true);
+                    const locName = await fetchLocationName(latitude, longitude);
+                    setLocationName(locName);
+                    fetchWeather(latitude, longitude, locName, true);
+                },
+                (error) => {
+                    console.warn("Geolocation permission denied or error:", error);
+                    // Fallback to default
+                    fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'Sultan Naga Dimaporo', false);
+                }
+            );
+        } else {
+            // Fallback if geolocation is not supported
+            fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'Sultan Naga Dimaporo', false);
+        }
+    };
 
     const getWeatherIcon = (code) => {
         // WMO Weather interpretation codes (ww)
@@ -136,18 +168,18 @@ const WeatherAdvisory = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6 bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                <div className="flex items-center justify-around w-full md:w-auto gap-2 sm:gap-6 bg-white/10 p-3 rounded-lg backdrop-blur-sm">
                     <div className="text-center px-2">
                         <div className="flex items-center justify-center gap-1">
                             <Thermometer size={18} className="text-yellow-300" />
                             <span className="text-2xl font-bold">{current.temperature_2m}°C</span>
                         </div>
-                        <p className="text-xs text-blue-200 uppercase tracking-wider">Temperature</p>
+                        <p className="text-xs text-blue-200 uppercase tracking-wider">Temp</p>
                     </div>
                     
-                    <div className="w-px h-8 bg-blue-400/30 hidden sm:block"></div>
+                    <div className="w-px h-8 bg-blue-400/30"></div>
 
-                    <div className="text-center hidden sm:block px-2">
+                    <div className="text-center px-2">
                         <div className="flex items-center justify-center gap-1">
                             <Wind size={18} className="text-gray-300" />
                             <span className="text-xl font-semibold">{current.wind_speed_10m} <span className="text-xs">km/h</span></span>
@@ -155,9 +187,9 @@ const WeatherAdvisory = () => {
                         <p className="text-xs text-blue-200 uppercase tracking-wider">Wind</p>
                     </div>
 
-                    <div className="w-px h-8 bg-blue-400/30 hidden sm:block"></div>
+                    <div className="w-px h-8 bg-blue-400/30"></div>
 
-                    <div className="text-center hidden sm:block px-2">
+                    <div className="text-center px-2">
                         <div className="flex items-center justify-center gap-1">
                             <CloudRain size={18} className="text-blue-300" />
                             <span className="text-xl font-semibold">{current.relative_humidity_2m}%</span>

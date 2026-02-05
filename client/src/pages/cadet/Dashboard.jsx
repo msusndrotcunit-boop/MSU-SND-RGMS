@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, X, AlertCircle, User, Info, Link } from 'lucide-react';
 import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
-import { cacheData, getCachedData } from '../../utils/db';
+import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 
 const CadetDashboard = () => {
     const navigate = useNavigate();
@@ -17,35 +17,67 @@ const CadetDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                try {
-                    const cachedGrades = await getCachedData('grades');
-                    if (cachedGrades && cachedGrades.length > 0) setGrades(cachedGrades[0]);
-                } catch {}
-                try {
-                    const gradesRes = await axios.get('/api/cadet/my-grades');
-                    setGrades(gradesRes.data);
-                    await cacheData('grades', [gradesRes.data]);
-                } catch {}
+                // 1. Try Cache First & Render Immediately
+                let hasCachedData = false;
+                
+                const cachedGrades = await getSingleton('dashboard', 'cadet_grades');
+                if (cachedGrades) {
+                    setGrades(cachedGrades.data);
+                    hasCachedData = true;
+                }
 
-                try {
-                    const cachedLogs = await getCachedData('merit_demerit_logs');
-                    if (cachedLogs && cachedLogs.length > 0) setLogs(cachedLogs);
-                } catch {}
-                try {
-                    const logsRes = await axios.get('/api/cadet/my-merit-logs');
-                    setLogs(logsRes.data);
-                    await cacheData('merit_demerit_logs', logsRes.data);
-                } catch {}
+                const cachedLogs = await getSingleton('dashboard', 'cadet_logs');
+                if (cachedLogs) {
+                    setLogs(cachedLogs.data);
+                    hasCachedData = true;
+                }
 
-                try {
-                    const cachedAttendance = await getCachedData('attendance_records');
-                    if (cachedAttendance && cachedAttendance.length > 0) setAttendanceLogs(cachedAttendance);
-                } catch {}
-                try {
-                    const attendanceRes = await axios.get('/api/attendance/my-history');
-                    setAttendanceLogs(attendanceRes.data);
-                    await cacheData('attendance_records', attendanceRes.data);
-                } catch {}
+                const cachedAttendance = await getSingleton('dashboard', 'cadet_attendance');
+                if (cachedAttendance) {
+                    setAttendanceLogs(cachedAttendance.data);
+                    hasCachedData = true;
+                }
+
+                // If we have ANY cached data, stop loading spinner so user sees something
+                if (hasCachedData) {
+                    setLoading(false);
+                }
+
+                // 2. Background Fetch (Stale-While-Revalidate)
+                // Only fetch if cache is old (> 5 mins) or missing
+                const now = Date.now();
+                const CACHE_TTL = 5 * 60 * 1000;
+
+                const promises = [];
+
+                if (!cachedGrades || (now - cachedGrades.timestamp > CACHE_TTL)) {
+                    promises.push(
+                        axios.get('/api/cadet/my-grades').then(async res => {
+                            setGrades(res.data);
+                            await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: now });
+                        }).catch(e => console.warn("Grades fetch failed", e))
+                    );
+                }
+
+                if (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL)) {
+                    promises.push(
+                        axios.get('/api/cadet/my-merit-logs').then(async res => {
+                            setLogs(res.data);
+                            await cacheSingleton('dashboard', 'cadet_logs', { data: res.data, timestamp: now });
+                        }).catch(e => console.warn("Logs fetch failed", e))
+                    );
+                }
+
+                if (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL)) {
+                    promises.push(
+                        axios.get('/api/attendance/my-history').then(async res => {
+                            setAttendanceLogs(res.data);
+                            await cacheSingleton('dashboard', 'cadet_attendance', { data: res.data, timestamp: now });
+                        }).catch(e => console.warn("Attendance fetch failed", e))
+                    );
+                }
+
+                await Promise.allSettled(promises);
 
             } catch (err) {
                 console.error("General fetch error:", err);

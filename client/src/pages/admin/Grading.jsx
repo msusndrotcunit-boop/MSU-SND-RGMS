@@ -12,7 +12,7 @@ import {
     ChevronRight,
     ChevronDown
 } from 'lucide-react';
-import { cacheData, getCachedData } from '../../utils/db';
+import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 
 const Grading = () => {
     const [cadets, setCadets] = useState([]);
@@ -39,18 +39,28 @@ const Grading = () => {
         fetchCadets();
     }, []);
 
-    const fetchCadets = async () => {
+    const fetchCadets = async (forceRefresh = false) => {
         try {
-            try {
-                const cached = await getCachedData('cadets');
-                if (cached?.length) {
-                    setCadets(cached);
+            if (!forceRefresh) {
+                // Try cache first
+                const cached = await getSingleton('grading', 'cadets_list');
+                if (cached) {
+                    setCadets(cached.data);
                     setLoading(false);
+                    
+                    // If cache is fresh (< 2 mins), skip API
+                    if (cached.timestamp && (Date.now() - cached.timestamp < 2 * 60 * 1000)) {
+                        return;
+                    }
                 }
-            } catch {}
+            }
+
             const res = await axios.get('/api/admin/cadets');
             setCadets(res.data);
-            await cacheData('cadets', res.data);
+            await cacheSingleton('grading', 'cadets_list', {
+                data: res.data,
+                timestamp: Date.now()
+            });
             setLoading(false);
             
             // If a cadet is selected, update their data in the view
@@ -93,7 +103,7 @@ const Grading = () => {
 
             await axios.put(`/api/admin/grades/${selectedCadet.id}`, updateData);
             alert('Scores updated successfully');
-            fetchCadets(); // Refresh to see new computed grades
+            fetchCadets(true); // Force refresh
         } catch (err) {
             alert('Error updating scores');
         }
@@ -127,7 +137,7 @@ const Grading = () => {
                 ...ledgerForm
             });
             fetchLedgerLogs(selectedCadet.id);
-            fetchCadets(); // Update total points
+            fetchCadets(true); // Update total points
             setLedgerForm({ type: 'merit', points: 0, reason: '' });
         } catch (err) {
             alert('Error adding log');
@@ -139,7 +149,7 @@ const Grading = () => {
         try {
             await axios.delete(`/api/admin/merit-logs/${logId}`);
             fetchLedgerLogs(selectedCadet.id);
-            fetchCadets();
+            fetchCadets(true);
         } catch (err) {
             alert('Error deleting log');
         }

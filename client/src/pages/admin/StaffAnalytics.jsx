@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts';
 import { Users, UserCheck, UserX, Clock } from 'lucide-react';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6']; // Green, Red, Amber, Blue
 
@@ -19,12 +20,39 @@ const StaffAnalytics = () => {
 
     const fetchAnalytics = async () => {
         try {
+            // Try cache first
+            try {
+                const cached = await getSingleton('admin', 'staff_analytics');
+                if (cached) {
+                    let data = cached;
+                    let timestamp = 0;
+                    if (cached.data && cached.timestamp) {
+                        data = cached.data;
+                        timestamp = cached.timestamp;
+                    }
+                    
+                    setStats(data);
+                    setLoading(false);
+                    
+                    if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+
             const token = localStorage.getItem('token');
             const res = await axios.get('/api/staff/analytics/overview', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setStats(res.data);
             setLoading(false);
+            
+            await cacheSingleton('admin', 'staff_analytics', {
+                data: res.data,
+                timestamp: Date.now()
+            });
         } catch (err) {
             console.error("Error fetching analytics:", err);
             setLoading(false);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trash2, Plus, Calendar } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
-import { cacheData, getCachedData } from '../../utils/db';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 
 const Activities = () => {
     const [activities, setActivities] = useState([]);
@@ -13,22 +13,43 @@ const Activities = () => {
         fetchActivities();
     }, []);
 
-    const fetchActivities = async () => {
+    const fetchActivities = async (forceRefresh = false) => {
         // 1. Load from Cache first
-        try {
-            const cached = await getCachedData('activities');
-            if (cached && cached.length > 0) {
-                setActivities(cached);
+        if (!forceRefresh) {
+            try {
+                const cached = await getSingleton('admin', 'activities_list');
+                if (cached) {
+                    let data = cached;
+                    let timestamp = 0;
+                    
+                    if (cached.data && cached.timestamp) {
+                        data = cached.data;
+                        timestamp = cached.timestamp;
+                    } else if (Array.isArray(cached)) {
+                        data = cached;
+                    }
+
+                    if (Array.isArray(data)) {
+                        setActivities(data);
+                        // If fresh (< 5 mins), return
+                        if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                            return;
+                        }
+                    }
+                }
+            } catch (cacheErr) {
+                console.warn("Failed to load from cache", cacheErr);
             }
-        } catch (cacheErr) {
-            console.warn("Failed to load from cache", cacheErr);
         }
 
         // 2. Network Fetch
         try {
             const res = await axios.get('/api/cadet/activities');
             setActivities(res.data);
-            await cacheData('activities', res.data);
+            await cacheSingleton('admin', 'activities_list', {
+                data: res.data,
+                timestamp: Date.now()
+            });
         } catch (err) {
             console.error(err);
         }
@@ -65,7 +86,7 @@ const Activities = () => {
             await axios.post('/api/admin/activities', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            fetchActivities();
+            fetchActivities(true);
             setIsModalOpen(false);
             setForm({ title: '', description: '', date: '', image: null });
         } catch (err) {
@@ -77,7 +98,12 @@ const Activities = () => {
         if (!confirm('Delete this activity?')) return;
         try {
             await axios.delete(`/api/admin/activities/${id}`);
-            setActivities(activities.filter(a => a.id !== id));
+            const updated = activities.filter(a => a.id !== id);
+            setActivities(updated);
+            await cacheSingleton('admin', 'activities_list', {
+                data: updated,
+                timestamp: Date.now()
+            });
         } catch (err) {
             alert('Error deleting activity');
         }

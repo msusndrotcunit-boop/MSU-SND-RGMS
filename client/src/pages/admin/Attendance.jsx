@@ -35,18 +35,38 @@ const Attendance = () => {
         }
     }, [attendanceType]);
 
-    const fetchDays = async () => {
+    const fetchDays = async (forceRefresh = false) => {
         try {
-            try {
-                const cached = await getCachedData('training_days');
-                if (cached?.length) {
-                    setDays(cached);
-                    setLoading(false);
-                }
-            } catch {}
+            if (!forceRefresh) {
+                try {
+                    const cached = await getSingleton('admin', 'training_days');
+                    if (cached) {
+                        let data = cached;
+                        let timestamp = 0;
+                        if (cached.data && cached.timestamp) {
+                            data = cached.data;
+                            timestamp = cached.timestamp;
+                        } else if (Array.isArray(cached)) {
+                            data = cached;
+                        }
+
+                        if (Array.isArray(data)) {
+                            setDays(data);
+                            setLoading(false);
+                            if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                                return;
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
             const res = await axios.get('/api/attendance/days');
             setDays(res.data);
-            await cacheData('training_days', res.data);
+            await cacheSingleton('admin', 'training_days', {
+                data: res.data,
+                timestamp: Date.now()
+            });
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -78,15 +98,35 @@ const Attendance = () => {
         }
     };
 
-    const selectDay = async (day) => {
+    const selectDay = async (day, forceRefresh = false) => {
         setSelectedDay(day);
         setLoading(true);
         try {
             const cacheKey = `${day.id}_${attendanceType}`;
-            try {
-                const cached = await getSingleton('attendance_by_day', cacheKey);
-                if (cached?.length) setAttendanceRecords(cached);
-            } catch {}
+            
+            if (!forceRefresh) {
+                try {
+                    const cached = await getSingleton('attendance_by_day', cacheKey);
+                    if (cached) {
+                        let data = cached;
+                        let timestamp = 0;
+                        if (cached.data && cached.timestamp) {
+                            data = cached.data;
+                            timestamp = cached.timestamp;
+                        } else if (Array.isArray(cached)) {
+                            data = cached;
+                        }
+                        
+                        if (Array.isArray(data)) {
+                            setAttendanceRecords(data);
+                            if (timestamp && (Date.now() - timestamp < 60 * 1000)) { // 1 minute cache
+                                setLoading(false);
+                                return;
+                            }
+                        }
+                    }
+                } catch {}
+            }
             
             const endpoint = attendanceType === 'cadet' 
                 ? `/api/attendance/records/${day.id}`
@@ -94,7 +134,10 @@ const Attendance = () => {
 
             const res = await axios.get(endpoint);
             setAttendanceRecords(res.data);
-            await cacheSingleton('attendance_by_day', cacheKey, res.data);
+            await cacheSingleton('attendance_by_day', cacheKey, {
+                data: res.data,
+                timestamp: Date.now()
+            });
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -152,6 +195,15 @@ const Attendance = () => {
             (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, status: status } : r
         );
         setAttendanceRecords(updatedRecords);
+        
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
 
         try {
             const payload = {
@@ -175,6 +227,15 @@ const Attendance = () => {
             (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, remarks: remarks } : r
         );
         setAttendanceRecords(updatedRecords);
+
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
     };
     
     const saveRemark = async (id, remarks, status) => {
@@ -203,6 +264,15 @@ const Attendance = () => {
             return r;
         });
         setAttendanceRecords(updatedRecords);
+
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
     };
 
     const saveTime = async (id, field, value) => {
