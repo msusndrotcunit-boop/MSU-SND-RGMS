@@ -124,7 +124,7 @@ const Dashboard = () => {
             </div>
 
             {/* Demographics Section */}
-            {cadets.length > 0 && (
+            {stats.totalCadets > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Company Distribution */}
                     <div className="bg-white p-6 rounded shadow">
