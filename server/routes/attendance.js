@@ -100,7 +100,7 @@ router.get('/records/:dayId', authenticateToken, isAdmin, (req, res) => {
         FROM cadets c
         JOIN users u ON c.id = u.cadet_id
         LEFT JOIN attendance_records ar ON c.id = ar.cadet_id AND ar.training_day_id = ?
-        WHERE u.is_approved = 1
+        WHERE u.is_approved = 1 AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
     `;
     const params = [dayId];
 
