@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { User, Lock, Eye, EyeOff, Smartphone, ShieldCheck, Briefcase, HelpCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Smartphone, ShieldCheck, Briefcase, HelpCircle, X, Download, Share, MoreVertical } from 'lucide-react';
 import rgmsLogo from '../assets/rgms_logo.webp';
 
 const Login = () => {
@@ -12,6 +12,7 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showMobileModal, setShowMobileModal] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -75,10 +76,7 @@ const Login = () => {
                 duration: 4000
             });
         } else if (type === 'mobile') {
-            toast('The mobile app is currently under development. Please check back later!', {
-                icon: '📱',
-                duration: 4000
-            });
+            setShowMobileModal(true);
         }
     };
 
@@ -265,6 +263,72 @@ const Login = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Download Modal */}
+            {showMobileModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-green-900 p-4 flex items-center justify-between">
+                            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                                <Smartphone size={20} />
+                                Install App
+                            </h3>
+                            <button 
+                                onClick={() => setShowMobileModal(false)}
+                                className="text-green-100 hover:text-white p-1 hover:bg-green-800 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="mb-6 text-center">
+                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 text-green-700">
+                                    <Download size={32} />
+                                </div>
+                                <p className="text-gray-600 font-medium">
+                                    Install RGMS on your mobile device for easier access.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Android Instructions */}
+                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                    <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2 text-sm">
+                                        <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">Android</span>
+                                        Chrome
+                                    </h4>
+                                    <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside ml-1">
+                                        <li>Open this page in <strong>Chrome</strong>.</li>
+                                        <li>Tap the <strong>Menu</strong> icon <MoreVertical size={14} className="inline mx-1" /> (three dots).</li>
+                                        <li>Select <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong>.</li>
+                                    </ol>
+                                </div>
+
+                                {/* iOS Instructions */}
+                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                    <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2 text-sm">
+                                        <span className="bg-gray-200 text-gray-800 text-xs px-2 py-0.5 rounded-full border border-gray-300">iOS</span>
+                                        Safari
+                                    </h4>
+                                    <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside ml-1">
+                                        <li>Open this page in <strong>Safari</strong>.</li>
+                                        <li>Tap the <strong>Share</strong> icon <Share size={14} className="inline mx-1" />.</li>
+                                        <li>Scroll down and tap <strong>"Add to Home Screen"</strong>.</li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowMobileModal(false)}
+                                className="w-full mt-6 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-lg transition-colors border border-gray-200"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
