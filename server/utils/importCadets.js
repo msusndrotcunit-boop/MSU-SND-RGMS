@@ -345,31 +345,41 @@ const processStaffData = async (data) => {
     
     for (const row of data) {
         let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName', 'Given Name']);
-        let lastName = findColumnValue(row, ['Last Name', 'last_name', 'Surname', 'LName']);
-        let middleName = findColumnValue(row, ['Middle Name', 'middle_name', 'MName']);
         
-        if (!firstName || !lastName) {
+        // Strict requirement: Just Rank, First Name, Username, Email
+        // If First Name is missing, we can try to derive it or skip.
+        // Let's assume First Name is required as per user instruction.
+        
+        if (!firstName) {
              failCount++;
-             errors.push(`Missing First Name or Last Name. Found columns: ${Object.keys(row).join(', ')}`);
+             errors.push(`Missing First Name. Found columns: ${Object.keys(row).join(', ')}`);
              continue;
         }
         
+        // Default Last Name since we are not importing it
+        let lastName = 'Staff';
+        let middleName = '';
+        
         const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
         const username = findColumnValue(row, ['Username', 'username', 'User Name']);
+        const rank = findColumnValue(row, ['Rank', 'rank']) || 'Mr/Ms';
         
         const staffData = {
-            rank: findColumnValue(row, ['Rank', 'rank']) || 'Mr/Ms',
+            rank: rank,
             first_name: firstName,
-            middle_name: middleName || '',
+            middle_name: middleName,
             last_name: lastName,
-            suffix_name: findColumnValue(row, ['Suffix', 'suffix_name']) || '',
+            suffix_name: '',
             email: email || null,
-            contact_number: findColumnValue(row, ['Contact Number', 'contact_number', 'Mobile']) || '',
-            role: findColumnValue(row, ['Role', 'role']) || 'Instructor'
+            contact_number: '',
+            role: 'Instructor' // Default role
         };
         
         try {
             let staffId;
+            // Check by First Name only (and Last Name = 'Staff') or maybe just assume new if unique?
+            // The getStaffByName uses (first, last). If we use 'Staff' as last name for all, 
+            // we effectively check by First Name + 'Staff'.
             const existingStaff = await getStaffByName(firstName, lastName);
             
             if (existingStaff) {
@@ -382,7 +392,7 @@ const processStaffData = async (data) => {
             successCount++;
         } catch (err) {
             failCount++;
-            errors.push(`${firstName} ${lastName}: ${err.message}`);
+            errors.push(`${firstName}: ${err.message}`);
         }
     }
     

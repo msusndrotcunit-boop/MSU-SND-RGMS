@@ -9,6 +9,7 @@ server/.env
 *.sqlite-journal
 *.ps1
 client/dist/
+client/dev-dist/
 .DS_Store
 logs/
 *.log

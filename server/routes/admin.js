@@ -157,74 +157,41 @@ const processCadetData = async (data) => {
     const errors = [];
 
     for (const row of data) {
-        let studentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'StudentId']);
         const customUsername = findColumnValue(row, ['Username', 'username', 'User Name']);
         const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
-
-        if (!studentId) {
-            if (customUsername) {
-                studentId = customUsername;
-            } else if (email) {
-                studentId = email;
-            } else {
-                const lName = findColumnValue(row, ['Last Name', 'last_name', 'Surname', 'LName']);
-                const fName = findColumnValue(row, ['First Name', 'first_name', 'FName']);
-                
-                if (lName && fName) {
-                    const cleanLast = lName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-                    const cleanFirst = fName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-                    studentId = `${cleanLast}.${cleanFirst}`;
-                }
-            }
-        }
-        
+        let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName']);
+        const rank = findColumnValue(row, ['Rank', 'rank']) || 'Cdt';
+        let studentId = customUsername || email || (firstName ? firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : undefined);
         if (!studentId) {
             failCount++;
             const availableKeys = Object.keys(row).join(', ');
-            errors.push(`Missing Student ID, Username, Email, or Name. Found columns: ${availableKeys}`);
+            errors.push(`Missing Username, Email, or First Name. Found columns: ${availableKeys}`);
             continue;
         }
-
-        let lastName = findColumnValue(row, ['Last Name', 'last_name', 'Surname', 'LName']);
-        let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName']);
-
-        if (!firstName || !lastName) {
-            const baseStr = studentId.split('@')[0]; 
-            const parts = baseStr.split(/[._, ]+/).filter(Boolean);
-            if (parts.length >= 2) {
-                if (!firstName) firstName = parts[0] || 'Unknown';
-                if (!lastName) lastName = parts.slice(1).join(' ') || 'Cadet';
-            } else {
-                if (!firstName) firstName = baseStr || 'Unknown';
-                if (!lastName) lastName = 'Cadet';
-            }
-            
-            const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-            firstName = firstName.split(' ').map(capitalize).join(' ');
-            lastName = lastName.split(' ').map(capitalize).join(' ');
+        if (!firstName) {
+            const baseStr = studentId.split('@')[0];
+            firstName = baseStr || 'Unknown';
         }
-
-        // Clean First Name for Temporary Username
-        const tempUsername = firstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const tempUsername = (firstName || '').toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
         const cadetData = {
             student_id: studentId,
-            last_name: lastName,
+            last_name: 'Cadet',
             first_name: firstName,
-            middle_name: findColumnValue(row, ['Middle Name', 'middle_name', 'MName']) || '',
-            suffix_name: findColumnValue(row, ['Suffix', 'suffix_name']) || '',
-            rank: findColumnValue(row, ['Rank', 'rank']) || 'Cdt',
+            middle_name: '',
+            suffix_name: '',
+            rank: rank,
             email: email || '',
-            contact_number: findColumnValue(row, ['Contact Number', 'contact_number', 'Mobile', 'Phone']) || '',
-            address: findColumnValue(row, ['Address', 'address']) || '',
-            course: findColumnValue(row, ['Course', 'course']) || '',
-            year_level: findColumnValue(row, ['Year Level', 'year_level', 'Year']) || '',
-            school_year: findColumnValue(row, ['School Year', 'school_year', 'SY']) || '',
-            battalion: findColumnValue(row, ['Battalion', 'battalion']) || '',
-            company: findColumnValue(row, ['Company', 'company']) || '',
-            platoon: findColumnValue(row, ['Platoon', 'platoon']) || '',
-            cadet_course: findColumnValue(row, ['Cadet Course', 'cadet_course']) || '', 
-            semester: findColumnValue(row, ['Semester', 'semester']) || ''
+            contact_number: '',
+            address: '',
+            course: '',
+            year_level: '',
+            school_year: '',
+            battalion: '',
+            company: '',
+            platoon: '',
+            cadet_course: '', 
+            semester: ''
         };
 
         try {
@@ -642,6 +609,66 @@ router.post('/sync-cadets', async (req, res) => {
              res.status(500).json({ message: 'Sync failed: ' + err.message });
         }
     });
+});
+
+router.post('/import-cadets-remote', async (req, res) => {
+    const { baseUrl, username, password } = req.body || {};
+    if (!baseUrl || !username || !password) {
+        return res.status(400).json({ message: 'baseUrl, username, and password are required' });
+    }
+    try {
+        const loginRes = await axios.post(`${baseUrl}/api/auth/login`, { username, password });
+        const token = loginRes.data?.token || loginRes.data?.accessToken;
+        if (!token) return res.status(401).json({ message: 'Authentication to remote failed' });
+        const listRes = await axios.get(`${baseUrl}/api/admin/cadets`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const remoteCadets = Array.isArray(listRes.data) ? listRes.data : [];
+        let successCount = 0;
+        let failCount = 0;
+        const errors = [];
+        for (const c of remoteCadets) {
+            try {
+                const studentId = c.student_id || c.username || c.email || `${(c.last_name || 'cadet')}.${(c.first_name || 'user')}`.toLowerCase();
+                const cadetData = {
+                    student_id: studentId,
+                    last_name: c.last_name || '',
+                    first_name: c.first_name || '',
+                    middle_name: c.middle_name || '',
+                    suffix_name: c.suffix_name || '',
+                    rank: c.rank || 'Cdt',
+                    email: c.email || '',
+                    contact_number: c.contact_number || '',
+                    address: c.address || '',
+                    course: c.course || '',
+                    year_level: c.year_level || '',
+                    school_year: c.school_year || '',
+                    battalion: c.battalion || '',
+                    company: c.company || '',
+                    platoon: c.platoon || '',
+                    cadet_course: c.cadet_course || '',
+                    semester: c.semester || ''
+                };
+                let cadetId;
+                const existingCadet = await getCadetByStudentId(studentId);
+                if (existingCadet) {
+                    cadetId = existingCadet.id;
+                    await updateCadet(cadetId, cadetData);
+                } else {
+                    cadetId = await insertCadet(cadetData);
+                }
+                const tempUsername = (c.username || c.first_name || studentId || '').toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                await upsertUser(cadetId, studentId, cadetData.email, c.username, tempUsername);
+                successCount++;
+            } catch (e) {
+                failCount++;
+                errors.push(e.message);
+            }
+        }
+        res.json({ message: `Import complete. Success: ${successCount}, Failed: ${failCount}`, errors: errors.slice(0, 10) });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to import from remote: ' + (err.response?.data?.message || err.message) });
+    }
 });
 
 router.get('/settings/cadet-source', (req, res) => {
