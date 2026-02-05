@@ -217,10 +217,10 @@ const Login = () => {
                         )}
 
                         {/* Extras: Remember Me / Forgot Password */}
-                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center justify-between text-xs">
                             <label className="flex items-center text-gray-600 cursor-pointer">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500" />
-                                <span className="ml-2">Remember me</span>
+                                <input type="checkbox" className="form-checkbox h-3 w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
+                                <span className="ml-1.5">Remember me</span>
                             </label>
                             <button type="button" className="text-green-600 hover:text-green-800 font-medium">
                                 Forgot Email/Username?
