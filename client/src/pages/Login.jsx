@@ -59,7 +59,7 @@ const Login = () => {
             }
         } catch (err) {
             console.error("Login error:", err);
-            setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+            setError(err.response?.data?.message || `Login failed. Please check your credentials. (Code: ${err.response?.status || 'Network/Server Error'})`);
         } finally {
             setLoading(false);
         }

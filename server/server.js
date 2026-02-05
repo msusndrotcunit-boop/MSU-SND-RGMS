@@ -251,7 +251,22 @@ app.get('*', serveIndex);
 // Final 404 handler for safety (should never be reached if * matches)
 app.use((req, res) => {
     console.error(`[Server] Unhandled 404: ${req.method} ${req.url}`);
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ message: `API Route not found: ${req.method} ${req.url}` });
+    }
     res.status(404).send(`Server Error: Route not found (${req.url}). Please contact support.`);
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('[Server] Global Error:', err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(500).json({ 
+        message: 'Internal Server Error', 
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
 });
 
 // START SERVER

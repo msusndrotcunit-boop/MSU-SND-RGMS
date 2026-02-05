@@ -171,45 +171,55 @@ router.post('/login', (req, res) => {
             return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
-        console.log('Password valid:', validPassword);
-        
-        if (!validPassword) return res.status(400).json({ message: 'Invalid password. Please try again.' });
+        try {
+            if (!user.password) {
+                console.error('Login failed: User has no password set', username);
+                return res.status(500).json({ message: 'Account configuration error. Please contact support.' });
+            }
 
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
-        
-        // Notify Admin of Login if it's a cadet (or staff?)
-        if (user.role === 'cadet' || user.role === 'training_staff') {
-            const displayName = user.username; // Or fetch name if available
-            const notifMsg = `${displayName} (${user.role}) has logged in.`;
-            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-                [notifMsg, 'login'], 
-                (nErr) => {
-                    if (nErr) console.error("Error creating login notification:", nErr);
-                }
-            );
-        }
+            const validPassword = await bcrypt.compare(password, user.password);
+            console.log('Password valid:', validPassword);
+            
+            if (!validPassword) return res.status(400).json({ message: 'Invalid password. Please try again.' });
 
-        // Update last_seen
-        const now = new Date().toISOString();
-        db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
+            const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+            
+            // Notify Admin of Login if it's a cadet (or staff?)
+            if (user.role === 'cadet' || user.role === 'training_staff') {
+                const displayName = user.username; // Or fetch name if available
+                const notifMsg = `${displayName} (${user.role}) has logged in.`;
+                db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
+                    [notifMsg, 'login'], 
+                    (nErr) => {
+                        if (nErr) console.error("Error creating login notification:", nErr);
+                    }
+                );
+            }
 
-        let isProfileCompleted = true;
-        
-        if (user.role === 'cadet') {
-             // Fetch from cadets table
-             db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [user.cadet_id], (err, row) => {
-                 if (!err && row) isProfileCompleted = !!row.is_profile_completed;
+            // Update last_seen
+            const now = new Date().toISOString();
+            db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
+
+            let isProfileCompleted = true;
+            
+            if (user.role === 'cadet') {
+                 // Fetch from cadets table
+                 db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [user.cadet_id], (err, row) => {
+                     if (!err && row) isProfileCompleted = !!row.is_profile_completed;
+                     res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+                 });
+            } else if (user.role === 'training_staff') {
+                 // Fetch from training_staff table
+                 db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [user.staff_id], (err, row) => {
+                     if (!err && row) isProfileCompleted = !!row.is_profile_completed;
+                     res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+                 });
+            } else {
                  res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
-             });
-        } else if (user.role === 'training_staff') {
-             // Fetch from training_staff table
-             db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [user.staff_id], (err, row) => {
-                 if (!err && row) isProfileCompleted = !!row.is_profile_completed;
-                 res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
-             });
-        } else {
-             res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
+            }
+        } catch (authError) {
+            console.error('Login Auth Error:', authError);
+            res.status(500).json({ message: 'Authentication failed due to server error.' });
         }
     });
 });
