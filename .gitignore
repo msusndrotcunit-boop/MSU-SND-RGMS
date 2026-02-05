@@ -8,6 +8,8 @@ server/.env
 *.sqlite
 *.sqlite-journal
 *.ps1
+!sync.ps1
+!pinger.ps1
 client/dist/
 client/dev-dist/
 .DS_Store
