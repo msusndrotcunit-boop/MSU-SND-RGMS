@@ -171,7 +171,7 @@ const serveIndex = (req, res) => {
     // SECURITY: Prevent API 404s from returning HTML
     if (req.path.startsWith('/api')) {
         console.log(`[SPA Fallback] 404 for API path: ${req.path}`);
-        return res.status(404).send('API endpoint not found');
+        return res.status(404).json({ message: `API endpoint not found: ${req.path}` });
     }
 
     if (!foundBuild) {
@@ -215,6 +215,12 @@ app.get('/', serveIndex);
 app.get('/login', serveIndex);
 app.get('/dashboard', serveIndex);
 app.get('*', serveIndex);
+
+// Final 404 handler for safety (should never be reached if * matches)
+app.use((req, res) => {
+    console.error(`[Server] Unhandled 404: ${req.method} ${req.url}`);
+    res.status(404).send(`Server Error: Route not found (${req.url}). Please contact support.`);
+});
 
 // START SERVER
 async function startServer() {
