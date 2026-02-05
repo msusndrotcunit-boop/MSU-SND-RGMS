@@ -28,7 +28,9 @@ const Login = () => {
             } else if (loginType === 'staff') {
                 response = await axios.post('/api/auth/staff-login-no-pass', { identifier: formData.identifier });
             } else {
-                response = await axios.post('/api/auth/login', { username: formData.username, password: formData.password });
+                const username = (formData.username || '').trim();
+                const password = (formData.password || '').trim();
+                response = await axios.post('/api/auth/login', { username, password });
             }
 
             const data = response.data;
