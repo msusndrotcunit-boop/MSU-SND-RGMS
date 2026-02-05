@@ -9,3 +9,8 @@ services:
     envVars:
       - key: ENABLE_CADET_AUTO_SYNC
         value: "false"
+  - type: cron
+    name: rotc-grading-keepalive
+    schedule: "*/10 * * * *"
+    env: docker
+    command: 'curl -s https://msu-snd-rgms.onrender.com/health || true'

@@ -93,11 +93,27 @@ const WeatherAdvisory = () => {
                     setLocationName(locName);
                     fetchWeather(latitude, longitude, locName, true);
                 },
-                (error) => {
+                async (error) => {
                     console.warn("Geolocation permission denied or error:", error);
-                    // Fallback to default
+                    // Try IP-based geolocation before defaulting
+                    try {
+                        const ipResp = await axios.get('https://ipapi.co/json/');
+                        const ipLat = ipResp.data?.latitude;
+                        const ipLon = ipResp.data?.longitude;
+                        const ipCity = ipResp.data?.city;
+                        if (ipLat && ipLon) {
+                            const locName = ipCity || await fetchLocationName(ipLat, ipLon);
+                            setIsUsingCurrentLocation(false);
+                            setLocationName(locName);
+                            return fetchWeather(ipLat, ipLon, locName, false);
+                        }
+                    } catch (e) {
+                        console.warn("IP geolocation failed:", e.message);
+                    }
+                    // Final fallback to default
                     fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'Sultan Naga Dimaporo', false);
-                }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 5 * 60 * 1000 }
             );
         } else {
             // Fallback if geolocation is not supported
