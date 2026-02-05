@@ -145,6 +145,11 @@ router.get('/system-settings', authenticateToken, (req, res) => {
     });
 });
 
+// TEST ROUTE
+router.get('/', (req, res) => {
+    res.json({ message: 'Auth Router is mounted and working' });
+});
+
 // Login
 router.post('/login', (req, res) => {
     let { username, password } = req.body;

@@ -198,6 +198,35 @@ app.get('/debug-deployment', (req, res) => {
     });
 });
 
+// DEBUG: List all routes
+app.get('/debug-routes', (req, res) => {
+    const routes = [];
+    app._router.stack.forEach((middleware) => {
+        if (middleware.route) { // routes registered directly on the app
+            routes.push(`${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
+        } else if (middleware.name === 'router') { // router middleware 
+            middleware.handle.stack.forEach((handler) => {
+                if (handler.route) {
+                    const method = Object.keys(handler.route.methods).join(', ').toUpperCase();
+                    let prefix = '';
+                    if (middleware.regexp.toString().includes('api/auth')) prefix = '/api/auth';
+                    else if (middleware.regexp.toString().includes('api/admin')) prefix = '/api/admin';
+                    else if (middleware.regexp.toString().includes('api/cadet')) prefix = '/api/cadet';
+                    else if (middleware.regexp.toString().includes('api/attendance')) prefix = '/api/attendance';
+                    else if (middleware.regexp.toString().includes('api/excuse')) prefix = '/api/excuse';
+                    else if (middleware.regexp.toString().includes('api/staff')) prefix = '/api/staff';
+                    else if (middleware.regexp.toString().includes('api/integration')) prefix = '/api/integration';
+                    else if (middleware.regexp.toString().includes('api/notifications')) prefix = '/api/notifications';
+                    else if (middleware.regexp.toString().includes('api/images')) prefix = '/api/images';
+                    
+                    routes.push(`${method} ${prefix}${handler.route.path}`);
+                }
+            });
+        }
+    });
+    res.json(routes);
+});
+
 // SPA FALLBACK HANDLER
 const serveIndex = (req, res) => {
     // SECURITY: Prevent API 404s from returning HTML
