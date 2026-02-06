@@ -712,6 +712,7 @@ function initSqliteDb() {
         // Migration: Add is_archived and is_profile_completed to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0`, (err) => {});
+        db.run(`ALTER TABLE cadets ADD COLUMN has_seen_guide INTEGER DEFAULT 0`, (err) => {});
 
         // Migration: Add last_seen to users
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
