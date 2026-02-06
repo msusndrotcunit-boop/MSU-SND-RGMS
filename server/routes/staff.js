@@ -106,13 +106,34 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Wrapper for upload middleware to handle errors gracefully
+const uploadProfilePic = (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+        if (err) {
+            console.error("Staff Profile Pic Upload Error:", err);
+            const msg = err.message || 'Unknown upload error';
+            return res.status(400).json({ message: `Image upload failed: ${msg}` });
+        }
+        next();
+    });
+};
+
 // UPLOAD Profile Picture (Me)
-router.post('/profile/photo', authenticateToken, upload.single('image'), (req, res) => {
+router.post('/profile/photo', authenticateToken, uploadProfilePic, (req, res) => {
     if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
     // Cloudinary returns the URL in req.file.path
-    const filePath = req.file.path;
+    let filePath = req.file.path;
+
+    // Normalize local path if needed (e.g. C:\Users\...\uploads\file.jpg -> /uploads/file.jpg)
+    if (filePath.includes('uploads')) {
+        const parts = filePath.split(/[\\/]/);
+        const uploadIndex = parts.indexOf('uploads');
+        if (uploadIndex !== -1) {
+            filePath = '/' + parts.slice(uploadIndex).join('/');
+        }
+    }
 
     // Update both training_staff and users table
     db.run("UPDATE training_staff SET profile_pic = ? WHERE id = ?", [filePath, req.user.staffId], (err) => {

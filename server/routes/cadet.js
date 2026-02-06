@@ -122,7 +122,8 @@ const uploadProfilePic = (req, res, next) => {
         if (err) {
             console.error("Profile Pic Upload Error:", err);
             // Return JSON error instead of 500 HTML
-            return res.status(400).json({ message: `Image upload failed: ${err.message}` });
+            const msg = err.message || 'Unknown upload error';
+            return res.status(400).json({ message: `Image upload failed: ${msg}` });
         }
         next();
     });
@@ -200,7 +201,17 @@ router.put('/profile', uploadProfilePic, (req, res) => {
 
             if (req.file) {
                 sql += `, profile_pic=?`;
-                const imageUrl = req.file.path; 
+                let imageUrl = req.file.path; 
+                
+                // Normalize local path if needed (e.g. C:\Users\...\uploads\file.jpg -> /uploads/file.jpg)
+                if (imageUrl.includes('uploads')) {
+                    const parts = imageUrl.split(/[\\/]/);
+                    const uploadIndex = parts.indexOf('uploads');
+                    if (uploadIndex !== -1) {
+                        imageUrl = '/' + parts.slice(uploadIndex).join('/');
+                    }
+                }
+                
                 params.push(imageUrl);
             }
     
@@ -235,15 +246,41 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                     db.run(userSql, [username, email, cadetId], (uErr) => {
                         if (uErr) console.error("Error updating user credentials:", uErr);
                         
+                        let returnPath = null;
+                        if (req.file) {
+                             returnPath = req.file.path;
+                             // Apply same normalization for response
+                             if (returnPath.includes('uploads')) {
+                                 const parts = returnPath.split(/[\\/]/);
+                                 const uploadIndex = parts.indexOf('uploads');
+                                 if (uploadIndex !== -1) {
+                                     returnPath = '/' + parts.slice(uploadIndex).join('/');
+                                 }
+                             }
+                        }
+
                         res.json({ 
                             message: 'Profile updated successfully', 
-                            profilePic: req.file ? req.file.path : null 
+                            profilePic: returnPath 
                         });
                     });
                 } else {
+                    let returnPath = null;
+                    if (req.file) {
+                         returnPath = req.file.path;
+                         // Apply same normalization for response
+                         if (returnPath.includes('uploads')) {
+                             const parts = returnPath.split(/[\\/]/);
+                             const uploadIndex = parts.indexOf('uploads');
+                             if (uploadIndex !== -1) {
+                                 returnPath = '/' + parts.slice(uploadIndex).join('/');
+                             }
+                         }
+                    }
+
                     res.json({ 
                         message: 'Profile updated successfully', 
-                        profilePic: req.file ? req.file.path : null 
+                        profilePic: returnPath 
                     });
                 }
             });
