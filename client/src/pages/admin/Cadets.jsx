@@ -279,8 +279,12 @@ const Cadets = () => {
 
         try {
             await axios.post('/api/admin/cadets', addForm);
-            toast.success('Cadet added successfully');
+            toast.success('Cadet added successfully. Please verify the profile in the Unverified tab.');
             setIsAddModalOpen(false);
+            
+            // Switch to Unverified tab to show the new cadet
+            setSelectedCadetCourse('Unverified');
+            
             fetchCadets(true);
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',

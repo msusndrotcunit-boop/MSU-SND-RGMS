@@ -666,7 +666,7 @@ function seedAdmin() {
             }
 
             seedDefaultStaff();
-            seedDefaultCadet();
+            // seedDefaultCadet(); // Disabled per user request to avoid ghost entries
         }
     });
 }

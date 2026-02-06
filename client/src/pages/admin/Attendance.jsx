@@ -53,7 +53,7 @@ const Attendance = () => {
                         if (Array.isArray(data)) {
                             setDays(data);
                             setLoading(false);
-                            if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
+                            if (timestamp && (Date.now() - timestamp < 30 * 1000)) { // Reduced to 30s
                                 return;
                             }
                         }
@@ -78,7 +78,7 @@ const Attendance = () => {
         e.preventDefault();
         try {
             await axios.post('/api/attendance/days', createForm);
-            fetchDays();
+            fetchDays(true); // Force refresh to update list and cache
             setIsCreateModalOpen(false);
             setCreateForm({ date: '', title: '', description: '' });
         } catch (err) {
@@ -92,7 +92,7 @@ const Attendance = () => {
         try {
             await axios.delete(`/api/attendance/days/${id}`);
             if (selectedDay?.id === id) setSelectedDay(null);
-            fetchDays();
+            fetchDays(true); // Force refresh
         } catch (err) {
             alert('Error deleting day');
         }
@@ -119,7 +119,7 @@ const Attendance = () => {
                         
                         if (Array.isArray(data)) {
                             setAttendanceRecords(data);
-                            if (timestamp && (Date.now() - timestamp < 60 * 1000)) { // 1 minute cache
+                            if (timestamp && (Date.now() - timestamp < 10 * 1000)) { // Reduced to 10s
                                 setLoading(false);
                                 return;
                             }
