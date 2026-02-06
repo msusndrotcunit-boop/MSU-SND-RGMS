@@ -11,6 +11,6 @@ services:
         value: "false"
   - type: cron
     name: rotc-grading-keepalive
-    schedule: "*/10 * * * *"
+    schedule: "* * * * *"
     env: docker
     command: 'curl -s https://msu-snd-rgms.onrender.com/health || true'

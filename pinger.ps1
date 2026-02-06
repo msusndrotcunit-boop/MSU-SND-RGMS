@@ -30,21 +30,40 @@
    if ($root -ne $url) { $targets += $root }
  } catch { }
  
- $finalStatus = $null
- foreach ($t in $targets) {
-   try {
-     $resp = Invoke-WebRequest -Uri $t -Method Head -TimeoutSec 15 -UseBasicParsing
-     $finalStatus = $resp.StatusCode
-     if ($finalStatus) { break }
-   } catch {
+ function Invoke-PingOnce {
+   param([string[]]$PingTargets)
+   $statusOut = $null
+   foreach ($t in $PingTargets) {
      try {
-       $resp = Invoke-WebRequest -Uri $t -Method Get -TimeoutSec 20 -UseBasicParsing
-       $finalStatus = $resp.StatusCode
-       if ($finalStatus) { break }
+       $resp = Invoke-WebRequest -Uri $t -Method Head -TimeoutSec 15 -UseBasicParsing
+       $statusOut = $resp.StatusCode
+       if ($statusOut) { break }
      } catch {
-       $finalStatus = "error: " + $_.Exception.Message
+       try {
+         $resp = Invoke-WebRequest -Uri $t -Method Get -TimeoutSec 20 -UseBasicParsing
+         $statusOut = $resp.StatusCode
+         if ($statusOut) { break }
+       } catch {
+         $statusOut = "error: " + $_.Exception.Message
+       }
      }
    }
+   $tsNow = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+   Add-Content -Path $logPath -Value ("[" + $tsNow + "] " + $url + " " + $statusOut)
  }
  
- Add-Content -Path $logPath -Value ("[" + $ts + "] " + $url + " " + $finalStatus)
+ # Interval and loop controls
+ $intervalSec = 60
+ if ($env:RGMS_PINGER_INTERVAL_SEC -and [int]::TryParse($env:RGMS_PINGER_INTERVAL_SEC, [ref]$intervalSec)) { }
+ $shouldLoop = $true
+ if ($env:RGMS_PINGER_LOOP -and ($env:RGMS_PINGER_LOOP -eq "0" -or $env:RGMS_PINGER_LOOP -eq "false")) { $shouldLoop = $false }
+ 
+ if ($shouldLoop) {
+   Invoke-PingOnce -PingTargets $targets
+   while ($true) {
+     Start-Sleep -Seconds $intervalSec
+     Invoke-PingOnce -PingTargets $targets
+   }
+ } else {
+   Invoke-PingOnce -PingTargets $targets
+ }
