@@ -149,6 +149,10 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             is_profile_completed // Frontend sends this as 'true'
         } = req.body;
 
+        // Ensure optional fields are null if undefined/empty strings (optional)
+        // But mainly ensure they are NOT undefined for the DB driver
+        const safeParam = (val) => val === undefined ? null : val;
+
         // 2. Mandatory Field Validation (Only if completing profile)
         if (is_profile_completed === 'true') {
             const requiredFields = [
@@ -163,7 +167,6 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             }
 
             // Check for duplicate username/email BEFORE updating
-            // We need to check if the NEW username/email is already taken by ANOTHER user
             const checkSql = `SELECT id, cadet_id FROM users WHERE (username = ? OR email = ?)`;
             db.all(checkSql, [username, email], (checkErr, rows) => {
                 if (checkErr) return res.status(500).json({ message: checkErr.message });
@@ -188,16 +191,15 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 cadet_course=?, semester=?`;
             
             const params = [
-                firstName, middleName, lastName, suffixName,
-                email, contactNumber, address,
-                course, yearLevel, schoolYear,
-                battalion, company, platoon,
-                cadetCourse, semester
+                safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
+                safeParam(email), safeParam(contactNumber), safeParam(address),
+                safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
+                safeParam(battalion), safeParam(company), safeParam(platoon),
+                safeParam(cadetCourse), safeParam(semester)
             ];
 
             if (req.file) {
                 sql += `, profile_pic=?`;
-                // Use Cloudinary URL if available, otherwise fallback (though middleware ensures it's uploaded)
                 const imageUrl = req.file.path; 
                 params.push(imageUrl);
             }
@@ -205,14 +207,18 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             // Set completion status if requested
             if (is_profile_completed === 'true') {
                 sql += `, is_profile_completed=?`;
-                params.push(true);
+                // Use 1 for TRUE to be safe across SQLite/Postgres
+                params.push(1);
             }
             
             sql += ` WHERE id=?`;
             params.push(cadetId);
     
             db.run(sql, params, (err) => {
-                if (err) return res.status(500).json({ message: err.message });
+                if (err) {
+                    console.error("DB Update Error (Cadet Profile):", err);
+                    return res.status(500).json({ message: "Database Error: " + err.message });
+                }
 
                 // Notify Admin
                 const notifMsg = `${firstName} ${lastName} has updated their profile.`;
@@ -228,8 +234,6 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                     const userSql = `UPDATE users SET username=?, email=? WHERE cadet_id=?`;
                     db.run(userSql, [username, email, cadetId], (uErr) => {
                         if (uErr) console.error("Error updating user credentials:", uErr);
-                        // If this fails now, it's likely a DB constraint we missed or connection issue.
-                        // Since we checked for conflicts, it should pass.
                         
                         res.json({ 
                             message: 'Profile updated successfully', 
