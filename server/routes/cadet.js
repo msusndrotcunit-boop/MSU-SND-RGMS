@@ -116,7 +116,19 @@ router.get('/profile', (req, res) => {
     });
 });
 
-router.put('/profile', upload.single('profilePic'), (req, res) => {
+// Wrapper for upload middleware to handle errors gracefully
+const uploadProfilePic = (req, res, next) => {
+    upload.single('profilePic')(req, res, (err) => {
+        if (err) {
+            console.error("Profile Pic Upload Error:", err);
+            // Return JSON error instead of 500 HTML
+            return res.status(400).json({ message: `Image upload failed: ${err.message}` });
+        }
+        next();
+    });
+};
+
+router.put('/profile', uploadProfilePic, (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
