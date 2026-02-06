@@ -810,6 +810,7 @@ router.get('/records/staff/:dayId', authenticateToken, isAdmin, (req, res) => {
             sar.remarks
         FROM training_staff s
         LEFT JOIN staff_attendance_records sar ON s.id = sar.staff_id AND sar.training_day_id = ?
+        WHERE (s.is_archived IS FALSE OR s.is_archived IS NULL)
         ORDER BY s.last_name ASC
     `;
     
