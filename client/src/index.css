@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.weather-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.25;
+}
+.weather-rain {
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,0.25) 0 2px, transparent 2px 8px);
+  animation: rainFall 1.2s linear infinite;
+  background-size: 8px 100%;
+}
+.weather-sunny {
+  background-image: conic-gradient(from 0deg, rgba(255,255,255,0.15) 0 12deg, transparent 12deg 24deg);
+  animation: sunRotate 12s linear infinite;
+}
+.weather-wind {
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0 1px, transparent 1px 20px);
+  animation: windMove 4s linear infinite;
+  background-size: 100% 20px;
+}
+@keyframes rainFall {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 200px; }
+}
+@keyframes sunRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes windMove {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}

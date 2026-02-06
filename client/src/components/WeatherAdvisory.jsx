@@ -148,6 +148,16 @@ const WeatherAdvisory = () => {
         if (code >= 51) return "Rainy Day";
         return "Cloudy Day"; // Default
     };
+    
+    const getAnimationClass = (w) => {
+        if (!w) return '';
+        const code = w.weather_code;
+        const wind = w.wind_speed_10m || 0;
+        if (code <= 1) return 'weather-sunny';
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 99)) return 'weather-rain';
+        if (wind >= 25) return 'weather-wind';
+        return '';
+    };
 
     if (loading) return (
         <div className="bg-white p-4 rounded-lg shadow animate-pulse h-32 flex items-center justify-center">
@@ -163,6 +173,7 @@ const WeatherAdvisory = () => {
 
     return (
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-lg shadow-lg relative overflow-hidden mb-6">
+            <div className={`weather-bg ${getAnimationClass(current)}`}></div>
             <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Cloud size={100} />
             </div>
