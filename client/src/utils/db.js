@@ -13,6 +13,7 @@ export const initDB = async () => {
                 if (stores.contains('cadets')) transaction.objectStore('cadets').clear();
                 if (stores.contains('grading')) transaction.objectStore('grading').clear();
                 if (stores.contains('training_days')) transaction.objectStore('training_days').clear();
+                if (stores.contains('analytics')) transaction.objectStore('analytics').clear();
             }
 
             // Cadets Store

@@ -255,8 +255,9 @@ const Cadets = () => {
             
             try {
                 await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('analytics', 'dashboard', null);
             } catch (cacheErr) {
-                console.warn('Failed to clear grading cache:', cacheErr);
+                console.warn('Failed to clear cache:', cacheErr);
             }
             
             fetchCadets(true);
