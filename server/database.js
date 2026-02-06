@@ -54,7 +54,7 @@ if (isPostgres) {
                 pgSql += ' RETURNING *';
             }
 
-            pool.query(pgSql, params, (err, res) => {
+            db.pool.query(pgSql, params, (err, res) => {
                 if (err) {
                     if (callback) callback(err);
                     return;
@@ -74,7 +74,7 @@ if (isPostgres) {
             let paramIndex = 1;
             const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
             
-            pool.query(pgSql, params, (err, res) => {
+            db.pool.query(pgSql, params, (err, res) => {
                 if (callback) callback(err, res ? res.rows : []);
             });
         },
@@ -86,7 +86,7 @@ if (isPostgres) {
             let paramIndex = 1;
             const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
             
-            pool.query(pgSql, params, (err, res) => {
+            db.pool.query(pgSql, params, (err, res) => {
                 if (callback) callback(err, res && res.rows.length > 0 ? res.rows[0] : undefined);
             });
         },
@@ -115,6 +115,48 @@ if (isPostgres) {
 }
 
 async function initPgDb() {
+    // FIX: Manually resolve DNS to IPv4 to prevent ENETUNREACH on IPv6-capable networks
+    try {
+        const connectionString = (process.env.DATABASE_URL || process.env.SUPABASE_URL).trim();
+        const url = new URL(connectionString);
+        const hostname = url.hostname;
+
+        // Only resolve if it looks like a domain name
+        if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+            console.log(`[Database] Resolving DNS for ${hostname} to force IPv4...`);
+            const addresses = await dns.promises.resolve4(hostname);
+            
+            if (addresses && addresses.length > 0) {
+                const ip = addresses[0];
+                console.log(`[Database] Resolved ${hostname} to ${ip}. Reconnecting with IPv4...`);
+                
+                // Close the initial pool which might be trying to connect via IPv6
+                await db.pool.end();
+
+                // Create new pool with explicit IPv4 and correct SSL SNI
+                db.pool = new Pool({
+                    user: decodeURIComponent(url.username),
+                    password: decodeURIComponent(url.password),
+                    host: ip,
+                    port: url.port || 5432,
+                    database: url.pathname.split('/')[1],
+                    ssl: { 
+                        rejectUnauthorized: false,
+                        servername: hostname // REQUIRED for SNI verification
+                    },
+                    max: 20, // Default max
+                    idleTimeoutMillis: 30000,
+                    connectionTimeoutMillis: 10000,
+                });
+                
+                console.log('[Database] Reconnected successfully with IPv4.');
+            }
+        }
+    } catch (dnsErr) {
+        console.warn("[Database] DNS resolution warning:", dnsErr.message);
+        // Continue with default pool if resolution fails
+    }
+
     const queries = [
         `CREATE TABLE IF NOT EXISTS cadets (
             id SERIAL PRIMARY KEY,
