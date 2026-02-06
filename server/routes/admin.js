@@ -45,8 +45,9 @@ const insertCadet = (cadet) => {
             student_id, email, contact_number, address, 
             course, year_level, school_year, 
             battalion, company, platoon, 
-            cadet_course, semester, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            cadet_course, semester, status,
+            is_profile_completed, is_archived
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`;
 
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
@@ -159,26 +160,58 @@ const processCadetData = async (data) => {
     for (const row of data) {
         const customUsername = findColumnValue(row, ['Username', 'username', 'User Name']);
         const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
-        let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName']);
+        let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName', 'Given Name']);
+        let lastName = findColumnValue(row, ['Last Name', 'last_name', 'LName', 'Surname']);
+        let middleName = findColumnValue(row, ['Middle Name', 'middle_name', 'MName']) || '';
         const rank = findColumnValue(row, ['Rank', 'rank']) || 'Cdt';
-        let studentId = customUsername || email || (firstName ? firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : undefined);
+        let rawStudentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'Student Number']);
+        
+        // Handle "Name" or "Full Name" if separate fields are missing
+        if (!firstName || !lastName) {
+            const fullName = findColumnValue(row, ['Name', 'name', 'Full Name', 'Cadet Name']);
+            if (fullName) {
+                const parts = fullName.split(',').map(s => s.trim());
+                if (parts.length >= 2) {
+                    // Format: Last, First Middle
+                    lastName = parts[0];
+                    const rest = parts[1].split(' ');
+                    firstName = rest[0];
+                    middleName = rest.slice(1).join(' ');
+                } else {
+                    // Format: First Last (assuming last word is surname)
+                    const spaceParts = fullName.split(' ');
+                    if (spaceParts.length >= 2) {
+                        lastName = spaceParts.pop();
+                        firstName = spaceParts.join(' ');
+                    } else {
+                        firstName = fullName;
+                        lastName = 'Unknown';
+                    }
+                }
+            }
+        }
+
+        // Determine unique ID (Student ID > Username > Email > First Name hash)
+        let studentId = rawStudentId || customUsername || email;
+        
+        if (!studentId && firstName) {
+             studentId = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 1000);
+        }
+
         if (!studentId) {
-            failCount++;
-            const availableKeys = Object.keys(row).join(', ');
-            errors.push(`Missing Username, Email, or First Name. Found columns: ${availableKeys}`);
-            continue;
-        }
-        if (!firstName) {
-            const baseStr = studentId.split('@')[0];
-            firstName = baseStr || 'Unknown';
-        }
-        const tempUsername = (firstName || '').toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    failCount++;
+                    const availableKeys = Object.keys(row).join(', ');
+                    errors.push(`Could not determine identity (Missing Student ID, Username, Email, or Name). Found columns: ${availableKeys}`);
+                    continue;
+                }
+
+        const tempUsername = (studentId || '').toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
         const cadetData = {
             student_id: studentId,
-            last_name: 'Cadet',
-            first_name: firstName,
-            middle_name: '',
+            last_name: lastName || 'Cadet',
+            first_name: firstName || 'Unknown',
+            middle_name: middleName,
             suffix_name: '',
             rank: rank,
             email: email || '',
