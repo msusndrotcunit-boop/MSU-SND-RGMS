@@ -1,11 +1,20 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'rotc_grading_system_db';
-const DB_VERSION = 5;
+const DB_VERSION = 7;
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
-        upgrade(db) {
+        upgrade(db, oldVersion, newVersion, transaction) {
+            // Clear all caches on major version upgrade
+            if (oldVersion < 7) {
+                const stores = db.objectStoreNames;
+                if (stores.contains('admin')) transaction.objectStore('admin').clear();
+                if (stores.contains('cadets')) transaction.objectStore('cadets').clear();
+                if (stores.contains('grading')) transaction.objectStore('grading').clear();
+                if (stores.contains('training_days')) transaction.objectStore('training_days').clear();
+            }
+
             // Cadets Store
             if (!db.objectStoreNames.contains('cadets')) {
                 db.createObjectStore('cadets', { keyPath: 'id' });
@@ -14,7 +23,11 @@ export const initDB = async () => {
             if (!db.objectStoreNames.contains('admin')) {
                 db.createObjectStore('admin', { keyPath: 'key' });
             }
-            // Grades Store
+            // Grading Store (For Grading Management Cache)
+            if (!db.objectStoreNames.contains('grading')) {
+                db.createObjectStore('grading', { keyPath: 'key' });
+            }
+            // Grades Store (Individual Records)
             if (!db.objectStoreNames.contains('grades')) {
                 db.createObjectStore('grades', { keyPath: 'id' });
             }

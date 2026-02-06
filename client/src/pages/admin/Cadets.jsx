@@ -252,7 +252,13 @@ const Cadets = () => {
             setIsImportModalOpen(false);
             setImportFile(null);
             setImportUrl('');
-            await cacheSingleton('grading', 'cadets_list', null);
+            
+            try {
+                await cacheSingleton('grading', 'cadets_list', null);
+            } catch (cacheErr) {
+                console.warn('Failed to clear grading cache:', cacheErr);
+            }
+            
             fetchCadets(true);
             fetchSettings();
         } catch (err) {

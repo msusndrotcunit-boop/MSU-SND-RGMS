@@ -50,10 +50,11 @@ const Attendance = () => {
                             data = cached;
                         }
 
-                        if (Array.isArray(data)) {
+                        if (Array.isArray(data) && data.length > 0) {
                             setDays(data);
                             setLoading(false);
-                            if (timestamp && (Date.now() - timestamp < 30 * 1000)) { // Reduced to 30s
+                            // If fresh (< 2 mins), skip API
+                            if (timestamp && (Date.now() - timestamp < 120 * 1000)) {
                                 return;
                             }
                         }
