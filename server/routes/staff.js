@@ -127,7 +127,8 @@ router.post('/profile/photo', authenticateToken, uploadProfilePic, (req, res) =>
     let filePath = req.file.path;
 
     // Normalize local path if needed (e.g. C:\Users\...\uploads\file.jpg -> /uploads/file.jpg)
-    if (filePath.includes('uploads')) {
+    // But avoid modifying Cloudinary URLs which might contain 'uploads' in their path
+    if (filePath.includes('uploads') && !filePath.startsWith('http')) {
         const parts = filePath.split(/[\\/]/);
         const uploadIndex = parts.indexOf('uploads');
         if (uploadIndex !== -1) {
