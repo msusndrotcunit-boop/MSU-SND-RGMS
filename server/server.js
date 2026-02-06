@@ -3,6 +3,7 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
+const axios = require('axios'); // Added for Keep-Alive self-ping
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
@@ -316,12 +317,43 @@ app.use((err, req, res, next) => {
     });
 });
 
+// --- RENDER FREE TIER SELF-PING KEEP-ALIVE ---
+// Pings the server every 14 minutes to prevent 15-minute inactivity spin-down
+const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 minutes
+const TARGET_URL = process.env.RENDER_EXTERNAL_URL || 'https://msu-snd-rgms.onrender.com';
+
+function startKeepAlive() {
+    console.log(`[KeepAlive] Service configured to ping ${TARGET_URL} every 14 minutes.`);
+    
+    // Initial ping after 1 minute to verify connectivity
+    setTimeout(() => {
+        performPing();
+        // Start periodic pings
+        setInterval(performPing, KEEP_ALIVE_INTERVAL);
+    }, 60000);
+}
+
+function performPing() {
+    console.log(`[KeepAlive] Pinging ${TARGET_URL}/health to prevent sleep...`);
+    axios.get(`${TARGET_URL}/health`)
+        .then(res => console.log(`[KeepAlive] Ping successful. Status: ${res.status}`))
+        .catch(err => {
+            console.error(`[KeepAlive] Ping failed: ${err.message}`);
+            // If external ping fails, try localhost as fallback to keep event loop active? 
+            // Render might still kill it if no external traffic.
+        });
+}
+
 // START SERVER
 async function startServer() {
     // Bind to 0.0.0.0 to ensure external access in container
     // MOVED UP: Listen first to satisfy Render's startup timeout requirements
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server successfully started on port ${PORT}`);
+        
+        // Start self-ping service only in production or if explicitly enabled
+        // We enable it by default here since the user requested to prevent sleep
+        startKeepAlive();
     });
 
     // Initialize Database (Migrations & Tables)
