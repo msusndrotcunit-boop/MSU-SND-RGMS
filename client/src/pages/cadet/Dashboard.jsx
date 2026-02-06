@@ -107,7 +107,7 @@ const CadetDashboard = () => {
                             >
                                 <h3 className="text-sm text-blue-800 font-semibold uppercase">Attendance (30%)</h3>
                                 <div className="text-2xl font-bold mt-2">{grades.attendanceScore.toFixed(2)} pts</div>
-                                <div className="text-xs text-gray-500 mt-1">{grades.attendance_present} / 15 days</div>
+                                <div className="text-xs text-gray-500 mt-1">{grades.attendance_present} / {grades.totalTrainingDays} days</div>
                             </div>
                             <div 
                                 className="bg-green-50 p-4 rounded text-center cursor-pointer hover:bg-green-100 transition"

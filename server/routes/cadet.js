@@ -33,82 +33,85 @@ const calculateTransmutedGrade = (finalGrade, status) => {
     return { transmutedGrade: typeof transmutedGrade === 'number' ? transmutedGrade.toFixed(2) : transmutedGrade, remarks };
 };
 
-router.get('/my-grades', (req, res) => {
+router.get('/my-grades', async (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
-
-    // Sync grade metrics from live data before returning
-    db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
-        if (err) return res.status(500).json({ message: err.message });
-        const totalTrainingDays = countRow.total || 15;
-        
-        db.get(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId], (aErr, aRow) => {
-            if (aErr) return res.status(500).json({ message: aErr.message });
-            const attendancePresent = aRow?.present || 0;
-            
-            db.get(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId], (mErr, mRow) => {
-                if (mErr) return res.status(500).json({ message: mErr.message });
-                const meritPoints = mRow?.merit || 0;
-                
-                db.get(`SELECT COALESCE(SUM(points),0) as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId], (dErr, dRow) => {
-                    if (dErr) return res.status(500).json({ message: dErr.message });
-                    const demeritPoints = dRow?.demerit || 0;
-                    
-                    db.get(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId], (gErr, gradeRow) => {
-                        if (gErr) return res.status(500).json({ message: gErr.message });
-                        
-                        const base = {
-                            attendance_present: attendancePresent,
-                            merit_points: meritPoints,
-                            demerit_points: demeritPoints,
-                            prelim_score: gradeRow?.prelim_score || 0,
-                            midterm_score: gradeRow?.midterm_score || 0,
-                            final_score: gradeRow?.final_score || 0,
-                            status: gradeRow?.status || 'active'
-                        };
-                        
-                        if (gradeRow) {
-                            const updSql = `UPDATE grades SET attendance_present = ?, merit_points = ?, demerit_points = ? WHERE cadet_id = ?`;
-                            db.run(updSql, [attendancePresent, meritPoints, demeritPoints, cadetId], (uErr) => {
-                                if (uErr) return res.status(500).json({ message: uErr.message });
-                                returnRespond(base, totalTrainingDays);
-                            });
-                        } else {
-                            const insSql = `INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-                            db.run(insSql, [cadetId, attendancePresent, meritPoints, demeritPoints, 0, 0, 0, 'active'], (iErr) => {
-                                if (iErr) return res.status(500).json({ message: iErr.message });
-                                returnRespond(base, totalTrainingDays);
-                            });
-                        }
-                    });
-                });
-            });
-        });
-        
-        function returnRespond(gradeData, totalDays) {
-            const safeTotalDays = totalDays > 0 ? totalDays : 1;
-            const attendanceScore = (gradeData.attendance_present / safeTotalDays) * 30;
-            
-            let rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
-            if (rawAptitude > 100) rawAptitude = 100;
-            if (rawAptitude < 0) rawAptitude = 0;
-            const aptitudeScore = rawAptitude * 0.3;
-            
-            const subjectScore = ((gradeData.prelim_score + gradeData.midterm_score + gradeData.final_score) / 300) * 40;
-            const finalGrade = attendanceScore + aptitudeScore + subjectScore;
-            const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, gradeData.status);
-            
-            res.json({
-                ...gradeData,
-                attendanceScore,
-                aptitudeScore,
-                subjectScore,
-                finalGrade,
-                transmutedGrade,
-                remarks
-            });
-        }
+    const pGet = (sql, params = []) => new Promise(resolve => {
+        db.get(sql, params, (err, row) => resolve(err ? undefined : row));
     });
+    const pRun = (sql, params = []) => new Promise((resolve) => {
+        db.run(sql, params, (err) => resolve(!err));
+    });
+    try {
+        const countRow = await pGet("SELECT COUNT(*) as total FROM training_days", []);
+        const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) || 15;
+        const aRow = await pGet(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId]);
+        const attendancePresent = aRow && aRow.present ? aRow.present : 0;
+        const mRow = await pGet(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
+        const meritPoints = mRow && mRow.merit ? mRow.merit : 0;
+        const dRow = await pGet(`SELECT COALESCE(SUM(points),0) as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId]);
+        const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
+        const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
+        const base = {
+            attendance_present: attendancePresent,
+            merit_points: meritPoints,
+            demerit_points: demeritPoints,
+            prelim_score: gradeRow?.prelim_score || 0,
+            midterm_score: gradeRow?.midterm_score || 0,
+            final_score: gradeRow?.final_score || 0,
+            status: gradeRow?.status || 'active'
+        };
+        if (gradeRow) {
+            await pRun(`UPDATE grades SET attendance_present = ?, merit_points = ?, demerit_points = ? WHERE cadet_id = ?`, [attendancePresent, meritPoints, demeritPoints, cadetId]);
+        } else {
+            await pRun(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [cadetId, attendancePresent, meritPoints, demeritPoints, 0, 0, 0, 'active']);
+        }
+        const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
+        const attendanceScore = (base.attendance_present / safeTotalDays) * 30;
+        let rawAptitude = 100 + (base.merit_points || 0) - (base.demerit_points || 0);
+        if (rawAptitude > 100) rawAptitude = 100;
+        if (rawAptitude < 0) rawAptitude = 0;
+        const aptitudeScore = rawAptitude * 0.3;
+        const subjectScore = ((base.prelim_score + base.midterm_score + base.final_score) / 300) * 40;
+        const finalGrade = attendanceScore + aptitudeScore + subjectScore;
+        const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, base.status);
+        res.json({
+            ...base,
+            totalTrainingDays: safeTotalDays,
+            attendanceScore,
+            aptitudeScore,
+            subjectScore,
+            finalGrade,
+            transmutedGrade,
+            remarks
+        });
+    } catch (e) {
+        const safeTotalDays = 15;
+        const base = {
+            attendance_present: 0,
+            merit_points: 0,
+            demerit_points: 0,
+            prelim_score: 0,
+            midterm_score: 0,
+            final_score: 0,
+            status: 'active'
+        };
+        const attendanceScore = 0;
+        const aptitudeScore = 100 * 0.3;
+        const subjectScore = 0;
+        const finalGrade = attendanceScore + aptitudeScore + subjectScore;
+        const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, base.status);
+        res.json({
+            ...base,
+            totalTrainingDays: safeTotalDays,
+            attendanceScore,
+            aptitudeScore,
+            subjectScore,
+            finalGrade,
+            transmutedGrade,
+            remarks
+        });
+    }
 });
 
 // Get My Merit/Demerit Logs
@@ -119,6 +122,31 @@ router.get('/my-merit-logs', (req, res) => {
     db.all(`SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`, [cadetId], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
+    });
+});
+
+// Notifications (Cadet scope)
+router.get('/notifications', (req, res) => {
+    const userId = req.user.id;
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL OR user_id = ?) ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+router.put('/notifications/:id/read', (req, res) => {
+    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Marked as read' });
+    });
+});
+
+router.put('/notifications/read-all', (req, res) => {
+    const userId = req.user.id;
+    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All marked as read' });
     });
 });
 

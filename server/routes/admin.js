@@ -1600,4 +1600,44 @@ router.get('/staff/archived', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// --- Purge Archived Records With Retention Window ---
+router.post('/purge/archived', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const days = Math.max(1, parseInt(req.body.days || 90));
+        const dryRun = !!req.body.dry_run;
+        const cutoffIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        const result = {};
+        // Collect candidates
+        const tables = ['cadets', 'users'];
+        for (const t of tables) {
+            const rows = await new Promise((resolve) => {
+                db.all(`SELECT id FROM ${t} WHERE is_archived = TRUE AND created_at < ?`, [cutoffIso], (err, r) => {
+                    resolve(err ? [] : r);
+                });
+            });
+            result[t] = rows.map(r => r.id);
+        }
+        if (dryRun) {
+            return res.json({ cutoff: cutoffIso, to_purge: result });
+        }
+        // Execute hard deletes (bypass safe-delete using marker)
+        let total = 0;
+        for (const t of tables) {
+            const ids = result[t];
+            if (ids.length) {
+                const placeholders = ids.map(() => '?').join(',');
+                await new Promise((resolve, reject) => {
+                    db.run(`/* HARD_DELETE */ DELETE FROM ${t} WHERE id IN (${placeholders})`, ids, function(err) {
+                        if (err) reject(err);
+                        else { total += this.changes || 0; resolve(); }
+                    });
+                });
+            }
+        }
+        res.json({ cutoff: cutoffIso, purged: result, total });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
 module.exports = router;

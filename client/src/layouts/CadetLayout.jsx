@@ -150,9 +150,7 @@ const CadetLayout = () => {
             });
             
             // Update local state
-            setNotifications(notifications.map(n => 
-                n.id === id ? { ...n, is_read: 1 } : n
-            ));
+            setNotifications(notifications.filter(n => n.id !== id));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (err) {
             console.error("Error marking notification as read", err);
@@ -167,7 +165,7 @@ const CadetLayout = () => {
             });
             
             // Update local state
-            setNotifications(notifications.map(n => ({ ...n, is_read: 1 })));
+            setNotifications([]);
             setUnreadCount(0);
         } catch (err) {
             console.error("Error marking all notifications as read", err);
@@ -307,11 +305,11 @@ const CadetLayout = () => {
                                             </button>
                                         )}
                                     </div>
-                                    {notifications.length === 0 ? (
+                                    {notifications.filter(n => !isNotifRead(n)).length === 0 ? (
                                         <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
                                     ) : (
                                         <div className="max-h-96 overflow-y-auto">
-                                            {notifications.map(notif => {
+                                            {notifications.filter(n => !isNotifRead(n)).map(notif => {
                                                 const isRead = isNotifRead(notif);
                                                 return (
                                                     <div 

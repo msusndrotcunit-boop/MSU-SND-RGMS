@@ -1,5 +1,7 @@
 const { Pool } = require('pg');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const dns = require('dns');
 
@@ -24,14 +26,32 @@ const getPgUrl = () => {
     }
     return null;
 };
-const pgUrl = getPgUrl();
+const sanitizePgUrl = (u) => {
+    let s = u.trim();
+    if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) {
+        s = s.slice(1, -1);
+    }
+    if (s.endsWith("'") || s.endsWith('"')) {
+        s = s.slice(0, -1);
+    }
+    try {
+        const o = new URL(s);
+        o.searchParams.delete('channel_binding');
+        s = o.toString();
+    } catch (_) {}
+    return s;
+};
+const pgUrl = (() => {
+    const raw = getPgUrl();
+    return raw ? sanitizePgUrl(raw) : null;
+})();
+const isProd = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+const dbStrict = ['1', 'true', 'yes'].includes((process.env.DB_STRICT || '').toLowerCase()) || isProd;
 const isPostgres = !!pgUrl;
 
-// Ensure we are not silently falling back to SQLite in a production-like environment if Supabase is expected
-if (!isPostgres && process.env.NODE_ENV === 'production') {
-    console.error("CRITICAL ERROR: No Supabase/PostgreSQL URL found in environment variables.");
-    console.error("System is configured for '1 Database Only' (Supabase). Local SQLite fallback is disabled.");
-    // We do NOT exit process here to avoid crash loops, but database operations will fail, alerting the admin.
+// Hard block: never use SQLite in strict/production to prevent data loss
+if (!isPostgres && dbStrict) {
+    throw new Error("No PostgreSQL URL found. Strict mode active — SQLite fallback disabled.");
 }
 
 // Removed strict placeholder check to prevent immediate crash on Render if env var is default.
@@ -54,12 +74,46 @@ if (isPostgres) {
 
     db = {
         pool: pool, // Expose pool if needed
+        flushJournal: async function() {
+            const journalPath = path.join(__dirname, 'journal.json');
+            let entries = [];
+            try {
+                if (fs.existsSync(journalPath)) {
+                    const raw = fs.readFileSync(journalPath, 'utf8');
+                    entries = JSON.parse(raw || '[]');
+                }
+            } catch (_) {}
+            if (!entries.length) return;
+            const remaining = [];
+            for (const e of entries) {
+                try {
+                    let paramIndex = 1;
+                    const pgSql = e.sql.replace(/\?/g, () => `$${paramIndex++}`);
+                    await db.pool.query(pgSql, e.params || []);
+                } catch (err) {
+                    remaining.push(e); // keep for next attempt
+                }
+            }
+            try {
+                fs.writeFileSync(journalPath, JSON.stringify(remaining, null, 2));
+            } catch (_) {}
+            console.log(`[Database] Journal replay complete. Applied: ${entries.length - remaining.length}, Pending: ${remaining.length}`);
+        },
         run: function(sql, params, callback) {
             if (typeof params === 'function') {
                 callback = params;
                 params = [];
             }
-            
+            // Safe-delete in production: rewrite hard deletes to archives (unless explicitly bypassed)
+            const hardBypass = /\/\*\s*HARD_DELETE\s*\*\//.test(sql);
+            if (dbStrict && !hardBypass) {
+                const normalized = sql.replace(/\s+/g, ' ').trim();
+                if (/^DELETE\s+FROM\s+cadets\b/i.test(normalized)) {
+                    sql = sql.replace(/^DELETE\s+FROM\s+cadets\b/i, 'UPDATE cadets SET is_archived = TRUE');
+                } else if (/^DELETE\s+FROM\s+users\b/i.test(normalized)) {
+                    sql = sql.replace(/^DELETE\s+FROM\s+users\b/i, 'UPDATE users SET is_archived = TRUE');
+                }
+            }
             // Convert ? to $1, $2, etc.
             let paramIndex = 1;
             let pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
@@ -72,6 +126,28 @@ if (isPostgres) {
 
             db.pool.query(pgSql, params, (err, res) => {
                 if (err) {
+                    // Offline write journal for critical ops
+                    const isWrite = /^\\s*(INSERT|UPDATE|DELETE)\\b/i.test(sql);
+                    const maybeConnErr = /ECONN|ENET|EHOST|TIMEOUT|closed|disconnect/i.test(err.code || '') || /connection|timeout|socket/i.test(err.message || '');
+                    if (isWrite && maybeConnErr) {
+                        const journalPath = path.join(__dirname, 'journal.json');
+                        let entries = [];
+                        try {
+                            if (fs.existsSync(journalPath)) {
+                                const raw = fs.readFileSync(journalPath, 'utf8');
+                                entries = JSON.parse(raw || '[]');
+                            }
+                        } catch (_) {}
+                        const key = crypto.createHash('sha1').update(sql + JSON.stringify(params || [])).digest('hex');
+                        const exists = entries.some(e => e.key === key);
+                        if (!exists) {
+                            entries.push({ key, sql, params, created_at: new Date().toISOString() });
+                            try {
+                                fs.writeFileSync(journalPath, JSON.stringify(entries, null, 2));
+                                console.warn('[Database] Write captured in journal (offline). It will replay on reconnect.');
+                            } catch (_) {}
+                        }
+                    }
                     if (callback) callback(err);
                     return;
                 }
@@ -275,7 +351,8 @@ async function initPgDb() {
             cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
             is_approved INTEGER DEFAULT 0,
             email TEXT,
-            profile_pic TEXT
+            profile_pic TEXT,
+            is_archived BOOLEAN DEFAULT FALSE
         )`,
         `CREATE TABLE IF NOT EXISTS grades (
             id SERIAL PRIMARY KEY,
@@ -462,8 +539,11 @@ async function initPgDb() {
         const simpleMigrations = [
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_profile_completed BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS has_seen_guide BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`
         ];
@@ -482,6 +562,7 @@ async function initPgDb() {
             console.warn(`Migration warning (role check):`, e.message);
         }
 
+        await db.flushJournal();
         console.log('Seeding admin...');
         seedAdmin();
         console.log('PostgreSQL initialized successfully.');
@@ -539,7 +620,8 @@ function initSqliteDb() {
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
             is_profile_completed INTEGER DEFAULT 0,
-            is_archived INTEGER DEFAULT 0
+            is_archived INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
             if (err) console.error('Error creating cadets table:', err);
         });
@@ -554,6 +636,8 @@ function initSqliteDb() {
             is_approved INTEGER DEFAULT 0,
             email TEXT,
             profile_pic TEXT,
+            is_archived INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
         )`);
 
@@ -717,9 +801,14 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN has_seen_guide INTEGER DEFAULT 0`, (err) => {});
+        db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
 
         // Migration: Add last_seen to users
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
+        // Migration: Add is_archived to users
+        db.run(`ALTER TABLE users ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});
+        // Migration: Add created_at to users
+        db.run(`ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
         
         // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
         // Ensure new users table creation has correct check.
