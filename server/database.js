@@ -195,7 +195,9 @@ async function initPgDb() {
         }
     }
     if (!connected) {
-        throw new Error('Database connection failed');
+        console.warn('[Database] Postgres connection failed after retries. Falling back to SQLite for local operation.');
+        await switchToSqlite();
+        return;
     }
 
     const queries = [
@@ -444,6 +446,29 @@ async function initPgDb() {
     } catch (err) {
         console.error('Error initializing PG DB:', err);
         throw err; // Propagate to server.js
+    }
+}
+
+async function switchToSqlite() {
+    try {
+        if (!sqlite3) sqlite3 = require('sqlite3').verbose();
+        const dbPath = path.resolve(__dirname, 'rotc.db');
+        const sqliteDb = new sqlite3.Database(dbPath, (err) => {
+            if (err) console.error('Error opening SQLite database', err.message);
+            else {
+                console.log('Connected to SQLite database (fallback).');
+                sqliteDb.run("PRAGMA foreign_keys = ON");
+            }
+        });
+        db.pool = undefined;
+        db.run = sqliteDb.run.bind(sqliteDb);
+        db.all = sqliteDb.all.bind(sqliteDb);
+        db.get = sqliteDb.get.bind(sqliteDb);
+        db.serialize = sqliteDb.serialize.bind(sqliteDb);
+        db.initialize = async () => {};
+        initSqliteDb();
+    } catch (e) {
+        console.error('[Database] Fallback to SQLite failed:', e);
     }
 }
 
