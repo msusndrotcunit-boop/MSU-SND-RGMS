@@ -297,8 +297,13 @@ const Cadets = () => {
 
     const filteredCadets = cadets.filter(cadet => {
         // Filter by Cadet Course
-        if (selectedCadetCourse !== 'All' && cadet.cadet_course !== selectedCadetCourse) {
-            return false;
+        if (selectedCadetCourse === 'Unverified') {
+            // Show only incomplete profiles (treating null/0/false as incomplete)
+            if (cadet.is_profile_completed) return false;
+        } else if (selectedCadetCourse !== 'All') {
+            if (cadet.cadet_course !== selectedCadetCourse) return false;
+            // Also enforce verification for specific course tabs
+            if (!cadet.is_profile_completed) return false;
         }
 
         if (!searchTerm) return true;
@@ -433,6 +438,16 @@ const Cadets = () => {
                 >
                     All Cadets
                 </button>
+                <button
+                    onClick={() => setSelectedCadetCourse('Unverified')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                        selectedCadetCourse === 'Unverified'
+                            ? 'bg-yellow-500 text-white shadow'
+                            : 'bg-white text-gray-600 border hover:bg-gray-50'
+                    }`}
+                >
+                    Unverified
+                </button>
                 {CADET_COURSE_OPTIONS.map(course => (
                     <button
                         key={course}
@@ -493,13 +508,19 @@ const Cadets = () => {
                                     <td className="p-4">{cadet.username || cadet.student_id}</td>
                                     <td className="p-4 text-center">{cadet.company || '-'}/{cadet.platoon || '-'}</td>
                                     <td className="p-4 text-center">
-                                        <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                            cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
-                                            cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                                            'bg-gray-100 text-gray-800'
-                                        }`}>
-                                            {cadet.status}
-                                        </span>
+                                        {!cadet.is_profile_completed ? (
+                                            <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                                Unverified
+                                            </span>
+                                        ) : (
+                                            <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                                cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
+                                                cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {cadet.status}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="p-4 text-right space-x-2">
                                         <button 

@@ -157,9 +157,10 @@ const Grading = () => {
 
     // --- Filtered List ---
     const filteredCadets = cadets.filter(c => 
-        c.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.student_id.includes(searchTerm)
+        c.student_id.includes(searchTerm)) &&
+        c.is_profile_completed // Only show verified cadets
     );
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
