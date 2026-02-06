@@ -1,6 +1,12 @@
 const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const dns = require('dns');
+
+// Force IPv4 to avoid ENETUNREACH on some networks
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
 
 // Force SQLite by disabling Postgres check
 const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
