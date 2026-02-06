@@ -3,6 +3,7 @@ const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
@@ -1637,6 +1638,36 @@ router.post('/purge/archived', authenticateToken, isAdmin, async (req, res) => {
         res.json({ cutoff: cutoffIso, purged: result, total });
     } catch (e) {
         res.status(500).json({ message: e.message });
+    }
+});
+
+// Save Full Database Backup to server/uploads/backups
+router.post('/backup/save', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const backup = {
+            timestamp: new Date().toISOString(),
+            data: {}
+        };
+        const tables = [
+            'cadets', 'users', 'grades', 'activities', 'merit_demerit_logs', 
+            'training_days', 'attendance_records', 'training_staff', 'staff_attendance_records',
+            'notifications', 'staff_messages'
+        ];
+        for (const table of tables) {
+            backup.data[table] = await new Promise((resolve) => {
+                db.all(`SELECT * FROM ${table}`, [], (err, rows) => resolve(err ? [] : rows));
+            });
+        }
+        const serverRoot = path.join(__dirname, '..');
+        const backupsDir = path.join(serverRoot, 'uploads', 'backups');
+        try { fs.mkdirSync(backupsDir, { recursive: true }); } catch (_) {}
+        const fileName = `rotc-backup-${new Date().toISOString().split('T')[0]}.json`;
+        const filePath = path.join(backupsDir, fileName);
+        fs.writeFileSync(filePath, JSON.stringify(backup, null, 2), 'utf8');
+        res.json({ message: 'Backup saved', path: `/uploads/backups/${fileName}` });
+    } catch (err) {
+        console.error("Backup save error:", err);
+        res.status(500).json({ message: 'Backup save failed: ' + err.message });
     }
 });
 

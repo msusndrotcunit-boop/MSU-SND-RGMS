@@ -19,4 +19,15 @@ module.exports = {
     'react/no-unescaped-entities': 'off', 
     'react-hooks/exhaustive-deps': 'off', 
   },
+  overrides: [
+    {
+      files: ['electron/**/*.js'],
+      env: { node: true },
+    },
+    {
+      files: ['src/sw.js'],
+      env: { serviceworker: true },
+      globals: { clients: 'readonly' },
+    },
+  ],
 }

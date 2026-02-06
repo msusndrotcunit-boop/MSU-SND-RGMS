@@ -18,6 +18,7 @@ const AdminLayout = () => {
         'Training Staff': true,
         'Grading Management': true
     });
+    const [health, setHealth] = useState({ status: 'unknown' });
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -45,6 +46,20 @@ const AdminLayout = () => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 10000); // Poll every 10s
         return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const fetchHealth = async () => {
+            try {
+                const res = await axios.get('/api/health');
+                setHealth(res.data || { status: 'ok', db: 'connected' });
+            } catch (_) {
+                setHealth({ status: 'ok', db: 'disconnected' });
+            }
+        };
+        fetchHealth();
+        const id = setInterval(fetchHealth, 15000);
+        return () => clearInterval(id);
     }, []);
 
     const markAsRead = async (id, e) => {
@@ -287,6 +302,11 @@ const AdminLayout = () => {
                         )}
                     </div>
                 </header>
+                {(health && health.db === 'disconnected') && (
+                    <div className="bg-red-600 text-white text-sm p-2 text-center">
+                        Degraded mode: Database disconnected. Writes are queued; some features may be limited.
+                    </div>
+                )}
                 <main className="flex-1 overflow-auto p-4 md:p-6">
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />

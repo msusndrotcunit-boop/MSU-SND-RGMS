@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, Bell, Check, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
 
 const CadetLayout = () => {
@@ -29,6 +29,7 @@ const CadetLayout = () => {
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [guideStep, setGuideStep] = useState(0);
+    const [health, setHealth] = useState({ status: 'unknown' });
 
     const guideSteps = [
         {
@@ -71,6 +72,20 @@ const CadetLayout = () => {
         };
         checkGuideStatus();
     }, [user]);
+
+    React.useEffect(() => {
+        const fetchHealth = async () => {
+            try {
+                const res = await axios.get('/api/health');
+                setHealth(res.data || { status: 'ok', db: 'connected' });
+            } catch (_) {
+                setHealth({ status: 'ok', db: 'disconnected' });
+            }
+        };
+        fetchHealth();
+        const id = setInterval(fetchHealth, 20000);
+        return () => clearInterval(id);
+    }, []);
 
     const handleStartGuide = () => {
         setShowWelcomeModal(false);
@@ -340,6 +355,11 @@ const CadetLayout = () => {
                         )}
                     </div>
                 </header>
+                {(health && health.db === 'disconnected') && (
+                    <div className="bg-yellow-600 text-white text-sm p-2 text-center">
+                        Degraded mode: Database disconnected. Your changes will be limited until service restores.
+                    </div>
+                )}
                 <main className="flex-1 overflow-auto p-6">
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
