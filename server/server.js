@@ -92,12 +92,14 @@ try {
 // Global Error Handlers
 process.on('uncaughtException', (err) => {
     console.error('UNCAUGHT EXCEPTION:', err);
-    process.exit(1); // Exit to allow restart
+    // Do not exit; keep the process alive to avoid Render restart loops
+    // Optionally set a non-zero exit code if the process ever exits
+    if (!process.exitCode) process.exitCode = 1;
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('UNHANDLED REJECTION:', reason);
-    process.exit(1); // Exit to allow restart
+    if (!process.exitCode) process.exitCode = 1;
 });
 
 // Middleware
