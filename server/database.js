@@ -124,10 +124,21 @@ async function initPgDb() {
         // Only resolve if it looks like a domain name
         if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
             console.log(`[Database] Resolving DNS for ${hostname} to force IPv4...`);
-            const addresses = await dns.promises.resolve4(hostname);
+            let ip;
+            try {
+                const addresses = await dns.promises.resolve4(hostname);
+                if (addresses && addresses.length > 0) ip = addresses[0];
+            } catch (resolveErr) {
+                console.warn(`[Database] resolve4 failed (${resolveErr.message}), trying lookup...`);
+                try {
+                    const lookup = await dns.promises.lookup(hostname, { family: 4 });
+                    if (lookup && lookup.address) ip = lookup.address;
+                } catch (lookupErr) {
+                    console.warn(`[Database] lookup failed: ${lookupErr.message}`);
+                }
+            }
             
-            if (addresses && addresses.length > 0) {
-                const ip = addresses[0];
+            if (ip) {
                 console.log(`[Database] Resolved ${hostname} to ${ip}. Reconnecting with IPv4...`);
                 
                 // Close the initial pool which might be trying to connect via IPv6
