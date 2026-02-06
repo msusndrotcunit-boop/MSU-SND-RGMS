@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getSingleton, cacheSingleton } from '../../utils/db';
+import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
 
 const TrainingStaffManagement = () => {
@@ -80,6 +80,7 @@ const TrainingStaffManagement = () => {
             
             // Clear cache and force refresh
             await cacheSingleton('admin', 'staff_list', null);
+            await clearCache('attendance_by_day'); // Sync with attendance
             fetchStaff(true);
         } catch (err) {
             console.error(err);
@@ -132,6 +133,7 @@ const TrainingStaffManagement = () => {
         try {
             await axios.put(`/api/staff/${currentStaff.id}`, editForm);
             await cacheSingleton('admin', 'staff_list', null);
+            await clearCache('attendance_by_day'); // Sync with attendance
             fetchStaff(true);
             setIsEditModalOpen(false);
             toast.success('Staff updated successfully');

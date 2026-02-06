@@ -219,6 +219,12 @@ const Attendance = () => {
 
             const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
             await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
         } catch (err) {
             console.error('Failed to save attendance', err);
         }
@@ -253,6 +259,12 @@ const Attendance = () => {
             };
             const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
             await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
         } catch (err) {
             console.error('Failed to save time fields', err);
         }
@@ -290,6 +302,12 @@ const Attendance = () => {
             };
             const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
             await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
         } catch (err) {
             console.error('Failed to save time', err);
         }

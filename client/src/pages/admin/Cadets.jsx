@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getSingleton, cacheSingleton } from '../../utils/db';
+import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { toast } from 'react-hot-toast';
 import { 
     RANK_OPTIONS, 
@@ -215,6 +215,8 @@ const Cadets = () => {
         e.preventDefault();
         try {
             await axios.put(`/api/admin/cadets/${currentCadet.id}`, editForm);
+            await cacheSingleton('admin', 'cadets_list', null);
+            await cacheSingleton('grading', 'cadets_list', null);
             fetchCadets(true);
             setIsEditModalOpen(false);
         } catch (err) {
@@ -250,6 +252,7 @@ const Cadets = () => {
             setIsImportModalOpen(false);
             setImportFile(null);
             setImportUrl('');
+            await cacheSingleton('grading', 'cadets_list', null);
             fetchCadets(true);
             fetchSettings();
         } catch (err) {
@@ -287,6 +290,7 @@ const Cadets = () => {
             
             // Clear cache and force refresh
             await cacheSingleton('admin', 'cadets_list', null);
+            await cacheSingleton('grading', 'cadets_list', null);
             await fetchCadets(true);
             
             setAddForm({
@@ -355,6 +359,9 @@ const Cadets = () => {
             await axios.post('/api/admin/cadets/delete', { ids: selectedCadets });
             toast.success('Cadets deleted successfully');
             setSelectedCadets([]);
+            await cacheSingleton('admin', 'cadets_list', null);
+            await cacheSingleton('grading', 'cadets_list', null);
+            await clearCache('attendance_by_day'); // Sync attendance lists
             fetchCadets();
         } catch (err) {
             console.error(err);

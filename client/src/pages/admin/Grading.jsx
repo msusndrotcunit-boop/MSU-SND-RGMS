@@ -103,6 +103,7 @@ const Grading = () => {
 
             await axios.put(`/api/admin/grades/${selectedCadet.id}`, updateData);
             alert('Scores updated successfully');
+            await cacheSingleton('admin', 'cadets_list', null); // Sync with admin list
             fetchCadets(true); // Force refresh
         } catch (err) {
             alert('Error updating scores');
@@ -137,6 +138,7 @@ const Grading = () => {
                 ...ledgerForm
             });
             fetchLedgerLogs(selectedCadet.id);
+            await cacheSingleton('admin', 'cadets_list', null); // Sync with admin list
             fetchCadets(true); // Update total points
             setLedgerForm({ type: 'merit', points: 0, reason: '' });
         } catch (err) {
@@ -149,6 +151,7 @@ const Grading = () => {
         try {
             await axios.delete(`/api/admin/merit-logs/${logId}`);
             fetchLedgerLogs(selectedCadet.id);
+            await cacheSingleton('admin', 'cadets_list', null); // Sync with admin list
             fetchCadets(true);
         } catch (err) {
             alert('Error deleting log');
