@@ -28,10 +28,26 @@ const TrainingStaffManagement = () => {
         fetchStaff();
     }, []);
 
-    const fetchStaff = async () => {
+    const fetchStaff = async (forceRefresh = false) => {
         try {
+            if (!forceRefresh) {
+                const cached = await getSingleton('admin', 'staff_list');
+                if (cached && Array.isArray(cached.data)) {
+                    setStaffList(cached.data);
+                    setLoading(false);
+                    // 2 minute cache
+                    if (Date.now() - cached.timestamp < 2 * 60 * 1000) {
+                        return;
+                    }
+                }
+            }
+
             const res = await axios.get('/api/staff');
             setStaffList(res.data);
+            await cacheSingleton('admin', 'staff_list', {
+                data: res.data,
+                timestamp: Date.now()
+            });
             setLoading(false);
         } catch (err) {
             console.error("Network request failed", err);
@@ -61,7 +77,10 @@ const TrainingStaffManagement = () => {
             toast.success(message);
             setIsImportModalOpen(false);
             setImportFile(null);
-            fetchStaff();
+            
+            // Clear cache and force refresh
+            await cacheSingleton('admin', 'staff_list', null);
+            fetchStaff(true);
         } catch (err) {
             console.error(err);
             toast.error('Import failed: ' + (err.response?.data?.message || err.message));
@@ -76,7 +95,11 @@ const TrainingStaffManagement = () => {
             await axios.post('/api/staff', addForm);
             toast.success('Staff added successfully');
             setIsAddModalOpen(false);
-            fetchStaff();
+            
+            // Clear cache and force refresh
+            await cacheSingleton('admin', 'staff_list', null);
+            fetchStaff(true);
+            
             setAddForm({
                 rank: '', first_name: '', middle_name: '', last_name: '', suffix_name: '',
                 email: '', contact_number: '', role: 'Instructor'
@@ -108,6 +131,7 @@ const TrainingStaffManagement = () => {
         e.preventDefault();
         try {
             await axios.put(`/api/staff/${currentStaff.id}`, editForm);
+            await cacheSingleton('admin', 'staff_list', null);
             fetchStaff(true);
             setIsEditModalOpen(false);
             toast.success('Staff updated successfully');
@@ -120,7 +144,8 @@ const TrainingStaffManagement = () => {
         if (!confirm('Are you sure you want to delete this staff member?')) return;
         try {
             await axios.delete(`/api/staff/${id}`);
-            setStaffList(staffList.filter(s => s.id !== id));
+            await cacheSingleton('admin', 'staff_list', null);
+            fetchStaff(true);
         } catch (err) {
             toast.error('Error deleting staff: ' + (err.response?.data?.message || err.message));
         }

@@ -78,6 +78,7 @@ const Attendance = () => {
         e.preventDefault();
         try {
             await axios.post('/api/attendance/days', createForm);
+            await cacheSingleton('admin', 'training_days', null); // Explicit clear
             fetchDays(true); // Force refresh to update list and cache
             setIsCreateModalOpen(false);
             setCreateForm({ date: '', title: '', description: '' });
@@ -92,6 +93,7 @@ const Attendance = () => {
         try {
             await axios.delete(`/api/attendance/days/${id}`);
             if (selectedDay?.id === id) setSelectedDay(null);
+            await cacheSingleton('admin', 'training_days', null); // Explicit clear
             fetchDays(true); // Force refresh
         } catch (err) {
             alert('Error deleting day');

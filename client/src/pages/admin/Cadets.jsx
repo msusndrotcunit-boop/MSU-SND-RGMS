@@ -285,7 +285,10 @@ const Cadets = () => {
             // Switch to Unverified tab to show the new cadet
             setSelectedCadetCourse('Unverified');
             
-            fetchCadets(true);
+            // Clear cache and force refresh
+            await cacheSingleton('admin', 'cadets_list', null);
+            await fetchCadets(true);
+            
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',

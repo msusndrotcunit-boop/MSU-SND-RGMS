@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'rotc_grading_system_db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
@@ -9,6 +9,10 @@ export const initDB = async () => {
             // Cadets Store
             if (!db.objectStoreNames.contains('cadets')) {
                 db.createObjectStore('cadets', { keyPath: 'id' });
+            }
+            // Admin Store (General Purpose Cache)
+            if (!db.objectStoreNames.contains('admin')) {
+                db.createObjectStore('admin', { keyPath: 'key' });
             }
             // Grades Store
             if (!db.objectStoreNames.contains('grades')) {

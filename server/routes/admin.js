@@ -903,15 +903,15 @@ router.post('/cadets', async (req, res) => {
                 student_id, email, contact_number, address, 
                 course, year_level, school_year, 
                 battalion, company, platoon, 
-                cadet_course, semester, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                cadet_course, semester, status, is_profile_completed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
             const params = [
                 cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
                 cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-                cadet.cadetCourse || '', cadet.semester || '', cadet.status || 'Ongoing'
+                cadet.cadetCourse || '', cadet.semester || '', cadet.status || 'Ongoing', 0
             ];
 
             db.run(insertSql, params, function(err) {
@@ -973,9 +973,9 @@ router.get('/cadets', (req, res) => {
                    g.attendance_present, g.merit_points, g.demerit_points, 
                    g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
             FROM cadets c
-            JOIN users u ON u.cadet_id = c.id
+            LEFT JOIN users u ON u.cadet_id = c.id
             LEFT JOIN grades g ON c.id = g.cadet_id
-            WHERE u.is_approved = 1 AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+            WHERE (c.is_archived IS FALSE OR c.is_archived IS NULL)
         `;
         db.all(sql, [], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
