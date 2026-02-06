@@ -9,7 +9,23 @@ if (dns.setDefaultResultOrder) {
 }
 
 // Force SQLite by disabling Postgres check
-const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
+const getPgUrl = () => {
+    const keys = [
+        'DATABASE_URL',
+        'SUPABASE_URL',
+        'SUPABASE_DB_URL',
+        'SUPABASE_POSTGRES_URL',
+        'POSTGRES_URL',
+        'PG_DATABASE_URL'
+    ];
+    for (const k of keys) {
+        const v = process.env[k];
+        if (v && v.trim()) return v.trim();
+    }
+    return null;
+};
+const pgUrl = getPgUrl();
+const isPostgres = !!pgUrl;
 
 // Ensure we are not silently falling back to SQLite in a production-like environment if Supabase is expected
 if (!isPostgres && process.env.NODE_ENV === 'production') {
@@ -26,7 +42,7 @@ let sqlite3;
 
 // DB Adapter to unify SQLite and Postgres
 if (isPostgres) {
-    const connectionString = (process.env.DATABASE_URL || process.env.SUPABASE_URL).trim();
+    const connectionString = pgUrl;
     // console.log('Using DB URL:', connectionString.replace(/:[^:@]*@/, ':****@')); // Debug log
 
     const pool = new Pool({
@@ -34,7 +50,7 @@ if (isPostgres) {
         ssl: { rejectUnauthorized: false }
     });
 
-    console.log('Connected to PostgreSQL database.');
+    console.log('Using PostgreSQL database.');
 
     db = {
         pool: pool, // Expose pool if needed
@@ -117,7 +133,7 @@ if (isPostgres) {
 async function initPgDb() {
     // FIX: Manually resolve DNS to IPv4 to prevent ENETUNREACH on IPv6-capable networks
     try {
-        const connectionString = (process.env.DATABASE_URL || process.env.SUPABASE_URL).trim();
+        const connectionString = pgUrl;
         const url = new URL(connectionString);
         const hostname = url.hostname;
 
@@ -166,6 +182,20 @@ async function initPgDb() {
     } catch (dnsErr) {
         console.warn("[Database] DNS resolution warning:", dnsErr.message);
         // Continue with default pool if resolution fails
+    }
+
+    let connected = false;
+    for (let i = 0; i < 3; i++) {
+        try {
+            await db.pool.query('SELECT 1');
+            connected = true;
+            break;
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+        }
+    }
+    if (!connected) {
+        throw new Error('Database connection failed');
     }
 
     const queries = [
