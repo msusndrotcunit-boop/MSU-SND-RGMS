@@ -136,6 +136,43 @@ async function initPgDb() {
         const connectionString = pgUrl;
         const url = new URL(connectionString);
         const hostname = url.hostname;
+        const overrideHostRaw = (process.env.PG_HOST_IPV4 || process.env.PG_HOST_OVERRIDE || '').trim();
+        let sniName = hostname;
+        if (overrideHostRaw) {
+            let ip;
+            if (/^(\d{1,3}\.){3}\d{1,3}$/.test(overrideHostRaw)) {
+                ip = overrideHostRaw;
+            } else {
+                try {
+                    const addresses = await dns.promises.resolve4(overrideHostRaw);
+                    if (addresses && addresses.length > 0) ip = addresses[0];
+                } catch (_) {
+                    try {
+                        const lookup = await dns.promises.lookup(overrideHostRaw, { family: 4 });
+                        if (lookup && lookup.address) ip = lookup.address;
+                    } catch (_) {}
+                }
+                sniName = overrideHostRaw;
+            }
+            if (ip) {
+                await db.pool.end();
+                db.pool = new Pool({
+                    user: decodeURIComponent(url.username),
+                    password: decodeURIComponent(url.password),
+                    host: ip,
+                    port: url.port || 5432,
+                    database: url.pathname.split('/')[1],
+                    ssl: { 
+                        rejectUnauthorized: false,
+                        servername: sniName
+                    },
+                    max: 20,
+                    idleTimeoutMillis: 30000,
+                    connectionTimeoutMillis: 10000,
+                });
+                console.log('[Database] Using override host with IPv4.');
+            }
+        } else {
 
         // Only resolve if it looks like a domain name
         if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
@@ -178,6 +215,7 @@ async function initPgDb() {
                 
                 console.log('[Database] Reconnected successfully with IPv4.');
             }
+        }
         }
     } catch (dnsErr) {
         console.warn("[Database] DNS resolution warning:", dnsErr.message);
