@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Bell, Monitor, PaintBucket, Database, Download } from 'lucide-react';
+import { Save, Bell, Monitor, PaintBucket } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
 const Settings = ({ role }) => {
     const { settings, updateSettings } = useSettings();
     const [localSettings, setLocalSettings] = useState(settings);
     const [saving, setSaving] = useState(false);
-    const [downloading, setDownloading] = useState(false);
 
     // Sync local state with context when context updates (initial load)
     useEffect(() => {
@@ -36,36 +34,6 @@ const Settings = ({ role }) => {
         }
     };
 
-    const handleDownloadBackup = async () => {
-        if (!window.confirm('Download full database backup? This may take a moment.')) return;
-        
-        setDownloading(true);
-        const toastId = toast.loading('Generating backup...');
-        
-        try {
-            const response = await axios.get('/api/admin/backup/download', {
-                responseType: 'blob'
-            });
-            
-            // Create blob link to download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            const date = new Date().toISOString().split('T')[0];
-            link.setAttribute('download', `rotc_backup_${date}.json`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
-            
-            toast.success('Backup downloaded successfully', { id: toastId });
-        } catch (err) {
-            console.error('Backup failed:', err);
-            toast.error('Backup failed: ' + (err.response?.data?.message || err.message), { id: toastId });
-        } finally {
-            setDownloading(false);
-        }
-    };
-
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -74,29 +42,6 @@ const Settings = ({ role }) => {
             </h2>
 
             <div className="space-y-8">
-                {/* Admin Data Management */}
-                {role === 'admin' && (
-                    <section>
-                        <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
-                            <Database size={20} />
-                            Data Management
-                        </h3>
-                        <div className="pl-4 border-l-2 border-gray-100">
-                            <p className="text-sm text-gray-500 mb-3">
-                                Download a complete backup of the database (Cadets, Grades, Attendance, etc.) as a JSON file.
-                            </p>
-                            <button
-                                onClick={handleDownloadBackup}
-                                disabled={downloading}
-                                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 disabled:opacity-50"
-                            >
-                                <Download size={16} />
-                                {downloading ? 'Downloading...' : 'Download Database Backup'}
-                            </button>
-                        </div>
-                    </section>
-                )}
-
                 {/* Notifications Settings */}
                 <section>
                     <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">

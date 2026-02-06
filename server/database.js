@@ -5,6 +5,13 @@ const bcrypt = require('bcryptjs');
 // Force SQLite by disabling Postgres check
 const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
 
+// Ensure we are not silently falling back to SQLite in a production-like environment if Supabase is expected
+if (!isPostgres && process.env.NODE_ENV === 'production') {
+    console.error("CRITICAL ERROR: No Supabase/PostgreSQL URL found in environment variables.");
+    console.error("System is configured for '1 Database Only' (Supabase). Local SQLite fallback is disabled.");
+    // We do NOT exit process here to avoid crash loops, but database operations will fail, alerting the admin.
+}
+
 // Removed strict placeholder check to prevent immediate crash on Render if env var is default.
 // The connection will fail naturally if the URL is invalid.
 
