@@ -233,9 +233,13 @@ async function initPgDb() {
         }
     }
     if (!connected) {
-        console.warn('[Database] Postgres connection failed after retries. Falling back to SQLite for local operation.');
-        await switchToSqlite();
-        return;
+        const isProd = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+        if (isProd) {
+            throw new Error('Postgres connection failed');
+        } else {
+            await switchToSqlite();
+            return;
+        }
     }
 
     const queries = [
