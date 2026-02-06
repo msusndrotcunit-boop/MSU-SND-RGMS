@@ -1,3 +1,9 @@
+const dns = require('dns');
+// Force IPv4 to avoid ENETUNREACH on some networks
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 require('dotenv').config({ override: true });
 // Force redeploy trigger: V2.8.1 (Render Startup Fix)
 const express = require('express');
