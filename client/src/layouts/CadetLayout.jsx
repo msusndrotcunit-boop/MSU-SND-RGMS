@@ -131,6 +131,10 @@ const CadetLayout = () => {
 
     // Notification Logic
     const isNotifRead = (n) => n.is_read === 1 || n.is_read === '1' || n.is_read === true;
+    
+    // Track the latest notification ID to detect new ones for "pop out" bubbles
+    const lastNotifIdRef = React.useRef(0);
+    const isFirstLoadRef = React.useRef(true);
 
     const fetchNotifications = async () => {
         try {
@@ -140,25 +144,48 @@ const CadetLayout = () => {
             const res = await axios.get('/api/cadet/notifications', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setNotifications(res.data);
-            const unread = res.data.filter(n => !isNotifRead(n));
-            setUnreadCount(unread.length);
-            if (unread.length > 0) {
-                setShowNotifications(true);
-                if (autoHideRef.current) clearTimeout(autoHideRef.current);
-                autoHideRef.current = setTimeout(async () => {
-                    try {
-                        const token = localStorage.getItem('token');
-                        await axios.put('/api/cadet/notifications/read-all', {}, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        setNotifications([]);
-                        setUnreadCount(0);
-                    } catch (err) {
-                        // Silent fail
-                    }
-                    setShowNotifications(false);
-                }, 6000);
+            const fetchedNotifs = res.data;
+            setNotifications(fetchedNotifs);
+            setUnreadCount(fetchedNotifs.filter(n => !isNotifRead(n)).length);
+
+            // Check for NEW notifications to pop out
+            const maxId = fetchedNotifs.reduce((max, n) => Math.max(max, n.id), 0);
+            
+            // On first load, just sync the ID, don't toast
+            if (isFirstLoadRef.current) {
+                lastNotifIdRef.current = maxId;
+                isFirstLoadRef.current = false;
+                return;
+            }
+            
+            // On subsequent polls, check for new IDs
+            if (maxId > lastNotifIdRef.current) {
+                // Find all new notifications
+                const newNotifs = fetchedNotifs.filter(n => n.id > lastNotifIdRef.current);
+                newNotifs.forEach(n => {
+                    // Bubble Pop Out (Toast)
+                    toast((t) => (
+                        <div className="flex items-start cursor-pointer" onClick={() => {
+                            toast.dismiss(t.id);
+                            navigate('/cadet/notifications'); // Optional navigation
+                        }}>
+                            <div className="flex-1">
+                                <p className="font-bold text-sm text-green-800">New Notification</p>
+                                <p className="text-sm text-gray-600">{n.message}</p>
+                            </div>
+                        </div>
+                    ), {
+                        duration: 5000,
+                        position: 'top-right',
+                        style: {
+                            borderLeft: '4px solid #166534', // green-800
+                            background: '#F0FDF4', // green-50
+                        }
+                    });
+                });
+                
+                // Update reference
+                lastNotifIdRef.current = maxId;
             }
         } catch (err) {
             console.error("Error fetching notifications", err);
