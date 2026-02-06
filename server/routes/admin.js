@@ -1502,6 +1502,45 @@ router.post('/cadets/archive', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// --- NEW: Export & Prune Completed Cadets ---
+
+// Export Completed Cadets to Excel
+router.get('/cadets/export-completed', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const sql = `SELECT * FROM cadets WHERE status = 'Completed'`;
+        db.all(sql, [], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (rows.length === 0) return res.status(404).json({ message: 'No completed cadets found to export.' });
+
+            // Create Workbook
+            const wb = xlsx.utils.book_new();
+            const ws = xlsx.utils.json_to_sheet(rows);
+            xlsx.utils.book_append_sheet(wb, ws, "Graduates");
+
+            // Write to buffer
+            const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+            // Send response
+            res.setHeader('Content-Disposition', 'attachment; filename="Graduates_Archive.xlsx"');
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.send(buffer);
+        });
+    } catch (error) {
+        console.error("Export error:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Delete Completed Cadets
+router.delete('/cadets/prune-completed', authenticateToken, isAdmin, (req, res) => {
+    const sql = `DELETE FROM cadets WHERE status = 'Completed'`;
+    db.run(sql, [], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: `Successfully removed ${this.changes} completed cadets from the database.` });
+    });
+});
+// --------------------------------------------
+
 // 3. Restore Cadets
 router.post('/cadets/restore', authenticateToken, isAdmin, (req, res) => {
     const { ids } = req.body;

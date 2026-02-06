@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Bell, Monitor, PaintBucket } from 'lucide-react';
+import axios from 'axios';
+import { Save, Bell, Monitor, PaintBucket, Database, Download, Trash2 } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { toast } from 'react-hot-toast';
 
@@ -31,6 +32,53 @@ const Settings = ({ role }) => {
             toast.success('Settings saved and applied successfully');
         } else {
             toast.error(result.message || 'Failed to save settings');
+        }
+    };
+
+    const handleExportGraduates = async () => {
+        try {
+            const response = await axios.get('/api/admin/cadets/export-completed', {
+                responseType: 'blob', // Important for file download
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            // Create download link
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'Graduates_Archive.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            toast.success('Graduates list exported successfully.');
+        } catch (error) {
+            console.error('Export failed:', error);
+            if (error.response && error.response.status === 404) {
+                 toast.error('No completed cadets found to export.');
+            } else {
+                 toast.error('Failed to export graduates.');
+            }
+        }
+    };
+
+    const handlePruneGraduates = async () => {
+        if (!window.confirm('WARNING: This will PERMANENTLY DELETE all cadets with status "Completed" from the database.\n\nMake sure you have exported/downloaded their data first.\n\nAre you sure you want to proceed?')) {
+            return;
+        }
+
+        try {
+             const response = await axios.delete('/api/admin/cadets/prune-completed', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            toast.success(response.data.message);
+        } catch (error) {
+            console.error('Prune failed:', error);
+            toast.error('Failed to delete graduates: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -132,6 +180,40 @@ const Settings = ({ role }) => {
                         </div>
                     </div>
                 </section>
+
+                {/* Archive & Maintenance (Admin Only) */}
+                {role === 'admin' && (
+                    <section>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                            <Database size={20} />
+                            Archive & Maintenance
+                        </h3>
+                        <div className="space-y-4 pl-4 border-l-2 border-gray-100">
+                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <h4 className="font-medium text-gray-800 mb-2">Old Graduates Management</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Export data of cadets who have completed the course (Status: "Completed"), then remove them to free up database space.
+                                </p>
+                                <div className="flex gap-3 flex-wrap">
+                                    <button 
+                                        onClick={handleExportGraduates}
+                                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                                    >
+                                        <Download size={16} />
+                                        Export Graduates (Excel)
+                                    </button>
+                                    <button 
+                                        onClick={handlePruneGraduates}
+                                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete from Database
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 <div className="pt-6 border-t border-gray-200">
                     <button
