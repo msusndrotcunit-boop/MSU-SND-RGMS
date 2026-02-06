@@ -2,7 +2,8 @@ const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
+// Force SQLite by disabling Postgres check
+const isPostgres = false; // !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
 
 // Removed strict placeholder check to prevent immediate crash on Render if env var is default.
 // The connection will fail naturally if the URL is invalid.
@@ -131,6 +132,20 @@ if (isPostgres) {
             db.run("ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0", (err) => {
                 if (err && !err.message.includes('duplicate column')) {
                     console.log('Migration info:', err.message);
+                }
+            });
+
+            // Migration: Add is_archived to cadets if missing
+            db.run("ALTER TABLE cadets ADD COLUMN is_archived INTEGER DEFAULT 0", (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.log('Migration info (SQLite is_archived):', err.message);
+                }
+            });
+
+            // Migration: Add is_archived to training_staff if missing
+            db.run("ALTER TABLE training_staff ADD COLUMN is_archived INTEGER DEFAULT 0", (err) => {
+                if (err && !err.message.includes('duplicate column')) {
+                    console.log('Migration info (SQLite staff is_archived):', err.message);
                 }
             });
 
