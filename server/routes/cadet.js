@@ -37,42 +37,67 @@ router.get('/my-grades', (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    // 1. Get Total Training Days first
+    // Sync grade metrics from live data before returning
     db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
         if (err) return res.status(500).json({ message: err.message });
-        const totalTrainingDays = countRow.total || 15; // Default to 15
-
-        db.get(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId], (err, row) => {
-            if (err) return res.status(500).json({ message: err.message });
+        const totalTrainingDays = countRow.total || 15;
+        
+        db.get(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId], (aErr, aRow) => {
+            if (aErr) return res.status(500).json({ message: aErr.message });
+            const attendancePresent = aRow?.present || 0;
             
-            // If no grades found, return default initialized structure
-            const gradeData = row || {
-                attendance_present: 0,
-                merit_points: 0,
-                demerit_points: 0,
-                prelim_score: 0,
-                midterm_score: 0,
-                final_score: 0,
-                status: 'active'
-            };
-
-            // Calculate Grades
-            const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
+            db.get(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId], (mErr, mRow) => {
+                if (mErr) return res.status(500).json({ message: mErr.message });
+                const meritPoints = mRow?.merit || 0;
+                
+                db.get(`SELECT COALESCE(SUM(points),0) as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId], (dErr, dRow) => {
+                    if (dErr) return res.status(500).json({ message: dErr.message });
+                    const demeritPoints = dRow?.demerit || 0;
+                    
+                    db.get(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId], (gErr, gradeRow) => {
+                        if (gErr) return res.status(500).json({ message: gErr.message });
+                        
+                        const base = {
+                            attendance_present: attendancePresent,
+                            merit_points: meritPoints,
+                            demerit_points: demeritPoints,
+                            prelim_score: gradeRow?.prelim_score || 0,
+                            midterm_score: gradeRow?.midterm_score || 0,
+                            final_score: gradeRow?.final_score || 0,
+                            status: gradeRow?.status || 'active'
+                        };
+                        
+                        if (gradeRow) {
+                            const updSql = `UPDATE grades SET attendance_present = ?, merit_points = ?, demerit_points = ? WHERE cadet_id = ?`;
+                            db.run(updSql, [attendancePresent, meritPoints, demeritPoints, cadetId], (uErr) => {
+                                if (uErr) return res.status(500).json({ message: uErr.message });
+                                returnRespond(base, totalTrainingDays);
+                            });
+                        } else {
+                            const insSql = `INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                            db.run(insSql, [cadetId, attendancePresent, meritPoints, demeritPoints, 0, 0, 0, 'active'], (iErr) => {
+                                if (iErr) return res.status(500).json({ message: iErr.message });
+                                returnRespond(base, totalTrainingDays);
+                            });
+                        }
+                    });
+                });
+            });
+        });
+        
+        function returnRespond(gradeData, totalDays) {
+            const safeTotalDays = totalDays > 0 ? totalDays : 1;
             const attendanceScore = (gradeData.attendance_present / safeTotalDays) * 30;
             
-            // Aptitude: Base 100 + Merits - Demerits (Capped at 100)
             let rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
             if (rawAptitude > 100) rawAptitude = 100;
             if (rawAptitude < 0) rawAptitude = 0;
             const aptitudeScore = rawAptitude * 0.3;
-
-            // Subject: (Sum / 300) * 40%
-            const subjectScore = ((gradeData.prelim_score + gradeData.midterm_score + gradeData.final_score) / 300) * 40;
             
+            const subjectScore = ((gradeData.prelim_score + gradeData.midterm_score + gradeData.final_score) / 300) * 40;
             const finalGrade = attendanceScore + aptitudeScore + subjectScore;
-
             const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, gradeData.status);
-
+            
             res.json({
                 ...gradeData,
                 attendanceScore,
@@ -82,7 +107,7 @@ router.get('/my-grades', (req, res) => {
                 transmutedGrade,
                 remarks
             });
-        });
+        }
     });
 });
 
