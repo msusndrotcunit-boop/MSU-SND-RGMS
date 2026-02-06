@@ -441,7 +441,8 @@ function initSqliteDb() {
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
-            is_profile_completed INTEGER DEFAULT 0
+            is_profile_completed INTEGER DEFAULT 0,
+            is_archived INTEGER DEFAULT 0
         )`);
 
         // Users Table
@@ -612,6 +613,13 @@ function initSqliteDb() {
         // Migration: Add time_in and time_out to staff_attendance_records
         db.run(`ALTER TABLE staff_attendance_records ADD COLUMN time_in TEXT`, (err) => {});
         db.run(`ALTER TABLE staff_attendance_records ADD COLUMN time_out TEXT`, (err) => {});
+
+        // Migration: Add is_archived and is_profile_completed to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});
+        db.run(`ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0`, (err) => {});
+
+        // Migration: Add last_seen to users
+        db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
         
         // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
         // Ensure new users table creation has correct check.
