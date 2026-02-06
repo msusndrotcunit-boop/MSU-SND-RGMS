@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Bell, Check, Settings, QrCode, ChevronDown, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -19,6 +19,7 @@ const AdminLayout = () => {
         'Grading Management': true
     });
     const [health, setHealth] = useState({ status: 'unknown' });
+    const autoHideRef = React.useRef(null);
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -36,7 +37,25 @@ const AdminLayout = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setNotifications(res.data);
-            setUnreadCount(res.data.filter(n => !isNotifRead(n)).length);
+            const unread = res.data.filter(n => !isNotifRead(n));
+            setUnreadCount(unread.length);
+            if (unread.length > 0) {
+                setShowNotifications(true);
+                if (autoHideRef.current) clearTimeout(autoHideRef.current);
+                autoHideRef.current = setTimeout(async () => {
+                    try {
+                        const token = localStorage.getItem('token');
+                        await axios.put('/api/admin/notifications/read-all', {}, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+                        setUnreadCount(0);
+                    } catch (err) {
+                        // Silent fail
+                    }
+                    setShowNotifications(false);
+                }, 6000);
+            }
         } catch (err) {
             console.error("Error fetching notifications", err);
         }
@@ -86,22 +105,7 @@ const AdminLayout = () => {
         navigate('/login');
     };
 
-    const markAllAsRead = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            await axios.put('/api/admin/notifications/read-all', {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setUnreadCount(0);
-            setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const toggleNotifications = () => {
-        setShowNotifications(!showNotifications);
-    };
+    // Removed manual toggle and buttons; notifications auto-show and auto-hide
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -242,65 +246,33 @@ const AdminLayout = () => {
                         {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
                     </h1>
 
-                    {/* Notification Bell */}
-                    <div className="relative mr-4">
-                        <button 
-                            onClick={toggleNotifications}
-                            className="p-2 text-gray-600 hover:text-gray-900 relative"
-                        >
-                            <Bell size={24} />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </button>
-
-                        {showNotifications && (
+                    {/* Notifications auto-display (no button) */}
+                    {showNotifications && (
+                        <div className="relative mr-4">
                             <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
                                 <div className="py-2">
-                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700 flex justify-between items-center">
-                                        <span>Notifications</span>
-                                        {unreadCount > 0 && (
-                                            <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-800 font-normal">
-                                                Mark all read
-                                            </button>
-                                        )}
+                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700">
+                                        Notifications
                                     </div>
-                                    {notifications.length === 0 ? (
+                                    {notifications.filter(n => !isNotifRead(n)).length === 0 ? (
                                         <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
                                     ) : (
                                         <div className="max-h-96 overflow-y-auto">
-                                            {notifications.map(notif => {
-                                                const isRead = isNotifRead(notif);
-                                                return (
-                                                    <div 
-                                                        key={notif.id} 
-                                                        onClick={(e) => !isRead && markAsRead(notif.id, e)}
-                                                        className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${isRead ? 'opacity-60' : 'bg-blue-50'}`}
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <p className="text-sm text-gray-800">{notif.message}</p>
-                                                            {!isRead && (
-                                                                <button 
-                                                                    onClick={(e) => markAsRead(notif.id, e)}
-                                                                    className="text-blue-600 hover:text-blue-800 ml-2"
-                                                                    title="Mark as read"
-                                                                >
-                                                                    <Check size={16} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
-                                                    </div>
-                                                );
-                                            })}
+                                            {notifications.filter(n => !isNotifRead(n)).map(notif => (
+                                                <div 
+                                                    key={notif.id}
+                                                    className="px-4 py-3 border-b border-gray-100 bg-blue-50"
+                                                >
+                                                    <p className="text-sm text-gray-800">{notif.message}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </header>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-red-600 text-white text-sm p-2 text-center">

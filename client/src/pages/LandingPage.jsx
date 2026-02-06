@@ -16,14 +16,6 @@ const LandingPage = () => {
                     {/* Logos can be added here if available, using placeholders for now or just text */}
                     <div className="font-bold text-2xl tracking-wider text-green-100">ROTC<span className="text-yellow-500">GMS</span></div>
                 </div>
-                <div>
-                    <button 
-                        onClick={() => navigate('/login')}
-                        className="bg-white text-green-900 px-6 py-2 rounded-full font-bold hover:bg-green-100 transition shadow-lg"
-                    >
-                        Login
-                    </button>
-                </div>
             </nav>
 
             {/* Hero Section */}
@@ -46,15 +38,7 @@ const LandingPage = () => {
                     Streamlining operations for the 1002nd Community Defense Center.
                 </p>
                 
-                <button 
-                    onClick={() => navigate('/login')}
-                    className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-green-600 font-pj rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600 hover:bg-green-700 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
-                >
-                    Access Portal
-                    <svg className="w-5 h-5 ml-2 -mr-1 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                </button>
+                
             </header>
 
             {/* Features Grid */}
