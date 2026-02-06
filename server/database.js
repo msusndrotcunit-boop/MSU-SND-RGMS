@@ -666,8 +666,8 @@ function seedAdmin() {
                         if (err) console.error('Error seeding admin:', err ? err.message : err);
                         else {
                             console.log('Admin seeded successfully.');
-                            seedDefaultStaff();
-                            seedDefaultCadet();
+                            // seedDefaultStaff(); // Disabled to prevent ghost entries
+                            // seedDefaultCadet(); // Disabled to prevent ghost entries
                         }
                     }
                 );
@@ -688,8 +688,8 @@ function seedAdmin() {
                 console.error('Error hashing admin password update:', e);
             }
 
-            seedDefaultStaff();
-            // seedDefaultCadet(); // Disabled per user request to avoid ghost entries
+            // seedDefaultStaff(); // Disabled to prevent ghost entries
+            // seedDefaultCadet(); // Disabled to prevent ghost entries
         }
     });
 }
