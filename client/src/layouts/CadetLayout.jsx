@@ -15,7 +15,7 @@ const CadetLayout = () => {
     // Notification State
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [showNotifications, setShowNotifications] = useState(false);
+    // showNotifications removed as requested (no button)
     const autoHideRef = React.useRef(null);
 
     // Redirect to profile if not completed
@@ -163,23 +163,32 @@ const CadetLayout = () => {
                 // Find all new notifications
                 const newNotifs = fetchedNotifs.filter(n => n.id > lastNotifIdRef.current);
                 newNotifs.forEach(n => {
-                    // Bubble Pop Out (Toast)
+                    // Messenger-style Pop Up
                     toast((t) => (
-                        <div className="flex items-start cursor-pointer" onClick={() => {
-                            toast.dismiss(t.id);
-                            navigate('/cadet/notifications'); // Optional navigation
-                        }}>
-                            <div className="flex-1">
-                                <p className="font-bold text-sm text-green-800">New Notification</p>
-                                <p className="text-sm text-gray-600">{n.message}</p>
+                        <div 
+                            className="flex items-center w-full max-w-md bg-white shadow-2xl rounded-2xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden p-4 cursor-pointer"
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                navigate('/cadet/dashboard');
+                            }}
+                        >
+                            <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                                    <Info className="h-6 w-6 text-green-600" />
+                                </div>
+                            </div>
+                            <div className="ml-3 flex-1">
+                                <p className="text-sm font-medium text-gray-900">ROTC Notification</p>
+                                <p className="mt-1 text-sm text-gray-500">{n.message}</p>
                             </div>
                         </div>
                     ), {
                         duration: 5000,
-                        position: 'top-right',
+                        position: 'top-center',
                         style: {
-                            borderLeft: '4px solid #166534', // green-800
-                            background: '#F0FDF4', // green-50
+                            background: 'transparent',
+                            boxShadow: 'none',
+                            padding: 0,
                         }
                     });
                 });
@@ -204,7 +213,7 @@ const CadetLayout = () => {
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
-             <Toaster position="top-right" reverseOrder={false} />
+             <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
              {isSidebarOpen && (
                 <div 
@@ -309,34 +318,6 @@ const CadetLayout = () => {
                             {location.pathname.includes('/cadet/settings') && 'Settings'}
                         </h1>
                     </div>
-
-                    {/* Notifications auto-display (no button) */}
-                    {showNotifications && (
-                        <div className="relative mr-4">
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
-                                <div className="py-2">
-                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700">
-                                        Notifications
-                                    </div>
-                                    {notifications.filter(n => !isNotifRead(n)).length === 0 ? (
-                                        <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
-                                    ) : (
-                                        <div className="max-h-96 overflow-y-auto">
-                                            {notifications.filter(n => !isNotifRead(n)).map(notif => (
-                                                <div 
-                                                    key={notif.id}
-                                                    className="px-4 py-3 border-b border-gray-100 bg-blue-50"
-                                                >
-                                                    <p className="text-sm text-gray-800">{notif.message}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </header>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-yellow-600 text-white text-sm p-2 text-center">

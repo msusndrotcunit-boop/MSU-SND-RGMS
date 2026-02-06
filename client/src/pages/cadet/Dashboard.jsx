@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, X, AlertCircle, User, Info, Link } from 'lucide-react';
+import { Calendar, AlertCircle, User, Info, Link } from 'lucide-react';
 import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 
@@ -11,8 +11,6 @@ const CadetDashboard = () => {
     const [logs, setLogs] = useState([]);
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
-    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -113,58 +111,164 @@ const CadetDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-800">My Portal</h1>
 
             {/* Grades Section */}
-            <div className="bg-white rounded shadow p-6">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">Grading Summary</h2>
+            <div className="space-y-6">
+                
                 {grades ? (
-                    <div className="space-y-6">
-                        {/* Raw Scores */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div 
-                                className="bg-blue-50 p-4 rounded text-center cursor-pointer hover:bg-blue-100 transition"
-                                onClick={() => setIsAttendanceModalOpen(true)}
-                            >
-                                <h3 className="text-sm text-blue-800 font-semibold uppercase">Attendance (30%)</h3>
-                                <div className="text-2xl font-bold mt-2">{grades.attendanceScore.toFixed(2)} pts</div>
-                                <div className="text-xs text-gray-500 mt-1">{grades.attendance_present} / {grades.totalTrainingDays} days</div>
+                    <>
+                        {/* 1. Attendance Section */}
+                        <div className="bg-white rounded shadow p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                <h2 className="text-xl font-bold text-blue-800 flex items-center">
+                                    <Calendar className="mr-2" size={20} />
+                                    Attendance History (30%)
+                                </h2>
+                                <div className="mt-2 md:mt-0 text-right">
+                                    <span className="text-2xl font-bold text-blue-900">{grades.attendanceScore.toFixed(2)} pts</span>
+                                    <span className="text-sm text-gray-500 ml-2">({grades.attendance_present} / {grades.totalTrainingDays} days)</span>
+                                </div>
                             </div>
-                            <div 
-                                className="bg-green-50 p-4 rounded text-center cursor-pointer hover:bg-green-100 transition"
-                                onClick={() => setIsLogsModalOpen(true)}
-                            >
-                                <h3 className="text-sm text-green-800 font-semibold uppercase">Aptitude (30%)</h3>
-                                <div className="text-2xl font-bold mt-2">{grades.aptitudeScore.toFixed(2)} pts</div>
-                                <div className="text-xs text-gray-500 mt-1">M: {grades.merit_points} | D: {grades.demerit_points}</div>
+                            
+                            <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
+                                        <tr className="border-b">
+                                            <th className="p-3 font-semibold text-gray-600">Date</th>
+                                            <th className="p-3 font-semibold text-gray-600">Status</th>
+                                            <th className="p-3 font-semibold text-gray-600">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {attendanceLogs.length > 0 ? (
+                                            attendanceLogs.map(log => (
+                                                <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                                            log.status === 'present' ? 'bg-green-100 text-green-800' : 
+                                                            log.status === 'late' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {log.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-sm text-gray-600">{log.remarks || '-'}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="3" className="p-4 text-center text-gray-500">No attendance records found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div className="bg-purple-50 p-4 rounded text-center">
-                                <h3 className="text-sm text-purple-800 font-semibold uppercase">Proficiency (40%)</h3>
-                                <div className="text-2xl font-bold mt-2">{grades.subjectScore.toFixed(2)} pts</div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    P: {grades.prelim_score} | M: {grades.midterm_score} | F: {grades.final_score}
+                        </div>
+
+                        {/* 2. Merit & Demerit Records */}
+                        <div className="bg-white rounded shadow p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                <h2 className="text-xl font-bold text-green-800 flex items-center">
+                                    <AlertCircle className="mr-2" size={20} />
+                                    Merit & Demerit Records (30%)
+                                </h2>
+                                <div className="mt-2 md:mt-0 text-right">
+                                    <span className="text-2xl font-bold text-green-900">{grades.aptitudeScore.toFixed(2)} pts</span>
+                                    <span className="text-sm text-gray-500 ml-2 block md:inline">
+                                        (Merits: {grades.merit_points} | Demerits: {grades.demerit_points})
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
+                                        <tr className="border-b">
+                                            <th className="p-3 font-semibold text-gray-600">Date</th>
+                                            <th className="p-3 font-semibold text-gray-600">Type</th>
+                                            <th className="p-3 font-semibold text-gray-600">Points</th>
+                                            <th className="p-3 font-semibold text-gray-600">Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {logs.length > 0 ? (
+                                            logs.map(log => (
+                                                <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                    <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                                            log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {log.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 font-bold">{log.points}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{log.reason}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* 3. Subject Proficiency */}
+                        <div className="bg-white rounded shadow p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                <h2 className="text-xl font-bold text-purple-800 flex items-center">
+                                    <Info className="mr-2" size={20} />
+                                    Subject Proficiency (40%)
+                                </h2>
+                                <div className="mt-2 md:mt-0">
+                                    <span className="text-2xl font-bold text-purple-900">{grades.subjectScore.toFixed(2)} pts</span>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-gray-50 p-4 rounded text-center border">
+                                    <div className="text-sm font-semibold text-gray-500 uppercase">Prelim</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{grades.prelim_score}</div>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded text-center border">
+                                    <div className="text-sm font-semibold text-gray-500 uppercase">Midterm</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{grades.midterm_score}</div>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded text-center border">
+                                    <div className="text-sm font-semibold text-gray-500 uppercase">Final</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{grades.final_score}</div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Final Grades */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <div className="bg-gray-100 p-4 rounded text-center border">
-                                <h3 className="text-sm text-gray-800 font-semibold uppercase">Final Grade (Numerical)</h3>
-                                <div className="text-4xl font-bold mt-2 text-gray-800">{grades.finalGrade.toFixed(2)}</div>
-                            </div>
-                            <div className={`p-4 rounded text-center shadow-lg transform md:scale-105 ${
-                                grades.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(grades.transmutedGrade)
-                                ? 'bg-red-600 text-white'
-                                : 'bg-green-600 text-white'
-                            }`}>
-                                <h3 className="text-sm font-semibold uppercase">Transmuted Grade</h3>
-                                <div className="text-5xl font-extrabold mt-2">{grades.transmutedGrade}</div>
-                                <div className="text-lg font-medium mt-1 uppercase tracking-wide">
-                                    {grades.remarks}
+                        {/* 4. Final Grades */}
+                        <div className="bg-white rounded shadow p-6">
+                            <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Assessment</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-gray-100 p-6 rounded text-center border">
+                                    <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
+                                    <div className="text-5xl font-bold mt-3 text-gray-800">{grades.finalGrade.toFixed(2)}</div>
+                                </div>
+                                <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
+                                    grades.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(grades.transmutedGrade)
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-green-600 text-white'
+                                }`}>
+                                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
+                                    <div className="text-6xl font-extrabold mt-2">{grades.transmutedGrade}</div>
+                                    <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
+                                        {grades.remarks}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 ) : (
-                    <p>No grades available yet.</p>
+                    <div className="bg-white rounded shadow p-6">
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2">Grading Summary</h2>
+                        <p>No grades available yet.</p>
+                    </div>
                 )}
             </div>
 
@@ -206,112 +310,7 @@ const CadetDashboard = () => {
                 </div>
             </div>
 
-            {/* Attendance Modal */}
-            {isAttendanceModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative animate-fadeIn">
-                        <button 
-                            onClick={() => setIsAttendanceModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-                        >
-                            <X size={24} />
-                        </button>
-                        
-                        <h2 className="text-2xl font-bold mb-4 flex items-center">
-                            <Calendar className="mr-2 text-blue-600" />
-                            Attendance History
-                        </h2>
-                        
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-gray-100 border-b">
-                                        <th className="p-2">Date</th>
-                                        <th className="p-2">Status</th>
-                                        <th className="p-2">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {attendanceLogs.length > 0 ? (
-                                        attendanceLogs.map(log => (
-                                            <tr key={log.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-2 text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                                                <td className="p-2">
-                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                                        log.status === 'present' ? 'bg-green-100 text-green-800' : 
-                                                        log.status === 'late' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                                    }`}>
-                                                        {log.status}
-                                                    </span>
-                                                </td>
-                                                <td className="p-2 text-sm">{log.remarks || '-'}</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="3" className="p-4 text-center text-gray-500">No attendance records found.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* Logs Modal */}
-            {isLogsModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative animate-fadeIn">
-                        <button 
-                            onClick={() => setIsLogsModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-                        >
-                            <X size={24} />
-                        </button>
-                        
-                        <h2 className="text-2xl font-bold mb-4 flex items-center">
-                            <AlertCircle className="mr-2 text-blue-600" />
-                            Merit & Demerit History
-                        </h2>
-                        
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-gray-100 border-b">
-                                        <th className="p-2">Date</th>
-                                        <th className="p-2">Type</th>
-                                        <th className="p-2">Points</th>
-                                        <th className="p-2">Reason</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {logs.length > 0 ? (
-                                        logs.map(log => (
-                                            <tr key={log.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-2 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
-                                                <td className="p-2">
-                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                                        log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                    }`}>
-                                                        {log.type}
-                                                    </span>
-                                                </td>
-                                                <td className="p-2 font-bold">{log.points}</td>
-                                                <td className="p-2 text-sm">{log.reason}</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
