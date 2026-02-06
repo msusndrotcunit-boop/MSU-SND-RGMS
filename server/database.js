@@ -96,72 +96,6 @@ if (isPostgres) {
             db.run("PRAGMA foreign_keys = ON");
             
             initSqliteDb();
-            
-            // Migration: Add extra columns to training_staff if missing
-            const staffColumns = [
-                { name: 'afpsn', type: 'TEXT' },
-                { name: 'birthdate', type: 'TEXT' },
-                { name: 'birthplace', type: 'TEXT' },
-                { name: 'age', type: 'INTEGER' },
-                { name: 'height', type: 'TEXT' },
-                { name: 'weight', type: 'TEXT' },
-                { name: 'blood_type', type: 'TEXT' },
-                { name: 'address', type: 'TEXT' },
-                { name: 'civil_status', type: 'TEXT' },
-                { name: 'nationality', type: 'TEXT' },
-                { name: 'gender', type: 'TEXT' },
-                { name: 'language_spoken', type: 'TEXT' },
-                { name: 'combat_boots_size', type: 'TEXT' },
-                { name: 'uniform_size', type: 'TEXT' },
-                { name: 'bullcap_size', type: 'TEXT' },
-                { name: 'facebook_link', type: 'TEXT' },
-                { name: 'rotc_unit', type: 'TEXT' },
-                { name: 'mobilization_center', type: 'TEXT' },
-                { name: 'is_profile_completed', type: 'INTEGER DEFAULT 0' }
-            ];
-
-            staffColumns.forEach(col => {
-                db.run(`ALTER TABLE training_staff ADD COLUMN ${col.name} ${col.type}`, (err) => {
-                    if (err && !err.message.includes('duplicate column')) {
-                        // console.log(`Migration info: ${err.message}`);
-                    }
-                });
-            });
-
-            // Migration: Add is_profile_completed if missing
-            db.run("ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0", (err) => {
-                if (err && !err.message.includes('duplicate column')) {
-                    console.log('Migration info:', err.message);
-                }
-            });
-
-            // Migration: Add is_archived to cadets if missing
-            db.run("ALTER TABLE cadets ADD COLUMN is_archived INTEGER DEFAULT 0", (err) => {
-                if (err && !err.message.includes('duplicate column')) {
-                    console.log('Migration info (SQLite is_archived):', err.message);
-                }
-            });
-
-            // Migration: Add is_archived to training_staff if missing
-            db.run("ALTER TABLE training_staff ADD COLUMN is_archived INTEGER DEFAULT 0", (err) => {
-                if (err && !err.message.includes('duplicate column')) {
-                    console.log('Migration info (SQLite staff is_archived):', err.message);
-                }
-            });
-
-            // Migration: Add has_seen_guide if missing
-            db.run("ALTER TABLE cadets ADD COLUMN has_seen_guide INTEGER DEFAULT 0", (err) => {
-                if (err && !err.message.includes('duplicate column')) {
-                    console.log('Migration info:', err.message);
-                }
-            });
-
-            // Migration: Add last_seen to users
-            db.run("ALTER TABLE users ADD COLUMN last_seen TEXT", (err) => {
-                if (err && !err.message.includes('duplicate column')) {
-                    console.log('Migration info:', err.message);
-                }
-            });
         }
     });
     db.initialize = async () => {};
@@ -443,7 +377,9 @@ function initSqliteDb() {
             profile_pic TEXT,
             is_profile_completed INTEGER DEFAULT 0,
             is_archived INTEGER DEFAULT 0
-        )`);
+        )`, (err) => {
+            if (err) console.error('Error creating cadets table:', err);
+        });
 
         // Users Table
         db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -675,89 +611,9 @@ function seedAdmin() {
                 console.error('Error hashing password:', hashErr);
             }
         } else {
-            // Ensure admin password is correct (reset to default on restart if it exists)
-            // This guarantees login works even if DB persists but password was forgotten/changed locally
-            const password = 'admingrading@2026';
-            try {
-                const hashedPassword = await bcrypt.hash(password, 10);
-                db.run("UPDATE users SET password = ? WHERE username = 'msu-sndrotc_admin'", [hashedPassword], (err) => {
-                    if (err) console.error('Error updating admin password:', err);
-                    else console.log('Admin password verified/reset to default.');
-                });
-            } catch (e) {
-                console.error('Error hashing admin password update:', e);
-            }
-
+            console.log('Admin account already exists.');
             // seedDefaultStaff(); // Disabled to prevent ghost entries
             // seedDefaultCadet(); // Disabled to prevent ghost entries
-        }
-    });
-}
-
-
-function seedDefaultCadet() {
-    const username = 'cadet@2026';
-    const password = 'cadet@2026';
-    const email = 'cadet2026@default.com';
-    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
-        if (!row) {
-            console.log('Default cadet not found. Seeding...');
-            try {
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                db.run("INSERT INTO cadets (first_name, last_name, rank, company, platoon, status, student_id) VALUES ('Default', 'Cadet', 'Cdt', 'Alpha', '1', 'Active', 'DEFAULT-001')", [], function(err) {
-                    if (err) {
-                        console.error('Error inserting default cadet profile:', err);
-                        return;
-                    }
-                    const cadetId = this.lastID;
-
-                    db.run('INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, \'cadet\', ?, 1, ?)',
-                        [username, hashedPassword, cadetId, email],
-                        (uErr) => {
-                            if (uErr) console.error('Error seeding default cadet user:', uErr);
-                            else console.log('Default cadet seeded successfully (cadet@2026) with profile.');
-                        }
-                    );
-                });
-            } catch (e) {
-                console.error('Error hashing cadet password:', e);
-            }
-        }
-    });
-}
-
-
-function seedDefaultStaff() {
-    // Check if ANY training staff exists. If so, do not seed default staff to prevent security risk.
-    db.get("SELECT COUNT(*) as count FROM users WHERE role = 'training_staff'", [], async (err, row) => {
-        if (err) return console.error("Error checking staff count:", err);
-        
-        if (row && row.count === 0) {
-            const username = 'staff';
-            const password = 'staff@2026';
-            const email = 'staff2026@default.com'; // Placeholder email
-
-            // Double check if the specific user exists (in case count is 0 but user is there? unlikely if role is training_staff)
-            // But if user exists with DIFFERENT role, we might have collision.
-            
-            db.get("SELECT * FROM users WHERE username = ?", [username], async (err, userRow) => {
-                if (!userRow) {
-                    console.log('No training staff found. Seeding default staff user...');
-                    try {
-                        const hashedPassword = await bcrypt.hash(password, 10);
-                        db.run(`INSERT INTO users (username, password, role, is_approved, email) VALUES (?, ?, 'training_staff', 1, ?)`, 
-                            [username, hashedPassword, email], 
-                            (err) => {
-                                if (err) console.error('Error seeding default staff:', err ? err.message : err);
-                                else console.log('Default staff seeded successfully (staff@2026).');
-                            }
-                        );
-                    } catch (e) {
-                        console.error('Error hashing staff password:', e);
-                    }
-                }
-            });
         }
     });
 }
