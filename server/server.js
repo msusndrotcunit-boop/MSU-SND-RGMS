@@ -42,8 +42,7 @@ app.get('/health', (req, res) => {
 app.get('/api/health', (req, res) => {
     // Check DB connection
     // Fix: Support both DATABASE_URL and SUPABASE_URL
-    // Force SQLite check
-    const isPostgres = false; // !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
+    const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
     
     if (db.pool && isPostgres) {
         // Postgres check

@@ -3,7 +3,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 
 // Force SQLite by disabling Postgres check
-const isPostgres = false; // !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
+const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
 
 // Removed strict placeholder check to prevent immediate crash on Render if env var is default.
 // The connection will fail naturally if the URL is invalid.
