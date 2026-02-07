@@ -870,15 +870,27 @@ router.get('/analytics', (req, res) => {
                         });
                     }),
                     new Promise((resolve, reject) => {
-                         db.get("SELECT COUNT(*) as total FROM cadets", [], (err, row) => {
-                             if (err) reject(err); else resolve({ type: 'total', count: row.total });
-                         });
+                        const sql = `
+                            SELECT c.cadet_course, c.status, COUNT(*) as count 
+                            FROM cadets c
+                            LEFT JOIN users u ON u.cadet_id = c.id
+                            WHERE u.is_approved = 1 AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                            GROUP BY c.cadet_course, c.status
+                        `;
+                        db.all(sql, [], (err, rows) => {
+                            if (err) reject(err); else resolve({ type: 'course_stats', rows });
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
+                        db.get("SELECT COUNT(*) as total FROM cadets", [], (err, row) => {
+                            if (err) reject(err); else resolve({ type: 'total', count: row.total });
+                        });
                     })
                 ];
 
                 Promise.all(demographicsQueries)
                     .then(results => {
-                        const demographics = { company: [], rank: [], status: [], totalCadets: 0 };
+                        const demographics = { company: [], rank: [], status: [], courseStats: [], totalCadets: 0 };
                         
                         results.forEach(result => {
                             if (result.type === 'total') {
@@ -897,6 +909,8 @@ router.get('/analytics', (req, res) => {
                                 demographics.rank = result.rows.map(r => ({ name: r.rank || 'Unverified', count: r.count }));
                             } else if (result.type === 'status') {
                                 demographics.status = result.rows.map(r => ({ name: r.status || 'Unverified', value: r.count }));
+                            } else if (result.type === 'course_stats') {
+                                demographics.courseStats = result.rows;
                             }
                         });
 

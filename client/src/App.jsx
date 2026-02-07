@@ -20,6 +20,7 @@ const AdminCadets = lazy(() => import('./pages/admin/Cadets'));
 const AdminGrading = lazy(() => import('./pages/admin/Grading'));
 const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
 const AdminActivities = lazy(() => import('./pages/admin/Activities'));
+const AdminDataAnalysis = lazy(() => import('./pages/admin/DataAnalysis'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));

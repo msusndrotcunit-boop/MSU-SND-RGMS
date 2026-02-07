@@ -1,277 +1,310 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
-import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
-import WeatherAdvisory from '../../components/WeatherAdvisory';
+import { 
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+import { 
+    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
+    BookOpen, Users, Calendar, Mail
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getSingleton, cacheSingleton } from '../../utils/db';
 
-const COLORS = {
-  Passed: '#22c55e', // Green
-  Failed: '#ef4444', // Red
-  Incomplete: '#f59e0b' // Amber
+const STATUS_COLORS = {
+    Ongoing: '#06b6d4', // cyan-500
+    Completed: '#22c55e', // green-500
+    Incomplete: '#f59e0b', // amber-500
+    Failed: '#ef4444', // red-500
+    Drop: '#6b7280' // gray-500
 };
 
-const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
-
 const Dashboard = () => {
-    const [stats, setStats] = useState({ totalCadets: 0, totalActivities: 0 });
-    const [analytics, setAnalytics] = useState({ 
-        attendance: [], 
-        grades: [],
-        demographics: { company: [], rank: [], status: [], totalCadets: 0 }
+    const [stats, setStats] = useState({
+        ongoing: 0,
+        completed: 0,
+        incomplete: 0,
+        failed: 0,
+        drop: 0
     });
-    const [onlineCount, setOnlineCount] = useState(0);
-
-    console.log('AdminDashboard rendered. onlineCount:', onlineCount);
+    const [courseData, setCourseData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchData = async () => {
             try {
-                let shouldFetchAnalytics = true;
+                // Try cache first
+                const cached = await getSingleton('analytics', 'dashboard_v2');
+                if (cached && cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000)) {
+                    processData(cached.data);
+                    setLoading(false);
+                }
+
+                // Fetch fresh data
+                const res = await axios.get('/api/admin/analytics');
+                processData(res.data);
                 
-                try {
-                    const cachedActivities = await getCachedData('activities');
-                    const cachedAnalyticsWrapper = await getSingleton('analytics', 'dashboard');
-                    
-                    if (cachedActivities?.length) {
-                        setStats(s => ({ ...s, totalActivities: cachedActivities.length }));
-                    }
-
-                    if (cachedAnalyticsWrapper) {
-                        let analyticsData = cachedAnalyticsWrapper;
-                        let timestamp = 0;
-
-                        // Check for new format { data, timestamp }
-                        if (cachedAnalyticsWrapper.data && cachedAnalyticsWrapper.timestamp) {
-                            analyticsData = cachedAnalyticsWrapper.data;
-                            timestamp = cachedAnalyticsWrapper.timestamp;
-                        }
-
-                        const gradeDataCached = [
-                            { name: 'Passed', value: analyticsData.grades.passed },
-                            { name: 'Failed', value: analyticsData.grades.failed },
-                            { name: 'Incomplete', value: analyticsData.grades.incomplete }
-                        ].filter(item => item.value > 0);
-                        
-                        setAnalytics({
-                            attendance: analyticsData.attendance || [],
-                            grades: gradeDataCached,
-                            demographics: analyticsData.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
-                        });
-                        
-                        if (analyticsData.demographics?.totalCadets) {
-                            setStats(s => ({ ...s, totalCadets: analyticsData.demographics.totalCadets }));
-                        }
-
-                        // If fresh (< 5 mins), skip fetch
-                        if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
-                            shouldFetchAnalytics = false;
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Cache read error", e);
-                }
-                
-                const promises = [
-                    axios.get('/api/cadet/activities'),
-                    axios.get('/api/admin/online-users')
-                ];
-
-                if (shouldFetchAnalytics) {
-                    promises.push(axios.get('/api/admin/analytics'));
-                }
-
-                const results = await Promise.allSettled(promises);
-                
-                // Map results back to variables
-                const activitiesRes = results[0];
-                const onlineRes = results[1];
-                const analyticsRes = shouldFetchAnalytics ? results[2] : null;
-
-                if (activitiesRes.status === 'fulfilled') {
-                    setStats(s => ({ ...s, totalActivities: activitiesRes.value.data.length }));
-                    await cacheData('activities', activitiesRes.value.data);
-                }
-                if (onlineRes.status === 'fulfilled') {
-                    setOnlineCount(onlineRes.value.data.count);
-                }
-
-                if (analyticsRes && analyticsRes.status === 'fulfilled') {
-                    const analyticsData = analyticsRes.value.data;
-                    const gradeData = [
-                        { name: 'Passed', value: analyticsData.grades.passed },
-                        { name: 'Failed', value: analyticsData.grades.failed },
-                        { name: 'Incomplete', value: analyticsData.grades.incomplete }
-                    ].filter(item => item.value > 0);
-
-                    setAnalytics({
-                        attendance: analyticsData.attendance,
-                        grades: gradeData,
-                        demographics: analyticsData.demographics || { company: [], rank: [], status: [], totalCadets: 0 }
-                    });
-                    
-                    if (analyticsData.demographics?.totalCadets) {
-                        setStats(s => ({ ...s, totalCadets: analyticsData.demographics.totalCadets }));
-                    }
-
-                    await cacheSingleton('analytics', 'dashboard', { data: analyticsData, timestamp: Date.now() });
-                }
-
+                // Update cache
+                await cacheSingleton('analytics', 'dashboard_v2', { 
+                    data: res.data, 
+                    timestamp: Date.now() 
+                });
+                setLoading(false);
             } catch (err) {
-                console.error(err);
+                console.error("Dashboard fetch error:", err);
+                setLoading(false);
             }
         };
-        fetchStats();
+
+        fetchData();
     }, []);
 
-    // Analytics Data Computation (Replaced by Backend Demographics)
-    const { companyData, rankData, statusData } = {
-        companyData: analytics.demographics.company,
-        rankData: analytics.demographics.rank,
-        statusData: analytics.demographics.status
+    const processData = (data) => {
+        const rawStats = data.demographics?.courseStats || [];
+        
+        // Initialize aggregation
+        const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
+        const byCourse = {};
+
+        // Courses we expect (ordered)
+        const courses = ['COQC', 'MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42'];
+        courses.forEach(c => {
+            byCourse[c] = { name: c, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
+        });
+
+        rawStats.forEach(item => {
+            const status = normalizeStatus(item.status);
+            const course = item.cadet_course || 'Unknown';
+            const count = item.count;
+
+            if (total[status] !== undefined) {
+                total[status] += count;
+            }
+
+            if (byCourse[course]) {
+                byCourse[course][status] += count;
+                byCourse[course].total += count;
+            } else if (course !== 'Unknown') {
+                // Handle unexpected courses if any
+                byCourse[course] = { 
+                    name: course, 
+                    Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 
+                };
+                if (byCourse[course][status] !== undefined) {
+                    byCourse[course][status] += count;
+                    byCourse[course].total += count;
+                }
+            }
+        });
+
+        setStats({
+            ongoing: total.Ongoing,
+            completed: total.Completed,
+            incomplete: total.Incomplete,
+            failed: total.Failed,
+            drop: total.Drop
+        });
+
+        // Convert byCourse object to array for Recharts, filtering out empty unknown courses
+        const chartData = Object.values(byCourse);
+        setCourseData(chartData);
+    };
+
+    const normalizeStatus = (status) => {
+        if (!status) return 'Ongoing'; // Default
+        const s = status.toLowerCase();
+        if (s.includes('complete') && !s.includes('in')) return 'Completed';
+        if (s.includes('incomplete') || s.includes('inc')) return 'Incomplete';
+        if (s.includes('fail')) return 'Failed';
+        if (s.includes('drop')) return 'Drop';
+        return 'Ongoing'; // Default/Active
     };
 
     return (
-        <div className="space-y-6">
-            <WeatherAdvisory />
+        <div className="space-y-8 p-2">
             
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded shadow border-l-4 border-blue-500">
-                    <h3 className="text-gray-500 text-sm font-medium">Total Cadets</h3>
-                    <p className="text-3xl font-bold text-gray-800">{stats.totalCadets}</p>
+            {/* Header */}
+            <div>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <span className="border-l-4 border-yellow-500 pl-3">ROTC Unit Dashboard</span>
+                </h2>
+            </div>
+
+            {/* Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <StatusCard 
+                    title="ONGOING (VERIFIED)" 
+                    count={stats.ongoing} 
+                    color="text-cyan-500" 
+                    icon={<Activity className="h-10 w-10 text-cyan-500 mb-2" />} 
+                />
+                <StatusCard 
+                    title="COMPLETED (VERIFIED)" 
+                    count={stats.completed} 
+                    color="text-green-500" 
+                    icon={<CheckCircle className="h-10 w-10 text-green-500 mb-2" />} 
+                />
+                <StatusCard 
+                    title="INCOMPLETE (VERIFIED)" 
+                    count={stats.incomplete} 
+                    color="text-amber-500" 
+                    icon={<AlertTriangle className="h-10 w-10 text-amber-500 mb-2" />} 
+                />
+                <StatusCard 
+                    title="FAILED (VERIFIED)" 
+                    count={stats.failed} 
+                    color="text-red-500" 
+                    icon={<XCircle className="h-10 w-10 text-red-500 mb-2" />} 
+                />
+                <StatusCard 
+                    title="DROP (VERIFIED)" 
+                    count={stats.drop} 
+                    color="text-gray-500" 
+                    icon={<UserMinus className="h-10 w-10 text-gray-500 mb-2" />} 
+                />
+            </div>
+
+            {/* Chart Section */}
+            <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-gray-800">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-gray-800 flex items-center">
+                        <BookOpen size={20} className="text-yellow-600 mr-2" />
+                        Cadet Status Distribution by Course (Verified Only)
+                    </h3>
                 </div>
-                <div className="bg-white p-6 rounded shadow border-l-4 border-green-500">
-                    <h3 className="text-gray-500 text-sm font-medium">Active Activities</h3>
-                    <p className="text-3xl font-bold text-gray-800">{stats.totalActivities}</p>
-                </div>
-                <div className="bg-white p-6 rounded shadow border-l-4 border-purple-500">
-                    <h3 className="text-gray-500 text-sm font-medium">Training Days</h3>
-                    <p className="text-3xl font-bold text-gray-800">15</p>
-                </div>
-                <div className="bg-white p-6 rounded shadow border-l-4 border-indigo-500">
-                    <h3 className="text-gray-500 text-sm font-medium">Online Cadets</h3>
-                    <p className="text-3xl font-bold text-gray-800">{onlineCount}</p>
+                <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                            data={courseData}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                            <YAxis axisLine={false} tickLine={false} />
+                            <Tooltip 
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                cursor={{ fill: '#f3f4f6' }}
+                            />
+                            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                            <Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
+                            <Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
+                            <Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
+                            <Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
+                            <Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Demographics Section */}
-            {stats.totalCadets > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Company Distribution */}
-                    <div className="bg-white p-6 rounded shadow">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadets by Company</h3>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={companyData}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="count" fill="#3b82f6" name="Cadets">
-                                        <LabelList dataKey="count" position="top" />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
+            {/* Course Breakdown Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {courseData.map((course) => (
+                    <CourseCard key={course.name} data={course} />
+                ))}
+            </div>
 
-                    {/* Rank Distribution */}
-                    <div className="bg-white p-6 rounded shadow">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadets by Rank</h3>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={rankData} margin={{ bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" interval={0} angle={-45} textAnchor="end" height={60} tick={{fontSize: 10}} />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="count" fill="#10b981" name="Cadets">
-                                        <LabelList dataKey="count" position="top" />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Status Distribution */}
-                    <div className="bg-white p-6 rounded shadow">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">Cadet Status Overview</h3>
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        label
-                                    >
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
+            {/* Quick Actions */}
+            <div className="bg-gray-800 rounded-lg p-6 text-white shadow-lg">
+                <div className="flex items-center mb-4 border-b border-gray-700 pb-2">
+                    <span className="text-yellow-400 mr-2">⚡</span>
+                    <h3 className="font-bold">Quick Actions</h3>
                 </div>
-            )}
-
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Attendance Chart */}
-                <div className="bg-white p-6 rounded shadow">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Attendance Trends (Last 10 Days)</h3>
-                    <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={analytics.attendance}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="present" fill="#16a34a" name="Present" />
-                                <Bar dataKey="absent" fill="#dc2626" name="Absent" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <ActionButton 
+                        to="/admin/settings" 
+                        label="Program Background" 
+                        icon={<BookOpen size={18} />} 
+                        className="bg-gray-700 hover:bg-gray-600"
+                    />
+                    <ActionButton 
+                        to="/admin/cadets" 
+                        label="Cadet Database" 
+                        icon={<Users size={18} />} 
+                        className="bg-blue-500 hover:bg-blue-600"
+                    />
+                    <ActionButton 
+                        to="/admin/attendance" 
+                        label="Attendance" 
+                        icon={<Calendar size={18} />} 
+                        className="bg-green-500 hover:bg-green-600"
+                    />
+                    <ActionButton 
+                        to="/admin/users" // Assuming users page handles requests
+                        label="Pending Requests" 
+                        icon={<Mail size={18} />} 
+                        className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                    />
                 </div>
-
-                {/* Grade Distribution Chart */}
-                <div className="bg-white p-6 rounded shadow">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Grade Distribution</h3>
-                    <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={analytics.grades}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {analytics.grades.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#8884d8'} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+            </div>
+            
+            {/* Footer Info */}
+            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+                <div>
+                    <div className="flex items-center text-white text-xl font-bold mb-4">
+                        <span className="bg-yellow-500 text-gray-900 p-1 rounded mr-2">🛡️</span>
+                        ROTCMIS
                     </div>
+                    <p className="mb-4">Reserve Officers' Training Corps Management Information System</p>
+                    <p className="text-xs text-gray-500">CDC EDITION V2.1</p>
                 </div>
+                <div className="flex flex-col space-y-2">
+                    <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
+                    <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
+                    <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Database</Link>
+                    <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Advanced Search</Link>
+                </div>
+                <div className="flex flex-col space-y-2">
+                    <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
+                    <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About</Link>
+                    <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
+                    <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
+                </div>
+            </div>
+            <div className="text-center text-xs text-gray-500 mt-4">
+                &copy; 2026 Christian M Ragus. All rights reserved.
             </div>
         </div>
     );
 };
+
+const StatusCard = ({ title, count, color, icon }) => (
+    <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center hover:shadow-lg transition-shadow">
+        {icon}
+        <div className={`text-4xl font-bold ${color} mb-1`}>{count}</div>
+        <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{title}</div>
+    </div>
+);
+
+const CourseCard = ({ data }) => (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-gray-800 p-3 flex items-center">
+            <span className="text-yellow-500 mr-2">🎓</span>
+            <h3 className="text-white font-bold">{data.name}</h3>
+        </div>
+        <div className="p-4 grid grid-cols-5 gap-2 text-center">
+            <MiniStatus label="Ongoing" count={data.Ongoing} color="bg-cyan-100 text-cyan-800" />
+            <MiniStatus label="Completed" count={data.Completed} color="bg-green-100 text-green-800" />
+            <MiniStatus label="Incomplete" count={data.Incomplete} color="bg-amber-100 text-amber-800" />
+            <MiniStatus label="Failed" count={data.Failed} color="bg-red-100 text-red-800" />
+            <MiniStatus label="Drop" count={data.Drop} color="bg-gray-100 text-gray-800" />
+        </div>
+        <div className="px-4 pb-3 text-center">
+            <span className="text-xs font-bold text-gray-500">Total: {data.total}</span>
+        </div>
+    </div>
+);
+
+const MiniStatus = ({ label, count, color }) => (
+    <div className={`rounded p-2 flex flex-col items-center justify-center ${color}`}>
+        <span className="text-lg font-bold">{count}</span>
+        <span className="text-[10px] uppercase">{label}</span>
+    </div>
+);
+
+const ActionButton = ({ to, label, icon, className }) => (
+    <Link to={to} className={`flex items-center justify-center p-3 rounded text-white font-medium transition-colors ${className}`}>
+        <span className="mr-2">{icon}</span>
+        {label}
+    </Link>
+);
 
 export default Dashboard;
