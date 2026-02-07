@@ -1,7 +1,7 @@
 import React, { useState, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -193,6 +193,17 @@ const CadetLayout = () => {
                     >
                         <Info size={20} />
                         <span>About</span>
+                    </Link>
+                    <Link
+                        to="/cadet/ask-admin"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/cadet/ask-admin' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                        )}
+                    >
+                        <MessageSquare size={20} />
+                        <span>Ask Admin</span>
                     </Link>
                     <Link
                         to="/cadet/settings"

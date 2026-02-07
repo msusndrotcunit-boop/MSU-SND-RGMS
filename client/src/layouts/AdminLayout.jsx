@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -70,6 +70,7 @@ const AdminLayout = () => {
             ]
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
+        { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
         // { path: '/admin/approvals', label: 'Approvals', icon: UserCheck }, // Removed as approvals are automated via import
         { path: '/admin/profile', label: 'Profile', icon: User },
         { path: '/admin/settings', label: 'Settings', icon: Settings },

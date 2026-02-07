@@ -10,6 +10,7 @@ const CadetHome = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedActivity, setSelectedActivity] = useState(null);
+    const [activeTab, setActiveTab] = useState('activities'); // 'activities' or 'announcements'
 
     useEffect(() => {
         const fetchActivities = async () => {
@@ -32,27 +33,32 @@ const CadetHome = () => {
         fetchActivities();
     }, []);
 
-    const hasActivities = activities && activities.length > 0;
+    const filteredActivities = activities.filter(a => {
+        const type = (a.type || 'activity').toLowerCase();
+        return activeTab === 'activities' ? type === 'activity' : type === 'announcement';
+    });
+
+    const hasActivities = filteredActivities && filteredActivities.length > 0;
 
     useEffect(() => {
         if (!hasActivities) return;
         const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % activities.length);
-        }, 8000); // 2s transition + 6s wait
+            setCurrentIndex((prev) => (prev + 1) % filteredActivities.length);
+        }, 8000); 
 
         return () => clearInterval(interval);
-    }, [hasActivities, activities.length]);
+    }, [hasActivities, filteredActivities.length]);
 
     const goPrev = (e) => {
         e.stopPropagation();
         if (!hasActivities) return;
-        setCurrentIndex((prev) => (prev - 1 + activities.length) % activities.length);
+        setCurrentIndex((prev) => (prev - 1 + filteredActivities.length) % filteredActivities.length);
     };
 
     const goNext = (e) => {
         e.stopPropagation();
         if (!hasActivities) return;
-        setCurrentIndex((prev) => (prev + 1) % activities.length);
+        setCurrentIndex((prev) => (prev + 1) % filteredActivities.length);
     };
 
     if (loading) {
@@ -72,11 +78,24 @@ const CadetHome = () => {
             </p>
 
             <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">Activities &amp; Announcements</h2>
+                <div className="flex border-b mb-4">
+                    <button
+                        className={`py-2 px-4 font-bold ${activeTab === 'activities' ? 'text-green-700 border-b-2 border-green-700' : 'text-gray-500 hover:text-green-600'}`}
+                        onClick={() => { setActiveTab('activities'); setCurrentIndex(0); }}
+                    >
+                        Activities
+                    </button>
+                    <button
+                        className={`py-2 px-4 font-bold ${activeTab === 'announcements' ? 'text-green-700 border-b-2 border-green-700' : 'text-gray-500 hover:text-green-600'}`}
+                        onClick={() => { setActiveTab('announcements'); setCurrentIndex(0); }}
+                    >
+                        Announcements
+                    </button>
+                </div>
 
                 {!hasActivities && (
                     <div className="text-center text-gray-500 py-10">
-                        No activities or announcements have been posted yet.
+                        No {activeTab} posted yet.
                     </div>
                 )}
 
@@ -87,7 +106,7 @@ const CadetHome = () => {
                                 className="flex transition-transform duration-[2000ms] ease-in-out"
                                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                             >
-                                {activities.map((activity) => (
+                                {filteredActivities.map((activity) => (
                                     <div 
                                         key={activity.id} 
                                         className="w-full flex-shrink-0 bg-white"
@@ -122,7 +141,7 @@ const CadetHome = () => {
                             </div>
                         </div>
 
-                        {activities.length > 1 && (
+                        {filteredActivities.length > 1 && (
                             <>
                                 <button
                                     type="button"
@@ -141,9 +160,9 @@ const CadetHome = () => {
                             </>
                         )}
 
-                        {activities.length > 1 && (
+                        {filteredActivities.length > 1 && (
                             <div className="flex justify-center mt-4 space-x-2">
-                                {activities.map((activity, index) => (
+                                {filteredActivities.map((activity, index) => (
                                     <button
                                         key={activity.id}
                                         type="button"

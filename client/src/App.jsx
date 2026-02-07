@@ -25,6 +25,7 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 
 // Cadet Pages
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
@@ -32,6 +33,7 @@ const CadetHome = lazy(() => import('./pages/cadet/Home'));
 const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
+const AskAdmin = lazy(() => import('./pages/AskAdmin'));
 
 // Staff Pages
 const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
@@ -77,6 +79,7 @@ function App() {
                 <Route path="activities" element={<AdminActivities />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="profile" element={<AdminProfile />} />
+                <Route path="messages" element={<AdminMessages />} />
                 <Route path="settings" element={<Settings role="admin" />} />
                 <Route index element={<Navigate to="dashboard" replace />} />
               </Route>
@@ -89,6 +92,7 @@ function App() {
                 <Route path="dashboard" element={<CadetDashboard />} />
                 <Route path="profile" element={<CadetProfile />} />
                 <Route path="about" element={<CadetAbout />} />
+                <Route path="ask-admin" element={<AskAdmin />} />
                 <Route path="settings" element={<Settings role="cadet" />} />
                 <Route index element={<Navigate to="home" replace />} />
               </Route>
@@ -102,6 +106,7 @@ function App() {
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="profile-completion" element={<StaffOnboarding />} />
                 <Route path="communication" element={<StaffCommunication />} />
+                <Route path="ask-admin" element={<AskAdmin />} />
                 <Route path="settings" element={<Settings role="staff" />} />
                 <Route index element={<Navigate to="home" replace />} />
               </Route>

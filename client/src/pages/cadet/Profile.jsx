@@ -281,7 +281,20 @@ const Profile = () => {
                         <div className="relative inline-block">
                             <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-100 mx-auto border-4 border-white dark:border-gray-700 shadow-lg">
                                 {preview ? (
-                                    <img src={preview} alt="Profile" className="w-full h-full object-cover" />
+                                    <img 
+                                        src={preview} 
+                                        alt="Profile" 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => {
+                                            e.target.onerror = null; 
+                                            e.target.src = '/assets/default-avatar.png'; // Fallback
+                                            // If even fallback fails, hide it or show placeholder
+                                            if (e.target.src.includes('default-avatar')) {
+                                                 e.target.style.display = 'none';
+                                                 e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                                            }
+                                        }}
+                                    />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                                         <User size={64} />

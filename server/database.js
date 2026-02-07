@@ -484,6 +484,16 @@ async function initPgDb() {
             endpoint TEXT NOT NULL UNIQUE,
             keys TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS admin_messages (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            sender_role TEXT,
+            subject TEXT,
+            message TEXT,
+            status TEXT DEFAULT 'pending',
+            admin_reply TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 

@@ -248,7 +248,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         <p className="mb-4 text-gray-500 leading-relaxed">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
-                        <p className="text-xs font-mono text-yellow-500/80">Version 2.3.19</p>
+                        <p className="text-xs font-mono text-yellow-500/80">Version {import.meta.env.PACKAGE_VERSION || '2.3.19'}</p>
                     </div>
                     <div className="flex flex-col space-y-2">
                         <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>

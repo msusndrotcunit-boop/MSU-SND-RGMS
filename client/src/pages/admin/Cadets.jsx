@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
@@ -23,6 +23,7 @@ const Cadets = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isViewMode, setIsViewMode] = useState(false);
     const [currentCadet, setCurrentCadet] = useState(null);
 
     // Import State
@@ -186,6 +187,7 @@ const Cadets = () => {
     };
 
     const openEditModal = (cadet) => {
+        setIsViewMode(false);
         setCurrentCadet(cadet);
         setEditForm({
             rank: cadet.rank || '',
@@ -209,6 +211,11 @@ const Cadets = () => {
             status: cadet.status || 'Ongoing'
         });
         setIsEditModalOpen(true);
+    };
+
+    const openViewModal = (cadet) => {
+        openEditModal(cadet);
+        setIsViewMode(true);
     };
 
     const handleEditSubmit = async (e) => {
@@ -545,6 +552,13 @@ const Cadets = () => {
                                     </td>
                                     <td className="p-4 text-right space-x-2">
                                         <button 
+                                            onClick={() => openViewModal(cadet)}
+                                            className="text-blue-600 hover:bg-blue-50 p-2 rounded"
+                                            title="View Profile"
+                                        >
+                                            <Eye size={18} />
+                                        </button>
+                                        <button 
                                             onClick={() => openEditModal(cadet)}
                                             className="text-gray-600 hover:bg-gray-50 p-2 rounded"
                                             title="Edit Info"
@@ -817,78 +831,78 @@ const Cadets = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg w-full max-w-lg mx-4 p-6 flex flex-col max-h-[90vh]">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Edit Cadet Info</h3>
+                            <h3 className="text-xl font-bold">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
                             <button onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleEditSubmit} className="space-y-4 overflow-y-auto pr-2">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
                                     <option value="">Select Rank</option>
                                     {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <input className="border p-2 rounded" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="First Name" />
-                                <input className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
-                                <input className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
-                                <input className="border p-2 rounded" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="First Name" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} placeholder="Suffix" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
-                                <input className="border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input className="border p-2 rounded" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} placeholder="Contact Number" />
+                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} placeholder="Contact Number" />
                             </div>
 
-                            <input className="border p-2 rounded w-full" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" />
+                            <input disabled={isViewMode} className="border p-2 rounded w-full" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <select className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
                                     <option value="">Select Course</option>
                                     {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
                                     <option value="">Select Year Level</option>
                                     {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.schoolYear} onChange={e => setEditForm({...editForm, schoolYear: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.schoolYear} onChange={e => setEditForm({...editForm, schoolYear: e.target.value})}>
                                     <option value="">Select School Year</option>
                                     {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
                                     <option value="">Select Battalion</option>
                                     {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
                                     <option value="">Select Company</option>
                                     {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
                                     <option value="">Select Platoon</option>
                                     {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
                                     <option value="">Select Cadet Course</option>
                                     {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
                                     <option value="">Select Semester</option>
                                     {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
-                                <select className="border p-2 rounded" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
+                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
                                     <option value="">Select Status</option>
                                     {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
 
-                            <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Update Cadet</button>
+                            {!isViewMode && <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Update Cadet</button>}
                         </form>
                     </div>
                 </div>

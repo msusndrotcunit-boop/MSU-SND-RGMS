@@ -5,18 +5,22 @@ import {
 } from 'recharts';
 import { FileText, Printer, Building2, Download } from 'lucide-react';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
+// Refined Color Scheme
 const COLORS = {
-    MS1: '#0088FE',
-    MS2: '#00C49F',
-    MS31: '#FFBB28',
-    MS32: '#FF8042',
-    MS41: '#AF19FF',
-    MS42: '#FF1919',
-    Basic: '#0088FE',
-    Advance: '#FF8042',
-    Completed: '#22c55e',
-    Incomplete: '#f59e0b'
+    MS1: '#3b82f6', // Blue 500
+    MS2: '#2563eb', // Blue 600
+    MS31: '#ef4444', // Red 500
+    MS32: '#dc2626', // Red 600
+    MS41: '#f59e0b', // Amber 500
+    MS42: '#d97706', // Amber 600
+    Basic: '#1e40af', // Blue 800
+    Advance: '#b91c1c', // Red 700
+    Completed: '#22c55e', // Green 500
+    Incomplete: '#6b7280' // Gray 500
 };
 
 const RADIAN = Math.PI / 180;
@@ -26,7 +30,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return percent > 0 ? (
-        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight="bold">
             {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
         </text>
     ) : null;
@@ -113,7 +117,7 @@ const DataAnalysis = () => {
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
             const course = (item.cadet_course || '').toUpperCase();
-            const count = item.count;
+            const count = parseInt(item.count, 10) || 0;
 
             const isBasic = ['MS1', 'MS2'].includes(course);
             const isAdvance = ['MS31', 'MS32', 'MS41', 'MS42'].includes(course);
@@ -144,6 +148,124 @@ const DataAnalysis = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const handleDownloadChart = async (elementId, title) => {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        try {
+            const canvas = await html2canvas(element);
+            const link = document.createElement('a');
+            link.download = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        } catch (err) {
+            console.error('Failed to download chart:', err);
+        }
+    };
+
+    const handlePrintChart = async (elementId) => {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        try {
+            const canvas = await html2canvas(element);
+            const imgData = canvas.toDataURL('image/png');
+            const windowContent = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>Print Chart</title></head>
+                <body onload="window.print();window.close()">
+                    <img src="${imgData}" style="width:100%;">
+                </body>
+                </html>
+            `;
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write(windowContent);
+            printWindow.document.close();
+        } catch (err) {
+            console.error('Failed to print chart:', err);
+        }
+    };
+
+    const generatePDF = async () => {
+        const doc = new jsPDF();
+        const date = new Date().toLocaleDateString();
+        let yPos = 20;
+
+        // Header
+        doc.setFontSize(18);
+        doc.text("ROTC GRADING MANAGEMENT SYSTEM", 14, yPos);
+        yPos += 8;
+        doc.setFontSize(14);
+        doc.text("Data Analysis Report", 14, yPos);
+        yPos += 6;
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${date}`, 14, yPos);
+        yPos += 6;
+        doc.text("Mindanao State University-Sultan Naga Dimaporo", 14, yPos);
+        yPos += 10;
+
+        // Capture Charts
+        const chartIds = ['chart-basic', 'chart-advance', 'chart-combined'];
+        
+        for (const id of chartIds) {
+            const element = document.getElementById(id);
+            if (element) {
+                try {
+                    const canvas = await html2canvas(element);
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgProps = doc.getImageProperties(imgData);
+                    const pdfWidth = doc.internal.pageSize.getWidth() - 28;
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    
+                    // Check if new page needed
+                    if (yPos + pdfHeight > doc.internal.pageSize.getHeight() - 20) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+
+                    doc.addImage(imgData, 'PNG', 14, yPos, pdfWidth, pdfHeight);
+                    yPos += pdfHeight + 10;
+                } catch (err) {
+                    console.error(`Failed to capture chart ${id}:`, err);
+                }
+            }
+        }
+
+        // Check page break for tables
+        if (yPos > doc.internal.pageSize.getHeight() - 60) {
+            doc.addPage();
+            yPos = 20;
+        }
+
+        // Ongoing Summary Table
+        doc.autoTable({
+            startY: yPos,
+            head: [['Category', 'Count', 'Details']],
+            body: [
+                ['Total Ongoing Cadets', stats.ongoing.total, 'All enrolled'],
+                ['Basic Corps', stats.ongoing.basic.total, `MS1: ${stats.ongoing.basic.MS1}, MS2: ${stats.ongoing.basic.MS2}`],
+                ['Advance Corps', stats.ongoing.advance.total, `MS31: ${stats.ongoing.advance.MS31}, MS32: ${stats.ongoing.advance.MS32}, MS41: ${stats.ongoing.advance.MS41}, MS42: ${stats.ongoing.advance.MS42}`],
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [255, 193, 7] }, // Yellow/Gold header
+        });
+
+        // Completed & Incomplete Summary
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 10,
+            head: [['Status', 'Basic', 'Advance', 'Total']],
+            body: [
+                ['Completed/Graduated', stats.completed.basic.total, stats.completed.advance.total, stats.completed.total],
+                ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total],
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [33, 33, 33] }, // Dark header
+        });
+
+        doc.save(`ROTC_Data_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
 
     // Prepare Chart Data
     const basicData = [
@@ -180,7 +302,7 @@ const DataAnalysis = () => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-2 border border-gray-200 shadow-md rounded text-sm">
-                    <p className="font-semibold">{`${payload[0].name}: ${payload[0].value}`}</p>
+                    <p className="font-semibold" style={{ color: payload[0].fill }}>{`${payload[0].name}: ${payload[0].value}`}</p>
                 </div>
             );
         }
@@ -188,7 +310,7 @@ const DataAnalysis = () => {
     };
 
     return (
-        <div className="p-6 min-h-screen bg-gray-50 font-sans">
+        <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
             {/* Header */}
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between">
                 <div>
@@ -201,11 +323,11 @@ const DataAnalysis = () => {
                     </div>
                 </div>
                 <button 
-                    onClick={() => window.print()}
+                    onClick={generatePDF}
                     className="mt-4 md:mt-0 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center shadow-lg transition-all"
                 >
                     <FileText size={18} className="mr-2" />
-                    Print / Generate Report
+                    <span>Generate PDF Report</span>
                 </button>
             </div>
 
@@ -224,12 +346,12 @@ const DataAnalysis = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Basic ROTC Chart */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                <div id="chart-basic" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
                     <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
                         <h3 className="text-white font-bold">Ongoing Basic ROTC Cadets</h3>
                         <div className="space-x-2 text-gray-400">
-                            <button><Printer size={16} /></button>
-                            <button><Download size={16} /></button>
+                            <button onClick={() => handlePrintChart('chart-basic')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-basic', 'Basic ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
                     <div className="p-4 h-64">
@@ -257,12 +379,12 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Advance ROTC Chart */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                <div id="chart-advance" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
                     <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
                         <h3 className="text-white font-bold">Ongoing Advance ROTC Cadets</h3>
                         <div className="space-x-2 text-gray-400">
-                            <button><Printer size={16} /></button>
-                            <button><Download size={16} /></button>
+                            <button onClick={() => handlePrintChart('chart-advance')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-advance', 'Advance ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
                     <div className="p-4 h-64">
@@ -294,12 +416,12 @@ const DataAnalysis = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Combined Chart */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                <div id="chart-combined" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
                     <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
                         <h3 className="text-white font-bold">Ongoing Basic and Advance ROTC Cadets</h3>
                         <div className="space-x-2 text-gray-400">
-                            <button><Printer size={16} /></button>
-                            <button><Download size={16} /></button>
+                            <button onClick={() => handlePrintChart('chart-combined')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-combined', 'Combined ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
                     <div className="p-4 h-64">

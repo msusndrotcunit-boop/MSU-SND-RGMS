@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -126,6 +126,24 @@ const StaffLayout = () => {
                         <MessageCircle size={20} />
                         <span>Communication</span>
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                    </Link>
+
+                    {/* Ask Admin - Always Accessible or Locked? Let's keep it accessible or locked? Usually reporting bugs should be accessible even if profile incomplete?
+                        But consistent with other items, let's keep it accessible or locked.
+                        User said "users to be able to ask and report bugs and issues".
+                        If they can't complete profile due to bug, they need this.
+                        So it should be ALWAYS ACCESSIBLE.
+                    */}
+                    <Link
+                        to="/staff/ask-admin"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/staff/ask-admin' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                        )}
+                    >
+                        <HelpCircle size={20} />
+                        <span>Ask Admin</span>
                     </Link>
 
                     {/* Profile - Always Accessible */}

@@ -10,6 +10,15 @@ const Activities = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form, setForm] = useState({ title: '', description: '', date: '', image: null, type: 'activity' });
 
+    const announcementTemplate = `WHAT: 
+WHEN: 
+WHERE: 
+WHO: 
+HOW: 
+
+NOTE: 
+REMINDERS: `;
+
     useEffect(() => {
         fetchActivities();
     }, []);
@@ -207,12 +216,28 @@ const Activities = () => {
                                 onChange={e => setForm({...form, title: e.target.value})} 
                                 required 
                             />
-                            <textarea 
-                                className="w-full border p-2 rounded h-24" 
-                                placeholder="Description" 
-                                value={form.description} 
-                                onChange={e => setForm({...form, description: e.target.value})} 
-                            />
+                            <div className="relative">
+                                <textarea 
+                                    className="w-full border p-2 rounded h-48 font-mono text-sm" 
+                                    placeholder={form.type === 'announcement' ? announcementTemplate : "Description"} 
+                                    value={form.description} 
+                                    onChange={e => setForm({...form, description: e.target.value})} 
+                                />
+                                {form.type === 'announcement' && !form.description && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => setForm({...form, description: announcementTemplate})}
+                                        className="absolute top-2 right-2 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border text-gray-600"
+                                    >
+                                        Insert Template
+                                    </button>
+                                )}
+                            </div>
+                            {form.type === 'announcement' && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Announcements must include WHAT, WHEN, WHERE, WHO, HOW, NOTE, and REMINDERS.
+                                </p>
+                            )}
                             <input 
                                 type="date" 
                                 className="w-full border p-2 rounded" 

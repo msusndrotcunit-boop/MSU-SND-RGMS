@@ -62,8 +62,11 @@ router.get('/my-grades', async (req, res) => {
             status: gradeRow?.status || 'active'
         };
         if (gradeRow) {
-            await pRun(`UPDATE grades SET attendance_present = ?, merit_points = ?, demerit_points = ? WHERE cadet_id = ?`, [attendancePresent, meritPoints, demeritPoints, cadetId]);
+            // SYNC FIX: Do NOT overwrite Admin's manual edits with raw counts.
+            // The Admin 'Grading Management' is the source of truth.
+            // await pRun(`UPDATE grades SET attendance_present = ?, merit_points = ?, demerit_points = ? WHERE cadet_id = ?`, [attendancePresent, meritPoints, demeritPoints, cadetId]);
         } else {
+            // Only insert if missing
             await pRun(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [cadetId, attendancePresent, meritPoints, demeritPoints, 0, 0, 0, 'active']);
         }
         const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
