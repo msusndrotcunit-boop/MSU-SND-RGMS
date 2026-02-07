@@ -845,6 +845,19 @@ function initSqliteDb() {
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        // Admin Messages Table (Ask Admin)
+        db.run(`CREATE TABLE IF NOT EXISTS admin_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            sender_role TEXT,
+            subject TEXT,
+            message TEXT,
+            status TEXT DEFAULT 'pending',
+            admin_reply TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`);
+
         seedAdmin();
     });
 }
