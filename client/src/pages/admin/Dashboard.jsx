@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Users, Calendar, Mail
+    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -205,7 +205,7 @@ const Dashboard = () => {
             {/* Quick Actions */}
             <div className="bg-gray-800 rounded-lg p-6 text-white shadow-lg">
                 <div className="flex items-center mb-4 border-b border-gray-700 pb-2">
-                    <span className="text-yellow-400 mr-2">⚡</span>
+                    <Zap className="text-yellow-500 mr-2" size={20} />
                     <h3 className="font-bold">Quick Actions</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -224,7 +224,7 @@ const Dashboard = () => {
                     <ActionButton 
                         to="/admin/attendance" 
                         label="Attendance" 
-                        icon={<Calendar size={18} />} 
+                        icon={<ClipboardCheck size={18} />} 
                         className="bg-green-500 hover:bg-green-600"
                     />
                     <ActionButton 
@@ -237,31 +237,47 @@ const Dashboard = () => {
             </div>
             
             {/* Footer Info */}
-            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
-                <div>
-                    <div className="flex items-center text-white text-xl font-bold mb-4">
-                        <span className="bg-yellow-500 text-gray-900 p-1 rounded mr-2">🛡️</span>
-                        ROTCMIS
+            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mb-8">
+                    <div>
+                        <div className="flex items-center text-white text-xl font-bold mb-4">
+                            <span className="bg-yellow-500 text-gray-900 p-1 rounded mr-2">🛡️</span>
+                            ROTCMIS
+                        </div>
+                        <p className="mb-4">Reserve Officers' Training Corps Management Information System</p>
+                        <p className="text-xs text-gray-500">CDC EDITION V2.1</p>
                     </div>
-                    <p className="mb-4">Reserve Officers' Training Corps Management Information System</p>
-                    <p className="text-xs text-gray-500">CDC EDITION V2.1</p>
+                    <div className="flex flex-col space-y-2">
+                        <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
+                        <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
+                        <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Database</Link>
+                        <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Advanced Search</Link>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
+                        <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About</Link>
+                        <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
+                        <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
+                    </div>
                 </div>
-                <div className="flex flex-col space-y-2">
-                    <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
-                    <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
-                    <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Database</Link>
-                    <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Advanced Search</Link>
-                </div>
-                <div className="flex flex-col space-y-2">
-                    <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
-                    <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About</Link>
-                    <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
-                    <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
+                
+                <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center text-xs">
+                    <div className="flex items-center mb-4 md:mb-0">
+                        <span className="bg-yellow-600 text-white p-1 rounded-full mr-2 font-bold text-[10px]">C</span>
+                        <div>
+                            <p className="text-gray-300 font-bold">2026 Christian M Ragus</p>
+                            <p>All rights reserved.</p>
+                        </div>
+                    </div>
+                    <div className="flex space-x-4">
+                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-600 hover:text-white transition-colors"><Facebook size={16} /></a>
+                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-sky-500 hover:text-white transition-colors"><Twitter size={16} /></a>
+                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-700 hover:text-white transition-colors"><Linkedin size={16} /></a>
+                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-red-500 hover:text-white transition-colors"><Mail size={16} /></a>
+                    </div>
                 </div>
             </div>
-            <div className="text-center text-xs text-gray-500 mt-4">
-                &copy; 2026 Christian M Ragus. All rights reserved.
-            </div>
+            
         </div>
     );
 };
