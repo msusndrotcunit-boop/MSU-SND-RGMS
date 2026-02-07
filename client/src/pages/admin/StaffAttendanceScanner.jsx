@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -14,6 +14,8 @@ const StaffAttendanceScanner = () => {
 
     const scannerRef = useRef(null);
     const selectedDayRef = useRef(selectedDay);
+    const lastScanRef = useRef(0);
+    const beepRef = useRef(null);
 
     // Sync ref with state
     useEffect(() => {
@@ -70,7 +72,11 @@ const StaffAttendanceScanner = () => {
                         fps: 10, 
                         qrbox: { width: 250, height: 250 },
                         aspectRatio: 1.0,
-                        showTorchButtonIfSupported: true
+                        showTorchButtonIfSupported: true,
+                        rememberLastUsedCamera: true,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
+                        useBarCodeDetectorIfSupported: true,
+                        disableFlip: true
                     },
                     /* verbose= */ false
                 );
@@ -99,6 +105,9 @@ const StaffAttendanceScanner = () => {
     }, []);
 
     const onScanSuccess = async (decodedText, decodedResult) => {
+        const now = Date.now();
+        if (now - lastScanRef.current < 2000) return;
+        lastScanRef.current = now;
         if (!selectedDayRef.current) {
             toast.error("Please select a training day first.");
             // Pause to avoid spamming errors
@@ -129,6 +138,7 @@ const StaffAttendanceScanner = () => {
 
             setScannedData({ ...data, rawQr: decodedText });
             setShowModal(true);
+            try { beepRef.current && beepRef.current.play(); } catch {}
 
         } catch (err) {
             console.error(err);
@@ -195,6 +205,7 @@ const StaffAttendanceScanner = () => {
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-1/2 bg-white p-4 rounded shadow">
                     <div id="reader" width="100%"></div>
+                    <audio ref={beepRef} src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAFAAABAAACAAACcQBhdWRpby1tcDMAAABNAAACcAAACmYAAABaQW5kcmV3b2xmcwAAABQAAP/9AAA=" />
                 </div>
                 
                 <div className="w-full md:w-1/2">
