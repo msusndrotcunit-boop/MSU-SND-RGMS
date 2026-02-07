@@ -81,7 +81,7 @@ function App() {
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="messages" element={<AdminMessages />} />
                 <Route path="settings" element={<Settings role="admin" />} />
-                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route index element={<Navigate to="data-analysis" replace />} />
               </Route>
             </Route>
 

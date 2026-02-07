@@ -149,6 +149,24 @@ const CadetLayout = () => {
                         <X size={24} />
                     </button>
                 </div>
+                
+                {/* User Info Section */}
+                <div className="px-6 py-4 border-b border-green-800 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
+                        {profile?.profile_pic ? (
+                            <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                                <User size={40} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="font-semibold text-sm text-yellow-400">
+                        {profile ? `${profile.rank} ${profile.last_name}` : (user?.username || 'Cadet')}
+                    </div>
+                    {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
+                </div>
+
                 <nav className="flex-1 p-4 space-y-2">
                     <Link
                         to="/cadet/home"
@@ -184,17 +202,6 @@ const CadetLayout = () => {
                         <span>My Profile</span>
                     </Link>
                     <Link
-                        to="/cadet/about"
-                        onClick={() => setIsSidebarOpen(false)}
-                        className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/cadet/about' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
-                        )}
-                    >
-                        <Info size={20} />
-                        <span>About</span>
-                    </Link>
-                    <Link
                         to="/cadet/ask-admin"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
@@ -204,6 +211,17 @@ const CadetLayout = () => {
                     >
                         <MessageSquare size={20} />
                         <span>Ask Admin</span>
+                    </Link>
+                    <Link
+                        to="/cadet/about"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/cadet/about' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                        )}
+                    >
+                        <Info size={20} />
+                        <span>About</span>
                     </Link>
                     <Link
                         to="/cadet/settings"
