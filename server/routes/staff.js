@@ -20,6 +20,19 @@ const isAdmin = (req, res, next) => {
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
 
+// SSE broadcast helper
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
 // GET Staff Analytics (Admin)
 router.get('/analytics/overview', authenticateToken, isAdmin, (req, res) => {
     const cachedStats = cache.get("staff_analytics");
@@ -106,6 +119,37 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Portal Access Telemetry (Staff)
+router.post('/access', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Not a staff account' });
+    broadcastEvent({ type: 'portal_access', role: 'staff', userId: req.user.id, staffId: req.user.staffId, at: Date.now() });
+    db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Staff portal accessed', 'portal_access']);
+    res.json({ message: 'access recorded' });
+});
+
+router.get('/notifications', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL OR user_id = ?) ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+router.delete('/notifications/:id', authenticateToken, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All notifications deleted' });
+    });
+});
 // Wrapper for upload middleware to handle errors gracefully
 const uploadProfilePic = (req, res, next) => {
     upload.single('image')(req, res, (err) => {

@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -16,6 +16,17 @@ const AdminLayout = () => {
         'Grading Management': true
     });
     const [health, setHealth] = useState({ status: 'unknown' });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchResults, setSearchResults] = useState({ cadets: [], staff: [] });
+    const [cadetsData, setCadetsData] = useState([]);
+    const [staffData, setStaffData] = useState([]);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [messageOpen, setMessageOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [badgeNotif, setBadgeNotif] = useState(0);
+    const [badgeMsg, setBadgeMsg] = useState(0);
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -37,6 +48,81 @@ const AdminLayout = () => {
         return () => clearInterval(id);
     }, []);
 
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [cad, stf] = await Promise.all([
+                    axios.get('/api/admin/cadets'),
+                    axios.get('/api/staff')
+                ]);
+                setCadetsData(cad.data || []);
+                setStaffData(stf.data || []);
+            } catch {}
+        };
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'portal_access') {
+                            setBadgeNotif((b) => b + 1);
+                        } else if (data.type === 'ask_admin_reply') {
+                            setBadgeNotif((b) => b + 1);
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    if (es) es.close();
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
+
+    useEffect(() => {
+        if (!searchQuery) {
+            setSearchResults({ cadets: [], staff: [] });
+            return;
+        }
+        const q = searchQuery.toLowerCase();
+        const cad = cadetsData.filter(c => {
+            const name = `${c.rank} ${c.first_name} ${c.last_name}`.toLowerCase();
+            return name.includes(q) || (c.student_id || '').toLowerCase().includes(q) || (c.username || '').toLowerCase().includes(q);
+        }).slice(0, 5);
+        const stf = staffData.filter(s => {
+            const name = `${s.rank} ${s.first_name} ${s.last_name}`.toLowerCase();
+            return name.includes(q) || (s.afpsn || '').toLowerCase().includes(q) || (s.username || '').toLowerCase().includes(q);
+        }).slice(0, 5);
+        setSearchResults({ cadets: cad, staff: stf });
+    }, [searchQuery, cadetsData, staffData]);
+
+    const openNotifications = async () => {
+        setNotifOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/admin/notifications');
+            setNotifications(res.data || []);
+            setBadgeNotif(0);
+            await axios.delete('/api/admin/notifications/delete-all');
+        } catch {}
+    };
+
+    const openMessages = async () => {
+        setMessageOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/messages');
+            setMessages(res.data || []);
+            setBadgeMsg(0);
+            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
+        } catch {}
+    };
     
 
     const handleLogout = () => {
@@ -187,7 +273,63 @@ const AdminLayout = () => {
                         {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
                     </h1>
 
-                    
+                    <div className="hidden md:flex items-center space-x-4">
+                        <div className="relative">
+                            <div className="flex items-center border rounded-md px-3 py-2 w-64 focus-within:ring-2 focus-within:ring-green-600">
+                                <Search size={18} className="text-gray-400 mr-2" />
+                                <input
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onFocus={() => setSearchOpen(true)}
+                                    onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                                    placeholder="Search cadets or staff"
+                                    className="w-full outline-none text-sm"
+                                />
+                            </div>
+                            {searchOpen && (searchResults.cadets.length > 0 || searchResults.staff.length > 0) && (
+                                <div className="absolute mt-2 bg-white border rounded shadow w-64 z-50">
+                                    {searchResults.cadets.map(c => (
+                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-3 py-2 hover:bg-gray-100 text-sm">
+                                            {c.rank} {c.first_name} {c.last_name} • {c.student_id}
+                                        </Link>
+                                    ))}
+                                    {searchResults.staff.map(s => (
+                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-3 py-2 hover:bg-gray-100 text-sm">
+                                            {s.rank} {s.first_name} {s.last_name} • {s.afpsn || 'N/A'}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                            <Mail size={20} />
+                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
+                        </button>
+                        <button onClick={openNotifications} className="relative text-gray-600 hover:text-green-700">
+                            <Bell size={20} />
+                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
+                        </button>
+                        {(notifOpen && notifications.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {notifications.map(n => (
+                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{n.message}</div>
+                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {(messageOpen && messages.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {messages.map(m => (
+                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{m.subject}</div>
+                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </header>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-red-600 text-white text-sm p-2 text-center">
@@ -198,6 +340,34 @@ const AdminLayout = () => {
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
                     </Suspense>
+                    {(!location.pathname.includes('about') && location.pathname !== '/admin/settings' && location.pathname !== '/admin/profile') && (
+                        <div className="mt-6 bg-white rounded shadow p-4 border-t-4 border-green-800">
+                            <div className="flex items-center justify-between">
+                                <div className="font-semibold text-gray-800">Updates & Messages</div>
+                                <div className="text-xs text-gray-500">Auto-clears after viewing</div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div className="bg-gray-50 border rounded p-3">
+                                    <div className="text-sm font-medium text-green-700">Recent Notifications</div>
+                                    <div className="mt-2 space-y-2">
+                                        {notifications.slice(0,3).map(n => (
+                                            <div key={n.id} className="text-sm text-gray-700">{n.message}</div>
+                                        ))}
+                                        {notifications.length === 0 && <div className="text-sm text-gray-400">None</div>}
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 border rounded p-3">
+                                    <div className="text-sm font-medium text-green-700">Recent Messages</div>
+                                    <div className="mt-2 space-y-2">
+                                        {messages.slice(0,3).map(m => (
+                                            <div key={m.id} className="text-sm text-gray-700">{m.subject}</div>
+                                        ))}
+                                        {messages.length === 0 && <div className="text-sm text-gray-400">None</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
             </div>
         </div>

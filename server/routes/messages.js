@@ -6,6 +6,18 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
+// SSE broadcast helper
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
 // Helper for DB operations
 const pRun = (sql, params = []) => new Promise((resolve, reject) => {
     db.run(sql, params, function(err) {
@@ -103,10 +115,30 @@ router.put('/:id/reply', async (req, res) => {
 
     try {
         await pRun(`UPDATE admin_messages SET admin_reply = ?, status = ? WHERE id = ?`, [admin_reply, status || 'resolved', id]);
+        const msg = await pGet(`SELECT user_id FROM admin_messages WHERE id = ?`, [id]);
+        if (msg && msg.user_id) {
+            db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [msg.user_id, 'Admin replied to your inquiry.', 'ask_admin_reply']);
+            broadcastEvent({ type: 'ask_admin_reply', userId: msg.user_id, messageId: id });
+        }
         res.json({ message: 'Reply sent successfully' });
     } catch (err) {
         console.error('Error replying to message:', err);
         res.status(500).json({ message: 'Error replying to message' });
+    }
+});
+
+// Delete message (Admin auto-delete on view)
+router.delete('/:id', async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { id } = req.params;
+    try {
+        await pRun(`DELETE FROM admin_messages WHERE id = ?`, [id]);
+        res.json({ message: 'Message deleted' });
+    } catch (err) {
+        console.error('Error deleting message:', err);
+        res.status(500).json({ message: 'Error deleting message' });
     }
 });
 

@@ -11,6 +11,25 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
+// SSE broadcast helper
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
+// Portal Access Telemetry
+router.post('/access', (req, res) => {
+    broadcastEvent({ type: 'portal_access', role: 'cadet', userId: req.user.id, cadetId: req.user.cadetId, at: Date.now() });
+    db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Cadet portal accessed', 'portal_access']);
+    res.json({ message: 'access recorded' });
+});
 // Helper: Transmuted Grade Logic (Consistent with admin.js)
 const calculateTransmutedGrade = (finalGrade, status) => {
     if (status && ['DO', 'INC', 'T'].includes(status)) {
@@ -153,6 +172,20 @@ router.put('/notifications/read-all', (req, res) => {
     });
 });
 
+router.delete('/notifications/:id', (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', (req, res) => {
+    const userId = req.user.id;
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All notifications deleted' });
+    });
+});
 
 router.get('/profile', (req, res) => {
     const cadetId = req.user.cadetId;

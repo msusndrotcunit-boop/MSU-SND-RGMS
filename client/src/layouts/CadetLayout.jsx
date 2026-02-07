@@ -1,7 +1,7 @@
 import React, { useState, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight, MessageSquare, Bell, Mail } from 'lucide-react';
 import clsx from 'clsx';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
@@ -27,6 +27,12 @@ const CadetLayout = () => {
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [guideStep, setGuideStep] = useState(0);
     const [health, setHealth] = useState({ status: 'unknown' });
+    const [badgeNotif, setBadgeNotif] = useState(0);
+    const [badgeMsg, setBadgeMsg] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [messageOpen, setMessageOpen] = useState(false);
 
     const guideSteps = [
         {
@@ -69,6 +75,30 @@ const CadetLayout = () => {
         };
         checkGuideStatus();
     }, [user]);
+
+    React.useEffect(() => {
+        axios.post('/api/cadet/access').catch(() => {});
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'ask_admin_reply') {
+                            setBadgeNotif((b) => b + 1);
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    if (es) es.close();
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
 
     React.useEffect(() => {
         const fetchHealth = async () => {
@@ -125,6 +155,25 @@ const CadetLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+    const openNotifications = async () => {
+        setNotifOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/cadet/notifications');
+            setNotifications(res.data || []);
+            setBadgeNotif(0);
+            await axios.delete('/api/cadet/notifications/delete-all');
+        } catch {}
+    };
+
+    const openMessages = async () => {
+        setMessageOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/messages/my');
+            setMessages(res.data || []);
+            setBadgeMsg(0);
+            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
+        } catch {}
+    };
     
 
     return (
@@ -262,6 +311,36 @@ const CadetLayout = () => {
                             {location.pathname.includes('/cadet/about') && 'About'}
                             {location.pathname.includes('/cadet/settings') && 'Settings'}
                         </h1>
+                    </div>
+                    <div className="hidden md:flex items-center space-x-4">
+                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                            <Mail size={20} />
+                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
+                        </button>
+                        <button onClick={openNotifications} className="relative text-gray-600 hover:text-green-700">
+                            <Bell size={20} />
+                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
+                        </button>
+                        {(notifOpen && notifications.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {notifications.map(n => (
+                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{n.message}</div>
+                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {(messageOpen && messages.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {messages.map(m => (
+                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{m.subject}</div>
+                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </header>
                 {(health && health.db === 'disconnected') && (

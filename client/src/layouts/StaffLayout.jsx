@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
-
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -26,6 +25,12 @@ const StaffLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [badgeNotif, setBadgeNotif] = useState(0);
+    const [badgeMsg, setBadgeMsg] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [messageOpen, setMessageOpen] = useState(false);
 
     
 
@@ -43,6 +48,49 @@ const StaffLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+    React.useEffect(() => {
+        axios.post('/api/staff/access').catch(() => {});
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'ask_admin_reply') {
+                            setBadgeNotif((b) => b + 1);
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    if (es) es.close();
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
+
+    const openNotifications = async () => {
+        setNotifOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/staff/notifications');
+            setNotifications(res.data || []);
+            setBadgeNotif(0);
+            await axios.delete('/api/staff/notifications/delete-all');
+        } catch {}
+    };
+
+    const openMessages = async () => {
+        setMessageOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/messages/my');
+            setMessages(res.data || []);
+            setBadgeMsg(0);
+            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
+        } catch {}
+    };
     
 
     
@@ -201,7 +249,36 @@ const StaffLayout = () => {
                         <span className="font-bold text-green-900">Training Staff Portal</span>
                     </div>
 
-                    
+                    <div className="hidden md:flex items-center space-x-4">
+                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                            <Mail size={20} />
+                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
+                        </button>
+                        <button onClick={openNotifications} className="relative text-gray-600 hover:text-green-700">
+                            <Bell size={20} />
+                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
+                        </button>
+                        {(notifOpen && notifications.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {notifications.map(n => (
+                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{n.message}</div>
+                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {(messageOpen && messages.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {messages.map(m => (
+                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{m.subject}</div>
+                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </header>
 
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">

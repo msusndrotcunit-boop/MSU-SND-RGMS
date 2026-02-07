@@ -1219,6 +1219,31 @@ router.put('/grades/:cadetId', (req, res) => {
     );
 });
 
+// --- Notifications (Admin scope) ---
+router.get('/notifications', authenticateToken, isAdmin, (req, res) => {
+    const userId = req.user.id;
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL OR user_id = ?) ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+router.delete('/notifications/:id', authenticateToken, isAdmin, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res) => {
+    const userId = req.user.id;
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All notifications deleted' });
+    });
+});
+
 // --- Activity Management ---
 
 // Upload Activity
