@@ -174,6 +174,9 @@ const WeatherAdvisory = () => {
     return (
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-lg shadow-lg relative overflow-hidden mb-6">
             <div className={`weather-bg ${getAnimationClass(current)}`}></div>
+            {/* Overlay for better text visibility */}
+            <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
+            
             <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Cloud size={100} />
             </div>

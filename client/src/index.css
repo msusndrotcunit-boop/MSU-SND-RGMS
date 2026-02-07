@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+.app-bg {
+  background-color: #f3f4f6;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(22, 163, 74, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(22, 163, 74, 0.08) 0px, transparent 50%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.01) 0px, rgba(0,0,0,0.01) 2px, transparent 2px, transparent 10px);
+}
+
 .weather-bg {
   position: absolute;
   inset: 0;

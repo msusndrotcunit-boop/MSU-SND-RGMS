@@ -128,7 +128,7 @@ const CadetLayout = () => {
     
 
     return (
-        <div className="flex h-screen bg-gray-100 overflow-hidden">
+        <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
              {isSidebarOpen && (
