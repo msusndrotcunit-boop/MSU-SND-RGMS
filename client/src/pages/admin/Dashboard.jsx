@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin
+    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -210,27 +210,27 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <ActionButton 
-                        to="/admin/settings" 
-                        label="Program Background" 
-                        icon={<BookOpen size={18} />} 
-                        className="bg-gray-700 hover:bg-gray-600"
+                        to="/admin/cadets" 
+                        label="Cadet Management" 
+                        icon={<Users size={18} />} 
+                        className="bg-blue-600 hover:bg-blue-700"
                     />
                     <ActionButton 
-                        to="/admin/cadets" 
-                        label="Cadet Database" 
-                        icon={<Users size={18} />} 
-                        className="bg-blue-500 hover:bg-blue-600"
+                        to="/admin/grading" 
+                        label="Grading" 
+                        icon={<Calculator size={18} />} 
+                        className="bg-green-600 hover:bg-green-700"
                     />
                     <ActionButton 
                         to="/admin/attendance" 
                         label="Attendance" 
                         icon={<ClipboardCheck size={18} />} 
-                        className="bg-green-500 hover:bg-green-600"
+                        className="bg-purple-600 hover:bg-purple-700"
                     />
                     <ActionButton 
-                        to="/admin/users" // Assuming users page handles requests
-                        label="Pending Requests" 
-                        icon={<Mail size={18} />} 
+                        to="/admin/activities" 
+                        label="Activities" 
+                        icon={<Calendar size={18} />} 
                         className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
                     />
                 </div>
@@ -242,20 +242,23 @@ const Dashboard = () => {
                     <div>
                         <div className="flex items-center text-white text-xl font-bold mb-4">
                             <span className="bg-yellow-500 text-gray-900 p-1 rounded mr-2">🛡️</span>
-                            ROTCMIS
+                            <div>
+                                <div>MSU-SND RGMS</div>
+                                <div className="text-xs font-normal text-gray-400">integrated with Training Staff Attendance System</div>
+                            </div>
                         </div>
-                        <p className="mb-4">Reserve Officers' Training Corps Management Information System</p>
-                        <p className="text-xs text-gray-500">CDC EDITION V2.1</p>
+                        <p className="mb-4">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
+                        <p className="text-xs text-gray-500">Version 2.3.18</p>
                     </div>
                     <div className="flex flex-col space-y-2">
                         <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
                         <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
-                        <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Database</Link>
-                        <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Advanced Search</Link>
+                        <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Management</Link>
+                        <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Searching Cadets</Link>
                     </div>
                     <div className="flex flex-col space-y-2">
                         <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
-                        <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About</Link>
+                        <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About of the App</Link>
                         <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
                         <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
                     </div>
@@ -265,7 +268,7 @@ const Dashboard = () => {
                     <div className="flex items-center mb-4 md:mb-0">
                         <span className="bg-yellow-600 text-white p-1 rounded-full mr-2 font-bold text-[10px]">C</span>
                         <div>
-                            <p className="text-gray-300 font-bold">2026 Christian M Ragus</p>
+                            <p className="text-gray-300 font-bold">2026 MSU-SND ROTC UNIT</p>
                             <p>All rights reserved.</p>
                         </div>
                     </div>
