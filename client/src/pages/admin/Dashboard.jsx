@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import WeatherAdvisory from '../../components/WeatherAdvisory';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -128,6 +129,8 @@ const Dashboard = () => {
                     <span className="border-l-4 border-yellow-500 pl-3">ROTC Unit Dashboard</span>
                 </h2>
             </div>
+
+            <WeatherAdvisory />
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
