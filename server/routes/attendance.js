@@ -9,6 +9,36 @@ const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
 const axios = require('axios');
 
+// Simple SSE clients registry (shared via global)
+const SSE_CLIENTS = global.__sseClients || [];
+global.__sseClients = SSE_CLIENTS;
+
+function broadcastEvent(event) {
+    try {
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        SSE_CLIENTS.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
+// Server-Sent Events endpoint
+router.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    res.write('retry: 5000\n\n');
+    SSE_CLIENTS.push(res);
+
+    req.on('close', () => {
+        const idx = SSE_CLIENTS.indexOf(res);
+        if (idx !== -1) SSE_CLIENTS.splice(idx, 1);
+    });
+});
 // Multer config for file upload (Memory storage for immediate parsing)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -159,6 +189,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -181,6 +212,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -275,6 +307,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                     (err) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
+                        broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -304,6 +337,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                     (err) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
+                        broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -370,6 +404,7 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
+                            broadcastEvent({ type: 'staff_attendance_updated', staffId, dayId, status });
                             // Notify Staff
                             db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
                                 if (uRow) {
@@ -398,6 +433,7 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
+                            broadcastEvent({ type: 'staff_attendance_updated', staffId, dayId, status });
                             // Notify Staff
                             db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
                                 if (uRow) {

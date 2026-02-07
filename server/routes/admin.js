@@ -12,6 +12,18 @@ const { processStaffData } = require('../utils/importCadets');
 
 const router = express.Router();
 
+// SSE broadcast helper using global registry created in attendance routes
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
 // Multer Setup (Memory Storage for Base64)
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -1200,6 +1212,7 @@ router.put('/grades/:cadetId', (req, res) => {
                     
                     await sendEmail(cadet.email, subject, text, html);
                 }
+                broadcastEvent({ type: 'grade_updated', cadetId });
                 res.json({ message: 'Grades updated' });
             });
         }

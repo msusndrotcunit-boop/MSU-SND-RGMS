@@ -11,6 +11,7 @@ const CadetDashboard = () => {
     const [logs, setLogs] = useState([]);
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [esConnected, setEsConnected] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -117,6 +118,37 @@ const CadetDashboard = () => {
             window.removeEventListener('focus', refresh);
             document.removeEventListener('visibilitychange', onVisible);
         };
+    }, []);
+
+    useEffect(() => {
+        let es;
+        const connectSSE = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onopen = () => setEsConnected(true);
+                es.onmessage = async (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'grade_updated') {
+                            const res = await axios.get('/api/cadet/my-grades');
+                            setGrades(res.data);
+                            await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
+                        } else if (data.type === 'attendance_updated') {
+                            const res = await axios.get('/api/attendance/my-history');
+                            setAttendanceLogs(res.data);
+                            await cacheSingleton('dashboard', 'cadet_attendance', { data: res.data, timestamp: Date.now() });
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    setEsConnected(false);
+                    if (es) es.close();
+                    setTimeout(connectSSE, 3000);
+                };
+            } catch {}
+        };
+        connectSSE();
+        return () => { try { es && es.close(); } catch {} };
     }, []);
 
     if (loading) return <div className="text-center p-10">Loading...</div>;
