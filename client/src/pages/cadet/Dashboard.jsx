@@ -306,7 +306,7 @@ const CadetDashboard = () => {
                         <span className="font-semibold text-gray-700">About System</span>
                     </button>
                     <a 
-                        href="https://www.facebook.com/msusndrotc" 
+                        href="https://www.facebook.com/share/14SweZHYBFR/" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
