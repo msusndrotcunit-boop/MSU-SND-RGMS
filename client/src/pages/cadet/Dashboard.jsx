@@ -100,6 +100,25 @@ const CadetDashboard = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const refresh = async () => {
+            try {
+                const res = await axios.get('/api/cadet/my-grades');
+                setGrades(res.data);
+                await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
+            } catch {}
+        };
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') refresh();
+        };
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            window.removeEventListener('focus', refresh);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, []);
+
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
     return (
