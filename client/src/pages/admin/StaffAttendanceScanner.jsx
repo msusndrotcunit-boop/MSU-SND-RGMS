@@ -251,11 +251,11 @@ const StaffAttendanceScanner = () => {
                             </button>
                             
                             <button
-                                onClick={() => handleAttendanceAction('absent')}
-                                className="flex flex-col items-center justify-center p-4 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition border border-red-200"
+                                onClick={() => handleAttendanceAction('excused')}
+                                className="flex flex-col items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition border border-blue-200"
                             >
-                                <span className="text-2xl mb-1">❌</span>
-                                <span className="font-bold">ABSENT</span>
+                                <span className="text-2xl mb-1">📝</span>
+                                <span className="font-bold">EXCUSE</span>
                             </button>
                         </div>
                         
