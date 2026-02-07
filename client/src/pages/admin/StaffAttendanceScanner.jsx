@@ -16,6 +16,9 @@ const StaffAttendanceScanner = () => {
     const selectedDayRef = useRef(selectedDay);
     const lastScanRef = useRef(0);
     const beepRef = useRef(null);
+    const [staffList, setStaffList] = useState([]);
+    const [manualStaffId, setManualStaffId] = useState('');
+    const [manualRemarks, setManualRemarks] = useState('');
 
     // Sync ref with state
     useEffect(() => {
@@ -45,6 +48,26 @@ const StaffAttendanceScanner = () => {
             toast.error("Failed to load training days");
         }
     };
+
+    useEffect(() => {
+        const loadStaff = async () => {
+            if (!selectedDay) {
+                setStaffList([]);
+                return;
+            }
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setStaffList(res.data || []);
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to load staff list");
+            }
+        };
+        loadStaff();
+    }, [selectedDay]);
 
     useEffect(() => {
         let isMounted = true;
@@ -181,6 +204,33 @@ const StaffAttendanceScanner = () => {
         // console.warn(`Code scan error = ${error}`);
     };
 
+    const handleMarkAbsent = async () => {
+        if (!manualStaffId || !selectedDayRef.current) {
+            toast.error("Select training day and staff");
+            return;
+        }
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post('/api/attendance/mark/staff', {
+                dayId: selectedDayRef.current,
+                staffId: manualStaffId,
+                status: 'absent',
+                remarks: manualRemarks
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setScanResult(res.data);
+            toast.success("Marked as ABSENT");
+            const updated = staffList.map(s => s.staff_id === manualStaffId ? { ...s, status: 'absent', remarks: manualRemarks } : s);
+            setStaffList(updated);
+            setManualStaffId('');
+            setManualRemarks('');
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Attendance update failed");
+        }
+    };
+
     return (
         <div className="p-6">
             <h2 className="text-2xl font-bold mb-4 text-green-800">Staff Attendance Scanner</h2>
@@ -226,6 +276,43 @@ const StaffAttendanceScanner = () => {
                             Waiting for scan...
                         </div>
                     )}
+                    
+                    <div className="mt-8">
+                        <h3 className="text-lg font-semibold mb-3">Manual Absent</h3>
+                        <div className="bg-white p-4 rounded border shadow-sm space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
+                                <select
+                                    value={manualStaffId}
+                                    onChange={(e) => setManualStaffId(e.target.value)}
+                                    className="w-full p-2 border rounded shadow-sm focus:ring-green-500 focus:border-green-500"
+                                >
+                                    <option value="">-- Select Staff --</option>
+                                    {staffList.map(s => (
+                                        <option key={s.staff_id} value={s.staff_id}>
+                                            {s.rank} {s.first_name} {s.last_name} {s.status ? `(${s.status})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                                <input
+                                    type="text"
+                                    value={manualRemarks}
+                                    onChange={(e) => setManualRemarks(e.target.value)}
+                                    placeholder="Optional"
+                                    className="w-full p-2 border rounded shadow-sm focus:ring-green-500 focus:border-green-500"
+                                />
+                            </div>
+                            <button
+                                onClick={handleMarkAbsent}
+                                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded transition"
+                            >
+                                Mark ABSENT
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
