@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "../msu-snd-rgms/**"
+  ]
+}

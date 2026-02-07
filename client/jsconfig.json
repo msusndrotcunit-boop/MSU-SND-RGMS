@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "../msu-snd-rgms/**"
+  ]
+}
