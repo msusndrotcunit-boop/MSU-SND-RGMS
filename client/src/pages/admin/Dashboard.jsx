@@ -10,6 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import WeatherAdvisory from '../../components/WeatherAdvisory';
+import rgmsLogo from '../../assets/rgms_logo.webp';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -244,7 +245,9 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mb-8">
                     <div>
                         <div className="flex items-center text-white text-xl font-bold mb-4">
-                            <span className="bg-yellow-500 text-gray-900 p-1.5 rounded mr-3 shadow-lg shadow-yellow-500/20">🛡️</span>
+                            <span className="bg-green-800 border border-green-700 p-1.5 rounded mr-3 shadow-lg shadow-green-800/30 flex items-center justify-center">
+                                <img src={rgmsLogo} alt="RGMS Logo" className="w-7 h-7 rounded" />
+                            </span>
                             <div>
                                 <div className="tracking-wide">MSU-SND RGMS</div>
                                 <div className="text-[10px] font-normal text-gray-500 uppercase tracking-wider">integrated with Training Staff Attendance System</div>
