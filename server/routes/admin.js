@@ -60,14 +60,15 @@ const insertCadet = (cadet) => {
             battalion, company, platoon, 
             cadet_course, semester, status,
             is_profile_completed, is_archived
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '', 'Ongoing'
+            cadet.cadet_course || '', cadet.semester || '', 'Ongoing',
+            false, false
         ];
 
         db.run(sql, params, function(err) {
@@ -133,8 +134,8 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                     }
                 );
             } else {
-                let sql = `UPDATE users SET email = ?, is_approved = 1`;
-                const params = [email];
+                let sql = `UPDATE users SET email = ?, is_approved = ?`;
+                const params = [email, true];
                 if (customUsername && customUsername !== existingUser.username) {
                     sql += `, username = ?`;
                     params.push(customUsername);

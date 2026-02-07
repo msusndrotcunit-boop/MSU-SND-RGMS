@@ -36,7 +36,7 @@ const insertCadet = (cadet) => {
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '', 'Ongoing', 0
+            cadet.cadet_course || '', cadet.semester || '', 'Ongoing', false
         ];
         db.run(sql, params, function(err) {
             if (err) reject(err);
@@ -88,7 +88,7 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                 
                 const insertUser = (uName) => {
                     db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                        [uName, dummyHash, 'cadet', cadetId, 0, email], 
+                        [uName, dummyHash, 'cadet', cadetId, false, email], 
                         (err) => {
                             if (err) {
                                 if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate key')) {
