@@ -11,61 +11,17 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [expandedMenus, setExpandedMenus] = useState({
         'Training Staff': true,
         'Grading Management': true
     });
     const [health, setHealth] = useState({ status: 'unknown' });
-    const autoHideRef = React.useRef(null);
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
     };
 
-    // Helper to check if notification is read
-    const isNotifRead = (n) => n.is_read === 1 || n.is_read === '1' || n.is_read === true;
-
-    // Fetch notifications
-    const fetchNotifications = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-            const res = await axios.get('/api/admin/notifications', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setNotifications(res.data);
-            const unread = res.data.filter(n => !isNotifRead(n));
-            setUnreadCount(unread.length);
-            if (unread.length > 0) {
-                setShowNotifications(true);
-                if (autoHideRef.current) clearTimeout(autoHideRef.current);
-                autoHideRef.current = setTimeout(async () => {
-                    try {
-                        const token = localStorage.getItem('token');
-                        await axios.put('/api/admin/notifications/read-all', {}, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
-                        setUnreadCount(0);
-                    } catch (err) {
-                        // Silent fail
-                    }
-                    setShowNotifications(false);
-                }, 6000);
-            }
-        } catch (err) {
-            console.error("Error fetching notifications", err);
-        }
-    };
-
-    useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 10000); // Poll every 10s
-        return () => clearInterval(interval);
-    }, []);
+    
 
     useEffect(() => {
         const fetchHealth = async () => {
@@ -81,24 +37,7 @@ const AdminLayout = () => {
         return () => clearInterval(id);
     }, []);
 
-    const markAsRead = async (id, e) => {
-        if (e) e.stopPropagation();
-        try {
-            const token = localStorage.getItem('token');
-            await axios.put(`/api/admin/notifications/${id}/read`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            // Update local state and recompute count robustly
-            setNotifications(prev => {
-                const next = prev.map(n => n.id === id ? { ...n, is_read: 1 } : n);
-                const nextUnread = next.filter(n => !isNotifRead(n)).length;
-                setUnreadCount(nextUnread);
-                return next;
-            });
-        } catch (err) {
-            console.error("Error marking read", err);
-        }
-    };
+    
 
     const handleLogout = () => {
         logout();
@@ -246,33 +185,7 @@ const AdminLayout = () => {
                         {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
                     </h1>
 
-                    {/* Notifications auto-display (no button) */}
-                    {showNotifications && (
-                        <div className="relative mr-4">
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
-                                <div className="py-2">
-                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700">
-                                        Notifications
-                                    </div>
-                                    {notifications.filter(n => !isNotifRead(n)).length === 0 ? (
-                                        <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
-                                    ) : (
-                                        <div className="max-h-96 overflow-y-auto">
-                                            {notifications.filter(n => !isNotifRead(n)).map(notif => (
-                                                <div 
-                                                    key={notif.id}
-                                                    className="px-4 py-3 border-b border-gray-100 bg-blue-50"
-                                                >
-                                                    <p className="text-sm text-gray-800">{notif.message}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    
                 </header>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-red-600 text-white text-sm p-2 text-center">

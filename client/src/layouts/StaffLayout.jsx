@@ -27,11 +27,7 @@ const StaffLayout = () => {
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    // Notification State
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const autoHideRef = React.useRef(null);
+    
 
     // Redirect to profile if not completed and trying to access other pages
     React.useEffect(() => {
@@ -47,128 +43,11 @@ const StaffLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    // Subscribe to Push Notifications
-    React.useEffect(() => {
-        if (!user) return;
+    
 
-        const subscribeToPush = async () => {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
 
-            try {
-                const register = await navigator.serviceWorker.ready;
-                
-                // Get VAPID key
-                const { data: { publicKey } } = await axios.get('/api/notifications/vapid-key');
-                
-                const subscription = await register.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(publicKey)
-                });
-
-                await axios.post('/api/notifications/subscribe', subscription);
-                console.log('Subscribed to push notifications');
-            } catch (error) {
-                console.error('Push subscription error:', error);
-            }
-        };
-
-        subscribeToPush();
-    }, [user]);
-
-    // Poll for new messages and show notification
-    React.useEffect(() => {
-        const checkMessages = async () => {
-            // Only check if logged in and user has a staff profile (or is admin/staff)
-            if (!user) return;
-            
-            try {
-                const res = await axios.get('/api/staff/chat/latest');
-                const msg = res.data;
-                if (!msg) return;
-
-                const lastSeen = parseInt(localStorage.getItem('lastSeenMessageId') || '0');
-                const lastNotified = parseInt(sessionStorage.getItem('lastNotifiedMessageId') || '0');
-
-                // If new message exists and we haven't seen it AND haven't notified about it yet
-                if (msg.id > lastSeen && msg.id > lastNotified) {
-                    // Don't notify if we are currently on the communication page
-                    if (location.pathname !== '/staff/communication') {
-                        toast((t) => (
-                            <div onClick={() => {
-                                navigate('/staff/communication');
-                                toast.dismiss(t.id);
-                            }} className="cursor-pointer flex flex-col min-w-[200px]">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <MessageCircle size={16} className="text-green-600" />
-                                    <span className="font-bold text-gray-800 text-sm">New Message</span>
-                                </div>
-                                <span className="font-semibold text-xs text-green-700">{msg.rank} {msg.last_name}</span>
-                                <span className="text-sm text-gray-600 truncate">{msg.content}</span>
-                            </div>
-                        ), {
-                            duration: 5000,
-                            position: 'top-right',
-                            style: {
-                                border: '1px solid #4ade80',
-                                padding: '10px',
-                                background: '#fff',
-                            },
-                        });
-                        sessionStorage.setItem('lastNotifiedMessageId', msg.id.toString());
-                    }
-                }
-            } catch (err) {
-                // Silent fail (network error, etc)
-            }
-        };
-
-        const interval = setInterval(checkMessages, 5000); // Check every 5 seconds
-        return () => clearInterval(interval);
-    }, [user, location.pathname, navigate]);
-
-    // Notification Logic (From Remote)
-    const isNotifRead = (n) => n.is_read === 1 || n.is_read === '1' || n.is_read === true;
-
-    const fetchNotifications = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-            
-            const res = await axios.get('/api/staff/notifications', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setNotifications(res.data);
-            const unread = res.data.filter(n => !isNotifRead(n));
-            setUnreadCount(unread.length);
-            if (unread.length > 0) {
-                setShowNotifications(true);
-                if (autoHideRef.current) clearTimeout(autoHideRef.current);
-                autoHideRef.current = setTimeout(async () => {
-                    try {
-                        const token = localStorage.getItem('token');
-                        await axios.put('/api/staff/notifications/read-all', {}, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
-                        setUnreadCount(0);
-                    } catch (err) {
-                        // Silent fail
-                    }
-                    setShowNotifications(false);
-                }, 6000);
-            }
-        } catch (err) {
-            console.error("Error fetching notifications", err);
-        }
-    };
-
-    React.useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-            return () => clearInterval(interval);
-        }
-    }, [user]);
+    
 
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
 
@@ -304,33 +183,7 @@ const StaffLayout = () => {
                         <span className="font-bold text-green-900">Training Staff Portal</span>
                     </div>
 
-                    {/* Notifications auto-display (no button) */}
-                    {showNotifications && (
-                        <div className="relative mr-4">
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
-                                <div className="py-2">
-                                    <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-700">
-                                        Notifications
-                                    </div>
-                                    {notifications.filter(n => !isNotifRead(n)).length === 0 ? (
-                                        <div className="px-4 py-4 text-gray-500 text-sm text-center">No notifications</div>
-                                    ) : (
-                                        <div className="max-h-96 overflow-y-auto">
-                                            {notifications.filter(n => !isNotifRead(n)).map(notif => (
-                                                <div 
-                                                    key={notif.id}
-                                                    className="px-4 py-3 border-b border-gray-100 bg-blue-50"
-                                                >
-                                                    <p className="text-sm text-gray-800">{notif.message}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    
                 </header>
 
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">

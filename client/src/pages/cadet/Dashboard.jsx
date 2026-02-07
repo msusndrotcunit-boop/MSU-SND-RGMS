@@ -48,32 +48,28 @@ const CadetDashboard = () => {
 
                 const promises = [];
 
-                if (!cachedGrades || (now - cachedGrades.timestamp > CACHE_TTL)) {
-                    promises.push(
-                        axios.get('/api/cadet/my-grades').then(async res => {
-                            setGrades(res.data);
-                            await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: now });
-                        }).catch(e => {
-                            console.warn("Grades fetch failed", e);
-                            // Fallback: If fetch fails, show empty grades structure so the UI doesn't look broken
-                            // This ensures the Grading Summary section is always displayed
-                            setGrades({
-                                attendanceScore: 0,
-                                attendance_present: 0,
-                                aptitudeScore: 0,
-                                merit_points: 0,
-                                demerit_points: 0,
-                                subjectScore: 0,
-                                prelim_score: 0,
-                                midterm_score: 0,
-                                final_score: 0,
-                                finalGrade: 0,
-                                transmutedGrade: '5.00',
-                                remarks: 'No Data'
-                            });
-                        })
-                    );
-                }
+                promises.push(
+                    axios.get('/api/cadet/my-grades').then(async res => {
+                        setGrades(res.data);
+                        await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: now });
+                    }).catch(e => {
+                        console.warn("Grades fetch failed", e);
+                        setGrades({
+                            attendanceScore: 0,
+                            attendance_present: 0,
+                            aptitudeScore: 0,
+                            merit_points: 0,
+                            demerit_points: 0,
+                            subjectScore: 0,
+                            prelim_score: 0,
+                            midterm_score: 0,
+                            final_score: 0,
+                            finalGrade: 0,
+                            transmutedGrade: '5.00',
+                            remarks: 'No Data'
+                        });
+                    })
+                );
 
                 if (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL)) {
                     promises.push(

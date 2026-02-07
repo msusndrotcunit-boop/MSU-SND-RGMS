@@ -12,11 +12,7 @@ const CadetLayout = () => {
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    // Notification State
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    // showNotifications removed as requested (no button)
-    const autoHideRef = React.useRef(null);
+    
 
     // Redirect to profile if not completed
     React.useEffect(() => {
@@ -129,87 +125,7 @@ const CadetLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    // Notification Logic
-    const isNotifRead = (n) => n.is_read === 1 || n.is_read === '1' || n.is_read === true;
     
-    // Track the latest notification ID to detect new ones for "pop out" bubbles
-    const lastNotifIdRef = React.useRef(0);
-    const isFirstLoadRef = React.useRef(true);
-
-    const fetchNotifications = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-            
-            const res = await axios.get('/api/cadet/notifications', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const fetchedNotifs = res.data;
-            setNotifications(fetchedNotifs);
-            setUnreadCount(fetchedNotifs.filter(n => !isNotifRead(n)).length);
-
-            // Check for NEW notifications to pop out
-            const maxId = fetchedNotifs.reduce((max, n) => Math.max(max, n.id), 0);
-            
-            // On first load, just sync the ID, don't toast
-            if (isFirstLoadRef.current) {
-                lastNotifIdRef.current = maxId;
-                isFirstLoadRef.current = false;
-                return;
-            }
-            
-            // On subsequent polls, check for new IDs
-            if (maxId > lastNotifIdRef.current) {
-                // Find all new notifications
-                const newNotifs = fetchedNotifs.filter(n => n.id > lastNotifIdRef.current);
-                newNotifs.forEach(n => {
-                    // Messenger-style Pop Up
-                    toast((t) => (
-                        <div 
-                            className="flex items-center w-full max-w-md bg-white shadow-2xl rounded-2xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden p-4 cursor-pointer"
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                navigate('/cadet/dashboard');
-                            }}
-                        >
-                            <div className="flex-shrink-0">
-                                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                    <Info className="h-6 w-6 text-green-600" />
-                                </div>
-                            </div>
-                            <div className="ml-3 flex-1">
-                                <p className="text-sm font-medium text-gray-900">ROTC Notification</p>
-                                <p className="mt-1 text-sm text-gray-500">{n.message}</p>
-                            </div>
-                        </div>
-                    ), {
-                        duration: 5000,
-                        position: 'top-center',
-                        style: {
-                            background: 'transparent',
-                            boxShadow: 'none',
-                            padding: 0,
-                        }
-                    });
-                });
-                
-                // Update reference
-                lastNotifIdRef.current = maxId;
-            }
-        } catch (err) {
-            console.error("Error fetching notifications", err);
-        }
-    };
-
-    React.useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    // Removed manual toggle and buttons; notifications auto-show and auto-hide
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
