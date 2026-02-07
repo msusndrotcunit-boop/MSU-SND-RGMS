@@ -310,6 +310,9 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 sql += `, is_profile_completed=?`;
                 // Use 1 for TRUE to be safe across SQLite/Postgres
                 params.push(1);
+                // Also mark cadet as verified
+                sql += `, status=?`;
+                params.push('Verified');
             }
             
             sql += ` WHERE id=?`;
@@ -332,8 +335,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     
                 // 3. Update Users Table (Username/Email sync)
                 if (username && email) {
-                    const userSql = `UPDATE users SET username=?, email=? WHERE cadet_id=?`;
-                    db.run(userSql, [username, email, cadetId], (uErr) => {
+                    const userSql = `UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`;
+                    db.run(userSql, [username, email, 1, cadetId], (uErr) => {
                         if (uErr) console.error("Error updating user credentials:", uErr);
                         
                         let returnPath = null;

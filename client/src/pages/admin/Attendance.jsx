@@ -160,10 +160,11 @@ const Attendance = () => {
                     "reader",
                     { 
                         fps: 10, 
-                        qrbox: { width: 250, height: 250 },
+                        qrbox: { width: 230, height: 230 },
                         aspectRatio: 1.0,
                         showTorchButtonIfSupported: true,
-                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
+                        rememberLastUsedCamera: true,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
                         useBarCodeDetectorIfSupported: true,
                         disableFlip: true
                     },
@@ -584,31 +585,31 @@ const Attendance = () => {
                                                 <div className="flex justify-center space-x-1">
                                                     <button 
                                                         onClick={() => handleMarkAttendance(id, 'present')}
-                                                        className={`p-1 rounded ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'text-gray-300 hover:text-green-500'}`}
+                                                        className={`p-0.5 rounded ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'text-gray-300 hover:text-green-500'}`}
                                                         title="Present"
                                                     >
-                                                        <CheckCircle size={20} />
+                                                        <CheckCircle size={16} />
                                                     </button>
                                                     <button 
                                                         onClick={() => handleMarkAttendance(id, 'absent')}
-                                                        className={`p-1 rounded ${record.status === 'absent' ? 'bg-red-100 text-red-700' : 'text-gray-300 hover:text-red-500'}`}
+                                                        className={`p-0.5 rounded ${record.status === 'absent' ? 'bg-red-100 text-red-700' : 'text-gray-300 hover:text-red-500'}`}
                                                         title="Absent"
                                                     >
-                                                        <XCircle size={20} />
+                                                        <XCircle size={16} />
                                                     </button>
                                                     <button 
                                                         onClick={() => handleMarkAttendance(id, 'late')}
-                                                        className={`p-1 rounded ${record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-300 hover:text-yellow-500'}`}
+                                                        className={`p-0.5 rounded ${record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-300 hover:text-yellow-500'}`}
                                                         title="Late"
                                                     >
-                                                        <Clock size={20} />
+                                                        <Clock size={16} />
                                                     </button>
                                                     <button 
                                                         onClick={() => handleMarkAttendance(id, 'excused')}
-                                                        className={`p-1 rounded ${record.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:text-blue-500'}`}
+                                                        className={`p-0.5 rounded ${record.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:text-blue-500'}`}
                                                         title="Excused"
                                                     >
-                                                        <AlertTriangle size={20} />
+                                                        <AlertTriangle size={16} />
                                                     </button>
                                                 </div>
                                             </td>
