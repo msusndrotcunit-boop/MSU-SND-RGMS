@@ -14,6 +14,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [showMobileModal, setShowMobileModal] = useState(false);
     const [showAccessModal, setShowAccessModal] = useState(false);
+    const [showForgotModal, setShowForgotModal] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -218,7 +219,11 @@ const Login = () => {
                                 <input type="checkbox" className="form-checkbox h-3 w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
                                 <span className="ml-1.5">Remember me</span>
                             </label>
-                            <button type="button" className="text-green-600 hover:text-green-800 font-medium">
+                            <button 
+                                type="button" 
+                                onClick={() => setShowForgotModal(true)}
+                                className="text-green-600 hover:text-green-800 font-medium"
+                            >
                                 Forgot Email/Username?
                             </button>
                         </div>
@@ -325,6 +330,42 @@ const Login = () => {
                                 >
                                     Close
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showForgotModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="bg-green-900 p-4 flex items-center justify-between">
+                                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                                    <HelpCircle size={20} />
+                                    Account Recovery
+                                </h3>
+                                <button 
+                                    onClick={() => setShowForgotModal(false)}
+                                    className="text-green-100 hover:text-white p-1 hover:bg-green-800 rounded-full transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="p-8 text-center space-y-4">
+                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 mb-2">
+                                    <ShieldCheck size={32} />
+                                </div>
+                                <h4 className="text-xl font-bold text-gray-800">Contact Administrator</h4>
+                                <p className="text-gray-600 text-sm leading-relaxed">
+                                    For security reasons, account recovery must be handled manually. Please contact the ROTC Office Administrator or your Training Staff to recover your account or reset your password.
+                                </p>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => setShowForgotModal(false)}
+                                        className="px-6 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors"
+                                    >
+                                        Understood
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

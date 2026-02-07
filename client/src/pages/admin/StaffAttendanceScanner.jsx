@@ -209,6 +209,14 @@ const StaffAttendanceScanner = () => {
             toast.error("Select training day and staff");
             return;
         }
+
+        const staffMember = staffList.find(s => s.staff_id === parseInt(manualStaffId) || s.staff_id === manualStaffId);
+        
+        if (!staffMember) {
+            toast.error("Selected staff not found in list");
+            return;
+        }
+
         try {
             const token = localStorage.getItem('token');
             const res = await axios.post('/api/attendance/mark/staff', {
@@ -219,7 +227,19 @@ const StaffAttendanceScanner = () => {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setScanResult(res.data);
+            
+            // Safety check for response data
+            if (res.data && res.data.staff) {
+                setScanResult(res.data);
+            } else {
+                // If backend doesn't return full staff object, construct a temporary one for display
+                setScanResult({
+                    status: 'absent',
+                    staff: staffMember,
+                    message: 'Marked absent manually'
+                });
+            }
+
             toast.success("Marked as ABSENT");
             const updated = staffList.map(s => s.staff_id === manualStaffId ? { ...s, status: 'absent', remarks: manualRemarks } : s);
             setStaffList(updated);

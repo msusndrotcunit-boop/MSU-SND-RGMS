@@ -75,6 +75,7 @@ function App() {
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
                 <Route path="activities" element={<AdminActivities />} />
+                <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="settings" element={<Settings role="admin" />} />
                 <Route index element={<Navigate to="dashboard" replace />} />

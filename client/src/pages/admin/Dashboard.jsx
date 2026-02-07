@@ -203,52 +203,52 @@ const Dashboard = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gray-800 rounded-lg p-6 text-white shadow-lg">
-                <div className="flex items-center mb-4 border-b border-gray-700 pb-2">
-                    <Zap className="text-yellow-500 mr-2" size={20} />
-                    <h3 className="font-bold">Quick Actions</h3>
+            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">
+                <div className="flex items-center mb-4 border-b border-green-600 pb-2">
+                    <Zap className="text-yellow-400 mr-2" size={20} />
+                    <h3 className="font-bold text-yellow-50">Quick Actions</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <ActionButton 
                         to="/admin/cadets" 
                         label="Cadet Management" 
                         icon={<Users size={18} />} 
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/grading" 
                         label="Grading" 
                         icon={<Calculator size={18} />} 
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/attendance" 
                         label="Attendance" 
                         icon={<ClipboardCheck size={18} />} 
-                        className="bg-purple-600 hover:bg-purple-700"
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/activities" 
                         label="Activities" 
                         icon={<Calendar size={18} />} 
-                        className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                        className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border-2 border-yellow-300"
                     />
                 </div>
             </div>
             
             {/* Footer Info */}
-            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8">
+            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8 border-t-4 border-yellow-600">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mb-8">
                     <div>
                         <div className="flex items-center text-white text-xl font-bold mb-4">
-                            <span className="bg-yellow-500 text-gray-900 p-1 rounded mr-2">🛡️</span>
+                            <span className="bg-yellow-500 text-gray-900 p-1.5 rounded mr-3 shadow-lg shadow-yellow-500/20">🛡️</span>
                             <div>
-                                <div>MSU-SND RGMS</div>
-                                <div className="text-xs font-normal text-gray-400">integrated with Training Staff Attendance System</div>
+                                <div className="tracking-wide">MSU-SND RGMS</div>
+                                <div className="text-[10px] font-normal text-gray-500 uppercase tracking-wider">integrated with Training Staff Attendance System</div>
                             </div>
                         </div>
-                        <p className="mb-4">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
-                        <p className="text-xs text-gray-500">Version 2.3.19</p>
+                        <p className="mb-4 text-gray-500 leading-relaxed">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
+                        <p className="text-xs font-mono text-yellow-500/80">Version 2.3.19</p>
                     </div>
                     <div className="flex flex-col space-y-2">
                         <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
