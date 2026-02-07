@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "checkJs": true,
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "lib": ["dom", "es2020"],
     "forceConsistentCasingInFileNames": false
   },
-  "exclude": [
-    "../msu-snd-rgms/**"
-  ]
+  "include": ["src/**/*"]
 }

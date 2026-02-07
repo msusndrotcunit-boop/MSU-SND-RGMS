@@ -88,8 +88,8 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                 
                 const insertUser = (uName) => {
                     db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                        [uName, dummyHash, 'cadet', cadetId, false, email], 
-                        (err) => {
+                    [uName, dummyHash, 'cadet', cadetId, 0, email], 
+                    (err) => {
                             if (err) {
                                 if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate key')) {
                                     const newUsername = uName + Math.floor(Math.random() * 1000);

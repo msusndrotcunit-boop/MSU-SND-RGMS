@@ -10,7 +10,6 @@ import {
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import WeatherAdvisory from '../../components/WeatherAdvisory';
-import rgmsLogo from '../../assets/rgms_logo.webp';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500

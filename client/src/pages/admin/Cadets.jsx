@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
@@ -25,6 +25,49 @@ const Cadets = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewMode, setIsViewMode] = useState(false);
     const [currentCadet, setCurrentCadet] = useState(null);
+    const [profilePic, setProfilePic] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [darkMode, setDarkMode] = useState(false);
+
+    useEffect(() => {
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        setDarkMode(isDark);
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        }
+    }, []);
+
+    const toggleDarkMode = () => {
+        const newMode = !darkMode;
+        setDarkMode(newMode);
+        localStorage.setItem('darkMode', newMode);
+        if (newMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const options = {
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true,
+            };
+
+            try {
+                const compressedFile = await imageCompression(file, options);
+                setProfilePic(compressedFile);
+                setPreview(URL.createObjectURL(compressedFile));
+            } catch (error) {
+                console.error("Image compression error:", error);
+                setProfilePic(file);
+                setPreview(URL.createObjectURL(file));
+            }
+        }
+    };
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -189,6 +232,23 @@ const Cadets = () => {
     const openEditModal = (cadet) => {
         setIsViewMode(false);
         setCurrentCadet(cadet);
+        
+        // Handle Profile Pic Preview
+        if (cadet.profile_pic) {
+            if (cadet.profile_pic.startsWith('data:')) {
+                setPreview(cadet.profile_pic);
+            } else {
+                let normalizedPath = cadet.profile_pic.replace(/\\/g, '/');
+                if (!normalizedPath.startsWith('/')) {
+                    normalizedPath = '/' + normalizedPath;
+                }
+                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+            }
+        } else {
+            setPreview(null);
+        }
+        setProfilePic(null);
+
         setEditForm({
             rank: cadet.rank || '',
             firstName: cadet.first_name || '',
@@ -221,13 +281,29 @@ const Cadets = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.put(`/api/admin/cadets/${currentCadet.id}`, editForm);
+            const formData = new FormData();
+            
+            // Append all text fields
+            Object.keys(editForm).forEach(key => {
+                formData.append(key, editForm[key]);
+            });
+
+            // Append file if exists
+            if (profilePic) {
+                formData.append('profilePic', profilePic);
+            }
+
+            await axios.put(`/api/admin/cadets/${currentCadet.id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             await cacheSingleton('admin', 'cadets_list', null);
             await cacheSingleton('grading', 'cadets_list', null);
             fetchCadets(true);
             setIsEditModalOpen(false);
+            toast.success('Cadet updated successfully');
         } catch (err) {
-            alert('Error updating cadet');
+            console.error(err);
+            toast.error('Error updating cadet');
         }
     };
 
@@ -828,81 +904,232 @@ const Cadets = () => {
 
             {/* Edit Modal */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-lg mx-4 p-6 flex flex-col max-h-[90vh]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
-                            <button onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+                    <div className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-5xl mx-auto p-6 flex flex-col my-8 shadow-xl ${darkMode ? 'dark' : ''}`}>
+                        <div className="flex justify-between items-center mb-6 border-b pb-4 dark:border-gray-700">
+                            <h3 className="text-2xl font-bold dark:text-white">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
+                            <div className="flex items-center space-x-4">
+                                <button 
+                                    onClick={toggleDarkMode}
+                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    title="Toggle Dark Mode Preview"
+                                >
+                                    {darkMode ? <Sun className="text-yellow-400" size={20} /> : <Moon className="text-gray-600" size={20} />}
+                                </button>
+                                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    <X size={24} />
+                                </button>
+                            </div>
                         </div>
-                        <form onSubmit={handleEditSubmit} className="space-y-4 overflow-y-auto pr-2">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
-                                    <option value="">Select Rank</option>
-                                    {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} placeholder="First Name" />
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} placeholder="Middle Name" />
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} placeholder="Last Name" />
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} placeholder="Suffix" />
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} placeholder="Student ID" />
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} placeholder="Username" />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input disabled={isViewMode} className="border p-2 rounded" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} placeholder="Contact Number" />
+                        
+                        <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto">
+                            {/* Left Column: Photo & Status */}
+                            <div className="md:col-span-1 space-y-6">
+                                <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg shadow-inner text-center">
+                                    <div className="relative inline-block">
+                                        <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mx-auto border-4 border-white dark:border-gray-600 shadow-lg">
+                                            {preview ? (
+                                                <img 
+                                                    src={preview} 
+                                                    alt="Profile" 
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-300">
+                                                    <User size={64} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        {!isViewMode && (
+                                            <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md transition-transform hover:scale-105">
+                                                <Camera size={18} />
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            </label>
+                                        )}
+                                    </div>
+                                    <h2 className="mt-4 text-xl font-bold text-gray-800 dark:text-white">{editForm.lastName}, {editForm.firstName}</h2>
+                                    <p className="text-gray-500 dark:text-gray-300 font-medium">{editForm.rank || 'Cadet'}</p>
+                                </div>
+
+                                <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border dark:border-gray-600">
+                                     <h3 className="font-bold mb-3 text-gray-700 dark:text-gray-200 uppercase text-xs tracking-wider">Account Status</h3>
+                                     <select 
+                                        disabled={isViewMode}
+                                        value={editForm.status} 
+                                        onChange={e => setEditForm({...editForm, status: e.target.value})}
+                                        className={`w-full p-2 rounded font-bold border-0 ring-1 ring-inset focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
+                                            editForm.status === 'Ongoing' ? 'bg-green-50 text-green-700 ring-green-600/20' :
+                                            editForm.status === 'Failed' || editForm.status === 'Drop' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                            'bg-gray-50 text-gray-600 ring-gray-500/10'
+                                        }`}
+                                     >
+                                        {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                     </select>
+                                </div>
                             </div>
 
-                            <input disabled={isViewMode} className="border p-2 rounded w-full" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" />
+                            {/* Right Column: Form Fields */}
+                            <div className="md:col-span-2 space-y-6 pb-6">
+                                {/* Credentials */}
+                                <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-lg border border-green-100 dark:border-green-800">
+                                    <h4 className="font-bold text-green-800 dark:text-green-300 mb-4 text-sm uppercase tracking-wide flex items-center">
+                                        <User size={16} className="mr-2" /> Login Credentials
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+                                            <input 
+                                                disabled={isViewMode}
+                                                className="w-full border dark:border-gray-600 dark:bg-gray-800 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-shadow disabled:opacity-60 disabled:cursor-not-allowed" 
+                                                value={editForm.username} 
+                                                onChange={e => setEditForm({...editForm, username: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                                            <input 
+                                                disabled={isViewMode}
+                                                className="w-full border dark:border-gray-600 dark:bg-gray-800 dark:text-white p-2 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-shadow disabled:opacity-60 disabled:cursor-not-allowed" 
+                                                value={editForm.email} 
+                                                onChange={e => setEditForm({...editForm, email: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
-                                    <option value="">Select Course</option>
-                                    {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
-                                    <option value="">Select Year Level</option>
-                                    {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.schoolYear} onChange={e => setEditForm({...editForm, schoolYear: e.target.value})}>
-                                    <option value="">Select School Year</option>
-                                    {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
+                                {/* Personal Info */}
+                                <div>
+                                    <h3 className="text-lg font-bold mb-4 pb-2 border-b dark:border-gray-700 text-gray-800 dark:text-white">Personal Information</h3>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
+                                                    <option value="">Select Rank</option>
+                                                    {RANK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Suffix</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.suffixName} onChange={e => setEditForm({...editForm, suffixName: e.target.value})} />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Middle Name</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.middleName} onChange={e => setEditForm({...editForm, middleName: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                                            <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Military & School Info */}
+                                <div>
+                                    <h3 className="text-lg font-bold mb-4 pb-2 border-b dark:border-gray-700 text-gray-800 dark:text-white">Military & School Information</h3>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="md:col-span-1">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.course} onChange={e => setEditForm({...editForm, course: e.target.value})}>
+                                                    <option value="">Select Course</option>
+                                                    {COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year Level</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.yearLevel} onChange={e => setEditForm({...editForm, yearLevel: e.target.value})}>
+                                                    <option value="">Select Level</option>
+                                                    {YEAR_LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.schoolYear} onChange={e => setEditForm({...editForm, schoolYear: e.target.value})}>
+                                                    <option value="">Select S.Y.</option>
+                                                    {SCHOOL_YEAR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
+                                                    <option value="">Select Battalion</option>
+                                                    {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
+                                                    <option value="">Select Company</option>
+                                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Platoon</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
+                                                    <option value="">Select Platoon</option>
+                                                    {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
+                                                    <option value="">Select Course</option>
+                                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
+                                                <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
+                                                    <option value="">Select Semester</option>
+                                                    {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {!isViewMode && (
+                                    <div className="pt-4 border-t dark:border-gray-700 flex justify-end space-x-3">
+                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors">Cancel</button>
+                                        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md transition-transform hover:scale-105">Save Changes</button>
+                                    </div>
+                                )}
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.battalion} onChange={e => setEditForm({...editForm, battalion: e.target.value})}>
-                                    <option value="">Select Battalion</option>
-                                    {BATTALION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.company} onChange={e => setEditForm({...editForm, company: e.target.value})}>
-                                    <option value="">Select Company</option>
-                                    {COMPANY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.platoon} onChange={e => setEditForm({...editForm, platoon: e.target.value})}>
-                                    <option value="">Select Platoon</option>
-                                    {PLATOON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.cadetCourse} onChange={e => setEditForm({...editForm, cadetCourse: e.target.value})}>
-                                    <option value="">Select Cadet Course</option>
-                                    {CADET_COURSE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.semester} onChange={e => setEditForm({...editForm, semester: e.target.value})}>
-                                    <option value="">Select Semester</option>
-                                    {SEMESTER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select disabled={isViewMode} className="border p-2 rounded" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
-                                    <option value="">Select Status</option>
-                                    {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                            </div>
-
-                            {!isViewMode && <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Update Cadet</button>}
                         </form>
                     </div>
                 </div>
