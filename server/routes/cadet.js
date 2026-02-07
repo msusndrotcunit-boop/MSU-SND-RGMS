@@ -72,9 +72,9 @@ router.get('/my-grades', async (req, res) => {
         const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {
-            attendance_present: attendancePresent,
-            merit_points: meritPoints,
-            demerit_points: demeritPoints,
+            attendance_present: gradeRow ? gradeRow.attendance_present : attendancePresent,
+            merit_points: gradeRow ? gradeRow.merit_points : meritPoints,
+            demerit_points: gradeRow ? gradeRow.demerit_points : demeritPoints,
             prelim_score: gradeRow?.prelim_score || 0,
             midterm_score: gradeRow?.midterm_score || 0,
             final_score: gradeRow?.final_score || 0,

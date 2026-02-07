@@ -322,11 +322,11 @@ const Grading = () => {
         <div className="relative h-full">
             {/* Scanner Modal */}
             {isScannerOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl w-full max-w-5xl h-[85vh] flex flex-col md:flex-row overflow-hidden shadow-2xl">
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-none md:rounded-xl w-full max-w-5xl h-full md:h-[85vh] flex flex-col-reverse md:flex-row overflow-hidden shadow-2xl">
                         {/* Left: Config & Results */}
-                        <div className="w-full md:w-1/3 border-r bg-gray-50 flex flex-col">
-                            <div className="p-5 border-b bg-white flex justify-between items-center">
+                        <div className="w-full md:w-1/3 border-r bg-gray-50 flex flex-col h-1/3 md:h-auto">
+                            <div className="p-3 md:p-5 border-b bg-white flex justify-between items-center">
                                 <h3 className="font-bold text-lg flex items-center text-gray-800">
                                     <ScanLine className="mr-2 text-blue-600" size={20} /> 
                                     Exam Scanner
@@ -336,7 +336,7 @@ const Grading = () => {
                                 </button>
                             </div>
                             
-                            <div className="p-5 flex-1 overflow-y-auto space-y-5">
+                            <div className="p-3 md:p-5 flex-1 overflow-y-auto space-y-3 md:space-y-5">
                                 <div className="bg-white p-4 rounded-lg shadow-sm border">
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Exam Configuration</label>
                                     
@@ -402,7 +402,7 @@ const Grading = () => {
                         </div>
 
                         {/* Right: Camera */}
-                        <div className="w-full md:w-2/3 bg-gray-900 flex flex-col relative">
+                        <div className="w-full md:w-2/3 bg-gray-900 flex flex-col relative flex-1 md:flex-auto">
                             <div className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-md">
                                 Camera Active
                             </div>
