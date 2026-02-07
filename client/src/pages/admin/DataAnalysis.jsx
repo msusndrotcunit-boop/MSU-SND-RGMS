@@ -315,7 +315,7 @@ const DataAnalysis = () => {
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between">
                 <div>
                     <div className="flex items-center text-sm text-blue-600 mb-1">
-                        <span className="mr-1">🏠</span> Home <span className="mx-2">›</span> <span className="font-semibold">Data Analysis</span>
+                        <span className="mr-1">📊</span> Generate Data Analysis <span className="mx-2">›</span> <span className="font-semibold">Data Analysis</span>
                     </div>
                     <div className="flex items-center space-x-2">
                         <span className="text-yellow-500 text-2xl">📊</span>

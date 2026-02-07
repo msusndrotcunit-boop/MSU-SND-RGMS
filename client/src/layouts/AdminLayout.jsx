@@ -49,7 +49,8 @@ const AdminLayout = () => {
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     const navItems = [
-        { path: '/admin/data-analysis', label: 'Generate Data Analysis', icon: PieChart },
+        { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { 
             label: 'Grading Management', 
