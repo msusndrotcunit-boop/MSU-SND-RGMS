@@ -311,25 +311,6 @@ const DataAnalysis = () => {
 
     return (
         <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
-            {/* Header */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between">
-                <div>
-                    <div className="flex items-center text-sm text-blue-600 mb-1">
-                        <span className="mr-1">📊</span> Generate Data Analysis <span className="mx-2">›</span> <span className="font-semibold">Data Analysis</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <span className="text-yellow-500 text-2xl">📊</span>
-                        <h1 className="text-2xl font-bold text-gray-800">Generate Data Analysis</h1>
-                    </div>
-                </div>
-                <button 
-                    onClick={generatePDF}
-                    className="mt-4 md:mt-0 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center shadow-lg transition-all"
-                >
-                    <FileText size={18} className="mr-2" />
-                    <span>Generate PDF Report</span>
-                </button>
-            </div>
 
             {/* School Info Card */}
             <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden border-t-4 border-yellow-500">
