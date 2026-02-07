@@ -302,7 +302,7 @@ const CourseCard = ({ data }) => (
             <span className="text-yellow-500 mr-2">🎓</span>
             <h3 className="text-white font-bold">{data.name}</h3>
         </div>
-        <div className="p-4 grid grid-cols-5 gap-2 text-center">
+        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-center">
             <MiniStatus label="Ongoing" count={data.Ongoing} color="bg-cyan-100 text-cyan-800" />
             <MiniStatus label="Completed" count={data.Completed} color="bg-green-100 text-green-800" />
             <MiniStatus label="Incomplete" count={data.Incomplete} color="bg-amber-100 text-amber-800" />
@@ -317,8 +317,8 @@ const CourseCard = ({ data }) => (
 
 const MiniStatus = ({ label, count, color }) => (
     <div className={`rounded p-2 flex flex-col items-center justify-center ${color}`}>
-        <span className="text-lg font-bold">{count}</span>
-        <span className="text-[10px] uppercase">{label}</span>
+        <span className="text-base md:text-lg font-bold">{count}</span>
+        <span className="text-[9px] md:text-[10px] uppercase tracking-wide">{label}</span>
     </div>
 );
 

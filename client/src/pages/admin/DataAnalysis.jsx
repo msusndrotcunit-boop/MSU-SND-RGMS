@@ -29,9 +29,12 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
+    const shortName = (name || '').length > 12 ? `${(name || '').slice(0, 12)}…` : (name || '');
+    const fontSize = 10;
+
     return percent > 0 ? (
-        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight="bold">
-            {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={fontSize} fontWeight="bold">
+            {`${shortName}: ${value} (${(percent * 100).toFixed(0)}%)`}
         </text>
     ) : null;
 };
@@ -281,8 +284,8 @@ const DataAnalysis = () => {
     ].filter(d => d.value > 0);
 
     const combinedData = [
-        { name: 'Basic Cadets', value: stats.ongoing.basic.total },
-        { name: 'Advance Cadets', value: stats.ongoing.advance.total }
+        { name: 'Basic', value: stats.ongoing.basic.total },
+        { name: 'Advance', value: stats.ongoing.advance.total }
     ].filter(d => d.value > 0);
 
     // Completed Data for simple pie

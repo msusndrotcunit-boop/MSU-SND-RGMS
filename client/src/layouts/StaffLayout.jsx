@@ -208,6 +208,24 @@ const StaffLayout = () => {
                         {!user?.isProfileCompleted && <div className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
                     </Link>
 
+                    {/* My QR Code - Locked if profile incomplete */}
+                    <Link
+                        to={user?.isProfileCompleted ? "/staff/my-qr" : "#"}
+                        onClick={(e) => {
+                            if (!user?.isProfileCompleted) e.preventDefault();
+                            setIsSidebarOpen(false);
+                        }}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition",
+                            location.pathname === '/staff/my-qr' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                        )}
+                    >
+                        <User size={20} />
+                        <span>My QR Code</span>
+                        {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                    </Link>
+
                     {/* Settings - Locked if profile incomplete */}
                     <Link
                         to={user?.isProfileCompleted ? "/staff/settings" : "#"}

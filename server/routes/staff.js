@@ -311,18 +311,26 @@ router.put('/profile', authenticateToken, (req, res) => {
         });
     };
 
-    // Check email uniqueness if email is changing
-    if (email) {
-        db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
-            if (err) return res.status(500).json({ message: err.message });
-            if (row) {
-                return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
-            }
+    // Enforce lock after profile completion; block further edits when completed
+    db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [req.user.staffId], (lockErr, lockRow) => {
+        if (lockErr) return res.status(500).json({ message: lockErr.message });
+        const isCompleted = !!(lockRow && (lockRow.is_profile_completed === 1 || lockRow.is_profile_completed === true));
+        if (isCompleted) {
+            return res.status(403).json({ message: 'Profile is locked after completion. Contact admin for changes.' });
+        }
+        // Check email uniqueness if email is changing
+        if (email) {
+            db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
+                if (err) return res.status(500).json({ message: err.message });
+                if (row) {
+                    return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
+                }
+                proceedUpdate();
+            });
+        } else {
             proceedUpdate();
-        });
-    } else {
-        proceedUpdate();
-    }
+        }
+    })
 });
 
 // --- Notifications ---

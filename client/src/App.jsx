@@ -42,6 +42,7 @@ const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
 const StaffProfile = lazy(() => import('./pages/staff/Profile'));
 const StaffOnboarding = lazy(() => import('./pages/staff/Onboarding'));
 const StaffCommunication = lazy(() => import('./pages/staff/Communication'));
+const StaffMyQRCode = lazy(() => import('./pages/staff/MyQRCode'));
 
 // Loading Fallback
 const LoadingSpinner = () => (
@@ -106,6 +107,7 @@ function App() {
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="profile-completion" element={<StaffOnboarding />} />
                 <Route path="communication" element={<StaffCommunication />} />
+                <Route path="my-qr" element={<StaffMyQRCode />} />
                 <Route path="ask-admin" element={<AskAdmin />} />
                 <Route path="settings" element={<Settings role="staff" />} />
                 <Route index element={<Navigate to="home" replace />} />

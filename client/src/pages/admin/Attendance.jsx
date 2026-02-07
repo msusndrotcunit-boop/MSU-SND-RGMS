@@ -20,6 +20,7 @@ const Attendance = () => {
     const [scanResult, setScanResult] = useState(null);
     const scannerRef = useRef(null);
     const lastScanRef = useRef(0);
+    const beepRef = useRef(null);
 
     // Filters for marking
     const [filterCompany, setFilterCompany] = useState('');
@@ -191,6 +192,8 @@ const Attendance = () => {
         if (scannerRef.current) {
             scannerRef.current.pause(true);
         }
+
+        try { beepRef.current && beepRef.current.play(); } catch {}
 
         // Parse Data
         let data = { raw: decodedText, originalText: decodedText };
@@ -714,7 +717,11 @@ const Attendance = () => {
                         <h3 className="text-xl font-bold mb-4">Scan QR Code</h3>
                         
                         {!scanResult ? (
-                            <div id="reader" className="w-full"></div>
+                            <div className="relative">
+                                <div className="absolute -top-4 right-0 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-xs">Camera Active</div>
+                                <div id="reader" className="w-full border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+                                <div className="text-xs text-gray-500 text-center mt-2">Position the QR code within the frame to scan automatically.</div>
+                            </div>
                         ) : (
                             <div className="text-center space-y-4">
                                 <div className="bg-green-100 text-green-800 p-4 rounded">
@@ -732,6 +739,7 @@ const Attendance = () => {
                                 </div>
                             </div>
                         )}
+                        <audio ref={beepRef} src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAFAAABAAACAAACcQBhdWRpby1tcDMAAABNAAACcAAACmYAAABaQW5kcmV3b2xmcwAAABQAAP/9AAA=" />
                     </div>
                 </div>
             )}
