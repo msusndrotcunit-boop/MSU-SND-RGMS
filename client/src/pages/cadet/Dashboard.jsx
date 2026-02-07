@@ -111,6 +111,93 @@ const CadetDashboard = () => {
                 
                 {grades ? (
                     <>
+                        <div className="bg-white rounded shadow p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                <h2 className="text-xl font-bold text-gray-800">Grading Summary</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 md:mt-0">
+                                    <div className="bg-gray-50 p-4 rounded border text-center">
+                                        <div className="text-xs text-gray-500 uppercase">Attendance Score</div>
+                                        <div className="text-2xl font-bold text-blue-900 mt-1">{grades.attendanceScore.toFixed(2)}</div>
+                                        <div className="text-xs text-gray-500 mt-1">({grades.attendance_present} / {grades.totalTrainingDays} days)</div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded border text-center">
+                                        <div className="text-xs text-gray-500 uppercase">Aptitude Score</div>
+                                        <div className="text-2xl font-bold text-green-900 mt-1">{grades.aptitudeScore.toFixed(2)}</div>
+                                        <div className="text-xs text-gray-500 mt-1">Merit {grades.merit_points} • Demerit {grades.demerit_points}</div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded border text-center">
+                                        <div className="text-xs text-gray-500 uppercase">Subject Score</div>
+                                        <div className="text-2xl font-bold text-purple-900 mt-1">{grades.subjectScore.toFixed(2)}</div>
+                                        <div className="text-xs text-gray-500 mt-1">Prelim {grades.prelim_score} • Midterm {grades.midterm_score} • Final {grades.final_score}</div>
+                                    </div>
+                                    <div className={`p-4 rounded border text-center ${(['5.00','DO','INC','T'].includes(grades.transmutedGrade)) ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                                        <div className="text-xs text-gray-500 uppercase">Final</div>
+                                        <div className="text-2xl font-bold mt-1">{grades.finalGrade.toFixed(2)}</div>
+                                        <div className="text-xs font-semibold mt-1">Transmuted {grades.transmutedGrade} • {grades.remarks}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="border rounded">
+                                    <div className="px-4 py-2 border-b bg-gray-50 font-semibold text-gray-700">Attendance Preview</div>
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-gray-100">
+                                            <tr className="border-b">
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Date</th>
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Status</th>
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(attendanceLogs || []).slice(0,5).map(log => (
+                                                <tr key={log.id} className="border-b">
+                                                    <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${log.status === 'present' ? 'bg-green-100 text-green-800' : log.status === 'late' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {log.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-sm text-gray-600">{log.remarks || '-'}</td>
+                                                </tr>
+                                            ))}
+                                            {(attendanceLogs || []).length === 0 && (
+                                                <tr><td colSpan="3" className="p-4 text-center text-gray-500 text-sm">No records</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="border rounded">
+                                    <div className="px-4 py-2 border-b bg-gray-50 font-semibold text-gray-700">Merit & Demerit Preview</div>
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-gray-100">
+                                            <tr className="border-b">
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Date</th>
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Type</th>
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Points</th>
+                                                <th className="p-3 text-xs font-semibold text-gray-600">Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(logs || []).slice(0,5).map(log => (
+                                                <tr key={log.id} className="border-b">
+                                                    <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {log.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 font-bold">{log.points}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{log.reason}</td>
+                                                </tr>
+                                            ))}
+                                            {(logs || []).length === 0 && (
+                                                <tr><td colSpan="4" className="p-4 text-center text-gray-500 text-sm">No records</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                         {/* 1. Attendance Section */}
                         <div className="bg-white rounded shadow p-6">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
