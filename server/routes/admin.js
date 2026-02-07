@@ -142,12 +142,17 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
 };
 
 const findColumnValue = (row, possibleNames) => {
-    const keys = Object.keys(row);
-    for (const key of keys) {
-        const normalizedKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        for (const name of possibleNames) {
-            const normalizedName = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedKey === normalizedName) return row[key];
+    const rowKeys = Object.keys(row);
+    // Iterate through possible names first to prioritize them
+    for (const name of possibleNames) {
+        const normalizedName = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        for (const key of rowKeys) {
+            const normalizedKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalizedKey === normalizedName) {
+                const val = row[key];
+                // Only return if value is not null/undefined
+                if (val !== null && val !== undefined) return val;
+            }
         }
     }
     return undefined;
@@ -159,13 +164,14 @@ const processCadetData = async (data) => {
     const errors = [];
 
     for (const row of data) {
+        // Updated mapping to strictly follow user preferences
         const customUsername = findColumnValue(row, ['Username', 'username', 'User Name']);
-        const email = findColumnValue(row, ['Email', 'email', 'E-mail']);
+        const email = findColumnValue(row, ['Email', 'email', 'E-mail', 'Email Address']);
         let firstName = findColumnValue(row, ['First Name', 'first_name', 'FName', 'Given Name']);
         let lastName = findColumnValue(row, ['Last Name', 'last_name', 'LName', 'Surname']);
-        let middleName = findColumnValue(row, ['Middle Name', 'middle_name', 'MName']) || '';
-        const rank = findColumnValue(row, ['Rank', 'rank']) || 'Cdt';
-        let rawStudentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'Student Number']);
+        let middleName = findColumnValue(row, ['Middle Name', 'middle_name', 'MName', 'Middle Initial']) || '';
+        const rank = findColumnValue(row, ['Rank', 'rank', 'Grade']) || 'Cdt';
+        let rawStudentId = findColumnValue(row, ['Student ID', 'student_id', 'ID', 'Student Number', 'USN']);
         
         // Handle "Name" or "Full Name" if separate fields are missing
         if (!firstName || !lastName) {
@@ -1204,7 +1210,7 @@ router.put('/grades/:cadetId', (req, res) => {
 
 // Upload Activity
 router.post('/activities', upload.single('image'), (req, res) => {
-    const { title, description, date } = req.body;
+    const { title, description, date, type } = req.body;
     
     // Convert buffer to Base64 Data URI if file exists
     let imagePath = null;
@@ -1212,13 +1218,15 @@ router.post('/activities', upload.single('image'), (req, res) => {
         imagePath = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
-    db.run(`INSERT INTO activities (title, description, date, image_path) VALUES (?, ?, ?, ?)`,
-        [title, description, date, imagePath],
+    const activityType = type || 'activity';
+
+    db.run(`INSERT INTO activities (title, description, date, image_path, type) VALUES (?, ?, ?, ?, ?)`,
+        [title, description, date, imagePath, activityType],
         function(err) {
             if (err) return res.status(500).json({ message: err.message });
             
             // Create notification for the new activity
-            const notifMsg = `New Activity Posted: ${title}`;
+            const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
             db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
                 [notifMsg], 
                 (nErr) => {

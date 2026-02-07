@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { 
     Calculator, 
@@ -10,8 +10,11 @@ import {
     Trash2, 
     Save,
     ChevronRight,
-    ChevronDown
+    ChevronDown,
+    Camera,
+    ScanLine
 } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 
 const Grading = () => {
@@ -20,6 +23,17 @@ const Grading = () => {
     const [selectedCadet, setSelectedCadet] = useState(null);
     const [activeTab, setActiveTab] = useState('proficiency'); // proficiency, merit, attendance
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Scanner State
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scanConfig, setScanConfig] = useState({
+        examType: 'prelim', // prelim, midterm, final
+        pointsPerItem: 1,
+        correctAnswers: ''
+    });
+    const [lastScanned, setLastScanned] = useState(null);
+    const scannerRef = useRef(null);
+    const lastScanTimeRef = useRef(0);
 
     // Merit/Demerit State
     const [ledgerLogs, setLedgerLogs] = useState([]);
@@ -38,6 +52,137 @@ const Grading = () => {
     useEffect(() => {
         fetchCadets();
     }, []);
+
+    // Scanner Effect
+    useEffect(() => {
+        if (isScannerOpen && !scannerRef.current) {
+            // Delay to ensure DOM is ready
+            setTimeout(() => {
+                const scanner = new Html5QrcodeScanner(
+                    "reader",
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    /* verbose= */ false
+                );
+                scanner.render(onScanSuccess, onScanFailure);
+                scannerRef.current = scanner;
+            }, 100);
+        }
+
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(console.error);
+                scannerRef.current = null;
+            }
+        };
+    }, [isScannerOpen]); // Re-init when opened
+
+    // Re-bind scan success when config changes to capture latest state
+    useEffect(() => {
+        if (scannerRef.current) {
+            // We can't easily re-bind the callback in Html5QrcodeScanner without clearing
+            // So we rely on a ref or closure. 
+            // Actually, React state in callback might be stale if not careful.
+            // Using a ref for the latest config is safer.
+        }
+    }, [scanConfig, cadets]);
+    
+    // Use Ref for config to avoid stale closures in scanner callback
+    const configRef = useRef(scanConfig);
+    const cadetsRef = useRef(cadets);
+    useEffect(() => { configRef.current = scanConfig; }, [scanConfig]);
+    useEffect(() => { cadetsRef.current = cadets; }, [cadets]);
+
+    const onScanSuccess = async (decodedText, decodedResult) => {
+        const now = Date.now();
+        if (now - lastScanTimeRef.current < 2000) return; // 2s cooldown
+        lastScanTimeRef.current = now;
+
+        try {
+            const data = JSON.parse(decodedText);
+            const { student_id, answers, exam_type } = data;
+
+            if (!student_id || !answers) {
+                alert('Invalid QR Data: Missing student_id or answers');
+                return;
+            }
+
+            const currentConfig = configRef.current;
+            const currentCadets = cadetsRef.current;
+
+            // Determine Exam Type (QR overrides Config)
+            const targetExam = (exam_type || currentConfig.examType).toLowerCase();
+            let scoreField = '';
+            if (targetExam.includes('prelim')) scoreField = 'prelim_score';
+            else if (targetExam.includes('midterm')) scoreField = 'midterm_score';
+            else if (targetExam.includes('final')) scoreField = 'final_score';
+            else {
+                alert(`Unknown exam type: ${targetExam}`);
+                return;
+            }
+
+            // Calculate Score
+            const key = currentConfig.correctAnswers.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Normalize key
+            const studentAnswers = answers.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Normalize answers
+            const points = Number(currentConfig.pointsPerItem) || 1;
+
+            let score = 0;
+            // Assuming simple char-by-char comparison or comma separated
+            // If length matches, compare char by char
+            const limit = Math.min(key.length, studentAnswers.length);
+            for (let i = 0; i < limit; i++) {
+                if (key[i] === studentAnswers[i]) score += points;
+            }
+
+            // Find Cadet
+            const cadet = currentCadets.find(c => c.student_id === student_id);
+            if (!cadet) {
+                alert(`Cadet not found: ${student_id}`);
+                return;
+            }
+
+            // Update Backend
+            // We need to fetch the existing grades row first or assume we have it?
+            // The /api/admin/grades/:id endpoint updates scores.
+            // We need to send ALL scores to avoid overwriting with zeros if we only send one?
+            // Let's check handleProficiencySubmit: it sends `updateData` with all fields.
+            // We should use the cadet's existing scores for the other fields.
+            
+            const updateData = {
+                prelimScore: cadet.prelim_score || 0,
+                midtermScore: cadet.midterm_score || 0,
+                finalScore: cadet.final_score || 0,
+                attendancePresent: cadet.attendance_present || 0,
+                meritPoints: cadet.merit_points || 0,
+                demeritPoints: cadet.demerit_points || 0,
+                status: cadet.grade_status || 'active'
+            };
+
+            // Update the specific field
+            if (scoreField === 'prelim_score') updateData.prelimScore = score;
+            if (scoreField === 'midterm_score') updateData.midtermScore = score;
+            if (scoreField === 'final_score') updateData.finalScore = score;
+
+            await axios.put(`/api/admin/grades/${cadet.id}`, updateData);
+
+            // Update Local State
+            setLastScanned({ name: `${cadet.last_name}, ${cadet.first_name}`, score, type: targetExam });
+            
+            // Refresh List
+            fetchCadets(true);
+
+            // Audio Feedback
+            const audio = new Audio('/assets/beep.mp3'); // Optional
+            // audio.play().catch(e => {});
+
+        } catch (e) {
+            console.error(e);
+            alert('Scan Error: ' + e.message);
+        }
+    };
+
+    const onScanFailure = (error) => {
+        // console.warn(error);
+    };
 
     const fetchCadets = async (forceRefresh = false) => {
         try {
@@ -169,11 +314,117 @@ const Grading = () => {
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
     return (
-        <div className="flex h-full flex-col md:flex-row gap-6">
+        <div className="relative h-full">
+            {/* Scanner Modal */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl w-full max-w-5xl h-[85vh] flex flex-col md:flex-row overflow-hidden shadow-2xl">
+                        {/* Left: Config & Results */}
+                        <div className="w-full md:w-1/3 border-r bg-gray-50 flex flex-col">
+                            <div className="p-5 border-b bg-white flex justify-between items-center">
+                                <h3 className="font-bold text-lg flex items-center text-gray-800">
+                                    <ScanLine className="mr-2 text-blue-600" size={20} /> 
+                                    Exam Scanner
+                                </h3>
+                                <button onClick={() => setIsScannerOpen(false)} className="text-gray-400 hover:text-gray-700 transition">
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            
+                            <div className="p-5 flex-1 overflow-y-auto space-y-5">
+                                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Exam Configuration</label>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type</label>
+                                            <select 
+                                                className="w-full border-gray-300 border p-2.5 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                value={scanConfig.examType}
+                                                onChange={e => setScanConfig({...scanConfig, examType: e.target.value})}
+                                            >
+                                                <option value="prelim">Prelim Exam</option>
+                                                <option value="midterm">Midterm Exam</option>
+                                                <option value="final">Final Exam</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Points per Item</label>
+                                            <input 
+                                                type="number" 
+                                                min="1"
+                                                className="w-full border-gray-300 border p-2.5 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                value={scanConfig.pointsPerItem}
+                                                onChange={e => setScanConfig({...scanConfig, pointsPerItem: Number(e.target.value)})}
+                                            />
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answers Key</label>
+                                            <div className="relative">
+                                                <textarea 
+                                                    className="w-full border-gray-300 border p-3 rounded-md font-mono text-lg tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                    rows="4"
+                                                    placeholder="ABCD..."
+                                                    value={scanConfig.correctAnswers}
+                                                    onChange={e => setScanConfig({...scanConfig, correctAnswers: e.target.value})}
+                                                />
+                                                <div className="absolute bottom-2 right-2 text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
+                                                    {scanConfig.correctAnswers.replace(/[^A-Z0-9]/gi, '').length} items
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">Enter keys without spaces (e.g., AABCC)</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Last Scanned Result */}
+                                {lastScanned && (
+                                    <div className="bg-green-50 border border-green-200 p-5 rounded-lg shadow-sm animate-pulse-once">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-green-700 uppercase tracking-wide bg-green-100 px-2 py-0.5 rounded">Success</span>
+                                            <span className="text-xs text-green-600">{new Date().toLocaleTimeString()}</span>
+                                        </div>
+                                        <div className="font-bold text-lg text-gray-900 mb-1">{lastScanned.name}</div>
+                                        <div className="flex justify-between items-end border-t border-green-200 pt-2 mt-2">
+                                            <div className="text-sm text-gray-600 capitalize">{lastScanned.type.replace('_', ' ')}</div>
+                                            <div className="text-2xl font-bold text-green-700">{lastScanned.score} <span className="text-sm font-normal text-green-600">pts</span></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right: Camera */}
+                        <div className="w-full md:w-2/3 bg-gray-900 flex flex-col relative">
+                            <div className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-md">
+                                Camera Active
+                            </div>
+                            <div className="flex-1 flex items-center justify-center p-6">
+                                <div id="reader" className="w-full max-w-lg bg-black rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700"></div>
+                            </div>
+                            <div className="p-4 bg-gray-800 text-center text-gray-400 text-sm">
+                                Position the QR code within the frame to scan automatically.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex h-full flex-col md:flex-row gap-6">
             {/* Left Panel: Cadet List */}
             <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedCadet ? 'hidden md:flex' : ''}`}>
                 <div className="p-4 border-b">
-                    <h2 className="text-xl font-bold mb-4">Grading Management</h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold">Grading Management</h2>
+                        <button 
+                            onClick={() => setIsScannerOpen(true)}
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center text-sm transition"
+                        >
+                            <ScanLine size={16} className="mr-1.5" /> Scan Exams
+                        </button>
+                    </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                         <input 

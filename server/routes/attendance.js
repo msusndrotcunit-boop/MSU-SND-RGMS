@@ -170,6 +170,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                             });
                         }
                     });
+                    
+                    res.json({ message: 'Attendance updated' });
                 }
             );
         } else {
@@ -190,10 +192,146 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                             });
                         }
                     });
+
+                    res.json({ message: 'Attendance recorded' });
                 }
             );
         }
     });
+});
+
+// Cadet Attendance Scan Endpoint
+router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
+    const { dayId, qrData, status: providedStatus } = req.body;
+    
+    try {
+        let cadetIdentifier = qrData;
+        let scannedStatus = null;
+        let scannedTimeIn = null;
+        let scannedTimeOut = null;
+        let scannedUsername = null;
+
+        // Try to parse JSON if qrData is a JSON string
+        try {
+            const parsed = JSON.parse(qrData);
+            if (parsed.student_id) cadetIdentifier = parsed.student_id;
+            else if (parsed.id) cadetIdentifier = parsed.id;
+            
+            // New fields from ROTCMIS exported PDF
+            if (parsed.Username) scannedUsername = parsed.Username;
+            if (parsed.Status) scannedStatus = parsed.Status.toLowerCase();
+            if (parsed['Time In']) scannedTimeIn = parsed['Time In'];
+            if (parsed['Time Out']) scannedTimeOut = parsed['Time Out'];
+        } catch (e) {
+            // Not JSON, use raw string
+        }
+
+        // Helper to find cadet
+        const findCadet = () => new Promise((resolve, reject) => {
+            // 1. Try Student ID or ID
+            const sql = `SELECT id, first_name, last_name, rank, student_id FROM cadets WHERE student_id = ? OR id = ?`;
+            db.get(sql, [cadetIdentifier, cadetIdentifier], (err, cadet) => {
+                if (err) return reject(err);
+                if (cadet) return resolve(cadet);
+
+                // 2. Try Username if available
+                if (scannedUsername) {
+                    const userSql = `SELECT c.id, c.first_name, c.last_name, c.rank, c.student_id 
+                                     FROM users u 
+                                     JOIN cadets c ON u.cadet_id = c.id 
+                                     WHERE u.username = ?`;
+                    db.get(userSql, [scannedUsername], (uErr, uCadet) => {
+                        if (uErr) return reject(uErr);
+                        resolve(uCadet);
+                    });
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+
+        const cadet = await findCadet();
+        if (!cadet) return res.status(404).json({ message: 'Cadet not found' });
+
+        const cadetId = cadet.id;
+        // Priority: QR Status -> Provided Status -> Present
+        let status = scannedStatus || providedStatus || 'present';
+        // Normalize status
+        if (!['present', 'late', 'excused', 'absent'].includes(status)) {
+            status = 'present'; 
+        }
+
+        const remarks = 'Scanned via QR';
+        const time_in = scannedTimeIn || new Date().toLocaleTimeString();
+
+        // Check if record exists
+        db.get('SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+
+            if (row) {
+                // Update
+                db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ? WHERE id = ?', 
+                    [status, remarks, time_in, row.id], 
+                    (err) => {
+                        if (err) return res.status(500).json({ message: err.message });
+                        updateTotalAttendance(cadetId, res);
+
+                        // Notify Cadet
+                        db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
+                            if (uRow) {
+                                db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                    const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                    const message = `Your attendance for ${dayTitle} has been recorded as ${status}.`;
+                                    db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                                });
+                            }
+                        });
+
+                        res.json({ 
+                            message: 'Attendance updated', 
+                            status: status,
+                            cadet: { 
+                                name: `${cadet.rank} ${cadet.first_name} ${cadet.last_name}`,
+                                student_id: cadet.student_id
+                            } 
+                        });
+                    }
+                );
+            } else {
+                // Insert
+                db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                    [dayId, cadetId, status, remarks, time_in, time_out], 
+                    (err) => {
+                        if (err) return res.status(500).json({ message: err.message });
+                        updateTotalAttendance(cadetId, res);
+
+                        // Notify Cadet
+                        db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
+                            if (uRow) {
+                                db.get('SELECT title, date FROM training_days WHERE id = ?', [dayId], (dErr, dRow) => {
+                                    const dayTitle = dRow ? `${dRow.title} (${dRow.date})` : 'Training Day';
+                                    const message = `Your attendance for ${dayTitle} has been recorded as ${status}.`;
+                                    db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [uRow.id, message, 'attendance']);
+                                });
+                            }
+                        });
+
+                        res.json({ 
+                            message: 'Attendance recorded', 
+                            status: status,
+                            cadet: { 
+                                name: `${cadet.rank} ${cadet.first_name} ${cadet.last_name}`,
+                                student_id: cadet.student_id
+                            } 
+                        });
+                    }
+                );
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error processing scan' });
+    }
 });
 
 // Staff Attendance Scan Endpoint

@@ -343,8 +343,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
 });
 
 router.get('/activities', (req, res) => {
-    // Exclude image_path to reduce payload size
-    db.all(`SELECT id, title, description, date FROM activities ORDER BY date DESC`, [], (err, rows) => {
+    // Return id, title, description, date, type
+    db.all(`SELECT id, title, description, date, type FROM activities ORDER BY date DESC`, [], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(rows);
     });

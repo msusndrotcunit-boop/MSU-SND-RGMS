@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Upload, FileText } from 'lucide-react';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText } from 'lucide-react';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 
@@ -14,11 +15,11 @@ const Attendance = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createForm, setCreateForm] = useState({ date: '', title: '', description: '' });
     
-    // Import State
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [importFile, setImportFile] = useState(null);
-    const [importUrl, setImportUrl] = useState('');
-    const [importing, setImporting] = useState(false);
+    // Scanner State
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scanResult, setScanResult] = useState(null);
+    const scannerRef = useRef(null);
+    const lastScanRef = useRef(0);
 
     // Filters for marking
     const [filterCompany, setFilterCompany] = useState('');
@@ -148,42 +149,122 @@ const Attendance = () => {
         }
     };
 
-    const handleImport = async (e) => {
-        e.preventDefault();
-        if ((!importFile && !importUrl) || !selectedDay) return;
+    useEffect(() => {
+        let scanner = null;
+        if (isScannerOpen && !scanResult) {
+            // Delay to ensure DOM is ready
+            setTimeout(() => {
+                if (!document.getElementById("reader")) return;
+                
+                scanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0,
+                        showTorchButtonIfSupported: true,
+                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
+                        useBarCodeDetectorIfSupported: true,
+                        disableFlip: true
+                    },
+                    /* verbose= */ false
+                );
 
-        setImporting(true);
+                scanner.render(onScanSuccess, (err) => { /* ignore failures */ });
+                scannerRef.current = scanner;
+            }, 100);
+        }
+
+        return () => {
+            if (scanner) {
+                scanner.clear().catch(console.error);
+            }
+        };
+    }, [isScannerOpen, scanResult]);
+
+    const onScanSuccess = async (decodedText, decodedResult) => {
+        const now = Date.now();
+        if (now - lastScanRef.current < 2000) return;
+        lastScanRef.current = now;
+
+        if (scannerRef.current) {
+            scannerRef.current.pause(true);
+        }
+
+        // Parse Data
+        let data = { raw: decodedText, originalText: decodedText };
+        try {
+            const parsed = JSON.parse(decodedText);
+            data = { ...data, ...parsed };
+        } catch (e) {
+            // Raw text
+        }
+
+        setScanResult(data);
+    };
+
+    const handleScanConfirm = async (status) => {
+        if (!scanResult || !selectedDay) return;
 
         try {
-            let res;
-            if (importFile) {
-                const formData = new FormData();
-                formData.append('file', importFile);
-                formData.append('dayId', selectedDay.id);
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/scan' : '/api/attendance/staff/scan';
+            const payload = {
+                dayId: selectedDay.id,
+                qrData: JSON.stringify(scanResult), // Send as JSON string or raw if it was raw
+                status: status
+            };
+            
+            // If scanResult was just raw text and we stringify it, the backend should handle it.
+            // My backend expects `qrData` which it tries to parse as JSON.
+            // If `scanResult` is an object, `JSON.stringify` works.
+            // If `scanResult` came from `JSON.parse` in `onScanSuccess`, it's an object.
+            // If it failed parse, it's `{ raw: decodedText }`.
+            // So I should probably just send `scanResult.raw` if I want to match my backend logic 
+            // OR ensure `qrData` sent matches what backend expects.
+            // Backend: `try { JSON.parse(qrData) ... }`
+            // If I send `JSON.stringify({ raw: "..." })`, backend parses it. `parsed.student_id` or `parsed.id` might be missing.
+            // The backend falls back to `cadetIdentifier = qrData` (the string) if JSON parse fails or keys missing.
+            // But if I send a JSON string of `{raw: "..."}` it will parse successfully but might not have `id`.
+            
+            // Let's refine `onScanSuccess` to keep `decodedText` as the main payload source.
+            // I'll send `qrData: scanResult.raw || JSON.stringify(scanResult)`?
+            // Actually, best to just send the original `decodedText`.
+            // So `scanResult` should store `originalText`.
+            
+            const res = await axios.post(endpoint, {
+                dayId: selectedDay.id,
+                qrData: scanResult.originalText,
+                status: status
+            });
 
-                res = await axios.post('/api/attendance/import', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-            } else {
-                res = await axios.post('/api/attendance/import-url', {
-                    url: importUrl,
-                    dayId: selectedDay.id
-                });
+            alert(`Marked ${status.toUpperCase()}: ${res.data.cadet?.name || res.data.staff?.name || 'Success'}`);
+            
+            // Refresh records
+            selectDay(selectedDay);
+            
+            // Close result modal, resume scanner
+            setScanResult(null);
+            if (scannerRef.current) {
+                setTimeout(() => scannerRef.current.resume(), 1000);
             }
 
-            alert(res.data.message);
-            if (res.data.errors && res.data.errors.length > 0) {
-                alert('Errors:\n' + res.data.errors.join('\n'));
-            }
-            selectDay(selectedDay); // Refresh records
-            setIsImportModalOpen(false);
-            setImportFile(null);
-            setImportUrl('');
         } catch (err) {
             console.error(err);
-            alert('Import failed: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setImporting(false);
+            alert('Scan failed: ' + (err.response?.data?.message || err.message));
+            // Resume scanner even on error
+            setScanResult(null);
+            if (scannerRef.current) {
+                setTimeout(() => scannerRef.current.resume(), 1000);
+            }
+        }
+    };
+
+    const closeScanner = () => {
+        setIsScannerOpen(false);
+        setScanResult(null);
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(console.error);
+            scannerRef.current = null;
         }
     };
 
@@ -420,10 +501,10 @@ const Attendance = () => {
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
                                     <button 
-                                        onClick={() => setIsImportModalOpen(true)}
+                                        onClick={() => setIsScannerOpen(true)}
                                         className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
                                     >
-                                        <Upload size={16} className="mr-2" /> Import Attendance
+                                        <Camera size={16} className="mr-2" /> Scan Attendance
                                     </button>
                                     <div className="flex flex-wrap gap-2 text-sm">
                                         <div className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
@@ -618,90 +699,38 @@ const Attendance = () => {
                     </div>
                 </div>
             )}
-            {/* Import Modal */}
-            {isImportModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h3 className="text-xl font-bold mb-4">Import Attendance Records</h3>
-                        <div className="text-sm text-gray-600 mb-4 space-y-2">
-                            <p>Upload a file containing attendance data.</p>
-                            <p><b>Supported Formats:</b> CSV, Excel, PDF, Word, Image (.png, .jpg).</p>
-                            <div>
-                                <b>Matching Logic:</b> The system matches cadets by:
-                                <ul className="list-disc pl-5 mt-1">
-                                    <li><b>Student ID</b> (Highest Priority)</li>
-                                    <li><b>Email Address</b></li>
-                                    <li><b>Student Name</b> (First & Last Name)</li>
-                                </ul>
+            {/* Scanner Modal */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-lg relative">
+                        <button 
+                            onClick={closeScanner}
+                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                        >
+                            <XCircle size={24} />
+                        </button>
+                        
+                        <h3 className="text-xl font-bold mb-4">Scan QR Code</h3>
+                        
+                        {!scanResult ? (
+                            <div id="reader" className="w-full"></div>
+                        ) : (
+                            <div className="text-center space-y-4">
+                                <div className="bg-green-100 text-green-800 p-4 rounded">
+                                    <p className="font-bold text-lg">Scanned Successfully!</p>
+                                    <p className="font-mono mt-2 break-all">{scanResult.raw}</p>
+                                    {scanResult.name && <p className="text-lg font-semibold mt-2">{scanResult.name}</p>}
+                                </div>
+                                
+                                <p className="text-gray-600">Mark attendance as:</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => handleScanConfirm('present')} className="bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700">PRESENT</button>
+                                    <button onClick={() => handleScanConfirm('late')} className="bg-yellow-500 text-white p-3 rounded font-bold hover:bg-yellow-600">LATE</button>
+                                    <button onClick={() => handleScanConfirm('excused')} className="bg-blue-500 text-white p-3 rounded font-bold hover:bg-blue-600">EXCUSED</button>
+                                    <button onClick={() => { setScanResult(null); if(scannerRef.current) setTimeout(() => scannerRef.current.resume(), 500); }} className="bg-gray-500 text-white p-3 rounded font-bold hover:bg-gray-600">CANCEL</button>
+                                </div>
                             </div>
-                            <p className="text-xs italic bg-gray-50 p-2 rounded">
-                                For PDF/Word/Image, ensure lines contain identifiable info (ID, Email, or Name) and a status (Present, Absent, Late, Excused).
-                                <br/>
-                                <span className="text-blue-600 font-semibold">Note:</span> Image processing (OCR) may take a few seconds. Ensure the image text is clear.
-                            </p>
-                        </div>
-                        <form onSubmit={handleImport} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Option 1: Upload File</label>
-                                <input 
-                                    type="file" 
-                                    accept=".csv, .xlsx, .xls, .pdf, .docx, .doc, .png, .jpg, .jpeg, .webp, .bmp, .gif"
-                                    className="w-full border p-2 rounded"
-                                    onChange={e => {
-                                        setImportFile(e.target.files[0]);
-                                        if(e.target.files[0]) setImportUrl('');
-                                    }}
-                                    disabled={!!importUrl}
-                                />
-                            </div>
-
-                            <div className="relative flex py-2 items-center">
-                                <div className="flex-grow border-t border-gray-300"></div>
-                                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
-                                <div className="flex-grow border-t border-gray-300"></div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Option 2: Import from URL (Lightshot/Image)</label>
-                                <input 
-                                    type="url" 
-                                    placeholder="https://prnt.sc/..."
-                                    className="w-full border p-2 rounded"
-                                    value={importUrl}
-                                    onChange={e => {
-                                        setImportUrl(e.target.value);
-                                        if(e.target.value) setImportFile(null);
-                                    }}
-                                    disabled={!!importFile}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Paste a Lightshot link (prnt.sc) or a direct image URL.</p>
-                            </div>
-                            
-                            <div className="flex space-x-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => { setIsImportModalOpen(false); setImportFile(null); setImportUrl(''); }}
-                                    className="flex-1 py-2 border rounded hover:bg-gray-50"
-                                    disabled={importing}
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 flex justify-center items-center"
-                                    disabled={importing || (!importFile && !importUrl)}
-                                >
-                                    {importing ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                            Importing...
-                                        </>
-                                    ) : (
-                                        'Import'
-                                    )}
-                                </button>
-                            </div>
-                        </form>
+                        )}
                     </div>
                 </div>
             )}

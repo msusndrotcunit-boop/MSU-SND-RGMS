@@ -6,8 +6,9 @@ import { getSingleton, cacheSingleton } from '../../utils/db';
 
 const Activities = () => {
     const [activities, setActivities] = useState([]);
+    const [activeTab, setActiveTab] = useState('activity');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [form, setForm] = useState({ title: '', description: '', date: '', image: null });
+    const [form, setForm] = useState({ title: '', description: '', date: '', image: null, type: 'activity' });
 
     useEffect(() => {
         fetchActivities();
@@ -80,6 +81,7 @@ const Activities = () => {
         formData.append('title', form.title);
         formData.append('description', form.description);
         formData.append('date', form.date);
+        formData.append('type', form.type);
         if (form.image) formData.append('image', form.image);
 
         try {
@@ -88,7 +90,7 @@ const Activities = () => {
             });
             fetchActivities(true);
             setIsModalOpen(false);
-            setForm({ title: '', description: '', date: '', image: null });
+            setForm({ title: '', description: '', date: '', image: null, type: activeTab });
         } catch (err) {
             alert('Error uploading activity');
         }
@@ -114,16 +116,37 @@ const Activities = () => {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Activity Management</h2>
                 <button 
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => {
+                        setForm({ ...form, type: activeTab });
+                        setIsModalOpen(true);
+                    }}
                     className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-blue-700"
                 >
                     <Plus size={18} />
-                    <span>New Activity</span>
+                    <span>New {activeTab === 'activity' ? 'Activity' : 'Announcement'}</span>
+                </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex space-x-1 mb-6 border-b">
+                <button 
+                    onClick={() => setActiveTab('activity')}
+                    className={`px-6 py-2 font-medium transition-colors ${activeTab === 'activity' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Activities
+                </button>
+                <button 
+                    onClick={() => setActiveTab('announcement')}
+                    className={`px-6 py-2 font-medium transition-colors ${activeTab === 'announcement' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Announcements
                 </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activities.map(activity => (
+                {activities
+                    .filter(a => (a.type || 'activity') === activeTab)
+                    .map(activity => (
                     <div key={activity.id} className="bg-white rounded shadow overflow-hidden">
                         <div className="p-4">
                             <h3 className="font-bold text-xl mb-2">{activity.title}</h3>
@@ -153,15 +176,33 @@ const Activities = () => {
                     </div>
                 ))}
             </div>
+            
+            {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
+                <div className="text-center py-10 text-gray-500">
+                    No {activeTab}s found.
+                </div>
+            )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg w-full max-w-md p-6">
-                        <h3 className="text-xl font-bold mb-4">Add New Activity</h3>
+                        <h3 className="text-xl font-bold mb-4">Add New {form.type === 'activity' ? 'Activity' : 'Announcement'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                <select 
+                                    className="w-full border p-2 rounded" 
+                                    value={form.type} 
+                                    onChange={e => setForm({...form, type: e.target.value})}
+                                >
+                                    <option value="activity">Activity</option>
+                                    <option value="announcement">Announcement</option>
+                                </select>
+                            </div>
+                            
                             <input 
                                 className="w-full border p-2 rounded" 
-                                placeholder="Activity Title" 
+                                placeholder="Title" 
                                 value={form.title} 
                                 onChange={e => setForm({...form, title: e.target.value})} 
                                 required 
@@ -185,8 +226,8 @@ const Activities = () => {
                                 accept="image/*"
                             />
                             <div className="flex space-x-2">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 border py-2 rounded">Cancel</button>
-                                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded">Upload</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 border py-2 rounded hover:bg-gray-50">Cancel</button>
+                                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Upload</button>
                             </div>
                         </form>
                     </div>
