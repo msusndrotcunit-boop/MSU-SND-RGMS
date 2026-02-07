@@ -240,52 +240,7 @@ const Dashboard = () => {
                 </div>
             </div>
             
-            {/* Footer Info */}
-            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8 border-t-4 border-yellow-600">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mb-8">
-                    <div>
-                        <div className="flex items-center text-white text-xl font-bold mb-4">
-                            <span className="bg-green-800 border border-green-700 p-1.5 rounded mr-3 shadow-lg shadow-green-800/30 flex items-center justify-center">
-                                <img src={rgmsLogo} alt="RGMS Logo" className="w-7 h-7 rounded" />
-                            </span>
-                            <div>
-                                <div className="tracking-wide">MSU-SND RGMS</div>
-                                <div className="text-[10px] font-normal text-gray-500 uppercase tracking-wider">integrated with Training Staff Attendance System</div>
-                            </div>
-                        </div>
-                        <p className="mb-4 text-gray-500 leading-relaxed">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
-                        <p className="text-xs font-mono text-yellow-500/80">Version {import.meta.env.PACKAGE_VERSION || '2.3.19'}</p>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
-                        <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
-                        <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Management</Link>
-                        <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Searching Cadets</Link>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
-                        <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About of the App</Link>
-                        <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
-                        <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
-                    </div>
-                </div>
-                
-                <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center text-xs">
-                    <div className="flex items-center mb-4 md:mb-0">
-                        <span className="bg-yellow-600 text-white p-1 rounded-full mr-2 font-bold text-[10px]">C</span>
-                        <div>
-                            <p className="text-gray-300 font-bold">2026 MSU-SND ROTC UNIT</p>
-                            <p>All rights reserved.</p>
-                        </div>
-                    </div>
-                    <div className="flex space-x-4">
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-600 hover:text-white transition-colors"><Facebook size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-sky-500 hover:text-white transition-colors"><Twitter size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-700 hover:text-white transition-colors"><Linkedin size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-red-500 hover:text-white transition-colors"><Mail size={16} /></a>
-                    </div>
-                </div>
-            </div>
+            
             
         </div>
     );
