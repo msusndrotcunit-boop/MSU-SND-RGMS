@@ -193,21 +193,32 @@ const Grading = () => {
         try {
             if (!forceRefresh) {
                 // Try cache first
-                const cached = await getSingleton('grading', 'cadets_list');
+                const cached = await getSingleton('admin', 'cadets_list');
                 if (cached) {
-                    setCadets(cached.data);
-                    setLoading(false);
-                    
-                    // If cache is fresh (< 2 mins), skip API
-                    if (cached.timestamp && (Date.now() - cached.timestamp < 2 * 60 * 1000)) {
-                        return;
+                    let data = cached;
+                    let timestamp = 0;
+                    if (cached.data && cached.timestamp) {
+                        data = cached.data;
+                        timestamp = cached.timestamp;
+                    } else if (Array.isArray(cached)) {
+                        data = cached;
+                    }
+
+                    if (Array.isArray(data)) {
+                        setCadets(data);
+                        setLoading(false);
+                        
+                        // If cache is fresh (< 2 mins), skip API
+                        if (timestamp && (Date.now() - timestamp < 2 * 60 * 1000)) {
+                            return;
+                        }
                     }
                 }
             }
 
             const res = await axios.get('/api/admin/cadets');
             setCadets(res.data);
-            await cacheSingleton('grading', 'cadets_list', {
+            await cacheSingleton('admin', 'cadets_list', {
                 data: res.data,
                 timestamp: Date.now()
             });

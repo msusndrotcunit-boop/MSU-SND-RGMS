@@ -297,7 +297,7 @@ const Cadets = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             await cacheSingleton('admin', 'cadets_list', null);
-            await cacheSingleton('grading', 'cadets_list', null);
+            await clearCache('attendance_by_day'); // Sync attendance lists
             fetchCadets(true);
             setIsEditModalOpen(false);
             toast.success('Cadet updated successfully');
@@ -337,7 +337,7 @@ const Cadets = () => {
             setImportUrl('');
             
             try {
-                await cacheSingleton('grading', 'cadets_list', null);
+                await clearCache('attendance_by_day'); // Sync attendance lists
                 await cacheSingleton('analytics', 'dashboard', null);
             } catch (cacheErr) {
                 console.warn('Failed to clear cache:', cacheErr);
@@ -380,7 +380,7 @@ const Cadets = () => {
             
             // Clear cache and force refresh
             await cacheSingleton('admin', 'cadets_list', null);
-            await cacheSingleton('grading', 'cadets_list', null);
+            await clearCache('attendance_by_day'); // Sync attendance lists
             await fetchCadets(true);
             
             setAddForm({
@@ -450,7 +450,6 @@ const Cadets = () => {
             toast.success('Cadets deleted successfully');
             setSelectedCadets([]);
             await cacheSingleton('admin', 'cadets_list', null);
-            await cacheSingleton('grading', 'cadets_list', null);
             await clearCache('attendance_by_day'); // Sync attendance lists
             fetchCadets();
         } catch (err) {

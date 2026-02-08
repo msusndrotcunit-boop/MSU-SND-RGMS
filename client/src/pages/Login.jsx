@@ -260,8 +260,8 @@ const Login = () => {
                             onClick={() => handleHelpClick('mobile')}
                             className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
                         >
-                            <Smartphone size={16} className="text-gray-400 group-hover:text-green-600" />
-                            How to download it in mobile
+                            <Download size={16} className="text-gray-400 group-hover:text-green-600" />
+                            Download Mobile App
                         </button>
                     </div>
                 </div>
