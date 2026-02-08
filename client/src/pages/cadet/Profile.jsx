@@ -122,11 +122,15 @@ const Profile = () => {
             status: data.status || 'Ongoing'
         });
         if (data.profile_pic) {
-            if (data.profile_pic.startsWith('data:')) {
+            if (data.profile_pic.startsWith('data:') || data.profile_pic.startsWith('http')) {
                 setPreview(data.profile_pic);
             } else {
                 let normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                if (!normalizedPath.startsWith('/')) {
+                // Remove absolute path prefix if present (look for /uploads/)
+                const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                if (uploadsIndex !== -1) {
+                    normalizedPath = normalizedPath.substring(uploadsIndex);
+                } else if (!normalizedPath.startsWith('/')) {
                     normalizedPath = '/' + normalizedPath;
                 }
                 setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText } from 'lucide-react';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText, Download } from 'lucide-react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
@@ -422,6 +422,37 @@ const Attendance = () => {
         return acc;
     }, {});
 
+    const handleExport = () => {
+        if (!selectedDay) return;
+        const headers = ["Cadet/Staff ID", "Name", "Role/Rank", "Status", "Time In", "Time Out", "Remarks"];
+        
+        const csvContent = [
+            headers.join(','),
+            ...filteredRecords.map(r => {
+                const name = `"${r.last_name}, ${r.first_name}"`;
+                const id = attendanceType === 'cadet' ? r.cadet_id : r.staff_id;
+                const role = attendanceType === 'cadet' ? r.rank : (r.role || 'Instructor');
+                return [
+                    id,
+                    name,
+                    role,
+                    r.status,
+                    r.time_in,
+                    r.time_out,
+                    `"${r.remarks || ''}"`
+                ].join(',');
+            })
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_${selectedDay.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="h-full flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded shadow gap-4">
@@ -504,12 +535,21 @@ const Attendance = () => {
                                     <p className="text-gray-600 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
-                                    <button 
-                                        onClick={() => setIsScannerOpen(true)}
-                                        className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
-                                    >
-                                        <Camera size={16} className="mr-2" /> Scan Attendance
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleExport}
+                                            className="flex items-center text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition"
+                                            title="Export CSV"
+                                        >
+                                            <Download size={16} className="mr-2" /> Export
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsScannerOpen(true)}
+                                            className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                                        >
+                                            <Camera size={16} className="mr-2" /> Scan Attendance
+                                        </button>
+                                    </div>
                                     <div className="flex flex-wrap gap-2 text-sm">
                                         <div className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
                                         <div className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded"><XCircle size={16} className="mr-1"/> Absent: {stats.absent || 0}</div>

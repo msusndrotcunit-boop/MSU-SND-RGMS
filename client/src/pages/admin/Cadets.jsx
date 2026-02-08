@@ -235,11 +235,15 @@ const Cadets = () => {
         
         // Handle Profile Pic Preview
         if (cadet.profile_pic) {
-            if (cadet.profile_pic.startsWith('data:')) {
+            if (cadet.profile_pic.startsWith('data:') || cadet.profile_pic.startsWith('http')) {
                 setPreview(cadet.profile_pic);
             } else {
                 let normalizedPath = cadet.profile_pic.replace(/\\/g, '/');
-                if (!normalizedPath.startsWith('/')) {
+                // Remove absolute path prefix if present (look for /uploads/)
+                const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                if (uploadsIndex !== -1) {
+                    normalizedPath = normalizedPath.substring(uploadsIndex);
+                } else if (!normalizedPath.startsWith('/')) {
                     normalizedPath = '/' + normalizedPath;
                 }
                 setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);

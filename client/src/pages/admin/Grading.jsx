@@ -12,7 +12,8 @@ import {
     ChevronRight,
     ChevronDown,
     Camera,
-    ScanLine
+    ScanLine,
+    Download
 } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
@@ -205,7 +206,9 @@ const Grading = () => {
                     }
 
                     if (Array.isArray(data)) {
-                        setCadets(data);
+                        // Filter unverified cadets
+                        const verifiedData = data.filter(c => c.is_profile_completed);
+                        setCadets(verifiedData);
                         setLoading(false);
                         
                         // If cache is fresh (< 2 mins), skip API
@@ -217,9 +220,11 @@ const Grading = () => {
             }
 
             const res = await axios.get('/api/admin/cadets');
-            setCadets(res.data);
+            // Filter unverified cadets
+            const verifiedRes = res.data.filter(c => c.is_profile_completed);
+            setCadets(verifiedRes);
             await cacheSingleton('admin', 'cadets_list', {
-                data: res.data,
+                data: res.data, // Cache ALL data (Cadet Management needs all)
                 timestamp: Date.now()
             });
             setLoading(false);
@@ -329,6 +334,39 @@ const Grading = () => {
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
+    const handleExport = () => {
+        const headers = ["Student ID", "Last Name", "First Name", "Company", "Platoon", "Prelim", "Midterm", "Final", "Subject Score", "Merits", "Demerits", "Attendance Present", "Attendance Score", "Final Grade", "Transmuted"];
+        
+        const csvContent = [
+            headers.join(','),
+            ...filteredCadets.map(c => [
+                c.student_id,
+                `"${c.last_name}"`,
+                `"${c.first_name}"`,
+                c.company,
+                c.platoon,
+                c.prelim_score,
+                c.midterm_score,
+                c.final_score,
+                c.subjectScore,
+                c.merit_points,
+                c.demerit_points,
+                c.attendance_present,
+                c.attendanceScore,
+                c.finalGrade,
+                c.transmutedGrade
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `grading_list_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="relative h-full">
             {/* Scanner Modal */}
@@ -434,12 +472,21 @@ const Grading = () => {
                 <div className="p-4 border-b">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold">Grading Management</h2>
-                        <button 
-                            onClick={() => setIsScannerOpen(true)}
-                            className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center text-sm transition"
-                        >
-                            <ScanLine size={16} className="mr-1.5" /> Scan Exams
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleExport}
+                                className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 flex items-center text-sm transition"
+                                title="Export CSV"
+                            >
+                                <Download size={16} />
+                            </button>
+                            <button 
+                                onClick={() => setIsScannerOpen(true)}
+                                className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center text-sm transition"
+                            >
+                                <ScanLine size={16} className="mr-1.5" /> Scan Exams
+                            </button>
+                        </div>
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-3 text-gray-400" size={18} />

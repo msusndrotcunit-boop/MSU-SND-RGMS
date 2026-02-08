@@ -1248,19 +1248,37 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 // --- Activity Management ---
 
 // Upload Activity
-router.post('/activities', upload.single('image'), (req, res) => {
+router.post('/activities', upload.array('images', 10), (req, res) => {
     const { title, description, date, type } = req.body;
     
     // Convert buffer to Base64 Data URI if file exists
-    let imagePath = null;
-    if (req.file) {
-        imagePath = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    let images = [];
+    if (req.files && req.files.length > 0) {
+        images = req.files.map(file => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`);
+    } else if (req.file) {
+        // Fallback if client sends single 'image' field (though upload.array handles 'images' field)
+        // Note: upload.array('images') won't catch field 'image'. 
+        // We might need upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 }]) 
+        // but simpler to just expect client to use 'images'.
+        // If client sends 'image' but we use upload.array('images'), req.file is undefined.
+        // So we should stick to upload.array('images') and update client.
     }
 
     const activityType = type || 'activity';
 
-    db.run(`INSERT INTO activities (title, description, date, image_path, type) VALUES (?, ?, ?, ?, ?)`,
-        [title, description, date, imagePath, activityType],
+    // Server-side validation for image count
+    if (activityType === 'activity' && images.length < 3) {
+        return res.status(400).json({ message: 'Activities require at least 3 photos.' });
+    }
+    if (activityType === 'announcement' && images.length < 1) {
+        return res.status(400).json({ message: 'Announcements require at least 1 photo.' });
+    }
+
+    const imagesJson = JSON.stringify(images);
+    const primaryImage = images[0] || null;
+
+    db.run(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?)`,
+        [title, description, date, primaryImage, imagesJson, activityType],
         function(err) {
             if (err) return res.status(500).json({ message: err.message });
             
