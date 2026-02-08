@@ -277,11 +277,11 @@ const Dashboard = () => {
                     <Zap className="text-yellow-400 mr-2" size={20} />
                     <h3 className="font-bold text-yellow-50">Quick Actions</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <ActionButton 
-                        to="/admin/cadets" 
-                        label="Cadet Management" 
-                        icon={<Users size={18} />} 
+                        to="/admin/data-analysis" 
+                        label="Data Analysis" 
+                        icon={<Activity size={18} />} 
                         className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
@@ -294,6 +294,12 @@ const Dashboard = () => {
                         to="/admin/attendance" 
                         label="Attendance" 
                         icon={<ClipboardCheck size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                    />
+                    <ActionButton 
+                        to="/admin/messages" 
+                        label="Messages" 
+                        icon={<Mail size={18} />} 
                         className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 

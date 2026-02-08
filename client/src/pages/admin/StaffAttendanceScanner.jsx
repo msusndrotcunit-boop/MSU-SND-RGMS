@@ -1,27 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Camera, RefreshCw, Check, X, FileText } from 'lucide-react';
+import { QrCode } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StaffAttendanceScanner = () => {
     const [scanResult, setScanResult] = useState(null);
     const [trainingDays, setTrainingDays] = useState([]);
     const [selectedDay, setSelectedDay] = useState('');
-    
-    // Camera & OCR State
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const [isCameraActive, setIsCameraActive] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [ocrText, setOcrText] = useState('');
-
-    // Modal State
-    const [scannedData, setScannedData] = useState(null);
-    const [showModal, setShowModal] = useState(false);
-
     const [staffList, setStaffList] = useState([]);
-    const [manualStaffId, setManualStaffId] = useState('');
-    const [manualRemarks, setManualRemarks] = useState('');
+    const scannerRef = useRef(null);
 
     // Fetch training days
     useEffect(() => {
@@ -67,159 +55,73 @@ const StaffAttendanceScanner = () => {
         loadStaff();
     }, [selectedDay]);
 
-    // Camera Control
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                setIsCameraActive(true);
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to access camera. Please allow permissions.");
-        }
-    };
-
-    const stopCamera = () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-            setIsCameraActive(false);
-        }
-    };
-
+    // Initialize QR scanner for staff QR codes
     useEffect(() => {
-        return () => stopCamera();
-    }, []);
-
-    // OCR Logic
-    const captureAndScan = async () => {
-        if (!videoRef.current || !canvasRef.current) return;
-        
-        setIsProcessing(true);
-        try {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/png');
-            
-            // Check if Tesseract is loaded
-            if (!window.Tesseract) {
-                throw new Error("OCR Library not loaded. Check internet connection.");
-            }
-
-            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng', {
-                logger: m => console.log(m)
-            });
-
-            setOcrText(text);
-            parseAttendanceText(text);
-
-        } catch (err) {
-            console.error(err);
-            toast.error(err.message || "OCR Failed");
-        } finally {
-            setIsProcessing(false);
+        if (!selectedDay) {
+            return;
         }
-    };
 
-    const parseAttendanceText = (text) => {
-        // Attempt to extract fields based on user description
-        // "Rank, name of cadets, program/course, status (if present, absent or excused), Time in and Time out"
-        
-        // Simple heuristic: Try to find lines with these keywords
-        const lines = text.split('\n');
-        let extracted = {
-            name: '',
-            rank: '',
-            status: 'present',
-            timeIn: '',
-            timeOut: ''
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(() => {});
+            scannerRef.current = null;
+        }
+
+        const config = {
+            fps: 10,
+            qrbox: {
+                width: 250,
+                height: 250
+            }
         };
 
-        // Naive parsing logic (can be improved with regex)
-        lines.forEach(line => {
-            const lower = line.toLowerCase();
-            if (lower.includes('name:')) extracted.name = line.split(/name:/i)[1].trim();
-            else if (lower.includes('rank:')) extracted.rank = line.split(/rank:/i)[1].trim();
-            else if (lower.includes('status:')) extracted.status = line.split(/status:/i)[1].trim().toLowerCase();
-            else if (lower.includes('in:')) extracted.timeIn = line.split(/in:/i)[1].trim();
-            else if (lower.includes('out:')) extracted.timeOut = line.split(/out:/i)[1].trim();
-        });
+        const scanner = new Html5QrcodeScanner('staff-qr-reader', config, false);
 
-        // Fallback: If no labels, try to fuzzy match names from staffList in the whole text
-        if (!extracted.name && staffList.length > 0) {
-            const foundStaff = staffList.find(s => text.toLowerCase().includes(s.last_name.toLowerCase()));
-            if (foundStaff) {
-                extracted.name = `${foundStaff.last_name}, ${foundStaff.first_name}`;
-                extracted.matchedStaffId = foundStaff.staff_id;
+        const onScanSuccess = async (decodedText) => {
+            if (!decodedText) return;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.post('/api/attendance/staff/scan', {
+                    dayId: selectedDay,
+                    qrData: decodedText,
+                    status: 'present'
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                setScanResult(res.data);
+                toast.success('Staff attendance recorded via QR');
+                if (navigator.vibrate) navigator.vibrate(60);
+
+                const updatedListRes = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setStaffList(updatedListRes.data || []);
+            } catch (err) {
+                console.error(err);
+                const message = err.response?.data?.message || 'Failed to record staff attendance';
+                toast.error(message);
             }
-        }
+        };
 
-        setScannedData(extracted);
-        setShowModal(true);
-    };
+        const onScanFailure = () => {};
 
-    const handleConfirmAttendance = async () => {
-        if (!selectedDay) return;
+        scanner.render(onScanSuccess, onScanFailure);
+        scannerRef.current = scanner;
 
-        // If we matched a staff ID, use it. Otherwise, we might need a manual selection in the modal.
-        // For this patch, if we don't have a staff ID, we'll ask the user to map it manually or fail.
-        let targetStaffId = scannedData.matchedStaffId;
-
-        if (!targetStaffId) {
-             // Try to find in staff list by name again if edited
-             const found = staffList.find(s => 
-                scannedData.name.toLowerCase().includes(s.last_name.toLowerCase()) || 
-                `${s.first_name} ${s.last_name}`.toLowerCase() === scannedData.name.toLowerCase()
-             );
-             if (found) targetStaffId = found.staff_id;
-        }
-
-        if (!targetStaffId) {
-            toast.error("Could not match Name to Staff Record. Please select manually below.");
-            return; // Or show a dropdown in the modal
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            // We reuse the 'manual' endpoint since we are not scanning a QR code with ID
-            const res = await axios.post('/api/attendance/mark/staff', {
-                dayId: selectedDay,
-                staffId: targetStaffId,
-                status: scannedData.status || 'present',
-                remarks: `Scanned: In ${scannedData.timeIn || '-'} Out ${scannedData.timeOut || '-'}`
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            setScanResult(res.data);
-            toast.success("Attendance Recorded via Smart Scan");
-            setShowModal(false);
-            setScannedData(null);
-            
-            // Refresh list
-            const updatedListRes = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setStaffList(updatedListRes.data);
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to update attendance");
-        }
-    };
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(() => {});
+                scannerRef.current = null;
+            }
+        };
+    }, [selectedDay]);
 
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4 text-green-800">Smart Attendance Scanner (OCR)</h2>
-            <p className="mb-4 text-gray-600">Scan printed attendance sheets to record staff attendance.</p>
+            <h2 className="text-2xl font-bold mb-4 text-green-800">Staff QR Attendance Scanner</h2>
+            <p className="mb-4 text-gray-600">
+                Scan each training staff&apos;s unique QR code to record their attendance.
+            </p>
             
             <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Training Day</label>
@@ -238,51 +140,18 @@ const StaffAttendanceScanner = () => {
             </div>
 
             <div className="flex flex-col md:flex-row gap-8">
-                {/* Camera Section */}
+                {/* QR Scanner Section */}
                 <div className="w-full md:w-1/2 bg-white p-4 rounded shadow">
-                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
-                        <video 
-                            ref={videoRef} 
-                            autoPlay 
-                            playsInline 
-                            muted 
-                            className={`w-full h-full object-cover ${!isCameraActive ? 'hidden' : ''}`}
-                        />
-                        {!isCameraActive && (
-                            <div className="absolute inset-0 flex items-center justify-center text-white">
-                                Camera Off
-                            </div>
-                        )}
-                        <canvas ref={canvasRef} className="hidden" />
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700">
+                            <QrCode size={20} />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800">Live QR Scanner</div>
+                            <div className="text-xs text-gray-500">Point the camera at the staff QR code.</div>
+                        </div>
                     </div>
-
-                    <div className="flex gap-2 justify-center">
-                        {!isCameraActive ? (
-                            <button 
-                                onClick={startCamera}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                            >
-                                <Camera size={20} /> Start Camera
-                            </button>
-                        ) : (
-                            <>
-                                <button 
-                                    onClick={captureAndScan}
-                                    disabled={isProcessing}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <FileText size={20} />}
-                                    {isProcessing ? 'Scanning...' : 'Capture & Scan'}
-                                </button>
-                                <button 
-                                    onClick={stopCamera}
-                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                                >
-                                    Stop
-                                </button>
-                            </>
-                        )}
-                    </div>
+                    <div id="staff-qr-reader" className="w-full rounded-lg overflow-hidden border border-gray-200" />
                 </div>
                 
                 {/* Results Section */}

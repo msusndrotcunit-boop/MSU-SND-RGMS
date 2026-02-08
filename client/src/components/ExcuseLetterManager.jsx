@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CheckCircle, XCircle, ExternalLink, Filter, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, ExternalLink, Filter, Trash2, Download } from 'lucide-react';
 import { cacheData, getCachedData } from '../utils/db';
 
 const ExcuseLetterManager = () => {
@@ -98,9 +98,23 @@ const ExcuseLetterManager = () => {
                                 <td className="p-3">{new Date(letter.date_absent).toLocaleDateString()}</td>
                                 <td className="p-3 max-w-xs truncate" title={letter.reason}>{letter.reason}</td>
                                 <td className="p-3">
-                                    <a href={letter.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                                        <ExternalLink size={14} className="mr-1" /> View
-                                    </a>
+                                    <div className="flex flex-col space-y-1">
+                                        <a 
+                                            href={letter.file_url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-blue-600 hover:underline flex items-center"
+                                        >
+                                            <ExternalLink size={14} className="mr-1" /> View
+                                        </a>
+                                        <a 
+                                            href={letter.file_url} 
+                                            download 
+                                            className="text-green-700 hover:underline flex items-center text-xs"
+                                        >
+                                            <Download size={12} className="mr-1" /> Download
+                                        </a>
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${

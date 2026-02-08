@@ -558,7 +558,7 @@ const Attendance = () => {
             {/* Smart Scanner Modal */}
             {isScannerOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative">
+                    <div className="bg-white rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
                         <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
                             <X size={24} />
                         </button>
