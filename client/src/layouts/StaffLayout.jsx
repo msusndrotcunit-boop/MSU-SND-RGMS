@@ -33,6 +33,8 @@ const StaffLayout = () => {
     const [notifOpen, setNotifOpen] = useState(false);
     const [messageOpen, setMessageOpen] = useState(false);
     const [staffRole, setStaffRole] = useState(null);
+    const [hasAutoSharedLocation, setHasAutoSharedLocation] = useState(false);
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     
 
@@ -53,6 +55,15 @@ const StaffLayout = () => {
         fetchStaffRole();
     }, []);
 
+    React.useEffect(() => {
+        try {
+            const seen = localStorage.getItem('rgms_permissions_seen');
+            if (!seen && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                setShowPermissionModal(true);
+            }
+        } catch {}
+    }, []);
+
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -60,7 +71,12 @@ const StaffLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    const isPrivilegedStaff = staffRole === 'Commandant' || staffRole === 'Assistant Commandant' || staffRole === 'NSTP Director' || staffRole === 'ROTC Coordinator';
+    const isPrivilegedStaff =
+        staffRole === 'Commandant' ||
+        staffRole === 'Assistant Commandant' ||
+        staffRole === 'NSTP Director' ||
+        staffRole === 'ROTC Coordinator' ||
+        staffRole === 'Admin NCO';
 
     const shareLocation = () => {
         if (!navigator.geolocation) {
@@ -84,6 +100,46 @@ const StaffLayout = () => {
             }
         );
     };
+
+    const handlePermissionsAccept = () => {
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        } catch {}
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        try {
+                            stream.getTracks().forEach(t => t.stop());
+                        } catch {}
+                    })
+                    .catch(() => {});
+            }
+        } catch {}
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
+    const handlePermissionsSkip = () => {
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
+    React.useEffect(() => {
+        if (!isPrivilegedStaff || hasAutoSharedLocation) return;
+        shareLocation();
+        setHasAutoSharedLocation(true);
+    }, [isPrivilegedStaff, hasAutoSharedLocation]);
 
     React.useEffect(() => {
         axios.post('/api/staff/access').catch(() => {});
@@ -423,27 +479,79 @@ const StaffLayout = () => {
                     </div>
                 </header>
 
-                <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
-                    <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
-                        <Mail size={20} />
-                        {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
-                    </button>
-                    <button 
-                        onClick={openNotifications} 
-                        className={clsx(
-                            "relative bg-white shadow-lg rounded-full p-3 transition-colors",
-                            notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
-                        )}
-                    >
-                        <Bell size={20} />
-                        {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
-                    </button>
-                </div>
-
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">
                     <Outlet />
                 </main>
+
+                {isPrivilegedStaff &&
+                    user?.isProfileCompleted &&
+                    !['/staff/communication', '/staff/profile', '/staff/settings'].includes(location.pathname) && (
+                    <div className="border-t bg-white px-3 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-4">
+                        <Link
+                            to="/staff/unit-dashboard"
+                            className="flex-1 flex items-center justify-center bg-green-900 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:bg-green-800 transition-colors"
+                        >
+                            <LayoutDashboard size={16} className="mr-1" />
+                            <span className="hidden sm:inline">Unit Dashboard</span>
+                            <span className="sm:hidden">Unit</span>
+                        </Link>
+                        <Link
+                            to="/staff/data-analysis"
+                            className="flex-1 flex items-center justify-center bg-green-800 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:bg-green-700 transition-colors"
+                        >
+                            <PieChart size={16} className="mr-1" />
+                            <span className="hidden sm:inline">Data Analysis</span>
+                            <span className="sm:hidden">Data</span>
+                        </Link>
+                        <Link
+                            to="/staff/activities"
+                            className="flex-1 flex items-center justify-center bg-yellow-400 text-green-900 text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors"
+                        >
+                            <Calendar size={16} className="mr-1" />
+                            <span className="hidden sm:inline">Activities</span>
+                            <span className="sm:hidden">Acts</span>
+                        </Link>
+                        <button
+                            onClick={shareLocation}
+                            className="flex items-center justify-center bg-white text-green-900 text-xs md:text-sm rounded-full px-3 py-2 border border-green-500 hover:bg-green-50 transition-colors"
+                        >
+                            <MapPin size={16} className="mr-1" />
+                            <span className="hidden sm:inline">Share Location</span>
+                            <span className="sm:hidden">Location</span>
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {showPermissionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
+                        <p className="text-sm text-gray-600 mb-3">
+                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                        </p>
+                        <p className="text-xs text-gray-500 mb-4">
+                            You can change these permissions anytime in your browser or device settings.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={handlePermissionsSkip}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                                Not now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePermissionsAccept}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Allow permissions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

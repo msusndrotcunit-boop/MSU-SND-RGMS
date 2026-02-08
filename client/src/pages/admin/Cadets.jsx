@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
@@ -29,6 +29,8 @@ const Cadets = () => {
     const [profilePic, setProfilePic] = useState(null);
     const [preview, setPreview] = useState(null);
     const [darkMode, setDarkMode] = useState(false);
+    const [locationInfo, setLocationInfo] = useState(null);
+    const [locationLoading, setLocationLoading] = useState(false);
 
     useEffect(() => {
         const isDark = localStorage.getItem('darkMode') === 'true';
@@ -253,6 +255,21 @@ const Cadets = () => {
             setPreview(null);
         }
         setProfilePic(null);
+
+        setLocationInfo(null);
+        setLocationLoading(true);
+        axios.get('/api/admin/locations')
+            .then(res => {
+                const rows = res.data || [];
+                const match = rows.find(u => u.role === 'cadet' && Number(u.cadet_id) === Number(cadet.id));
+                setLocationInfo(match || null);
+            })
+            .catch(() => {
+                setLocationInfo(null);
+            })
+            .finally(() => {
+                setLocationLoading(false);
+            });
 
         setEditForm({
             rank: cadet.rank || '',
@@ -973,6 +990,44 @@ const Cadets = () => {
                                      >
                                         {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                      </select>
+                                </div>
+
+                                <div className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow border dark:border-gray-600">
+                                    <h3 className="font-bold mb-3 text-gray-700 dark:text-gray-200 uppercase text-xs tracking-wider flex items-center gap-2">
+                                        <MapPin size={16} />
+                                        Last Known Location
+                                    </h3>
+                                    {locationLoading && (
+                                        <div className="text-sm text-gray-500 dark:text-gray-300">Loading location...</div>
+                                    )}
+                                    {!locationLoading && !locationInfo && (
+                                        <div className="text-sm text-gray-500 dark:text-gray-300">
+                                            No location data yet for this account.
+                                        </div>
+                                    )}
+                                    {!locationLoading && locationInfo && (
+                                        <div className="space-y-2 text-sm">
+                                            <div className="text-gray-700 dark:text-gray-200">
+                                                {locationInfo.last_latitude.toFixed(4)}, {locationInfo.last_longitude.toFixed(4)}
+                                            </div>
+                                            {locationInfo.last_location_at && (
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Updated {new Date(locationInfo.last_location_at).toLocaleString()}
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const url = `https://www.google.com/maps?q=${locationInfo.last_latitude},${locationInfo.last_longitude}`;
+                                                    window.open(url, '_blank', 'noopener,noreferrer');
+                                                }}
+                                                className="mt-2 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                            >
+                                                <MapPin size={14} className="mr-1" />
+                                                Ping Location
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

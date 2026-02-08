@@ -58,7 +58,12 @@ const StaffDashboard = () => {
         fetchStaffRole();
     }, []);
 
-    const canReviewExcuses = staffRole === 'Commandant' || staffRole === 'Assistant Commandant' || staffRole === 'NSTP Director' || staffRole === 'ROTC Coordinator';
+    const canReviewExcuses =
+        staffRole === 'Commandant' ||
+        staffRole === 'Assistant Commandant' ||
+        staffRole === 'NSTP Director' ||
+        staffRole === 'ROTC Coordinator' ||
+        staffRole === 'Admin NCO';
 
     if (loading) return <div className="text-center p-10">Loading...</div>;
 

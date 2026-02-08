@@ -27,7 +27,8 @@ const PRIVILEGED_STAFF_ROLES = new Set([
     'Commandant',
     'Assistant Commandant',
     'NSTP Director',
-    'ROTC Coordinator'
+    'ROTC Coordinator',
+    'Admin NCO'
 ]);
 
 const isAdminOrPrivilegedStaff = (req, res, next) => {

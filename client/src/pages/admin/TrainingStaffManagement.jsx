@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, Upload, Plus, UserCog } from 'lucide-react';
+import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
@@ -23,6 +23,8 @@ const TrainingStaffManagement = () => {
         email: '', contact_number: '', role: 'Instructor'
     });
     const [editForm, setEditForm] = useState({});
+    const [locationInfo, setLocationInfo] = useState(null);
+    const [locationLoading, setLocationLoading] = useState(false);
 
     useEffect(() => {
         fetchStaff();
@@ -125,6 +127,20 @@ const TrainingStaffManagement = () => {
             contact_number: staff.contact_number || '',
             role: staff.role || 'Instructor'
         });
+        setLocationInfo(null);
+        setLocationLoading(true);
+        axios.get('/api/admin/locations')
+            .then(res => {
+                const rows = res.data || [];
+                const match = rows.find(u => u.role === 'training_staff' && Number(u.staff_id) === Number(staff.id));
+                setLocationInfo(match || null);
+            })
+            .catch(() => {
+                setLocationInfo(null);
+            })
+            .finally(() => {
+                setLocationLoading(false);
+            });
         setIsEditModalOpen(true);
     };
 
@@ -313,6 +329,7 @@ const TrainingStaffManagement = () => {
                                         <option value="Assistant Commandant">Assistant Commandant</option>
                                         <option value="NSTP Director">NSTP Director</option>
                                         <option value="ROTC Coordinator">ROTC Coordinator</option>
+                                        <option value="Admin NCO">Admin NCO</option>
                                     </select>
                                 </div>
                             </div>
@@ -355,60 +372,104 @@ const TrainingStaffManagement = () => {
             {/* Edit Modal */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-lg w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold">Edit Staff</h3>
                             <button onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
                         </div>
-                        <form onSubmit={handleEditSubmit} className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Rank</label>
-                                    <input className="w-full border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} />
+                        <form onSubmit={handleEditSubmit} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Rank</label>
+                                            <input className="w-full border p-2 rounded" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Role</label>
+                                            <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
+                                                <option value="Instructor">Instructor</option>
+                                                <option value="Admin">Admin</option>
+                                                <option value="Commandant">Commandant</option>
+                                                <option value="Assistant Commandant">Assistant Commandant</option>
+                                                <option value="NSTP Director">NSTP Director</option>
+                                                <option value="ROTC Coordinator">ROTC Coordinator</option>
+                                                <option value="Admin NCO">Admin NCO</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 mt-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                                            <input required className="w-full border p-2 rounded" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                                            <input required className="w-full border p-2 rounded" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 mt-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Middle Name</label>
+                                            <input className="w-full border p-2 rounded" value={editForm.middle_name} onChange={e => setEditForm({...editForm, middle_name: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Suffix</label>
+                                            <input className="w-full border p-2 rounded" value={editForm.suffix_name} onChange={e => setEditForm({...editForm, suffix_name: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className="mt-3">
+                                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                                        <input type="email" className="w-full border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
+                                    </div>
+                                    <div className="mt-3">
+                                        <label className="block text-sm font-medium text-gray-700">Username</label>
+                                        <input className="w-full border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} />
+                                    </div>
+                                    <div className="mt-3">
+                                        <label className="block text-sm font-medium text-gray-700">Contact Number</label>
+                                        <input className="w-full border p-2 rounded" value={editForm.contact_number} onChange={e => setEditForm({...editForm, contact_number: e.target.value})} />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Role</label>
-                                    <select className="w-full border p-2 rounded" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
-                                        <option value="Instructor">Instructor</option>
-                                        <option value="Admin">Admin</option>
-                                        <option value="Commandant">Commandant</option>
-                                        <option value="Assistant Commandant">Assistant Commandant</option>
-                                        <option value="NSTP Director">NSTP Director</option>
-                                        <option value="ROTC Coordinator">ROTC Coordinator</option>
-                                    </select>
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-gray-50 rounded border text-sm">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <MapPin size={16} className="text-green-700" />
+                                            <span className="font-semibold text-gray-800">Last Known Location</span>
+                                        </div>
+                                        {locationLoading && (
+                                            <div className="text-gray-500">Loading location...</div>
+                                        )}
+                                        {!locationLoading && !locationInfo && (
+                                            <div className="text-gray-500">
+                                                No location data yet for this staff account.
+                                            </div>
+                                        )}
+                                        {!locationLoading && locationInfo && (
+                                            <div className="space-y-1">
+                                                <div className="text-gray-800">
+                                                    {locationInfo.last_latitude.toFixed(4)}, {locationInfo.last_longitude.toFixed(4)}
+                                                </div>
+                                                {locationInfo.last_location_at && (
+                                                    <div className="text-xs text-gray-500">
+                                                        Updated {new Date(locationInfo.last_location_at).toLocaleString()}
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const url = `https://www.google.com/maps?q=${locationInfo.last_latitude},${locationInfo.last_longitude}`;
+                                                        window.open(url, '_blank', 'noopener,noreferrer');
+                                                    }}
+                                                    className="mt-2 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                                >
+                                                    <MapPin size={14} className="mr-1" />
+                                                    Ping Location
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">First Name *</label>
-                                    <input required className="w-full border p-2 rounded" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Last Name *</label>
-                                    <input required className="w-full border p-2 rounded" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Middle Name</label>
-                                    <input className="w-full border p-2 rounded" value={editForm.middle_name} onChange={e => setEditForm({...editForm, middle_name: e.target.value})} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Suffix</label>
-                                    <input className="w-full border p-2 rounded" value={editForm.suffix_name} onChange={e => setEditForm({...editForm, suffix_name: e.target.value})} />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" className="w-full border p-2 rounded" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Username</label>
-                                <input className="w-full border p-2 rounded" value={editForm.username} onChange={e => setEditForm({...editForm, username: e.target.value})} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Contact Number</label>
-                                <input className="w-full border p-2 rounded" value={editForm.contact_number} onChange={e => setEditForm({...editForm, contact_number: e.target.value})} />
                             </div>
                             <div className="pt-2">
                                 <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Save Changes</button>

@@ -11,8 +11,7 @@ const CadetLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-    
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     // Redirect to profile if not completed
     React.useEffect(() => {
@@ -20,6 +19,15 @@ const CadetLayout = () => {
             navigate('/cadet/profile', { replace: true });
         }
     }, [user, location.pathname, navigate]);
+
+    React.useEffect(() => {
+        try {
+            const seen = localStorage.getItem('rgms_permissions_seen');
+            if (!seen && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                setShowPermissionModal(true);
+            }
+        } catch {}
+    }, []);
 
     // Welcome & Guide States
     const [profile, setProfile] = useState(null);
@@ -150,6 +158,40 @@ const CadetLayout = () => {
             console.error("Error acknowledging guide:", err);
             setShowGuideModal(false);
         }
+    };
+
+    const handlePermissionsAccept = () => {
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        } catch {}
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        try {
+                            stream.getTracks().forEach(t => t.stop());
+                        } catch {}
+                    })
+                    .catch(() => {});
+            }
+        } catch {}
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
+    const handlePermissionsSkip = () => {
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
     };
 
     const handleLogout = () => {
@@ -458,6 +500,36 @@ const CadetLayout = () => {
                             >
                                 {guideStep === guideSteps.length - 1 ? 'Get Started' : 'Next'}
                                 {guideStep < guideSteps.length - 1 && <ChevronRight size={20} className="ml-1" />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPermissionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
+                        <p className="text-sm text-gray-600 mb-3">
+                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                        </p>
+                        <p className="text-xs text-gray-500 mb-4">
+                            You can change these permissions anytime in your browser or device settings.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={handlePermissionsSkip}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                                Not now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePermissionsAccept}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Allow permissions
                             </button>
                         </div>
                     </div>

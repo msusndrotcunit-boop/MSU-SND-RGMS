@@ -306,6 +306,70 @@ router.get('/locations', (req, res) => {
     });
 });
 
+router.post('/broadcast-onboarding', (req, res) => {
+    const sql = `
+        SELECT 
+            id,
+            username,
+            email,
+            role
+        FROM users
+        WHERE email IS NOT NULL
+          AND email <> ''
+          AND (is_archived IS FALSE OR is_archived IS NULL)
+    `;
+    db.all(sql, [], async (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ message: 'No users with email found.' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const appUrl = `${baseUrl}/login`;
+
+        const subject = 'MSU-SND ROTC Grading Management System Access Details';
+
+        const tasks = rows.map((u) => {
+            const textLines = [
+                'Maayong adlaw!',
+                '',
+                'You are registered in the MSU-SND ROTC Grading Management System. This system is used for cadet grading, attendance, announcements, communication, and safety notifications such as weather and location-related advisories.',
+                '',
+                `Web app link: ${appUrl}`,
+                '',
+                'Your login details:',
+                `Username: ${u.username}`,
+                `Email: ${u.email}`,
+                '',
+                'Use your existing password for this account. For security reasons, passwords are not sent through email. If you forgot your password, please use the reset process provided in the portal or contact the ROTC office.',
+                '',
+                'Daghang salamat.'
+            ];
+            const text = textLines.join('\n');
+
+            const html = `
+                <p>Maayong adlaw!</p>
+                <p>You are registered in the <strong>MSU-SND ROTC Grading Management System</strong>.</p>
+                <p>This system is used for cadet grading, attendance, announcements, communication, and safety notifications such as weather and location-related advisories.</p>
+                <p><strong>Web app link:</strong> <a href="${appUrl}">${appUrl}</a></p>
+                <p><strong>Your login details:</strong><br/>
+                Username: <strong>${u.username}</strong><br/>
+                Email: <strong>${u.email}</strong></p>
+                <p>Use your existing password for this account. For security reasons, passwords are not sent through email. If you forgot your password, please use the reset process provided in the portal or contact the ROTC office.</p>
+                <p>Daghang salamat.</p>
+            `;
+
+            return sendEmail(u.email, subject, text, html);
+        });
+
+        try {
+            await Promise.all(tasks);
+        } catch {}
+
+        res.json({ message: `Broadcast started for ${rows.length} users.` });
+    });
+});
+
 // --- Import Official Cadet List ---
 
 const getDirectDownloadUrl = (url) => {

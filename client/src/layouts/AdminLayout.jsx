@@ -28,6 +28,7 @@ const AdminLayout = () => {
     const [badgeNotif, setBadgeNotif] = useState(0);
     const [badgeMsg, setBadgeMsg] = useState(0);
     const [notifHighlight, setNotifHighlight] = useState(false);
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -61,6 +62,15 @@ const AdminLayout = () => {
             } catch {}
         };
         loadData();
+    }, []);
+
+    useEffect(() => {
+        try {
+            const seen = localStorage.getItem('rgms_permissions_seen');
+            if (!seen && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                setShowPermissionModal(true);
+            }
+        } catch {}
     }, []);
 
     useEffect(() => {
@@ -136,7 +146,39 @@ const AdminLayout = () => {
         navigate('/login');
     };
 
-    // Removed manual toggle and buttons; notifications auto-show and auto-hide
+    const handlePermissionsAccept = () => {
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        } catch {}
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        try {
+                            stream.getTracks().forEach(t => t.stop());
+                        } catch {}
+                    })
+                    .catch(() => {});
+            }
+        } catch {}
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
+    const handlePermissionsSkip = () => {
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -352,26 +394,39 @@ const AdminLayout = () => {
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
                     </Suspense>
-
+                        
                 </main>
             </div>
 
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
-                <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
-                    <Mail size={20} />
-                    {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
-                </button>
-                <button 
-                    onClick={openNotifications} 
-                    className={clsx(
-                        "relative bg-white shadow-lg rounded-full p-3 transition-colors",
-                        notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
-                    )}
-                >
-                    <Bell size={20} />
-                    {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
-                </button>
-            </div>
+            {showPermissionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
+                        <p className="text-sm text-gray-600 mb-3">
+                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                        </p>
+                        <p className="text-xs text-gray-500 mb-4">
+                            You can change these permissions anytime in your browser or device settings.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={handlePermissionsSkip}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                                Not now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePermissionsAccept}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Allow permissions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

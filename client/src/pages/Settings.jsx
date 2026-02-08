@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, Bell, Monitor, PaintBucket, Database, Download, Trash2 } from 'lucide-react';
+import { Save, Bell, Monitor, PaintBucket, Database, Download, Trash2, Mail as MailIcon } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { toast } from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ const Settings = ({ role }) => {
     const { settings, updateSettings } = useSettings();
     const [localSettings, setLocalSettings] = useState(settings);
     const [saving, setSaving] = useState(false);
+    const [broadcasting, setBroadcasting] = useState(false);
 
     // Sync local state with context when context updates (initial load)
     useEffect(() => {
@@ -79,6 +80,22 @@ const Settings = ({ role }) => {
         } catch (error) {
             console.error('Prune failed:', error);
             toast.error('Failed to delete graduates: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
+    const handleBroadcastOnboarding = async () => {
+        if (!window.confirm('This will send an email to all active users with a registered email address, containing app information and their login username. Continue?')) {
+            return;
+        }
+        setBroadcasting(true);
+        try {
+            const response = await axios.post('/api/admin/broadcast-onboarding');
+            toast.success(response.data.message || 'Broadcast email sent.');
+        } catch (error) {
+            console.error('Broadcast failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to send broadcast email.');
+        } finally {
+            setBroadcasting(false);
         }
     };
 
@@ -210,6 +227,20 @@ const Settings = ({ role }) => {
                                         Delete from Database
                                     </button>
                                 </div>
+                            </div>
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 className="font-medium text-gray-800 mb-2">Broadcast Onboarding Email</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Send an information email to all registered users with their username, email, and the link to this web app. Passwords are not included for security.
+                                </p>
+                                <button
+                                    onClick={handleBroadcastOnboarding}
+                                    disabled={broadcasting}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors disabled:opacity-60"
+                                >
+                                    <MailIcon size={16} />
+                                    <span>{broadcasting ? 'Sending...' : 'Send Onboarding Email to All Users'}</span>
+                                </button>
                             </div>
                         </div>
                     </section>
