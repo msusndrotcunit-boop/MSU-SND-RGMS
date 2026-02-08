@@ -1190,34 +1190,50 @@ router.put('/grades/:cadetId', (req, res) => {
     const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status } = req.body;
     const cadetId = req.params.cadetId;
 
-    // Note: attendance_present is excluded from manual update to prevent overwriting 
-    // the value synchronized from the Attendance module.
-    db.run(`UPDATE grades SET 
-            merit_points = ?, 
-            demerit_points = ?, 
-            prelim_score = ?, 
-            midterm_score = ?, 
-            final_score = ?,
-            status = ?
-            WHERE cadet_id = ?`,
-        [meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
-        function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            
-            // Send Email Notification
-            db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
-                if (!err && cadet && cadet.email) {
-                    const subject = 'ROTC Grading System - Grades Updated';
-                    const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
-                    const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+    // Check if row exists, if not create it
+    db.get("SELECT id FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        const runUpdate = () => {
+            db.run(`UPDATE grades SET 
+                    merit_points = ?, 
+                    demerit_points = ?, 
+                    prelim_score = ?, 
+                    midterm_score = ?, 
+                    final_score = ?,
+                    status = ?
+                    WHERE cadet_id = ?`,
+                [meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
+                function(err) {
+                    if (err) return res.status(500).json({ message: err.message });
                     
-                    await sendEmail(cadet.email, subject, text, html);
+                    // Send Email Notification
+                    db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                        if (!err && cadet && cadet.email) {
+                            const subject = 'ROTC Grading System - Grades Updated';
+                            const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
+                            const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+                            
+                            await sendEmail(cadet.email, subject, text, html);
+                        }
+                        broadcastEvent({ type: 'grade_updated', cadetId });
+                        res.json({ message: 'Grades updated' });
+                    });
                 }
-                broadcastEvent({ type: 'grade_updated', cadetId });
-                res.json({ message: 'Grades updated' });
+            );
+        };
+
+        if (!row) {
+            // Initialize with defaults if missing
+            db.run(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) 
+                    VALUES (?, 0, 0, 0, 0, 0, 0, 'active')`, [cadetId], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
+                runUpdate();
             });
+        } else {
+            runUpdate();
         }
-    );
+    });
 });
 
 // --- Notifications (Admin scope) ---
