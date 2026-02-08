@@ -29,6 +29,7 @@ const CadetLayout = () => {
     const [health, setHealth] = useState({ status: 'unknown' });
     const [badgeNotif, setBadgeNotif] = useState(0);
     const [badgeMsg, setBadgeMsg] = useState(0);
+    const [notifHighlight, setNotifHighlight] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [messages, setMessages] = useState([]);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -87,6 +88,9 @@ const CadetLayout = () => {
                         const data = JSON.parse(e.data || '{}');
                         if (data.type === 'ask_admin_reply') {
                             setBadgeNotif((b) => b + 1);
+                            if (navigator.vibrate) navigator.vibrate(80);
+                            setNotifHighlight(true);
+                            setTimeout(() => setNotifHighlight(false), 1200);
                         }
                     } catch {}
                 };
@@ -317,7 +321,13 @@ const CadetLayout = () => {
                             <Mail size={20} />
                             {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
                         </button>
-                        <button onClick={openNotifications} className="relative text-gray-600 hover:text-green-700">
+                        <button 
+                            onClick={openNotifications} 
+                            className={clsx(
+                                "relative transition-colors",
+                                notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                            )}
+                        >
                             <Bell size={20} />
                             {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
                         </button>
@@ -353,6 +363,23 @@ const CadetLayout = () => {
                         <Outlet />
                     </Suspense>
                 </main>
+            </div>
+
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
+                <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
+                    <Mail size={20} />
+                    {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
+                </button>
+                <button 
+                    onClick={openNotifications} 
+                    className={clsx(
+                        "relative bg-white shadow-lg rounded-full p-3 transition-colors",
+                        notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                    )}
+                >
+                    <Bell size={20} />
+                    {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
+                </button>
             </div>
 
             {/* Welcome Modal */}

@@ -27,6 +27,7 @@ const StaffLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [badgeNotif, setBadgeNotif] = useState(0);
     const [badgeMsg, setBadgeMsg] = useState(0);
+    const [notifHighlight, setNotifHighlight] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [messages, setMessages] = useState([]);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -86,6 +87,20 @@ const StaffLayout = () => {
 
     React.useEffect(() => {
         axios.post('/api/staff/access').catch(() => {});
+
+        const fetchInitialCounts = async () => {
+            try {
+                const [notifRes, msgRes] = await Promise.all([
+                    axios.get('/api/staff/notifications'),
+                    axios.get('/api/messages/my')
+                ]);
+                setBadgeNotif((notifRes.data || []).length || 0);
+                setBadgeMsg((msgRes.data || []).length || 0);
+            } catch {}
+        };
+
+        fetchInitialCounts();
+
         let es;
         const connect = () => {
             try {
@@ -95,6 +110,9 @@ const StaffLayout = () => {
                         const data = JSON.parse(e.data || '{}');
                         if (data.type === 'ask_admin_reply') {
                             setBadgeNotif((b) => b + 1);
+                            if (navigator.vibrate) navigator.vibrate(80);
+                            setNotifHighlight(true);
+                            setTimeout(() => setNotifHighlight(false), 1200);
                         }
                     } catch {}
                 };
@@ -367,12 +385,18 @@ const StaffLayout = () => {
                         <span className="font-bold text-green-900">Training Staff Portal</span>
                     </div>
 
-                    <div className="hidden md:flex items-center space-x-4">
+                    <div className="flex items-center space-x-2 md:space-x-4">
                         <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
                             <Mail size={20} />
                             {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
                         </button>
-                        <button onClick={openNotifications} className="relative text-gray-600 hover:text-green-700">
+                        <button 
+                            onClick={openNotifications} 
+                            className={clsx(
+                                "relative transition-colors",
+                                notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                            )}
+                        >
                             <Bell size={20} />
                             {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
                         </button>
@@ -398,6 +422,23 @@ const StaffLayout = () => {
                         )}
                     </div>
                 </header>
+
+                <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
+                    <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
+                        <Mail size={20} />
+                        {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
+                    </button>
+                    <button 
+                        onClick={openNotifications} 
+                        className={clsx(
+                            "relative bg-white shadow-lg rounded-full p-3 transition-colors",
+                            notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                        )}
+                    >
+                        <Bell size={20} />
+                        {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
+                    </button>
+                </div>
 
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">
                     <Outlet />

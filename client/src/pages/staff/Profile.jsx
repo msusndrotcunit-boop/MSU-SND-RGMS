@@ -275,13 +275,18 @@ const StaffProfile = () => {
     if (!profile) return <div className="p-8 text-center">No profile found.</div>;
 
     const getProfileImage = () => {
-        if (profile.profile_pic) {
-             if (profile.profile_pic.startsWith('data:')) return profile.profile_pic;
-             // Ensure correct path format
-             const normalizedPath = profile.profile_pic.replace(/\\/g, '/');
-             return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
+        if (!profile.profile_pic) return null;
+        if (profile.profile_pic.startsWith('data:') || profile.profile_pic.startsWith('http')) {
+            return profile.profile_pic;
         }
-        return null;
+        let normalizedPath = profile.profile_pic.replace(/\\/g, '/');
+        const uploadsIndex = normalizedPath.indexOf('/uploads/');
+        if (uploadsIndex !== -1) {
+            normalizedPath = normalizedPath.substring(uploadsIndex);
+        } else if (!normalizedPath.startsWith('/')) {
+            normalizedPath = '/' + normalizedPath;
+        }
+        return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
     };
 
     const commonProps = {
