@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText, Download } from 'lucide-react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText, Download, RefreshCw, X } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
+import { toast } from 'react-hot-toast';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
@@ -15,12 +15,14 @@ const Attendance = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createForm, setCreateForm] = useState({ date: '', title: '', description: '' });
     
-    // Scanner State
+    // Scanner State (Smart OCR)
     const [isScannerOpen, setIsScannerOpen] = useState(false);
-    const [scanResult, setScanResult] = useState(null);
-    const scannerRef = useRef(null);
-    const lastScanRef = useRef(0);
-    const beepRef = useRef(null);
+    const [scanResults, setScanResults] = useState([]); // Array of detected records
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
 
     // Filters for marking
     const [filterCompany, setFilterCompany] = useState('');
@@ -150,125 +152,203 @@ const Attendance = () => {
         }
     };
 
-    useEffect(() => {
-        let scanner = null;
-        if (isScannerOpen && !scanResult) {
-            // Delay to ensure DOM is ready
-            setTimeout(() => {
-                if (!document.getElementById("reader")) return;
-                
-                scanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 230, height: 230 },
-                        aspectRatio: 1.0,
-                        showTorchButtonIfSupported: true,
-                        rememberLastUsedCamera: true,
-                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-                        useBarCodeDetectorIfSupported: true,
-                        disableFlip: true
-                    },
-                    /* verbose= */ false
-                );
+    // --- SMART SCANNER LOGIC ---
 
-                scanner.render(onScanSuccess, (err) => { /* ignore failures */ });
-                scannerRef.current = scanner;
-            }, 100);
-        }
-
-        return () => {
-            if (scanner) {
-                scanner.clear().catch(console.error);
-            }
-        };
-    }, [isScannerOpen, scanResult]);
-
-    const onScanSuccess = async (decodedText, decodedResult) => {
-        const now = Date.now();
-        if (now - lastScanRef.current < 2000) return;
-        lastScanRef.current = now;
-
-        if (scannerRef.current) {
-            scannerRef.current.pause(true);
-        }
-
-        try { beepRef.current && beepRef.current.play(); } catch {}
-
-        // Parse Data
-        let data = { raw: decodedText, originalText: decodedText };
+    const startCamera = async () => {
         try {
-            const parsed = JSON.parse(decodedText);
-            data = { ...data, ...parsed };
-        } catch (e) {
-            // Raw text
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setIsCameraActive(true);
+                setCapturedImage(null);
+                setScanResults([]);
+            }
+        } catch (err) {
+            console.error("Camera Error", err);
+            toast.error("Failed to access camera. Please check permissions.");
         }
-
-        setScanResult(data);
     };
 
-    const handleScanConfirm = async (status) => {
-        if (!scanResult || !selectedDay) return;
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            setIsCameraActive(false);
+        }
+    };
 
+    useEffect(() => {
+        if (!isScannerOpen) stopCamera();
+        return () => stopCamera();
+    }, [isScannerOpen]);
+
+    const captureAndScan = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        
+        setIsProcessing(true);
         try {
-            const endpoint = attendanceType === 'cadet' ? '/api/attendance/scan' : '/api/attendance/staff/scan';
-            const payload = {
-                dayId: selectedDay.id,
-                qrData: JSON.stringify(scanResult), // Send as JSON string or raw if it was raw
-                status: status
-            };
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // If scanResult was just raw text and we stringify it, the backend should handle it.
-            // My backend expects `qrData` which it tries to parse as JSON.
-            // If `scanResult` is an object, `JSON.stringify` works.
-            // If `scanResult` came from `JSON.parse` in `onScanSuccess`, it's an object.
-            // If it failed parse, it's `{ raw: decodedText }`.
-            // So I should probably just send `scanResult.raw` if I want to match my backend logic 
-            // OR ensure `qrData` sent matches what backend expects.
-            // Backend: `try { JSON.parse(qrData) ... }`
-            // If I send `JSON.stringify({ raw: "..." })`, backend parses it. `parsed.student_id` or `parsed.id` might be missing.
-            // The backend falls back to `cadetIdentifier = qrData` (the string) if JSON parse fails or keys missing.
-            // But if I send a JSON string of `{raw: "..."}` it will parse successfully but might not have `id`.
-            
-            // Let's refine `onScanSuccess` to keep `decodedText` as the main payload source.
-            // I'll send `qrData: scanResult.raw || JSON.stringify(scanResult)`?
-            // Actually, best to just send the original `decodedText`.
-            // So `scanResult` should store `originalText`.
-            
-            const res = await axios.post(endpoint, {
-                dayId: selectedDay.id,
-                qrData: scanResult.originalText,
-                status: status
-            });
+            const dataUrl = canvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            stopCamera();
 
-            alert(`Marked ${status.toUpperCase()}: ${res.data.cadet?.name || res.data.staff?.name || 'Success'}`);
-            
-            // Refresh records
-            selectDay(selectedDay);
-            
-            // Close result modal, resume scanner
-            setScanResult(null);
-            if (scannerRef.current) {
-                setTimeout(() => scannerRef.current.resume(), 1000);
+            // Check if Tesseract is loaded
+            if (!window.Tesseract) {
+                throw new Error("OCR Library not loaded. Check internet connection.");
             }
+
+            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng');
+            
+            processOCRText(text);
 
         } catch (err) {
             console.error(err);
-            alert('Scan failed: ' + (err.response?.data?.message || err.message));
-            // Resume scanner even on error
-            setScanResult(null);
-            if (scannerRef.current) {
-                setTimeout(() => scannerRef.current.resume(), 1000);
-            }
+            toast.error(err.message || "OCR Failed");
+            setIsProcessing(false);
         }
     };
 
-    const closeScanner = () => {
-        setIsScannerOpen(false);
-        setScanResult(null);
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(console.error);
-            scannerRef.current = null;
+    const processOCRText = (text) => {
+        // We have the full text of the image.
+        // We need to find which cadets from 'attendanceRecords' are present in this text.
+        // Improved heuristic: Search for "Rank Lastname" or "Lastname, Firstname"
+        
+        const lines = text.split('\n');
+        const matches = [];
+        
+        // Regex for time: 12-hour format with AM/PM (optional space, case insensitive)
+        const timeRegex = /(\d{1,2}:\d{2}\s*[APap][Mm]?)/g;
+        
+        attendanceRecords.forEach(record => {
+            // Construct patterns to search for
+            // 1. Lastname, Firstname (Standard List format)
+            // 2. Rank Lastname (e.g. Cdt Smith)
+            
+            const lastName = record.last_name.replace(/[^a-zA-Z0-9]/g, ''); // Clean for regex
+            const firstName = record.first_name.split(' ')[0].replace(/[^a-zA-Z0-9]/g, ''); // First word of first name
+            
+            // Flexible pattern: Lastname followed by Firstname OR Rank followed by Lastname
+            // We use the line as the context
+            
+            const namePattern = new RegExp(`${lastName}`, 'i');
+            
+            // Check if any line contains the last name
+            const matchingLines = lines.filter(l => namePattern.test(l));
+            
+            let bestMatchLine = null;
+            
+            // Refine match: check for first name or rank in those lines
+            for (const line of matchingLines) {
+                if (line.toLowerCase().includes(firstName.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+                if (record.rank && line.toLowerCase().includes(record.rank.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+            }
+            
+            // If we found a line with the name
+            if (bestMatchLine) {
+                let status = 'present'; // Default to present if found on sheet
+                const lowerLine = bestMatchLine.toLowerCase();
+                
+                if (lowerLine.includes('absent')) status = 'absent';
+                else if (lowerLine.includes('excused')) status = 'excused';
+                else if (lowerLine.includes('late')) status = 'late';
+
+                // Extract times from this line
+                const times = bestMatchLine.match(timeRegex) || [];
+                // Sort times to ensure Time In is earlier (simple heuristic, or just take first two)
+                // Usually Time In is first column, Time Out is second
+                const timeIn = times[0] || '';
+                const timeOut = times[1] || '';
+
+                // Extract/Verify Course
+                let detectedCourse = null;
+                if (record.cadet_course) {
+                    // Simple check if the course acronym is in the line
+                    // We remove special chars from course code for regex
+                    const cleanCourse = record.cadet_course.replace(/[^a-zA-Z0-9]/g, '');
+                    if (cleanCourse.length > 0) {
+                        const courseRegex = new RegExp(`\\b${cleanCourse}\\b`, 'i');
+                        if (courseRegex.test(bestMatchLine.replace(/[^a-zA-Z0-9\s]/g, ''))) {
+                             detectedCourse = record.cadet_course;
+                        }
+                    }
+                }
+                
+                // If not found by record, try to find generic course pattern (optional enhancement)
+                // const genericCourseMatch = bestMatchLine.match(/\b(BS\w+|AB\w+)\b/i);
+                // if (!detectedCourse && genericCourseMatch) detectedCourse = genericCourseMatch[0];
+
+                matches.push({
+                    id: attendanceType === 'cadet' ? record.cadet_id : record.staff_id,
+                    name: `${record.last_name}, ${record.first_name}`,
+                    rank: record.rank, // Pass rank for display
+                    detectedStatus: status,
+                    timeIn,
+                    timeOut,
+                    detectedCourse,
+                    recordCourse: record.cadet_course,
+                    originalRecord: record
+                });
+            }
+        });
+
+        // Remove duplicates (in case multiple lines match the same person? Unlikely with this logic but possible)
+        const uniqueMatches = Array.from(new Map(matches.map(m => [m.id, m])).values());
+
+        setScanResults(uniqueMatches);
+        setIsProcessing(false);
+        
+        if (uniqueMatches.length === 0) {
+            toast.error("No matching names found in scan. Ensure the image is clear and contains names from the list.");
+        } else {
+            toast.success(`Found ${uniqueMatches.length} records! Review before confirming.`);
+        }
+    };
+
+    const handleConfirmScan = async () => {
+        if (scanResults.length === 0) return;
+
+        try {
+            const promises = scanResults.map(match => {
+                const payload = {
+                    dayId: selectedDay.id,
+                    [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: match.id,
+                    status: match.detectedStatus,
+                    remarks: `Smart Scan: ${match.timeIn ? 'In ' + match.timeIn : ''} ${match.timeOut ? 'Out ' + match.timeOut : ''}`.trim(),
+                    time_in: match.timeIn,
+                    time_out: match.timeOut
+                };
+                const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+                return axios.post(endpoint, payload);
+            });
+
+            await Promise.all(promises);
+            
+            toast.success(`Successfully updated ${scanResults.length} records`);
+            
+            // Refresh
+            selectDay(selectedDay, true);
+            
+            // Reset
+            setScanResults([]);
+            setCapturedImage(null);
+            setIsScannerOpen(false);
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update some records");
         }
     };
 
@@ -475,6 +555,132 @@ const Attendance = () => {
                 </div>
             </div>
 
+            {/* Smart Scanner Modal */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl relative">
+                        <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
+                            <X size={24} />
+                        </button>
+
+                        {/* Camera Section */}
+                        <div className="w-full md:w-1/2 bg-black flex flex-col relative">
+                            <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay playsInline muted 
+                                    className={`absolute inset-0 w-full h-full object-cover ${capturedImage ? 'hidden' : ''}`}
+                                />
+                                <canvas ref={canvasRef} className="hidden" />
+                                {capturedImage && (
+                                    <img src={capturedImage} alt="Scan" className="absolute inset-0 w-full h-full object-contain" />
+                                )}
+                                
+                                {!isCameraActive && !capturedImage && (
+                                    <div className="text-white text-center">
+                                        <Camera size={48} className="mx-auto mb-2 opacity-50" />
+                                        <p>Camera is inactive</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="p-4 bg-gray-900 flex justify-center gap-4">
+                                {!isCameraActive ? (
+                                    <button 
+                                        onClick={startCamera}
+                                        className="bg-green-600 text-white px-6 py-2 rounded-full flex items-center gap-2"
+                                    >
+                                        <Camera size={20} /> Start Camera
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={captureAndScan}
+                                        disabled={isProcessing}
+                                        className="bg-blue-600 text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
+                                        {isProcessing ? 'Processing...' : 'Capture & Scan'}
+                                    </button>
+                                )}
+                                {capturedImage && (
+                                    <button 
+                                        onClick={() => { setCapturedImage(null); setScanResults([]); startCamera(); }}
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full"
+                                    >
+                                        Retake
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Results Section */}
+                        <div className="w-full md:w-1/2 bg-gray-50 flex flex-col">
+                            <div className="p-4 border-b bg-white">
+                                <h3 className="font-bold text-lg text-gray-800">Scan Results</h3>
+                                <p className="text-sm text-gray-500">
+                                    {scanResults.length > 0 ? `Found ${scanResults.length} records matching current list.` : 'Capture an attendance sheet to detect names.'}
+                                </p>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                {scanResults.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                        <FileText size={48} className="mb-2 opacity-20" />
+                                        <p>No records detected yet</p>
+                                    </div>
+                                ) : (
+                                    scanResults.map((res, idx) => (
+                                        <div key={idx} className="bg-white p-3 rounded shadow-sm border flex flex-col gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-bold text-gray-800">{res.name}</div>
+                                                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                        <span>{res.rank}</span>
+                                                        {res.recordCourse && (
+                                                            <span className={`px-1 rounded ${res.detectedCourse ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {res.detectedCourse ? res.detectedCourse : `Mismatch: ${res.recordCourse}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className={`px-2 py-0.5 text-xs rounded font-bold uppercase ${
+                                                    res.detectedStatus === 'present' ? 'bg-green-100 text-green-800' : 
+                                                    res.detectedStatus === 'absent' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {res.detectedStatus}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 text-sm text-gray-600">
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">IN</span>
+                                                    {res.timeIn || '--:--'}
+                                                </div>
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">OUT</span>
+                                                    {res.timeOut || '--:--'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {scanResults.length > 0 && (
+                                <div className="p-4 border-t bg-white">
+                                    <button 
+                                        onClick={handleConfirmScan}
+                                        className="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 flex justify-center items-center gap-2"
+                                    >
+                                        <CheckCircle size={20} />
+                                        Confirm & Update {scanResults.length} Records
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {viewMode === 'excuse' ? (
                 <ExcuseLetterManager />
             ) : (
@@ -547,7 +753,7 @@ const Attendance = () => {
                                             onClick={() => setIsScannerOpen(true)}
                                             className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
                                         >
-                                            <Camera size={16} className="mr-2" /> Scan Attendance
+                                            <Camera size={16} className="mr-2" /> Smart Scan
                                         </button>
                                     </div>
                                     <div className="flex flex-wrap gap-2 text-sm">
@@ -587,13 +793,13 @@ const Attendance = () => {
                                 {attendanceType === 'cadet' && (
                                     <>
                                         <input 
-                                            placeholder="Filter Company" 
+                                            placeholder="Company (A/B/C)" 
                                             className="border p-2 rounded"
                                             value={filterCompany}
                                             onChange={e => setFilterCompany(e.target.value)}
                                         />
                                         <input 
-                                            placeholder="Filter Platoon" 
+                                            placeholder="Platoon (1/2/3)" 
                                             className="border p-2 rounded"
                                             value={filterPlatoon}
                                             onChange={e => setFilterPlatoon(e.target.value)}
@@ -603,187 +809,155 @@ const Attendance = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-100 sticky top-0 z-10">
-                                    <tr>
-                                        <th className="p-3 border-b">{attendanceType === 'cadet' ? 'Cadet' : 'Staff Member'}</th>
-                                        <th className="p-3 border-b text-center">Status</th>
-                                        <th className="p-3 border-b">Time In</th>
-                                        <th className="p-3 border-b">Time Out</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredRecords.map(record => {
-                                        const id = attendanceType === 'cadet' ? record.cadet_id : record.staff_id;
-                                        return (
-                                        <tr key={id} className="border-b hover:bg-gray-50">
-                                            <td className="p-3">
-                                                <div className="font-medium">{record.last_name}, {record.first_name}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    {record.rank} | {attendanceType === 'cadet' ? `${record.company || '-'}/${record.platoon || '-'}` : (record.role || 'Instructor')}
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {filteredRecords.length === 0 ? (
+                                <div className="text-center text-gray-500 py-10">
+                                    No records found matching filters.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {filteredRecords.map(record => (
+                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 transition">
+                                            <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
+                                                <div className="flex items-center">
+                                                    <span className="font-bold text-gray-800 mr-2">
+                                                        {record.last_name}, {record.first_name}
+                                                    </span>
+                                                    {attendanceType === 'cadet' && (
+                                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                                            {record.company}/{record.platoon}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex justify-center space-x-1">
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'present')}
-                                                        className={`p-0.5 rounded ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'text-gray-300 hover:text-green-500'}`}
-                                                        title="Present"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'absent')}
-                                                        className={`p-0.5 rounded ${record.status === 'absent' ? 'bg-red-100 text-red-700' : 'text-gray-300 hover:text-red-500'}`}
-                                                        title="Absent"
-                                                    >
-                                                        <XCircle size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'late')}
-                                                        className={`p-0.5 rounded ${record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-300 hover:text-yellow-500'}`}
-                                                        title="Late"
-                                                    >
-                                                        <Clock size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'excused')}
-                                                        className={`p-0.5 rounded ${record.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:text-blue-500'}`}
-                                                        title="Excused"
-                                                    >
-                                                        <AlertTriangle size={16} />
-                                                    </button>
+                                                <div className="text-sm text-gray-500 flex flex-wrap gap-4 mt-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">In:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs"
+                                                            value={record.time_in || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">Out:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs"
+                                                            value={record.time_out || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <input 
+                                                        className="border-b border-gray-300 focus:border-blue-500 outline-none text-xs w-32 bg-transparent"
+                                                        placeholder="Remarks..."
+                                                        value={record.remarks || ''}
+                                                        onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
+                                                        onBlur={(e) => saveRemark(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value, record.status)}
+                                                    />
                                                 </div>
-                                            </td>
-                                            <td className="p-3">
-                                                <input 
-                                                    type="time"
-                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
-                                                    value={record.time_in || ''}
-                                                    onChange={(e) => handleTimeChange(id, 'time_in', e.target.value)}
-                                                    onBlur={(e) => saveTime(id, 'time_in', e.target.value)}
-                                                />
-                                            </td>
-                                            <td className="p-3">
-                                                <input 
-                                                    type="time"
-                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
-                                                    value={record.time_out || ''}
-                                                    onChange={(e) => handleTimeChange(id, 'time_out', e.target.value)}
-                                                    onBlur={(e) => saveTime(id, 'time_out', e.target.value)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    )})}
-                                </tbody>
-                            </table>
+                                            </div>
+                                            
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
+                                                    title="Present"
+                                                >
+                                                    <CheckCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'late')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'late' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'}`}
+                                                    title="Late"
+                                                >
+                                                    <Clock size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'absent')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'absent' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`}
+                                                    title="Absent"
+                                                >
+                                                    <XCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'excused')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'excused' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'}`}
+                                                    title="Excused"
+                                                >
+                                                    <AlertTriangle size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                        <Calendar size={64} className="mb-4 opacity-50" />
-                        <p className="text-lg">Select a training day to view or mark attendance</p>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                <Calendar size={64} className="mb-4 opacity-20" />
+                                <p className="text-lg">Select a training day to view attendance</p>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
-
-            {/* Create Modal */}
+                </div>
+            )}
+            
+            {/* Create Day Modal */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h3 className="text-xl font-bold mb-4">New Training Day</h3>
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded p-6 w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-bold mb-4">New Training Day</h3>
                         <form onSubmit={handleCreateDay} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Date</label>
+                                <label className="block text-sm font-medium mb-1">Date</label>
                                 <input 
-                                    type="date" 
-                                    required
+                                    type="date" required
                                     className="w-full border p-2 rounded"
                                     value={createForm.date}
                                     onChange={e => setCreateForm({...createForm, date: e.target.value})}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Title</label>
+                                <label className="block text-sm font-medium mb-1">Title</label>
                                 <input 
-                                    type="text" 
-                                    required
-                                    placeholder="e.g., Drill Day 1"
+                                    type="text" required
+                                    placeholder="e.g. Drill Day 1"
                                     className="w-full border p-2 rounded"
                                     value={createForm.title}
                                     onChange={e => setCreateForm({...createForm, title: e.target.value})}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <label className="block text-sm font-medium mb-1">Description</label>
                                 <textarea 
                                     className="w-full border p-2 rounded"
-                                    rows="3"
                                     value={createForm.description}
                                     onChange={e => setCreateForm({...createForm, description: e.target.value})}
-                                ></textarea>
+                                />
                             </div>
-                            <div className="flex space-x-3 pt-4">
+                            <div className="flex justify-end gap-2 pt-2">
                                 <button 
-                                    type="button"
+                                    type="button" 
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="flex-1 py-2 border rounded hover:bg-gray-50"
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                                 >
                                     Cancel
                                 </button>
                                 <button 
-                                    type="submit"
-                                    className="flex-1 py-2 bg-green-700 text-white rounded hover:bg-green-800"
+                                    type="submit" 
+                                    className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800"
                                 >
-                                    Create
+                                    Create Day
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-            )}
-            {/* Scanner Modal */}
-            {isScannerOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-lg relative">
-                        <button 
-                            onClick={closeScanner}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-                        >
-                            <XCircle size={24} />
-                        </button>
-                        
-                        <h3 className="text-xl font-bold mb-4">Scan QR Code</h3>
-                        
-                        {!scanResult ? (
-                            <div className="relative">
-                                <div className="absolute -top-4 right-0 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-xs">Camera Active</div>
-                                <div id="reader" className="w-full border-2 border-gray-200 rounded-lg overflow-hidden"></div>
-                                <div className="text-xs text-gray-500 text-center mt-2">Position the QR code within the frame to scan automatically.</div>
-                            </div>
-                        ) : (
-                            <div className="text-center space-y-4">
-                                <div className="bg-green-100 text-green-800 p-4 rounded">
-                                    <p className="font-bold text-lg">Scanned Successfully!</p>
-                                    <p className="font-mono mt-2 break-all">{scanResult.raw}</p>
-                                    {scanResult.name && <p className="text-lg font-semibold mt-2">{scanResult.name}</p>}
-                                </div>
-                                
-                                <p className="text-gray-600">Mark attendance as:</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => handleScanConfirm('present')} className="bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700">PRESENT</button>
-                                    <button onClick={() => handleScanConfirm('late')} className="bg-yellow-500 text-white p-3 rounded font-bold hover:bg-yellow-600">LATE</button>
-                                    <button onClick={() => handleScanConfirm('excused')} className="bg-blue-500 text-white p-3 rounded font-bold hover:bg-blue-600">EXCUSED</button>
-                                    <button onClick={() => { setScanResult(null); if(scannerRef.current) setTimeout(() => scannerRef.current.resume(), 500); }} className="bg-gray-500 text-white p-3 rounded font-bold hover:bg-gray-600">CANCEL</button>
-                                </div>
-                            </div>
-                        )}
-                        <audio ref={beepRef} src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAFAAABAAACAAACcQBhdWRpby1tcDMAAABNAAACcAAACmYAAABaQW5kcmV3b2xmcwAAABQAAP/9AAA=" />
-                    </div>
-                </div>
-            )}
-            </div>
             )}
         </div>
     );

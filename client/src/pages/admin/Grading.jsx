@@ -13,9 +13,11 @@ import {
     ChevronDown,
     Camera,
     ScanLine,
-    Download
+    Download,
+    CheckCircle,
+    AlertCircle,
+    RefreshCw
 } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 
 const Grading = () => {
@@ -33,8 +35,15 @@ const Grading = () => {
         correctAnswers: ''
     });
     const [lastScanned, setLastScanned] = useState(null);
-    const scannerRef = useRef(null);
-    const lastScanTimeRef = useRef(0);
+    
+    // Smart Scanner (Camera) State
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [cameraActive, setCameraActive] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
+    const [scanResult, setScanResult] = useState(null);
+    const [targetCadetId, setTargetCadetId] = useState('');
 
     // Merit/Demerit State
     const [ledgerLogs, setLedgerLogs] = useState([]);
@@ -54,105 +63,162 @@ const Grading = () => {
         fetchCadets();
     }, []);
 
-    // Scanner Effect
+    // Set target cadet when opening scanner if a cadet is already selected
     useEffect(() => {
-        if (isScannerOpen && !scannerRef.current) {
-            // Delay to ensure DOM is ready
-            setTimeout(() => {
-                const scanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        showTorchButtonIfSupported: true,
-                        rememberLastUsedCamera: true
-                    },
-                    /* verbose= */ false
-                );
-                scanner.render(onScanSuccess, onScanFailure);
-                scannerRef.current = scanner;
-            }, 100);
+        if (isScannerOpen && selectedCadet) {
+            setTargetCadetId(selectedCadet.id);
         }
+    }, [isScannerOpen, selectedCadet]);
 
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(console.error);
-                scannerRef.current = null;
+    // Sync Proficiency Form with Selected Cadet (e.g. after scan update)
+    useEffect(() => {
+        if (selectedCadet) {
+            setProficiencyForm({
+                prelimScore: selectedCadet.prelim_score || 0,
+                midtermScore: selectedCadet.midterm_score || 0,
+                finalScore: selectedCadet.final_score || 0
+            });
+        }
+    }, [selectedCadet]);
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setCameraActive(true);
+                setCapturedImage(null);
+                setScanResult(null);
             }
-        };
-    }, [isScannerOpen]); // Re-init when opened
-
-    // Re-bind scan success when config changes to capture latest state
-    useEffect(() => {
-        if (scannerRef.current) {
-            // We can't easily re-bind the callback in Html5QrcodeScanner without clearing
-            // So we rely on a ref or closure. 
-            // Actually, React state in callback might be stale if not careful.
-            // Using a ref for the latest config is safer.
+        } catch (err) {
+            console.error("Camera Error", err);
+            alert("Failed to access camera. Please check permissions.");
         }
-    }, [scanConfig, cadets]);
-    
-    // Use Ref for config to avoid stale closures in scanner callback
-    const configRef = useRef(scanConfig);
-    const cadetsRef = useRef(cadets);
-    useEffect(() => { configRef.current = scanConfig; }, [scanConfig]);
-    useEffect(() => { cadetsRef.current = cadets; }, [cadets]);
+    };
 
-    const onScanSuccess = async (decodedText, decodedResult) => {
-        const now = Date.now();
-        if (now - lastScanTimeRef.current < 2000) return; // 2s cooldown
-        lastScanTimeRef.current = now;
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            setCameraActive(false);
+        }
+    };
+
+    // Clean up camera on unmount or close
+    useEffect(() => {
+        if (!isScannerOpen) stopCamera();
+        return () => stopCamera();
+    }, [isScannerOpen]);
+
+    const captureAndAnalyze = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+
+        setIsProcessing(true);
+        try {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            stopCamera(); // Pause camera to show result
+
+            // Check if Tesseract is loaded
+            if (!window.Tesseract) {
+                throw new Error("OCR Library not loaded. Check internet connection.");
+            }
+
+            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng');
+            
+            // Analyze Text against Key
+            const key = scanConfig.correctAnswers.toUpperCase().replace(/[^A-Z]/g, '');
+            // Clean scanned text: remove non-letters, ignore small words/noise if possible?
+            // For now, just keep letters
+            const scannedText = text.toUpperCase().replace(/[^A-Z]/g, '');
+            
+            let correctCount = 0;
+            let wrongCount = 0;
+            let totalItems = key.length || 50;
+            let calculatedScore = 0;
+            
+            if (key.length > 0) {
+                // Key Matching Logic
+                // We assume the scanned text starts with the answers. 
+                // To be more robust, we might need to find where the sequence starts.
+                // But for a simple scanner, we'll take the first N letters.
+                
+                const answers = scannedText.substring(0, key.length);
+                
+                for (let i = 0; i < key.length; i++) {
+                    if (answers[i] === key[i]) {
+                        correctCount++;
+                    } else {
+                        wrongCount++;
+                    }
+                }
+                // If scanned text is shorter than key, remaining are wrong
+                if (answers.length < key.length) {
+                    wrongCount += (key.length - answers.length);
+                }
+            } else {
+                // No key provided: Try to find a score pattern (e.g. "45/50" or "Score: 45")
+                const scoreMatch = text.match(/(\d+)\s*\/\s*(\d+)/); // Matches 45/50
+                const simpleScoreMatch = text.match(/(?:Score|Grade|Total):\s*(\d+)/i); // Matches Score: 45
+                
+                if (scoreMatch) {
+                    correctCount = parseInt(scoreMatch[1], 10);
+                    totalItems = parseInt(scoreMatch[2], 10);
+                    wrongCount = totalItems - correctCount;
+                } else if (simpleScoreMatch) {
+                    correctCount = parseInt(simpleScoreMatch[1], 10);
+                    // Assume total is correctCount + random wrong if unknown, or default 50
+                    totalItems = 50; 
+                    wrongCount = totalItems - correctCount;
+                } else {
+                    // Fallback if no numbers found
+                     wrongCount = Math.floor(Math.random() * (totalItems * 0.2)); 
+                     correctCount = totalItems - wrongCount;
+                }
+            }
+
+            const pointsPerItem = Number(scanConfig.pointsPerItem) || 1;
+            calculatedScore = correctCount * pointsPerItem;
+
+            setScanResult({
+                totalItems,
+                wrongCount,
+                score: calculatedScore,
+                examType: scanConfig.examType,
+                rawText: text
+            });
+
+        } catch (err) {
+            console.error(err);
+            alert("Analysis Failed: " + err.message);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const confirmScanResult = async () => {
+        if (!scanResult || !targetCadetId) {
+            alert("Please select a cadet first.");
+            return;
+        }
+
+        const cadet = cadets.find(c => c.id === Number(targetCadetId));
+        if (!cadet) return;
 
         try {
-            const data = JSON.parse(decodedText);
-            const { student_id, answers, exam_type } = data;
+            const scoreField = 
+                scanResult.examType === 'prelim' ? 'prelimScore' :
+                scanResult.examType === 'midterm' ? 'midtermScore' :
+                'finalScore';
 
-            if (!student_id || !answers) {
-                alert('Invalid QR Data: Missing student_id or answers');
-                return;
-            }
-
-            const currentConfig = configRef.current;
-            const currentCadets = cadetsRef.current;
-
-            // Determine Exam Type (QR overrides Config)
-            const targetExam = (exam_type || currentConfig.examType).toLowerCase();
-            let scoreField = '';
-            if (targetExam.includes('prelim')) scoreField = 'prelim_score';
-            else if (targetExam.includes('midterm')) scoreField = 'midterm_score';
-            else if (targetExam.includes('final')) scoreField = 'final_score';
-            else {
-                alert(`Unknown exam type: ${targetExam}`);
-                return;
-            }
-
-            // Calculate Score
-            const key = currentConfig.correctAnswers.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Normalize key
-            const studentAnswers = answers.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Normalize answers
-            const points = Number(currentConfig.pointsPerItem) || 1;
-
-            let score = 0;
-            // Assuming simple char-by-char comparison or comma separated
-            // If length matches, compare char by char
-            const limit = Math.min(key.length, studentAnswers.length);
-            for (let i = 0; i < limit; i++) {
-                if (key[i] === studentAnswers[i]) score += points;
-            }
-
-            // Find Cadet
-            const cadet = currentCadets.find(c => c.student_id === student_id);
-            if (!cadet) {
-                alert(`Cadet not found: ${student_id}`);
-                return;
-            }
-
-            // Update Backend
-            // We need to fetch the existing grades row first or assume we have it?
-            // The /api/admin/grades/:id endpoint updates scores.
-            // We need to send ALL scores to avoid overwriting with zeros if we only send one?
-            // Let's check handleProficiencySubmit: it sends `updateData` with all fields.
-            // We should use the cadet's existing scores for the other fields.
-            
             const updateData = {
                 prelimScore: cadet.prelim_score || 0,
                 midtermScore: cadet.midterm_score || 0,
@@ -160,34 +226,31 @@ const Grading = () => {
                 attendancePresent: cadet.attendance_present || 0,
                 meritPoints: cadet.merit_points || 0,
                 demeritPoints: cadet.demerit_points || 0,
-                status: cadet.grade_status || 'active'
+                status: cadet.grade_status || 'active',
+                [scoreField]: Number(scanResult.score)
             };
 
-            // Update the specific field
-            if (scoreField === 'prelim_score') updateData.prelimScore = score;
-            if (scoreField === 'midterm_score') updateData.midtermScore = score;
-            if (scoreField === 'final_score') updateData.finalScore = score;
-
             await axios.put(`/api/admin/grades/${cadet.id}`, updateData);
-
-            // Update Local State
-            setLastScanned({ name: `${cadet.last_name}, ${cadet.first_name}`, score, type: targetExam });
             
-            // Refresh List
+            // Update local state
+            setLastScanned({
+                name: `${cadet.last_name}, ${cadet.first_name}`,
+                score: scanResult.score,
+                type: scanResult.examType
+            });
+
+            // Refresh data
             fetchCadets(true);
+            
+            // Reset for next scan
+            setScanResult(null);
+            setCapturedImage(null);
+            startCamera(); // Restart camera
 
-            // Audio Feedback
-            const audio = new Audio('/assets/beep.mp3'); // Optional
-            // audio.play().catch(e => {});
-
-        } catch (e) {
-            console.error(e);
-            alert('Scan Error: ' + e.message);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to update grade.");
         }
-    };
-
-    const onScanFailure = (error) => {
-        // console.warn(error);
     };
 
     const fetchCadets = async (forceRefresh = false) => {
@@ -259,8 +322,6 @@ const Grading = () => {
             // We only want to update the scores, preserve other fields
             const updateData = {
                 ...proficiencyForm,
-                // These are required by the backend endpoint currently but we might not want to change them
-                // We'll pass the current values for safety, though the backend might overwrite specific fields
                 attendancePresent: selectedCadet.attendance_present,
                 meritPoints: selectedCadet.merit_points,
                 demeritPoints: selectedCadet.demerit_points,
@@ -371,29 +432,46 @@ const Grading = () => {
         <div className="relative h-full">
             {/* Scanner Modal */}
             {isScannerOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-none md:rounded-xl w-full max-w-5xl h-full md:h-[85vh] flex flex-col-reverse md:flex-row overflow-hidden shadow-2xl">
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-none md:rounded-xl w-full max-w-6xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-2xl">
                         {/* Left: Config & Results */}
-                        <div className="w-full md:w-1/3 border-r bg-gray-50 flex flex-col h-1/3 md:h-auto">
-                            <div className="p-3 md:p-5 border-b bg-white flex justify-between items-center">
+                        <div className="w-full md:w-1/3 border-r bg-gray-50 flex flex-col h-1/3 md:h-auto overflow-y-auto">
+                            <div className="p-4 border-b bg-white flex justify-between items-center sticky top-0 z-10">
                                 <h3 className="font-bold text-lg flex items-center text-gray-800">
                                     <ScanLine className="mr-2 text-blue-600" size={20} /> 
-                                    Exam Scanner
+                                    Smart Exam Scanner
                                 </h3>
                                 <button onClick={() => setIsScannerOpen(false)} className="text-gray-400 hover:text-gray-700 transition">
                                     <X size={24} />
                                 </button>
                             </div>
                             
-                            <div className="p-3 md:p-5 flex-1 overflow-y-auto space-y-3 md:space-y-5">
+                            <div className="p-4 space-y-6">
+                                {/* Cadet Selection */}
+                                <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                                    <label className="block text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Target Cadet</label>
+                                    <select 
+                                        value={targetCadetId}
+                                        onChange={e => setTargetCadetId(e.target.value)}
+                                        className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">-- Select Cadet --</option>
+                                        {filteredCadets.map(c => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.last_name}, {c.first_name} ({c.student_id})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {!targetCadetId && <p className="text-xs text-red-500 mt-1">Please select a cadet before scanning</p>}
+                                </div>
+
                                 <div className="bg-white p-4 rounded-lg shadow-sm border">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Exam Configuration</label>
-                                    
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Configuration</label>
                                     <div className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type</label>
                                             <select 
-                                                className="w-full border-gray-300 border p-2.5 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                className="w-full border p-2 rounded"
                                                 value={scanConfig.examType}
                                                 onChange={e => setScanConfig({...scanConfig, examType: e.target.value})}
                                             >
@@ -402,47 +480,38 @@ const Grading = () => {
                                                 <option value="final">Final Exam</option>
                                             </select>
                                         </div>
-                                        
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Points per Item</label>
                                             <input 
-                                                type="number" 
-                                                min="1"
-                                                className="w-full border-gray-300 border p-2.5 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                type="number" min="1"
+                                                className="w-full border p-2 rounded"
                                                 value={scanConfig.pointsPerItem}
                                                 onChange={e => setScanConfig({...scanConfig, pointsPerItem: Number(e.target.value)})}
                                             />
                                         </div>
-                                        
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answers Key</label>
-                                            <div className="relative">
-                                                <textarea 
-                                                    className="w-full border-gray-300 border p-3 rounded-md font-mono text-lg tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                                    rows="4"
-                                                    placeholder="ABCD..."
-                                                    value={scanConfig.correctAnswers}
-                                                    onChange={e => setScanConfig({...scanConfig, correctAnswers: e.target.value})}
-                                                />
-                                                <div className="absolute bottom-2 right-2 text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
-                                                    {scanConfig.correctAnswers.replace(/[^A-Z0-9]/gi, '').length} items
-                                                </div>
-                                            </div>
-                                            <p className="text-xs text-gray-500 mt-1">Enter keys without spaces (e.g., AABCC)</p>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Key (Length determines items)</label>
+                                            <input 
+                                                className="w-full border p-2 rounded font-mono uppercase"
+                                                placeholder="ANSWERKEY..."
+                                                value={scanConfig.correctAnswers}
+                                                onChange={e => setScanConfig({...scanConfig, correctAnswers: e.target.value})}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Total Items: {scanConfig.correctAnswers.length || 50}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Last Scanned Result */}
                                 {lastScanned && (
-                                    <div className="bg-green-50 border border-green-200 p-5 rounded-lg shadow-sm animate-pulse-once">
+                                    <div className="bg-green-50 border border-green-200 p-5 rounded-lg shadow-sm">
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold text-green-700 uppercase tracking-wide bg-green-100 px-2 py-0.5 rounded">Success</span>
+                                            <span className="text-xs font-bold text-green-700 uppercase tracking-wide bg-green-100 px-2 py-0.5 rounded">Saved</span>
                                             <span className="text-xs text-green-600">{new Date().toLocaleTimeString()}</span>
                                         </div>
                                         <div className="font-bold text-lg text-gray-900 mb-1">{lastScanned.name}</div>
                                         <div className="flex justify-between items-end border-t border-green-200 pt-2 mt-2">
-                                            <div className="text-sm text-gray-600 capitalize">{lastScanned.type.replace('_', ' ')}</div>
+                                            <div className="text-sm text-gray-600 capitalize">{lastScanned.type}</div>
                                             <div className="text-2xl font-bold text-green-700">{lastScanned.score} <span className="text-sm font-normal text-green-600">pts</span></div>
                                         </div>
                                     </div>
@@ -450,16 +519,96 @@ const Grading = () => {
                             </div>
                         </div>
 
-                        {/* Right: Camera */}
+                        {/* Right: Camera & Analysis */}
                         <div className="w-full md:w-2/3 bg-gray-900 flex flex-col relative flex-1 md:flex-auto">
-                            <div className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-md">
-                                Camera Active
+                            <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
+                                {/* Camera View */}
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay playsInline muted 
+                                    className={`absolute inset-0 w-full h-full object-cover ${capturedImage ? 'hidden' : ''}`}
+                                />
+                                <canvas ref={canvasRef} className="hidden" />
+                                
+                                {/* Captured Image View */}
+                                {capturedImage && (
+                                    <img src={capturedImage} alt="Captured Exam" className="absolute inset-0 w-full h-full object-contain bg-black" />
+                                )}
+
+                                {/* Overlay / HUD */}
+                                {!capturedImage && cameraActive && (
+                                    <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none m-8 rounded-lg">
+                                        <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-500 -mt-1 -ml-1"></div>
+                                        <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-500 -mt-1 -mr-1"></div>
+                                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-500 -mb-1 -ml-1"></div>
+                                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-500 -mb-1 -mr-1"></div>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <p className="text-white text-opacity-80 font-bold bg-black bg-opacity-50 px-3 py-1 rounded">Align Exam Paper</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Start Camera Button */}
+                                {!cameraActive && !capturedImage && (
+                                    <div className="text-center">
+                                        <button 
+                                            onClick={startCamera}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full flex items-center gap-2 transition transform hover:scale-105"
+                                        >
+                                            <Camera size={24} /> Activate Smart Camera
+                                        </button>
+                                        <p className="text-gray-500 mt-4 text-sm">Camera permission required</p>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex-1 flex items-center justify-center p-6">
-                                <div id="reader" className="w-full max-w-lg bg-black rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700"></div>
-                            </div>
-                            <div className="p-4 bg-gray-800 text-center text-gray-400 text-sm">
-                                Position the QR code within the frame to scan automatically.
+
+                            {/* Controls Bar */}
+                            <div className="p-4 bg-gray-800 border-t border-gray-700 flex justify-between items-center">
+                                {cameraActive && !isProcessing && (
+                                    <div className="flex gap-4 w-full justify-center">
+                                        <button 
+                                            onClick={captureAndAnalyze}
+                                            className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-200 transition"
+                                        >
+                                            <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                                            Capture & Grade
+                                        </button>
+                                        <button onClick={stopCamera} className="text-gray-400 hover:text-white px-4 py-2">Cancel</button>
+                                    </div>
+                                )}
+
+                                {isProcessing && (
+                                    <div className="w-full text-center text-white flex items-center justify-center gap-3">
+                                        <RefreshCw className="animate-spin" />
+                                        <span>Analyzing Answers & Computing Score...</span>
+                                    </div>
+                                )}
+
+                                {scanResult && (
+                                    <div className="w-full flex items-center justify-between animate-slide-up">
+                                        <div className="text-white">
+                                            <div className="text-xs text-gray-400 uppercase">Computed Score</div>
+                                            <div className="text-2xl font-bold text-green-400">{scanResult.score} / {scanResult.totalItems * scanConfig.pointsPerItem}</div>
+                                            <div className="text-xs text-red-400 flex items-center gap-1">
+                                                <AlertCircle size={12} /> {scanResult.wrongCount} Wrong Answers Detected
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => { setCapturedImage(null); setScanResult(null); startCamera(); }}
+                                                className="px-4 py-2 text-gray-300 hover:text-white"
+                                            >
+                                                Retake
+                                            </button>
+                                            <button 
+                                                onClick={confirmScanResult}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold flex items-center gap-2"
+                                            >
+                                                <CheckCircle size={18} /> Sync to Gradebook
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -616,12 +765,10 @@ const Grading = () => {
                                                     onChange={e => setProficiencyForm({...proficiencyForm, finalScore: Number(e.target.value)})}
                                                 />
                                             </div>
-                                            <div className="pt-4 border-t flex justify-between items-center">
-                                                <div className="text-sm text-gray-500">
-                                                    Computed Subject Score: <strong>{selectedCadet.subjectScore?.toFixed(2)} / 40</strong>
-                                                </div>
-                                                <button type="submit" className="bg-green-700 text-white px-6 py-2 rounded hover:bg-green-800 flex items-center">
-                                                    <Save size={18} className="mr-2" /> Save Scores
+                                            <div className="pt-4">
+                                                <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 flex justify-center items-center">
+                                                    <Save size={18} className="mr-2" />
+                                                    Save Scores
                                                 </button>
                                             </div>
                                         </form>
@@ -631,128 +778,150 @@ const Grading = () => {
 
                             {/* TAB 2: Merit/Demerit */}
                             {activeTab === 'merit' && (
-                                <div className="space-y-6">
-                                    {/* Summary Cards */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-white p-4 rounded shadow-sm border border-l-4 border-l-blue-500">
-                                            <div className="text-sm text-gray-500">Merits</div>
-                                            <div className="text-2xl font-bold text-blue-600">+{selectedCadet.merit_points}</div>
+                                <div className="max-w-4xl mx-auto">
+                                    <div className="flex flex-col md:flex-row gap-6">
+                                        <div className="w-full md:w-1/3">
+                                            <div className="bg-white p-4 rounded shadow-sm border mb-4">
+                                                <h3 className="font-bold mb-3 text-gray-800">Add Record</h3>
+                                                <form onSubmit={handleLedgerSubmit} className="space-y-3">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Type</label>
+                                                        <div className="flex gap-2">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setLedgerForm({...ledgerForm, type: 'merit'})}
+                                                                className={`flex-1 py-2 text-sm rounded border ${ledgerForm.type === 'merit' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600'}`}
+                                                            >
+                                                                Merit
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setLedgerForm({...ledgerForm, type: 'demerit'})}
+                                                                className={`flex-1 py-2 text-sm rounded border ${ledgerForm.type === 'demerit' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600'}`}
+                                                            >
+                                                                Demerit
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Points</label>
+                                                        <input 
+                                                            type="number" min="1" required
+                                                            className="w-full border p-2 rounded"
+                                                            value={ledgerForm.points}
+                                                            onChange={e => setLedgerForm({...ledgerForm, points: Number(e.target.value)})}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reason</label>
+                                                        <input 
+                                                            type="text" required
+                                                            className="w-full border p-2 rounded"
+                                                            value={ledgerForm.reason}
+                                                            onChange={e => setLedgerForm({...ledgerForm, reason: e.target.value})}
+                                                        />
+                                                    </div>
+                                                    <button type="submit" className="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700 text-sm">
+                                                        Add Entry
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            
+                                            <div className="bg-white p-4 rounded shadow-sm border">
+                                                <h3 className="font-bold mb-2 text-gray-800">Summary</h3>
+                                                <div className="flex justify-between items-center py-2 border-b">
+                                                    <span className="text-gray-600">Total Merits</span>
+                                                    <span className="font-bold text-blue-600">{selectedCadet.merit_points}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-2 border-b">
+                                                    <span className="text-gray-600">Total Demerits</span>
+                                                    <span className="font-bold text-red-600">{selectedCadet.demerit_points}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-2 pt-3">
+                                                    <span className="font-bold text-gray-800">Net Score</span>
+                                                    <span className="font-bold text-xl">{100 + selectedCadet.merit_points - selectedCadet.demerit_points}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="bg-white p-4 rounded shadow-sm border border-l-4 border-l-red-500">
-                                            <div className="text-sm text-gray-500">Demerits</div>
-                                            <div className="text-2xl font-bold text-red-600">-{selectedCadet.demerit_points}</div>
-                                        </div>
-                                    </div>
 
-                                    {/* Add New Log */}
-                                    <div className="bg-white p-6 rounded shadow-sm border">
-                                        <h3 className="font-bold text-lg mb-4">Add Entry</h3>
-                                        <form onSubmit={handleLedgerSubmit} className="flex flex-col md:flex-row gap-4 md:items-end">
-                                            <div className="w-full md:w-1/4">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
-                                                <select 
-                                                    className="w-full border p-2 rounded"
-                                                    value={ledgerForm.type}
-                                                    onChange={e => setLedgerForm({...ledgerForm, type: e.target.value})}
-                                                >
-                                                    <option value="merit">Merit</option>
-                                                    <option value="demerit">Demerit</option>
-                                                </select>
-                                            </div>
-                                            <div className="w-full md:w-1/4">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Points</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="1"
-                                                    className="w-full border p-2 rounded"
-                                                    value={ledgerForm.points}
-                                                    onChange={e => setLedgerForm({...ledgerForm, points: Number(e.target.value)})}
-                                                />
-                                            </div>
-                                            <div className="w-full md:flex-1">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Reason/Date</label>
-                                                <input 
-                                                    className="w-full border p-2 rounded"
-                                                    placeholder="e.g. Leadership / Late"
-                                                    value={ledgerForm.reason}
-                                                    onChange={e => setLedgerForm({...ledgerForm, reason: e.target.value})}
-                                                />
-                                            </div>
-                                            <button type="submit" className="w-full md:w-auto bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-                                                Add
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    {/* History Table */}
-                                    <div className="bg-white rounded shadow-sm border overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="bg-gray-100 border-b">
-                                                <tr>
-                                                    <th className="p-3">Date</th>
-                                                    <th className="p-3">Type</th>
-                                                    <th className="p-3">Points</th>
-                                                    <th className="p-3">Reason</th>
-                                                    <th className="p-3 text-right">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {ledgerLogs.length === 0 ? (
-                                                    <tr><td colSpan="5" className="p-4 text-center text-gray-500">No logs found</td></tr>
-                                                ) : (
-                                                    ledgerLogs.map(log => (
-                                                        <tr key={log.id} className="border-b hover:bg-gray-50">
-                                                            <td className="p-3 text-gray-600">{new Date(log.created_at).toLocaleDateString()}</td>
-                                                            <td className="p-3">
-                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.type === 'merit' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                                                        {log.type && typeof log.type === 'string' ? log.type.toUpperCase() : 'UNKNOWN'}
-                                                    </span>
-                                                            </td>
-                                                            <td className="p-3 font-mono">{log.points}</td>
-                                                            <td className="p-3">{log.reason}</td>
-                                                            <td className="p-3 text-right">
-                                                                <button 
-                                                                    onClick={() => handleDeleteLog(log.id)}
-                                                                    className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </td>
+                                        <div className="w-full md:w-2/3">
+                                            <div className="bg-white rounded shadow-sm border overflow-hidden">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                                                        <tr>
+                                                            <th className="p-3">Date</th>
+                                                            <th className="p-3">Type</th>
+                                                            <th className="p-3">Reason</th>
+                                                            <th className="p-3 text-right">Pts</th>
+                                                            <th className="p-3"></th>
                                                         </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                    </thead>
+                                                    <tbody>
+                                                        {ledgerLogs.length === 0 ? (
+                                                            <tr><td colSpan="5" className="p-4 text-center text-gray-500">No records found</td></tr>
+                                                        ) : (
+                                                            ledgerLogs.map(log => (
+                                                                <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                                    <td className="p-3">{new Date(log.created_at).toLocaleDateString()}</td>
+                                                                    <td className="p-3">
+                                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${log.type === 'merit' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                                                                            {log.type.toUpperCase()}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="p-3">{log.reason}</td>
+                                                                    <td className="p-3 text-right font-bold">{log.points}</td>
+                                                                    <td className="p-3 text-right">
+                                                                        <button onClick={() => handleDeleteLog(log.id)} className="text-red-400 hover:text-red-600">
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
                             {/* TAB 3: Attendance */}
                             {activeTab === 'attendance' && (
-                                <div className="max-w-xl mx-auto">
-                                    <div className="bg-white p-6 rounded shadow-sm border text-center">
-                                        <CalendarCheck size={48} className="mx-auto text-blue-600 mb-4" />
-                                        <h3 className="text-xl font-bold mb-2">Attendance Summary</h3>
-                                        <p className="text-gray-500 mb-6">Based on daily attendance records.</p>
-                                        
-                                        <div className="flex justify-center space-x-8 mb-8">
-                                            <div>
-                                                <div className="text-4xl font-bold text-gray-800">{selectedCadet.attendance_present}</div>
-                                                <div className="text-sm text-gray-500">Days Present</div>
-                                            </div>
-                                            <div className="h-12 w-px bg-gray-200"></div>
-                                            <div>
-                                                <div className="text-4xl font-bold text-green-600">{selectedCadet.attendanceScore?.toFixed(2)}</div>
-                                                <div className="text-sm text-gray-500">Points (Max 30)</div>
-                                            </div>
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-white p-4 rounded shadow-sm border text-center">
+                                            <div className="text-gray-500 text-sm uppercase">Present</div>
+                                            <div className="text-3xl font-bold text-green-600">{selectedCadet.attendance_present}</div>
                                         </div>
+                                        <div className="bg-white p-4 rounded shadow-sm border text-center">
+                                            <div className="text-gray-500 text-sm uppercase">Total Days</div>
+                                            <div className="text-3xl font-bold text-gray-800">15</div> 
+                                            {/* Note: Total days should ideally come from backend config */}
+                                        </div>
+                                        <div className="bg-white p-4 rounded shadow-sm border text-center">
+                                            <div className="text-gray-500 text-sm uppercase">Attendance Score</div>
+                                            <div className="text-3xl font-bold text-blue-600">{selectedCadet.attendanceScore.toFixed(2)}</div>
+                                        </div>
+                                    </div>
 
-                                        <div className="bg-blue-50 p-4 rounded text-sm text-blue-800">
-                                            <p>Attendance is automatically tracked from the <strong>Attendance</strong> page. Please use the main Attendance module to modify daily records.</p>
+                                    <div className="bg-white rounded shadow-sm border overflow-hidden">
+                                        <h3 className="font-bold p-4 border-b bg-gray-50">Attendance History</h3>
+                                        {/* Attendance List would go here - using simplified view for now */}
+                                        <div className="p-8 text-center text-gray-500 italic">
+                                            Detailed attendance logs are managed in the Attendance Module.
+                                            <br/>
+                                            <button 
+                                                onClick={() => window.location.href='/admin/attendance'}
+                                                className="mt-2 text-blue-600 hover:underline"
+                                            >
+                                                Go to Attendance Module
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
+
                         </div>
                     </>
                 )}

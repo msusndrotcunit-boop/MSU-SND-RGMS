@@ -135,7 +135,7 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                 );
             } else {
                 let sql = `UPDATE users SET email = ?, is_approved = ?`;
-                const params = [email, true];
+                const params = [email, 1];
                 if (customUsername && customUsername !== existingUser.username) {
                     sql += `, username = ?`;
                     params.push(customUsername);
@@ -893,7 +893,7 @@ router.get('/analytics', (req, res) => {
                             SELECT c.cadet_course, c.status, COUNT(*) as count 
                             FROM cadets c
                             LEFT JOIN users u ON u.cadet_id = c.id
-                            WHERE c.is_profile_completed = 1 AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                            WHERE c.is_profile_completed IS TRUE AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
                             GROUP BY c.cadet_course, c.status
                         `;
                         db.all(sql, [], (err, rows) => {
