@@ -61,39 +61,37 @@ const Dashboard = () => {
 
     const processData = (data) => {
         const rawStats = data.demographics?.courseStats || [];
-        
-        // Initialize aggregation
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
-
-        // Courses we expect (ordered)
         const courses = ['COQC', 'MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42'];
+        const verifiedCourses = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
+
         courses.forEach(c => {
             byCourse[c] = { name: c, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
         });
 
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
-            const course = item.cadet_course || 'Unknown';
-            const count = item.count;
+            const course = (item.cadet_course || 'Unknown').toUpperCase();
+            const count = Number(item.count) || 0;
+            const includeInTotals = verifiedCourses.has(course);
 
-            if (total[status] !== undefined) {
+            if (includeInTotals && total[status] !== undefined) {
                 total[status] += count;
             }
 
-            if (byCourse[course]) {
-                byCourse[course][status] += count;
-                byCourse[course].total += count;
-            } else if (course !== 'Unknown') {
-                // Handle unexpected courses if any
-                byCourse[course] = { 
-                    name: course, 
+            const courseKey = course || 'Unknown';
+
+            if (!byCourse[courseKey] && courseKey !== 'Unknown') {
+                byCourse[courseKey] = { 
+                    name: courseKey, 
                     Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 
                 };
-                if (byCourse[course][status] !== undefined) {
-                    byCourse[course][status] += count;
-                    byCourse[course].total += count;
-                }
+            }
+
+            if (byCourse[courseKey] && byCourse[courseKey][status] !== undefined) {
+                byCourse[courseKey][status] += count;
+                byCourse[courseKey].total += count;
             }
         });
 

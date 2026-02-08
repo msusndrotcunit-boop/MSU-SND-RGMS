@@ -123,8 +123,8 @@ const Activities = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Activity Management</h2>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
+                <h2 className="text-xl sm:text-2xl font-bold">Activity Management</h2>
                 <button 
                     onClick={() => {
                         resetForms();
@@ -153,7 +153,7 @@ const Activities = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {activities
                     .filter(a => (a.type || 'activity') === activeTab)
                     .map(activity => (
@@ -194,8 +194,8 @@ const Activities = () => {
             )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-lg w-full max-w-2xl p-6 my-8">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+                    <div className="bg-white rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold">Add New {activeTab === 'activity' ? 'Activity' : 'Announcement'}</h3>
                             <button onClick={() => setIsModalOpen(false)}><X size={24} /></button>
@@ -284,7 +284,7 @@ const Activities = () => {
                                 <label className="block text-sm font-medium text-gray-700">
                                     Photos (Min: {activeTab === 'activity' ? 3 : 1})
                                 </label>
-                                <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                <div className="mt-1 flex items-center justify-center px-3 sm:px-6 pt-4 pb-5 border-2 border-gray-300 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
                                         <Upload className="mx-auto h-12 w-12 text-gray-400" />
                                         <div className="flex text-sm text-gray-600">
@@ -296,7 +296,7 @@ const Activities = () => {
                                         <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
                                     </div>
                                 </div>
-                                <div className="mt-4 grid grid-cols-3 gap-2">
+                                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {form.images.map((img, index) => (
                                         <div key={index} className="relative h-20 bg-gray-100 rounded overflow-hidden group">
                                             <img 

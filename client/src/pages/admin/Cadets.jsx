@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { toast } from 'react-hot-toast';
 import { 
@@ -925,7 +926,7 @@ const Cadets = () => {
                             </div>
                         </div>
                         
-                        <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto">
+                        <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 overflow-y-auto">
                             {/* Left Column: Photo & Status */}
                             <div className="md:col-span-1 space-y-6">
                                 <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg shadow-inner text-center">
@@ -1008,7 +1009,7 @@ const Cadets = () => {
                                 <div>
                                     <h3 className="text-lg font-bold mb-4 pb-2 border-b dark:border-gray-700 text-gray-800 dark:text-white">Personal Information</h3>
                                     <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
                                                 <select disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.rank} onChange={e => setEditForm({...editForm, rank: e.target.value})}>
@@ -1022,7 +1023,7 @@ const Cadets = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
                                                 <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} />
