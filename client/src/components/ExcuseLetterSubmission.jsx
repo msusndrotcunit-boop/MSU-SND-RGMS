@@ -103,7 +103,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                                 type="file" 
                                 onChange={(e) => setFile(e.target.files[0])} 
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                accept="image/*,application/pdf"
+                                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             />
                             {file ? (
                                 <div className="text-sm text-green-600 font-medium truncate">
@@ -112,7 +112,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                             ) : (
                                 <div className="text-gray-500 text-sm">
                                     <Upload className="mx-auto mb-2 text-gray-400" />
-                                    Click to upload (PDF or Image)
+                                    Click to upload (PDF, Word, or Image)
                                 </div>
                             )}
                         </div>

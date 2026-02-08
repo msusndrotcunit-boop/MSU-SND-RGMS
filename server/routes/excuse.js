@@ -97,6 +97,21 @@ router.put('/:id', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Delete Excuse Letter (Admin)
+router.delete('/:id', authenticateToken, isAdmin, (req, res) => {
+    const id = req.params.id;
+    
+    // Optional: Delete the file from filesystem/cloudinary if needed. 
+    // For now, we just remove the database record.
+    
+    db.run(`DELETE FROM excuse_letters WHERE id = ?`, [id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        if (this.changes === 0) return res.status(404).json({ message: 'Excuse letter not found' });
+        
+        res.json({ message: 'Excuse letter deleted successfully' });
+    });
+});
+
 // Helper to update total attendance count in grades table (Duplicated from attendance.js)
 function updateTotalAttendance(cadetId) {
     // Count 'present' and 'excused' records
