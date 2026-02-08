@@ -1191,10 +1191,10 @@ router.put('/grades/:cadetId', (req, res) => {
     const cadetId = req.params.cadetId;
 
     // Check if row exists, if not create it
-    db.get("SELECT id FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
+    db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         
-        const runUpdate = () => {
+        const runUpdate = (currentMerit, currentDemerit) => {
             db.run(`UPDATE grades SET 
                     merit_points = ?, 
                     demerit_points = ?, 
@@ -1207,17 +1207,37 @@ router.put('/grades/:cadetId', (req, res) => {
                 function(err) {
                     if (err) return res.status(500).json({ message: err.message });
                     
-                    // Send Email Notification
-                    db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
-                        if (!err && cadet && cadet.email) {
-                            const subject = 'ROTC Grading System - Grades Updated';
-                            const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
-                            const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
-                            
-                            await sendEmail(cadet.email, subject, text, html);
-                        }
-                        broadcastEvent({ type: 'grade_updated', cadetId });
-                        res.json({ message: 'Grades updated' });
+                    // Sync Logs: Create manual adjustment logs if points changed
+                    const meritDiff = (meritPoints || 0) - (currentMerit || 0);
+                    const demeritDiff = (demeritPoints || 0) - (currentDemerit || 0);
+                    
+                    const logPromises = [];
+                    if (meritDiff !== 0) {
+                        logPromises.push(new Promise(resolve => {
+                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'merit', ?, 'Manual Adjustment by Admin')`, 
+                                [cadetId, meritDiff], resolve);
+                        }));
+                    }
+                    if (demeritDiff !== 0) {
+                        logPromises.push(new Promise(resolve => {
+                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin')`, 
+                                [cadetId, demeritDiff], resolve);
+                        }));
+                    }
+                    
+                    Promise.all(logPromises).then(() => {
+                        // Send Email Notification
+                        db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                            if (!err && cadet && cadet.email) {
+                                const subject = 'ROTC Grading System - Grades Updated';
+                                const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
+                                const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+                                
+                                await sendEmail(cadet.email, subject, text, html);
+                            }
+                            broadcastEvent({ type: 'grade_updated', cadetId });
+                            res.json({ message: 'Grades updated' });
+                        });
                     });
                 }
             );
@@ -1228,10 +1248,10 @@ router.put('/grades/:cadetId', (req, res) => {
             db.run(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) 
                     VALUES (?, 0, 0, 0, 0, 0, 0, 'active')`, [cadetId], (err) => {
                 if (err) return res.status(500).json({ message: err.message });
-                runUpdate();
+                runUpdate(0, 0);
             });
         } else {
-            runUpdate();
+            runUpdate(row.merit_points, row.demerit_points);
         }
     });
 });
@@ -1455,6 +1475,7 @@ router.post('/merit-logs', (req, res) => {
                             
                             await sendEmail(cadet.email, subject, text, html);
                         }
+                        broadcastEvent({ type: 'grade_updated', cadetId });
                         res.json({ message: 'Log added and points updated' });
                     });
                 });
@@ -1493,6 +1514,7 @@ router.delete('/merit-logs/:id', (req, res) => {
             
             db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (err) => {
                 if (err) console.error("Error updating grades after log deletion", err);
+                broadcastEvent({ type: 'grade_updated', cadetId: log.cadet_id });
                 res.json({ message: 'Log deleted and points reverted' });
             });
         });

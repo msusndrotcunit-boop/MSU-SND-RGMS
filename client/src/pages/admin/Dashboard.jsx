@@ -111,13 +111,14 @@ const Dashboard = () => {
     };
 
     const normalizeStatus = (status) => {
-        if (!status) return 'Ongoing'; // Default
-        const s = status.toLowerCase();
-        if (s.includes('complete') && !s.includes('in')) return 'Completed';
-        if (s.includes('incomplete') || s.includes('inc')) return 'Incomplete';
-        if (s.includes('fail')) return 'Failed';
-        if (s.includes('drop')) return 'Drop';
-        return 'Ongoing'; // Default/Active
+        if (!status) return 'Unknown';
+        const s = status.toUpperCase();
+        if (['ONGOING', 'ENROLLED', 'ACTIVE'].includes(s)) return 'Ongoing';
+        if (['COMPLETED', 'GRADUATED', 'PASSED'].includes(s)) return 'Completed';
+        if (['INC', 'INCOMPLETE', 'T', 'DO'].includes(s)) return 'Incomplete';
+        if (['FAILED', 'FAIL'].includes(s)) return 'Failed';
+        if (['DROP', 'DROPPED'].includes(s)) return 'Drop';
+        return 'Ongoing'; // Default
     };
 
     return (
