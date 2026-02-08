@@ -893,7 +893,7 @@ router.get('/analytics', (req, res) => {
                             SELECT c.cadet_course, c.status, COUNT(*) as count 
                             FROM cadets c
                             LEFT JOIN users u ON u.cadet_id = c.id
-                            WHERE u.is_approved = 1 AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                            WHERE c.is_profile_completed = 1 AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
                             GROUP BY c.cadet_course, c.status
                         `;
                         db.all(sql, [], (err, rows) => {
