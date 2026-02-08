@@ -10,7 +10,6 @@ const router = express.Router();
 // Register (Sign Up) for Cadets - REMOVED
 // router.post('/signup', ...);
 
-// Heartbeat for Online Status
 router.post('/heartbeat', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const now = new Date().toISOString();
@@ -18,6 +17,22 @@ router.post('/heartbeat', authenticateToken, (req, res) => {
         if (err) console.error("Heartbeat error:", err);
         // Fail silently to client
         res.sendStatus(200);
+    });
+});
+
+router.post('/location', authenticateToken, (req, res) => {
+    const { latitude, longitude } = req.body || {};
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ message: 'Invalid location payload' });
+    }
+    const sql = `
+        UPDATE users 
+        SET last_latitude = ?, last_longitude = ?, last_location_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `;
+    db.run(sql, [latitude, longitude, req.user.id], (err) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Location updated' });
     });
 });
 

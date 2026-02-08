@@ -2,20 +2,12 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const bcrypt = require('bcryptjs');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
 const path = require('path');
 const webpush = require('web-push');
 
 // Multer (local disk storage) removed in favor of Cloudinary
-
-// Middleware to check if admin
-const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. Admins only.' });
-    }
-    next();
-};
 
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
@@ -33,8 +25,7 @@ function broadcastEvent(event) {
     }
 }
 
-// GET Staff Analytics (Admin)
-router.get('/analytics/overview', authenticateToken, isAdmin, (req, res) => {
+router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const cachedStats = cache.get("staff_analytics");
     if (cachedStats) {
         return res.json(cachedStats);

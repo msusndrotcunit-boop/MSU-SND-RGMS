@@ -311,6 +311,8 @@ const TrainingStaffManagement = () => {
                                         <option value="Admin">Admin</option>
                                         <option value="Commandant">Commandant</option>
                                         <option value="Assistant Commandant">Assistant Commandant</option>
+                                        <option value="NSTP Director">NSTP Director</option>
+                                        <option value="ROTC Coordinator">ROTC Coordinator</option>
                                     </select>
                                 </div>
                             </div>
@@ -371,6 +373,8 @@ const TrainingStaffManagement = () => {
                                         <option value="Admin">Admin</option>
                                         <option value="Commandant">Commandant</option>
                                         <option value="Assistant Commandant">Assistant Commandant</option>
+                                        <option value="NSTP Director">NSTP Director</option>
+                                        <option value="ROTC Coordinator">ROTC Coordinator</option>
                                     </select>
                                 </div>
                             </div>

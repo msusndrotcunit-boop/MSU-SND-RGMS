@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator
+    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -29,6 +29,7 @@ const Dashboard = () => {
     });
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [locations, setLocations] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -57,6 +58,20 @@ const Dashboard = () => {
         };
 
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const fetchLocations = async () => {
+            try {
+                const res = await axios.get('/api/admin/locations');
+                setLocations(res.data || []);
+            } catch (err) {
+                console.error('Location fetch error:', err);
+            }
+        };
+        fetchLocations();
+        const id = setInterval(fetchLocations, 60000);
+        return () => clearInterval(id);
     }, []);
 
     const processData = (data) => {
@@ -203,6 +218,58 @@ const Dashboard = () => {
                     <CourseCard key={course.name} data={course} />
                 ))}
             </div>
+
+            {locations.length > 0 && (
+                <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-green-600">
+                    <div className="flex items-center mb-4">
+                        <MapPin className="text-green-600 mr-2" size={20} />
+                        <h3 className="font-bold text-gray-800">Live User Locations</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">User</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Role</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Location</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {locations.map((u) => {
+                                    const name =
+                                        u.role === 'cadet'
+                                            ? `${u.cadet_last_name || ''}, ${u.cadet_first_name || ''}`.trim()
+                                            : u.role === 'training_staff'
+                                            ? `${u.staff_rank || ''} ${u.staff_last_name || ''}`.trim()
+                                            : u.username;
+                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
+                                    const when = u.last_location_at
+                                        ? new Date(u.last_location_at).toLocaleString()
+                                        : '';
+                                    return (
+                                        <tr key={u.id}>
+                                            <td className="px-4 py-2 text-gray-800">{name || u.username}</td>
+                                            <td className="px-4 py-2 capitalize text-gray-600">{u.role}</td>
+                                            <td className="px-4 py-2">
+                                                <a
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-green-700 hover:underline"
+                                                >
+                                                    {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
+                                                </a>
+                                            </td>
+                                            <td className="px-4 py-2 text-gray-500">{when}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Actions */}
             <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">

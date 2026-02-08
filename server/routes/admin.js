@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../database');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -270,7 +270,41 @@ const processCadetData = async (data) => {
 };
 
 router.use(authenticateToken);
-router.use(isAdmin);
+router.use(isAdminOrPrivilegedStaff);
+
+router.get('/locations', (req, res) => {
+    const sql = `
+        SELECT 
+            u.id,
+            u.username,
+            u.role,
+            u.cadet_id,
+            u.staff_id,
+            u.last_latitude,
+            u.last_longitude,
+            u.last_location_at,
+            c.first_name AS cadet_first_name,
+            c.last_name AS cadet_last_name,
+            c.company AS cadet_company,
+            c.platoon AS cadet_platoon,
+            s.first_name AS staff_first_name,
+            s.last_name AS staff_last_name,
+            s.rank AS staff_rank,
+            s.role AS staff_role
+        FROM users u
+        LEFT JOIN cadets c ON u.cadet_id = c.id
+        LEFT JOIN training_staff s ON u.staff_id = s.id
+        WHERE u.last_latitude IS NOT NULL
+          AND u.last_longitude IS NOT NULL
+          AND (u.is_archived IS FALSE OR u.is_archived IS NULL)
+        ORDER BY u.last_location_at DESC
+        LIMIT 200
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows || []);
+    });
+});
 
 // --- Import Official Cadet List ---
 

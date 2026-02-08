@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar, MapPin } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 function urlBase64ToUint8Array(base64String) {
@@ -31,6 +31,7 @@ const StaffLayout = () => {
     const [messages, setMessages] = useState([]);
     const [notifOpen, setNotifOpen] = useState(false);
     const [messageOpen, setMessageOpen] = useState(false);
+    const [staffRole, setStaffRole] = useState(null);
 
     
 
@@ -41,12 +42,47 @@ const StaffLayout = () => {
         }
     }, [user, location.pathname, navigate]);
 
+    React.useEffect(() => {
+        const fetchStaffRole = async () => {
+            try {
+                const res = await axios.get('/api/staff/me');
+                setStaffRole(res.data?.role || null);
+            } catch {}
+        };
+        fetchStaffRole();
+    }, []);
+
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+    const isPrivilegedStaff = staffRole === 'Commandant' || staffRole === 'Assistant Commandant' || staffRole === 'NSTP Director' || staffRole === 'ROTC Coordinator';
+
+    const shareLocation = () => {
+        if (!navigator.geolocation) {
+            toast.error('Location is not supported on this device.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                try {
+                    await axios.post('/api/auth/location', {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude
+                    });
+                    toast.success('Location shared successfully.');
+                } catch (e) {
+                    toast.error('Failed to share location.');
+                }
+            },
+            () => {
+                toast.error('Location permission denied.');
+            }
+        );
+    };
 
     React.useEffect(() => {
         axios.post('/api/staff/access').catch(() => {});
@@ -117,9 +153,18 @@ const StaffLayout = () => {
             )}>
                 <div className="p-6 text-xl font-bold border-b border-green-800 flex justify-between items-center">
                     <span>Training Staff</span>
-                    <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
-                        <X size={24} />
-                    </button>
+                    <div className="flex items-center space-x-3">
+                        <button
+                            onClick={shareLocation}
+                            className="text-green-200 hover:text-white flex items-center space-x-1 text-xs border border-green-700 px-2 py-1 rounded-full"
+                        >
+                            <MapPin size={14} />
+                            <span>Share Location</span>
+                        </button>
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
                     {/* Home - Locked if profile incomplete */}
@@ -157,6 +202,61 @@ const StaffLayout = () => {
                         <span>My Portal</span>
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
+
+                    {isPrivilegedStaff && (
+                        <>
+                            <Link
+                                to={user?.isProfileCompleted ? "/staff/unit-dashboard" : "#"}
+                                onClick={(e) => {
+                                    if (!user?.isProfileCompleted) e.preventDefault();
+                                    setIsSidebarOpen(false);
+                                }}
+                                className={clsx(
+                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    location.pathname === '/staff/unit-dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                                <LayoutDashboard size={20} />
+                                <span>Unit Dashboard</span>
+                                {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                            </Link>
+
+                            <Link
+                                to={user?.isProfileCompleted ? "/staff/data-analysis" : "#"}
+                                onClick={(e) => {
+                                    if (!user?.isProfileCompleted) e.preventDefault();
+                                    setIsSidebarOpen(false);
+                                }}
+                                className={clsx(
+                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    location.pathname === '/staff/data-analysis' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                                <PieChart size={20} />
+                                <span>Data Analysis</span>
+                                {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                            </Link>
+
+                            <Link
+                                to={user?.isProfileCompleted ? "/staff/activities" : "#"}
+                                onClick={(e) => {
+                                    if (!user?.isProfileCompleted) e.preventDefault();
+                                    setIsSidebarOpen(false);
+                                }}
+                                className={clsx(
+                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    location.pathname === '/staff/activities' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                                <Calendar size={20} />
+                                <span>Activities</span>
+                                {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                            </Link>
+                        </>
+                    )}
 
                     {/* Communication - Locked if profile incomplete */}
                     <Link

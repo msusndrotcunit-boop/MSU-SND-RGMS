@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { authenticateToken, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
 const path = require('path');
 const fs = require('fs');
@@ -31,7 +31,7 @@ router.post('/', authenticateToken, upload.single('file'), (req, res) => {
     });
 });
 
-// Get Excuse Letters (Admin: All, Cadet: Own)
+// Get Excuse Letters (Admin/Privileged Staff: All, Cadet: Own)
 router.get('/', authenticateToken, (req, res) => {
     if (req.user.role === 'admin') {
         const sql = `
@@ -42,19 +42,37 @@ router.get('/', authenticateToken, (req, res) => {
         `;
         db.all(sql, [], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
-            res.json(rows);
+            return res.json(rows);
         });
-    } else {
+    }
+
+    if (req.user.role === 'training_staff' && req.user.staffId) {
+        const sql = `
+            SELECT el.*, c.first_name, c.last_name, c.company, c.platoon
+            FROM excuse_letters el
+            JOIN cadets c ON el.cadet_id = c.id
+            ORDER BY el.created_at DESC
+        `;
+        return db.all(sql, [], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            return res.json(rows);
+        });
+    }
+
+    if (req.user.cadetId) {
         const sql = `SELECT * FROM excuse_letters WHERE cadet_id = ? ORDER BY created_at DESC`;
         db.all(sql, [req.user.cadetId], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
             res.json(rows);
         });
     }
+    else {
+        res.status(403).json({ message: 'Access denied' });
+    }
 });
 
-// Update Excuse Status (Admin)
-router.put('/:id', authenticateToken, isAdmin, (req, res) => {
+// Update Excuse Status (Admin/Privileged Staff)
+router.put('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const { status } = req.body; // 'approved' or 'rejected'
     const id = req.params.id;
 
@@ -97,8 +115,8 @@ router.put('/:id', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
-// Delete Excuse Letter (Admin)
-router.delete('/:id', authenticateToken, isAdmin, (req, res) => {
+// Delete Excuse Letter (Admin/Privileged Staff)
+router.delete('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const id = req.params.id;
     
     // Optional: Delete the file from filesystem/cloudinary if needed. 
