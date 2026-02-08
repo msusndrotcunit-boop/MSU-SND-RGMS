@@ -3,7 +3,8 @@ import axios from 'axios';
 import { 
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend 
 } from 'recharts';
-import { FileText, Printer, Building2, Download } from 'lucide-react';
+import { FileText, Printer, Building2, Download, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -483,7 +484,7 @@ const DataAnalysis = () => {
             </div>
 
             {/* Completed & Incomplete Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Completed Chart */}
                 <div className="bg-white rounded-lg shadow-md border-t-4 border-green-600 h-80">
@@ -549,6 +550,39 @@ const DataAnalysis = () => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            <div className="mt-4 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
                 </div>
             </div>
         </div>

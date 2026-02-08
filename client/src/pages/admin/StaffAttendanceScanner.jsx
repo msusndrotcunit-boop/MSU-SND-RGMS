@@ -8,7 +8,6 @@ const StaffAttendanceScanner = () => {
     const [scanResult, setScanResult] = useState(null);
     const [trainingDays, setTrainingDays] = useState([]);
     const [selectedDay, setSelectedDay] = useState('');
-    const [staffList, setStaffList] = useState([]);
     const scannerRef = useRef(null);
 
     // Fetch training days
@@ -33,27 +32,6 @@ const StaffAttendanceScanner = () => {
             toast.error("Failed to load training days");
         }
     };
-
-    // Load Staff List for Matching
-    useEffect(() => {
-        const loadStaff = async () => {
-            if (!selectedDay) {
-                setStaffList([]);
-                return;
-            }
-            try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setStaffList(res.data || []);
-            } catch (err) {
-                console.error(err);
-                toast.error("Failed to load staff list");
-            }
-        };
-        loadStaff();
-    }, [selectedDay]);
 
     // Initialize QR scanner for staff QR codes
     useEffect(() => {
@@ -92,10 +70,9 @@ const StaffAttendanceScanner = () => {
                 toast.success('Staff attendance recorded via QR');
                 if (navigator.vibrate) navigator.vibrate(60);
 
-                const updatedListRes = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
+                await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                setStaffList(updatedListRes.data || []);
             } catch (err) {
                 console.error(err);
                 const message = err.response?.data?.message || 'Failed to record staff attendance';
@@ -174,80 +151,6 @@ const StaffAttendanceScanner = () => {
                     )}
                 </div>
             </div>
-
-            {/* Verification Modal */}
-            {showModal && scannedData && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-                        <h3 className="text-xl font-bold mb-4">Verify Scanned Data</h3>
-                        
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Detected Name</label>
-                                <input 
-                                    type="text" 
-                                    value={scannedData.name} 
-                                    onChange={e => setScannedData({...scannedData, name: e.target.value})}
-                                    className="w-full p-2 border rounded"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Status</label>
-                                <select 
-                                    value={scannedData.status}
-                                    onChange={e => setScannedData({...scannedData, status: e.target.value})}
-                                    className="w-full p-2 border rounded"
-                                >
-                                    <option value="present">Present</option>
-                                    <option value="absent">Absent</option>
-                                    <option value="excused">Excused</option>
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Time In</label>
-                                    <input 
-                                        type="text" 
-                                        value={scannedData.timeIn} 
-                                        onChange={e => setScannedData({...scannedData, timeIn: e.target.value})}
-                                        className="w-full p-2 border rounded"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Time Out</label>
-                                    <input 
-                                        type="text" 
-                                        value={scannedData.timeOut} 
-                                        onChange={e => setScannedData({...scannedData, timeOut: e.target.value})}
-                                        className="w-full p-2 border rounded"
-                                    />
-                                </div>
-                            </div>
-
-                            {!scannedData.matchedStaffId && (
-                                <div className="p-2 bg-yellow-50 text-yellow-800 text-sm rounded">
-                                    Warning: Could not automatically match to a staff member. Please ensure the name matches the record.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button 
-                                onClick={() => setShowModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                onClick={handleConfirmAttendance}
-                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                            >
-                                Confirm & Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

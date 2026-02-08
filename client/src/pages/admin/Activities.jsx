@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trash2, Plus, Calendar, X, Upload } from 'lucide-react';
+import { Trash2, Plus, Calendar, X, Upload, Zap } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import { Link } from 'react-router-dom';
 
 const Activities = () => {
     const [activities, setActivities] = useState([]);
@@ -335,6 +336,39 @@ const Activities = () => {
                     </div>
                 </div>
             )}
+
+            <div className="mt-6 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
+                </div>
+            </div>
         </div>
     );
 };

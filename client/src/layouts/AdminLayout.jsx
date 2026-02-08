@@ -205,7 +205,6 @@ const AdminLayout = () => {
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
         { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
-        // { path: '/admin/approvals', label: 'Approvals', icon: UserCheck }, // Removed as approvals are automated via import
         { path: '/admin/profile', label: 'Profile', icon: User },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];
