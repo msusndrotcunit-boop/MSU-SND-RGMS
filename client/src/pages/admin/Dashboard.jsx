@@ -139,8 +139,8 @@ const Dashboard = () => {
             
             {/* Header */}
             <div>
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                    <span className="border-l-4 border-yellow-500 pl-3">ROTC Unit Dashboard</span>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">ROTC Unit Dashboard</span>
                 </h2>
             </div>
 
@@ -181,10 +181,10 @@ const Dashboard = () => {
             </div>
 
             {/* Chart Section */}
-            <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-gray-800">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-gray-800 dark:border-[var(--primary-color)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-gray-800 flex items-center">
-                        <BookOpen size={20} className="text-yellow-600 mr-2" />
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                        <BookOpen size={20} className="text-[var(--primary-color)] mr-2" />
                         Cadet Status Distribution by Course (Verified Only)
                     </h3>
                 </div>
@@ -220,19 +220,19 @@ const Dashboard = () => {
             </div>
 
             {locations.length > 0 && (
-                <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-green-600">
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
-                        <MapPin className="text-green-600 mr-2" size={20} />
-                        <h3 className="font-bold text-gray-800">Live User Locations</h3>
+                        <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
+                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 text-sm">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">User</th>
-                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Role</th>
-                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Location</th>
-                                    <th className="px-4 py-2 text-left font-semibold text-gray-600">Last Updated</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">User</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Role</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Location</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Last Updated</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -249,19 +249,19 @@ const Dashboard = () => {
                                         : '';
                                     return (
                                         <tr key={u.id}>
-                                            <td className="px-4 py-2 text-gray-800">{name || u.username}</td>
-                                            <td className="px-4 py-2 capitalize text-gray-600">{u.role}</td>
+                                            <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{name || u.username}</td>
+                                            <td className="px-4 py-2 capitalize text-gray-600 dark:text-gray-300">{u.role}</td>
                                             <td className="px-4 py-2">
                                                 <a
                                                     href={url}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="text-green-700 hover:underline"
+                                                    className="text-[var(--primary-color)] hover:underline"
                                                 >
                                                     {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
                                                 </a>
                                             </td>
-                                            <td className="px-4 py-2 text-gray-500">{when}</td>
+                                            <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{when}</td>
                                         </tr>
                                     );
                                 })}

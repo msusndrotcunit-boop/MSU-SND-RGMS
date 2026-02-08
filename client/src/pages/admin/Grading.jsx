@@ -604,7 +604,7 @@ const Grading = () => {
                                             </button>
                                             <button 
                                                 onClick={confirmScanResult}
-                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold flex items-center gap-2"
+                                                className="bg-[var(--primary-color)] hover:opacity-90 text-white px-6 py-2 rounded font-bold flex items-center gap-2"
                                             >
                                                 <CheckCircle size={18} /> Sync to Gradebook
                                             </button>
@@ -619,21 +619,21 @@ const Grading = () => {
 
             <div className="flex h-full flex-col md:flex-row gap-6">
             {/* Left Panel: Cadet List */}
-            <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedCadet ? 'hidden md:flex' : ''}`}>
+            <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedCadet ? 'hidden md:flex' : ''}`}>
                 <div className="p-4 border-b">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold">Grading Management</h2>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Grading Management</h2>
                         <div className="flex gap-2">
                             <button 
                                 onClick={handleExport}
-                                className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 flex items-center text-sm transition"
+                                className="bg-[var(--primary-color)] text-white px-3 py-1.5 rounded hover:opacity-90 flex items-center text-sm transition"
                                 title="Export CSV"
                             >
                                 <Download size={16} />
                             </button>
                             <button 
                                 onClick={() => setIsScannerOpen(true)}
-                                className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center text-sm transition"
+                                className="bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-black flex items-center text-sm transition"
                             >
                                 <ScanLine size={16} className="mr-1.5" /> Scan Exams
                             </button>
@@ -642,7 +642,7 @@ const Grading = () => {
                     <div className="relative">
                         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                         <input 
-                            className="w-full pl-10 p-2 border rounded bg-gray-50" 
+                            className="w-full pl-10 p-2 border rounded bg-gray-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700" 
                             placeholder="Search cadets..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
@@ -654,12 +654,12 @@ const Grading = () => {
                         <div 
                             key={cadet.id}
                             onClick={() => handleSelectCadet(cadet)}
-                            className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${selectedCadet?.id === cadet.id ? 'bg-green-50 border-l-4 border-green-600' : ''}`}
+                            className={`p-4 border-b cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition ${selectedCadet?.id === cadet.id ? 'bg-[var(--primary-color)]/10 border-l-4 border-[var(--primary-color)]' : ''}`}
                         >
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <div className="font-bold text-gray-800">{cadet.last_name}, {cadet.first_name}</div>
-                                    <div className="text-sm text-gray-500">{cadet.company}/{cadet.platoon} • {cadet.student_id}</div>
+                                    <div className="font-bold text-gray-800 dark:text-gray-100">{cadet.last_name}, {cadet.first_name}</div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">{cadet.company}/{cadet.platoon} • {cadet.student_id}</div>
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs text-gray-500">Final</div>
@@ -674,7 +674,7 @@ const Grading = () => {
             </div>
 
             {/* Right Panel: Grading Details */}
-            <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedCadet ? 'hidden md:flex justify-center items-center text-gray-400' : ''}`}>
+            <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedCadet ? 'hidden md:flex justify-center items-center text-gray-400 dark:text-gray-500' : ''}`}>
                 {!selectedCadet ? (
                     <div className="text-center">
                         <Calculator size={48} className="mx-auto mb-4 opacity-50" />
@@ -683,16 +683,16 @@ const Grading = () => {
                 ) : (
                     <>
                         {/* Header */}
-                        <div className="p-6 border-b flex justify-between items-start bg-gray-50">
+                        <div className="p-6 border-b flex justify-between items-start bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
                             <div>
                                 <button onClick={() => setSelectedCadet(null)} className="md:hidden text-gray-500 mb-2 flex items-center">
                                     <ChevronDown className="rotate-90 mr-1" size={16} /> Back to List
                                 </button>
-                                <h2 className="text-2xl font-bold">{selectedCadet.rank} {selectedCadet.last_name}, {selectedCadet.first_name}</h2>
-                                <p className="text-gray-600">{selectedCadet.student_id} • {selectedCadet.company}/{selectedCadet.platoon}</p>
+                                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedCadet.rank} {selectedCadet.last_name}, {selectedCadet.first_name}</h2>
+                                <p className="text-gray-600 dark:text-gray-300">{selectedCadet.student_id} • {selectedCadet.company}/{selectedCadet.platoon}</p>
                             </div>
-                            <div className="text-right bg-white p-3 rounded shadow-sm border">
-                                <div className="text-sm text-gray-500 uppercase tracking-wide">Final Grade</div>
+                            <div className="text-right bg-white dark:bg-gray-900 p-3 rounded shadow-sm border dark:border-gray-700">
+                                <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">Final Grade</div>
                                 <div className={`text-3xl font-bold ${selectedCadet.finalGrade >= 75 ? 'text-green-600' : 'text-red-600'}`}>
                                     {selectedCadet.finalGrade.toFixed(2)}
                                 </div>
@@ -738,37 +738,37 @@ const Grading = () => {
                                         </h3>
                                         <form onSubmit={handleProficiencySubmit} className="space-y-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Prelim Score (0-100)</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Prelim Score (0-100)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" max="100"
-                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                                     value={proficiencyForm.prelimScore}
                                                     onChange={e => setProficiencyForm({...proficiencyForm, prelimScore: Number(e.target.value)})}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Midterm Score (0-100)</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Midterm Score (0-100)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" max="100"
-                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                                     value={proficiencyForm.midtermScore}
                                                     onChange={e => setProficiencyForm({...proficiencyForm, midtermScore: Number(e.target.value)})}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Final Score (0-100)</label>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Final Score (0-100)</label>
                                                 <input 
                                                     type="number" 
                                                     min="0" max="100"
-                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-green-500 focus:outline-none"
+                                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                                     value={proficiencyForm.finalScore}
                                                     onChange={e => setProficiencyForm({...proficiencyForm, finalScore: Number(e.target.value)})}
                                                 />
                                             </div>
                                             <div className="pt-4">
-                                                <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 flex justify-center items-center">
+                                                <button type="submit" className="w-full bg-[var(--primary-color)] text-white py-2 rounded hover:opacity-90 flex justify-center items-center">
                                                     <Save size={18} className="mr-2" />
                                                     Save Scores
                                                 </button>

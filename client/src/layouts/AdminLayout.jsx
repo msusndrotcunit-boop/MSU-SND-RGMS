@@ -210,7 +210,7 @@ const AdminLayout = () => {
     ];
 
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
+        <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
             <Toaster position="top-right" reverseOrder={false} />
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
@@ -222,10 +222,10 @@ const AdminLayout = () => {
 
             {/* Sidebar */}
             <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-green-800 flex justify-between items-center">
+                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>ROTC Admin</span>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                         <X size={24} />
@@ -245,7 +245,7 @@ const AdminLayout = () => {
                                         onClick={() => toggleMenu(item.label)}
                                         className={clsx(
                                             "w-full flex items-center justify-between p-3 rounded transition",
-                                            isActiveParent ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                                            isActiveParent ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
                                     >
                                         <div className="flex items-center space-x-3">
@@ -255,8 +255,8 @@ const AdminLayout = () => {
                                         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                     </button>
                                     
-                                    {isExpanded && (
-                                        <div className="ml-8 mt-1 space-y-1 border-l-2 border-green-700 pl-2">
+                                        {isExpanded && (
+                                        <div className="ml-8 mt-1 space-y-1 border-l-2 border-white/20 pl-2">
                                             {item.children.map(child => {
                                                 const isChildActive = location.pathname === child.path;
                                                 return (
@@ -266,7 +266,7 @@ const AdminLayout = () => {
                                                         onClick={() => setIsSidebarOpen(false)}
                                                         className={clsx(
                                                             "block p-2 text-sm rounded transition",
-                                                            isChildActive ? "text-white font-medium bg-green-800/50" : "text-green-300 hover:text-white"
+                                                            isChildActive ? "text-white font-medium bg-black/20" : "text-white/80 hover:text-white"
                                                         )}
                                                     >
                                                         {child.label}
@@ -287,7 +287,7 @@ const AdminLayout = () => {
                                 onClick={() => setIsSidebarOpen(false)}
                                 className={clsx(
                                     "flex items-center space-x-3 p-3 rounded transition",
-                                    isActive ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                                    isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                 )}
                             >
                                 <Icon size={20} />
@@ -296,10 +296,10 @@ const AdminLayout = () => {
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-green-800">
+                <div className="p-4 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-green-200 hover:text-white hover:bg-green-800 rounded transition"
+                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded transition"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
@@ -309,46 +309,46 @@ const AdminLayout = () => {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow p-4 flex items-center">
+                <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center">
                     <button 
                         onClick={toggleSidebar} 
-                        className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
+                        className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden"
                     >
                         <Menu size={24} />
                     </button>
-                    <h1 className="text-sm md:text-xl font-semibold text-gray-800 flex-1 truncate">
+                    <h1 className="text-sm md:text-xl font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">
                         {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
                     </h1>
 
                     <div className="flex items-center space-x-2 md:space-x-4">
                         <div className="relative">
-                            <div className="flex items-center border rounded-md px-2 py-1 md:px-3 md:py-2 w-32 md:w-64 focus-within:ring-2 focus-within:ring-green-600">
-                                <Search size={18} className="text-gray-400 mr-2" />
+                            <div className="flex items-center border rounded-md px-2 py-1 md:px-3 md:py-2 w-32 md:w-64 focus-within:ring-2 focus-within:ring-[var(--primary-color)] dark:border-gray-700">
+                                <Search size={18} className="text-gray-400 dark:text-gray-300 mr-2" />
                                 <input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onFocus={() => setSearchOpen(true)}
                                     onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
                                     placeholder="Search..."
-                                    className="w-full outline-none text-xs md:text-sm"
+                                    className="w-full outline-none text-xs md:text-sm bg-transparent dark:text-gray-100"
                                 />
                             </div>
                             {searchOpen && (searchResults.cadets.length > 0 || searchResults.staff.length > 0) && (
-                                <div className="absolute mt-2 bg-white border rounded shadow w-64 z-50">
+                                <div className="absolute mt-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-64 z-50">
                                     {searchResults.cadets.map(c => (
-                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-3 py-2 hover:bg-gray-100 text-sm">
+                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
                                             {c.rank} {c.first_name} {c.last_name} • {c.student_id}
                                         </Link>
                                     ))}
                                     {searchResults.staff.map(s => (
-                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-3 py-2 hover:bg-gray-100 text-sm">
+                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
                                             {s.rank} {s.first_name} {s.last_name} • {s.afpsn || 'N/A'}
                                         </Link>
                                     ))}
                                 </div>
                             )}
                         </div>
-                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                        <button onClick={openMessages} className="relative text-gray-600 dark:text-gray-200 hover:text-[var(--primary-color)]">
                             <Mail size={20} />
                             {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
                         </button>
@@ -356,28 +356,28 @@ const AdminLayout = () => {
                             onClick={openNotifications} 
                             className={clsx(
                                 "relative transition-colors",
-                                notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                                notifHighlight ? "text-[var(--primary-color)]" : "text-gray-600 dark:text-gray-200 hover:text-[var(--primary-color)]"
                             )}
                         >
                             <Bell size={20} />
                             {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
                         </button>
                         {(notifOpen && notifications.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-80 z-50">
                                 {notifications.map(n => (
                                     <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800">{n.message}</div>
-                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                        <div className="text-sm text-gray-800 dark:text-gray-100">{n.message}</div>
+                                        <div className="text-xs text-gray-400 dark:text-gray-400">{n.type}</div>
                                     </div>
                                 ))}
                             </div>
                         )}
                         {(messageOpen && messages.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-80 z-50">
                                 {messages.map(m => (
                                     <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800">{m.subject}</div>
-                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                        <div className="text-sm text-gray-800 dark:text-gray-100">{m.subject}</div>
+                                        <div className="text-xs text-gray-400 dark:text-gray-400">{m.sender_role}</div>
                                     </div>
                                 ))}
                             </div>
@@ -390,7 +390,7 @@ const AdminLayout = () => {
                     </div>
                 )}
                 <main className="flex-1 overflow-auto p-4 md:p-6">
-                    <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
+                    <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                         <Outlet />
                     </Suspense>
                         

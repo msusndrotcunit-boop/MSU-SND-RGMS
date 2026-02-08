@@ -535,19 +535,27 @@ const Attendance = () => {
 
     return (
         <div className="h-full flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded shadow gap-4">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800">Attendance & Excuses</h1>
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-900 p-4 rounded shadow gap-4">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">Attendance & Excuses</h1>
                 <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
                     <button 
                         onClick={() => setViewMode('attendance')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${viewMode === 'attendance' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'attendance' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
                     >
                         <Calendar size={18} className="mr-2" />
                         <span className="whitespace-nowrap">Training Days</span>
                     </button>
                     <button 
                         onClick={() => setViewMode('excuse')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${viewMode === 'excuse' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'excuse' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
                     >
                         <FileText size={18} className="mr-2" />
                         <span className="whitespace-nowrap">Excuse Letters</span>
@@ -558,7 +566,7 @@ const Attendance = () => {
             {/* Smart Scanner Modal */}
             {isScannerOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
                         <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
                             <X size={24} />
                         </button>
@@ -588,7 +596,7 @@ const Attendance = () => {
                                 {!isCameraActive ? (
                                     <button 
                                         onClick={startCamera}
-                                        className="bg-green-600 text-white px-6 py-2 rounded-full flex items-center gap-2"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90"
                                     >
                                         <Camera size={20} /> Start Camera
                                     </button>
@@ -596,7 +604,7 @@ const Attendance = () => {
                                     <button 
                                         onClick={captureAndScan}
                                         disabled={isProcessing}
-                                        className="bg-blue-600 text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
                                     >
                                         {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
                                         {isProcessing ? 'Processing...' : 'Capture & Scan'}
@@ -614,17 +622,17 @@ const Attendance = () => {
                         </div>
 
                         {/* Results Section */}
-                        <div className="w-full md:w-1/2 bg-gray-50 flex flex-col">
-                            <div className="p-4 border-b bg-white">
-                                <h3 className="font-bold text-lg text-gray-800">Scan Results</h3>
-                                <p className="text-sm text-gray-500">
+                        <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 flex flex-col">
+                            <div className="p-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Scan Results</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                     {scanResults.length > 0 ? `Found ${scanResults.length} records matching current list.` : 'Capture an attendance sheet to detect names.'}
                                 </p>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                 {scanResults.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                                         <FileText size={48} className="mb-2 opacity-20" />
                                         <p>No records detected yet</p>
                                     </div>
@@ -666,10 +674,10 @@ const Attendance = () => {
                             </div>
 
                             {scanResults.length > 0 && (
-                                <div className="p-4 border-t bg-white">
+                                <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
                                     <button 
                                         onClick={handleConfirmScan}
-                                        className="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 flex justify-center items-center gap-2"
+                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2"
                                     >
                                         <CheckCircle size={20} />
                                         Confirm & Update {scanResults.length} Records
@@ -686,12 +694,12 @@ const Attendance = () => {
             ) : (
                 <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-180px)] gap-6">
                     {/* Sidebar List */}
-                    <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t">
-                            <h2 className="font-bold text-lg text-gray-700">Training Days</h2>
+                    <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-800 rounded-t">
+                            <h2 className="font-bold text-lg text-gray-700 dark:text-gray-100">Training Days</h2>
                             <button 
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-green-700 text-white p-2 rounded hover:bg-green-800"
+                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90"
                                 title="Add Training Day"
                             >
                                 <Plus size={20} />
@@ -703,13 +711,15 @@ const Attendance = () => {
                                     key={day.id}
                                     onClick={() => selectDay(day)}
                                     className={`p-4 rounded border cursor-pointer transition ${
-                                        selectedDay?.id === day.id ? 'bg-green-50 border-green-500' : 'hover:bg-gray-50'
+                                        selectedDay?.id === day.id 
+                                            ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]' 
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
                                     }`}
                                 >
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <div className="font-bold text-gray-800">{day.title}</div>
-                                            <div className="text-sm text-gray-500 flex items-center mt-1">
+                                            <div className="font-bold text-gray-800 dark:text-gray-100">{day.title}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
                                                 <Calendar size={14} className="mr-1" />
                                                 {new Date(day.date).toLocaleDateString()}
                                             </div>
@@ -723,35 +733,35 @@ const Attendance = () => {
                                     </div>
                                 </div>
                             ))}
-                            {days.length === 0 && <div className="p-4 text-center text-gray-500">No training days found.</div>}
+                            {days.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400">No training days found.</div>}
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
+                    <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
                         {selectedDay ? (
                             <>
-                        <div className="p-4 border-b bg-gray-50 rounded-t">
+                        <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
                             <div className="flex flex-col md:flex-row justify-between items-start mb-4">
                                 <div>
-                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 mb-2 flex items-center text-sm">
+                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 dark:text-gray-400 mb-2 flex items-center text-sm">
                                         <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
                                     </button>
-                                    <h2 className="text-2xl font-bold text-gray-800">{selectedDay.title}</h2>
-                                    <p className="text-gray-600 mt-1">{selectedDay.description || 'No description'}</p>
+                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handleExport}
-                                            className="flex items-center text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition"
+                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition"
                                             title="Export CSV"
                                         >
                                             <Download size={16} className="mr-2" /> Export
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}
-                                            className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition"
                                         >
                                             <Camera size={16} className="mr-2" /> Smart Scan
                                         </button>
@@ -768,15 +778,23 @@ const Attendance = () => {
                             {/* Filters */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                 <div className="md:col-span-3 flex justify-center mb-2">
-                                    <div className="bg-gray-200 rounded p-1 flex">
+                                    <div className="bg-gray-200 dark:bg-gray-800 rounded p-1 flex">
                                         <button
-                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'cadet' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
                                             onClick={() => setAttendanceType('cadet')}
                                         >
                                             Cadets
                                         </button>
                                         <button
-                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'staff' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
                                             onClick={() => setAttendanceType('staff')}
                                         >
                                             Training Staff
@@ -786,7 +804,7 @@ const Attendance = () => {
 
                                 <input 
                                     placeholder="Search Name..." 
-                                    className="border p-2 rounded"
+                                    className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
@@ -794,13 +812,13 @@ const Attendance = () => {
                                     <>
                                         <input 
                                             placeholder="Company (A/B/C)" 
-                                            className="border p-2 rounded"
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                             value={filterCompany}
                                             onChange={e => setFilterCompany(e.target.value)}
                                         />
                                         <input 
                                             placeholder="Platoon (1/2/3)" 
-                                            className="border p-2 rounded"
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                             value={filterPlatoon}
                                             onChange={e => setFilterPlatoon(e.target.value)}
                                         />
@@ -812,30 +830,30 @@ const Attendance = () => {
                         {/* List */}
                         <div className="flex-1 overflow-y-auto p-4">
                             {filteredRecords.length === 0 ? (
-                                <div className="text-center text-gray-500 py-10">
+                                <div className="text-center text-gray-500 dark:text-gray-400 py-10">
                                     No records found matching filters.
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     {filteredRecords.map(record => (
-                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 transition">
+                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition border-gray-200 dark:border-gray-700">
                                             <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
                                                 <div className="flex items-center">
-                                                    <span className="font-bold text-gray-800 mr-2">
+                                                    <span className="font-bold text-gray-800 dark:text-gray-100 mr-2">
                                                         {record.last_name}, {record.first_name}
                                                     </span>
                                                     {attendanceType === 'cadet' && (
-                                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                                                             {record.company}/{record.platoon}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-sm text-gray-500 flex flex-wrap gap-4 mt-1">
+                                                <div className="text-sm text-gray-500 dark:text-gray-300 flex flex-wrap gap-4 mt-1">
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-xs uppercase">In:</span>
                                                         <input 
                                                             type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs"
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                                             value={record.time_in || ''}
                                                             onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
                                                             onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
@@ -845,14 +863,14 @@ const Attendance = () => {
                                                         <span className="text-xs uppercase">Out:</span>
                                                         <input 
                                                             type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs"
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                                             value={record.time_out || ''}
                                                             onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
                                                             onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
                                                         />
                                                     </div>
                                                     <input 
-                                                        className="border-b border-gray-300 focus:border-blue-500 outline-none text-xs w-32 bg-transparent"
+                                                        className="border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs w-32 bg-transparent dark:text-gray-100"
                                                         placeholder="Remarks..."
                                                         value={record.remarks || ''}
                                                         onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
@@ -861,7 +879,7 @@ const Attendance = () => {
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex gap-2">
+                                        <div className="flex gap-2">
                                                 <button 
                                                     onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
                                                     className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
@@ -898,7 +916,7 @@ const Attendance = () => {
                         </div>
                             </>
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                                 <Calendar size={64} className="mb-4 opacity-20" />
                                 <p className="text-lg">Select a training day to view attendance</p>
                             </div>
@@ -910,32 +928,32 @@ const Attendance = () => {
             {/* Create Day Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded p-6 w-full max-w-md shadow-xl">
-                        <h3 className="text-lg font-bold mb-4">New Training Day</h3>
+                    <div className="bg-white dark:bg-gray-900 rounded p-6 w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-gray-100">New Training Day</h3>
                         <form onSubmit={handleCreateDay} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Date</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Date</label>
                                 <input 
                                     type="date" required
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={createForm.date}
                                     onChange={e => setCreateForm({...createForm, date: e.target.value})}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Title</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
                                 <input 
                                     type="text" required
                                     placeholder="e.g. Drill Day 1"
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={createForm.title}
                                     onChange={e => setCreateForm({...createForm, title: e.target.value})}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
                                 <textarea 
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={createForm.description}
                                     onChange={e => setCreateForm({...createForm, description: e.target.value})}
                                 />
@@ -944,13 +962,13 @@ const Attendance = () => {
                                 <button 
                                     type="button" 
                                     onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800"
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
                                 >
                                     Create Day
                                 </button>

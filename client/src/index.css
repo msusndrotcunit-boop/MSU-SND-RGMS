@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary-color: #10b981;
+  --primary-color-soft: rgba(16, 185, 129, 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
 .app-bg {
   background-color: #f3f4f6;
   background-image: 

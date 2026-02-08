@@ -222,20 +222,20 @@ const StaffLayout = () => {
 
              {/* Sidebar */}
              <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-green-800 flex justify-between items-center">
+                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>Training Staff</span>
                     <div className="flex items-center space-x-3">
                         <button
                             onClick={shareLocation}
-                            className="text-green-200 hover:text-white flex items-center space-x-1 text-xs border border-green-700 px-2 py-1 rounded-full"
+                            className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1"
                         >
                             <MapPin size={14} />
                             <span>Share Location</span>
                         </button>
-                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white/80 hover:text-white">
                             <X size={24} />
                         </button>
                     </div>
@@ -250,7 +250,7 @@ const StaffLayout = () => {
                         }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            location.pathname === '/staff/home' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -268,7 +268,7 @@ const StaffLayout = () => {
                         }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            location.pathname === '/staff/dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -287,7 +287,7 @@ const StaffLayout = () => {
                                 }}
                                 className={clsx(
                                     "flex items-center space-x-3 p-3 rounded transition",
-                                    location.pathname === '/staff/unit-dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    location.pathname === '/staff/unit-dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
                             >
@@ -304,7 +304,7 @@ const StaffLayout = () => {
                                 }}
                                 className={clsx(
                                     "flex items-center space-x-3 p-3 rounded transition",
-                                    location.pathname === '/staff/data-analysis' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    location.pathname === '/staff/data-analysis' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
                             >
@@ -321,7 +321,7 @@ const StaffLayout = () => {
                                 }}
                                 className={clsx(
                                     "flex items-center space-x-3 p-3 rounded transition",
-                                    location.pathname === '/staff/activities' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                                    location.pathname === '/staff/activities' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
                             >
@@ -341,7 +341,7 @@ const StaffLayout = () => {
                         }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/communication' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            location.pathname === '/staff/communication' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -361,7 +361,7 @@ const StaffLayout = () => {
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/ask-admin' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                            location.pathname === '/staff/ask-admin' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                         )}
                     >
                         <HelpCircle size={20} />
@@ -374,7 +374,7 @@ const StaffLayout = () => {
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/profile' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                            location.pathname === '/staff/profile' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                         )}
                     >
                         <User size={20} />
@@ -391,7 +391,7 @@ const StaffLayout = () => {
                         }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/my-qr' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            location.pathname === '/staff/my-qr' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -409,7 +409,7 @@ const StaffLayout = () => {
                         }}
                         className={clsx(
                             "flex items-center space-x-3 p-3 rounded transition",
-                            location.pathname === '/staff/settings' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white",
+                            location.pathname === '/staff/settings' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -418,10 +418,10 @@ const StaffLayout = () => {
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
                 </nav>
-                <div className="p-4 border-t border-green-800">
+                <div className="p-4 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-green-200 hover:text-white hover:bg-green-800 rounded transition"
+                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/10 rounded transition"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
@@ -430,19 +430,19 @@ const StaffLayout = () => {
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow p-4 flex items-center justify-between">
+                <header className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between">
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            className="text-green-900 focus:outline-none md:hidden mr-4"
+                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4"
                         >
                             <Menu size={24} />
                         </button>
-                        <span className="font-bold text-green-900">Training Staff Portal</span>
+                        <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>
 
                     <div className="flex items-center space-x-2 md:space-x-4">
-                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                        <button onClick={openMessages} className="relative text-gray-600 dark:text-gray-300 hover:text-[var(--primary-color)]">
                             <Mail size={20} />
                             {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
                         </button>
@@ -450,28 +450,28 @@ const StaffLayout = () => {
                             onClick={openNotifications} 
                             className={clsx(
                                 "relative transition-colors",
-                                notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                                notifHighlight ? "text-[var(--primary-color)]" : "text-gray-600 dark:text-gray-300 hover:text-[var(--primary-color)]"
                             )}
                         >
                             <Bell size={20} />
                             {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
                         </button>
                         {(notifOpen && notifications.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow w-80 z-50">
                                 {notifications.map(n => (
                                     <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800">{n.message}</div>
-                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                        <div className="text-sm text-gray-800 dark:text-gray-100">{n.message}</div>
+                                        <div className="text-xs text-gray-400 dark:text-gray-400">{n.type}</div>
                                     </div>
                                 ))}
                             </div>
                         )}
                         {(messageOpen && messages.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow w-80 z-50">
                                 {messages.map(m => (
                                     <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800">{m.subject}</div>
-                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                        <div className="text-sm text-gray-800 dark:text-gray-100">{m.subject}</div>
+                                        <div className="text-xs text-gray-400 dark:text-gray-400">{m.sender_role}</div>
                                     </div>
                                 ))}
                             </div>
@@ -479,17 +479,17 @@ const StaffLayout = () => {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-8">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8">
                     <Outlet />
                 </main>
 
                 {isPrivilegedStaff &&
                     user?.isProfileCompleted &&
                     !['/staff/communication', '/staff/profile', '/staff/settings'].includes(location.pathname) && (
-                    <div className="border-t bg-white px-3 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-4">
+                    <div className="border-t bg-white dark:bg-gray-900 px-3 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-4">
                         <Link
                             to="/staff/unit-dashboard"
-                            className="flex-1 flex items-center justify-center bg-green-900 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:bg-green-800 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)] text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors"
                         >
                             <LayoutDashboard size={16} className="mr-1" />
                             <span className="hidden sm:inline">Unit Dashboard</span>
@@ -497,7 +497,7 @@ const StaffLayout = () => {
                         </Link>
                         <Link
                             to="/staff/data-analysis"
-                            className="flex-1 flex items-center justify-center bg-green-800 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:bg-green-700 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)]/90 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors"
                         >
                             <PieChart size={16} className="mr-1" />
                             <span className="hidden sm:inline">Data Analysis</span>
@@ -505,7 +505,7 @@ const StaffLayout = () => {
                         </Link>
                         <Link
                             to="/staff/activities"
-                            className="flex-1 flex items-center justify-center bg-yellow-400 text-green-900 text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-yellow-400 text-[var(--primary-color)] text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors"
                         >
                             <Calendar size={16} className="mr-1" />
                             <span className="hidden sm:inline">Activities</span>
@@ -513,7 +513,8 @@ const StaffLayout = () => {
                         </Link>
                         <button
                             onClick={shareLocation}
-                            className="flex items-center justify-center bg-white text-green-900 text-xs md:text-sm rounded-full px-3 py-2 border border-green-500 hover:bg-green-50 transition-colors"
+                            onClick={shareLocation}
+                            className="flex items-center justify-center bg-white dark:bg-gray-900 text-[var(--primary-color)] text-xs md:text-sm rounded-full px-3 py-2 border border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-colors"
                         >
                             <MapPin size={16} className="mr-1" />
                             <span className="hidden sm:inline">Share Location</span>
@@ -525,26 +526,26 @@ const StaffLayout = () => {
 
             {showPermissionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
-                        <p className="text-sm text-gray-600 mb-3">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Allow App Permissions</h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                             This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
                         </p>
-                        <p className="text-xs text-gray-500 mb-4">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                             You can change these permissions anytime in your browser or device settings.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button
                                 type="button"
                                 onClick={handlePermissionsSkip}
-                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                                className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                             >
                                 Not now
                             </button>
                             <button
                                 type="button"
                                 onClick={handlePermissionsAccept}
-                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                                className="px-4 py-2 text-sm rounded bg-[var(--primary-color)] text-white hover:opacity-90"
                             >
                                 Allow permissions
                             </button>

@@ -123,15 +123,15 @@ const Activities = () => {
     };
 
     return (
-        <div>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-                <h2 className="text-xl sm:text-2xl font-bold">Activity Management</h2>
+        <div className="h-full flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 bg-white dark:bg-gray-900 p-4 rounded shadow">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">Activity Management</h2>
                 <button 
                     onClick={() => {
                         resetForms();
                         setIsModalOpen(true);
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-blue-700"
+                    className="bg-[var(--primary-color)] text-white px-4 py-2 rounded flex items-center space-x-2 hover:opacity-90"
                 >
                     <Plus size={18} />
                     <span>New Post</span>
@@ -139,16 +139,24 @@ const Activities = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-1 mb-6 border-b">
+            <div className="flex space-x-1 mb-6 border-b border-gray-200 dark:border-gray-700">
                 <button 
                     onClick={() => setActiveTab('activity')}
-                    className={`px-6 py-2 font-medium transition-colors ${activeTab === 'activity' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-6 py-2 font-medium transition-colors ${
+                        activeTab === 'activity' 
+                            ? 'border-b-2 border-[var(--primary-color)] text-[var(--primary-color)]' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
                 >
                     Activities
                 </button>
                 <button 
                     onClick={() => setActiveTab('announcement')}
-                    className={`px-6 py-2 font-medium transition-colors ${activeTab === 'announcement' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-6 py-2 font-medium transition-colors ${
+                        activeTab === 'announcement' 
+                            ? 'border-b-2 border-[var(--primary-color)] text-[var(--primary-color)]' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
                 >
                     Announcements
                 </button>
@@ -158,16 +166,16 @@ const Activities = () => {
                 {activities
                     .filter(a => (a.type || 'activity') === activeTab)
                     .map(activity => (
-                    <div key={activity.id} className="bg-white rounded shadow overflow-hidden">
+                    <div key={activity.id} className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800">
                         <div className="p-4">
-                            <h3 className="font-bold text-xl mb-2">{activity.title}</h3>
-                            <div className="flex items-center text-gray-500 text-sm mb-3">
+                            <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
+                            <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
                                 <Calendar size={14} className="mr-1" />
                                 {new Date(activity.date).toLocaleDateString()}
                             </div>
                             
                             {/* Display Primary Image */}
-                            <div className="w-full h-48 mb-4 bg-gray-200 rounded overflow-hidden">
+                            <div className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
                                 <img 
                                     src={`/api/images/activities/${activity.id}`} 
                                     alt={activity.title}
@@ -176,7 +184,7 @@ const Activities = () => {
                                 />
                             </div>
 
-                            <p className="text-gray-600 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
+                            <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
                             <button 
                                 onClick={() => handleDelete(activity.id)}
                                 className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center"
@@ -189,38 +197,38 @@ const Activities = () => {
             </div>
             
             {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
-                <div className="text-center py-10 text-gray-500">
+                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                     No {activeTab}s found.
                 </div>
             )}
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-                    <div className="bg-white rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Add New {activeTab === 'activity' ? 'Activity' : 'Announcement'}</h3>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Add New {activeTab === 'activity' ? 'Activity' : 'Announcement'}</h3>
                             <button onClick={() => setIsModalOpen(false)}><X size={24} /></button>
                         </div>
                         
                         {/* Tab Toggle inside Modal */}
-                        <div className="flex space-x-4 mb-4 border-b pb-2">
+                        <div className="flex space-x-4 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
                              <button 
                                 onClick={() => setActiveTab('activity')}
-                                className={`font-medium ${activeTab === 'activity' ? 'text-blue-600' : 'text-gray-500'}`}
+                                className={`font-medium ${activeTab === 'activity' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
                              >Activity</button>
                              <button 
                                 onClick={() => setActiveTab('announcement')}
-                                className={`font-medium ${activeTab === 'announcement' ? 'text-blue-600' : 'text-gray-500'}`}
+                                className={`font-medium ${activeTab === 'announcement' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
                              >Announcement</button>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Title</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Title</label>
                                 <input 
                                     type="text" 
                                     required 
-                                    className="mt-1 w-full border rounded p-2"
+                                    className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={form.title}
                                     onChange={e => setForm({...form, title: e.target.value})}
                                 />
@@ -228,10 +236,10 @@ const Activities = () => {
                             
                             {activeTab === 'activity' ? (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
                                     <textarea 
                                         required 
-                                        className="mt-1 w-full border rounded p-2"
+                                        className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                         rows="4"
                                         value={form.description}
                                         onChange={e => setForm({...form, description: e.target.value})}
@@ -240,66 +248,66 @@ const Activities = () => {
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700">WHAT</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2" value={announcement.what} onChange={e => setAnnouncement({...announcement, what: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHAT</label>
+                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.what} onChange={e => setAnnouncement({...announcement, what: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">WHEN</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2" value={announcement.when} onChange={e => setAnnouncement({...announcement, when: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHEN</label>
+                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.when} onChange={e => setAnnouncement({...announcement, when: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">WHERE</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2" value={announcement.where} onChange={e => setAnnouncement({...announcement, where: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHERE</label>
+                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.where} onChange={e => setAnnouncement({...announcement, where: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">WHO</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2" value={announcement.who} onChange={e => setAnnouncement({...announcement, who: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHO</label>
+                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.who} onChange={e => setAnnouncement({...announcement, who: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">HOW</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2" value={announcement.how} onChange={e => setAnnouncement({...announcement, how: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">HOW</label>
+                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.how} onChange={e => setAnnouncement({...announcement, how: e.target.value})} />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700">NOTE</label>
-                                        <textarea className="mt-1 w-full border rounded p-2" rows="2" value={announcement.note} onChange={e => setAnnouncement({...announcement, note: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">NOTE</label>
+                                        <textarea className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.note} onChange={e => setAnnouncement({...announcement, note: e.target.value})} />
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700">REMINDERS</label>
-                                        <textarea className="mt-1 w-full border rounded p-2" rows="2" value={announcement.reminders} onChange={e => setAnnouncement({...announcement, reminders: e.target.value})} />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">REMINDERS</label>
+                                        <textarea className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.reminders} onChange={e => setAnnouncement({...announcement, reminders: e.target.value})} />
                                     </div>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Date</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Date</label>
                                 <input 
                                     type="date" 
                                     required 
-                                    className="mt-1 w-full border rounded p-2"
+                                    className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={form.date}
                                     onChange={e => setForm({...form, date: e.target.value})}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Photos (Min: {activeTab === 'activity' ? 3 : 1})
                                 </label>
-                                <div className="mt-1 flex items-center justify-center px-3 sm:px-6 pt-4 pb-5 border-2 border-gray-300 border-dashed rounded-md">
+                                <div className="mt-1 flex items-center justify-center px-3 sm:px-6 pt-4 pb-5 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
-                                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                                        <div className="flex text-sm text-gray-600">
-                                            <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                        <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                                        <div className="flex text-sm text-gray-600 dark:text-gray-300">
+                                            <label className="relative cursor-pointer bg-white dark:bg-gray-900 rounded-md font-medium text-[var(--primary-color)] hover:opacity-90 focus-within:outline-none">
                                                 <span>Upload files</span>
                                                 <input type="file" multiple className="sr-only" onChange={handleFileChange} accept="image/*" />
                                             </label>
                                         </div>
-                                        <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 5MB</p>
                                     </div>
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {form.images.map((img, index) => (
-                                        <div key={index} className="relative h-20 bg-gray-100 rounded overflow-hidden group">
+                                        <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
                                             <img 
                                                 src={URL.createObjectURL(img)} 
                                                 alt="preview" 
@@ -321,13 +329,13 @@ const Activities = () => {
                                 <button 
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50"
+                                    className="px-4 py-2 border rounded text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
                                 >
                                     Post {activeTab === 'activity' ? 'Activity' : 'Announcement'}
                                 </button>
@@ -337,8 +345,8 @@ const Activities = () => {
                 </div>
             )}
 
-            <div className="mt-6 bg-green-900 text-white rounded-lg p-4 shadow-md">
-                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+            <div className="mt-6 bg-[var(--primary-color)] text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-white/20 pb-1">
                     <Zap size={18} className="text-yellow-400 mr-2" />
                     <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
                 </div>

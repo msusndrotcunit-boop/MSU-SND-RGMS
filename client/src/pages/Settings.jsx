@@ -100,26 +100,26 @@ const Settings = ({ role }) => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
-                <PaintBucket className="text-blue-600" />
+        <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <PaintBucket className="text-[var(--primary-color)]" />
                 My Settings
             </h2>
 
             <div className="space-y-8">
                 {/* Notifications Settings */}
                 <section>
-                    <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
                         <Bell size={20} />
                         Notifications
                     </h3>
-                    <div className="space-y-3 pl-4 border-l-2 border-gray-100">
+                    <div className="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={localSettings.notifications.emailAlerts}
                                 onChange={(e) => handleChange('notifications', 'emailAlerts', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Email Alerts</span>
                         </label>
@@ -146,17 +146,17 @@ const Settings = ({ role }) => {
 
                 {/* Display Settings */}
                 <section>
-                    <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
                         <Monitor size={20} />
                         Display
                     </h3>
-                    <div className="space-y-3 pl-4 border-l-2 border-gray-100">
+                    <div className="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={localSettings.display.darkMode}
                                 onChange={(e) => handleChange('display', 'darkMode', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Dark Mode (Beta)</span>
                         </label>
@@ -165,7 +165,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.display.compactMode}
                                 onChange={(e) => handleChange('display', 'compactMode', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Compact Mode</span>
                         </label>
@@ -174,12 +174,12 @@ const Settings = ({ role }) => {
 
                 {/* Theme Settings */}
                 <section>
-                    <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
                         <PaintBucket size={20} />
                         Theme Customization
                     </h3>
-                    <div className="pl-4 border-l-2 border-gray-100">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Primary Color</label>
+                    <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
                         <div className="flex gap-4">
                             {['blue', 'green', 'red', 'purple', 'orange'].map(color => (
                                 <button
