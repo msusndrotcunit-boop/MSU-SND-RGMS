@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #10b981;
-  --primary-color-soft: rgba(16, 185, 129, 0.12);
+  --primary-color: #0f766e;
+  --primary-color-soft: rgba(15, 118, 110, 0.12);
 }
 
 .dark {
@@ -14,8 +14,8 @@
 .app-bg {
   background-color: #f3f4f6;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(22, 163, 74, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(22, 163, 74, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, var(--primary-color-soft) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--primary-color-soft) 0px, transparent 50%),
     repeating-linear-gradient(45deg, rgba(0,0,0,0.01) 0px, rgba(0,0,0,0.01) 2px, transparent 2px, transparent 10px);
 }
 

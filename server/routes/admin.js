@@ -307,6 +307,15 @@ router.get('/locations', (req, res) => {
 });
 
 router.post('/broadcast-onboarding', (req, res) => {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+        return res.status(500).json({
+            message: 'Email sending is not configured on the server. Please set EMAIL_USER and EMAIL_PASS environment variables to enable onboarding emails.'
+        });
+    }
+
     const sql = `
         SELECT 
             id,
@@ -363,10 +372,21 @@ router.post('/broadcast-onboarding', (req, res) => {
         });
 
         try {
-            await Promise.all(tasks);
-        } catch {}
+            const results = await Promise.all(tasks);
+            const successCount = results.filter(Boolean).length;
+            const failCount = rows.length - successCount;
 
-        res.json({ message: `Broadcast started for ${rows.length} users.` });
+            if (successCount === 0) {
+                return res.status(500).json({
+                    message: 'Failed to send onboarding emails. Please check email configuration (EMAIL_USER/EMAIL_PASS) and server logs.'
+                });
+            }
+
+            res.json({ message: `Onboarding email sent to ${successCount} users. Failed: ${failCount}.` });
+        } catch (e) {
+            console.error('Broadcast onboarding email error:', e);
+            res.status(500).json({ message: 'Failed to send onboarding emails due to an unexpected server error.' });
+        }
     });
 });
 

@@ -11,7 +11,7 @@ const sendEmail = async (to, subject, text, html) => {
             console.log(`Subject: ${subject}`);
             console.log(`Text: ${text}`);
             console.log('------------------------');
-            return;
+            return false;
         }
 
         const fromAddress = process.env.EMAIL_FROM || user;
@@ -36,8 +36,10 @@ const sendEmail = async (to, subject, text, html) => {
 
         await transporter.sendMail(mailOptions);
         console.log(`Email sent to ${to}`);
+        return true;
     } catch (error) {
         console.error('Error sending email:', error);
+        return false;
     }
 };
 

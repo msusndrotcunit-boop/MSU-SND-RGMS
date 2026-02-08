@@ -370,7 +370,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
 
 // Staff Attendance Scan Endpoint
 router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
-    const { dayId, qrData, status: providedStatus } = req.body;
+    const { dayId, qrData, status: providedStatus, time_in: providedTimeIn, time_out: providedTimeOut } = req.body;
     
     try {
         let staffData;
@@ -390,17 +390,24 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
             if (err) return res.status(500).json({ message: err.message });
             if (!staff) return res.status(404).json({ message: 'Staff not found' });
 
-            // Mark Attendance
             const status = providedStatus || 'present';
             const remarks = 'Scanned via QR';
 
-            db.get('SELECT id FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
+            db.get('SELECT id, time_in, time_out FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
                 if (err) return res.status(500).json({ message: err.message });
 
                 if (row) {
-                    // Update
-                    db.run('UPDATE staff_attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                        [status, remarks, row.id], 
+                    let timeIn = row.time_in;
+                    let timeOut = row.time_out;
+
+                    if (!timeIn && status === 'present') {
+                        timeIn = providedTimeIn || new Date().toLocaleTimeString();
+                    } else if (timeIn && !timeOut && status === 'present') {
+                        timeOut = providedTimeOut || new Date().toLocaleTimeString();
+                    }
+
+                    db.run('UPDATE staff_attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
+                        [status, remarks, timeIn, timeOut, row.id], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
@@ -427,9 +434,15 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         }
                     );
                 } else {
-                    // Insert
-                    db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                        [dayId, staffId, status, remarks], 
+                    let timeIn = null;
+                    let timeOut = null;
+
+                    if (status === 'present') {
+                        timeIn = providedTimeIn || new Date().toLocaleTimeString();
+                    }
+
+                    db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                        [dayId, staffId, status, remarks, timeIn, timeOut], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
@@ -981,7 +994,9 @@ router.get('/records/staff/:dayId', authenticateToken, isAdmin, (req, res) => {
             s.first_name, 
             s.rank,
             sar.status, 
-            sar.remarks
+            sar.remarks,
+            sar.time_in,
+            sar.time_out
         FROM training_staff s
         LEFT JOIN staff_attendance_records sar ON s.id = sar.staff_id AND sar.training_day_id = ?
         WHERE (s.is_archived IS FALSE OR s.is_archived IS NULL)
