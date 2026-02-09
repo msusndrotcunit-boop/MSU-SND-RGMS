@@ -52,12 +52,6 @@ router.post('/', async (req, res) => {
 
     try {
         await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, ?, ?, ?)`, [userId, role, subject, message]);
-        
-        // Notify Admin
-        const type = 'ask_admin'; // Goes to Bell
-        const notifMsg = `New Ask Admin message from ${role} (User ID: ${userId})`;
-        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, [notifMsg, type]);
-
         res.status(201).json({ message: 'Message sent successfully' });
     } catch (err) {
         console.error('Error sending message:', err);

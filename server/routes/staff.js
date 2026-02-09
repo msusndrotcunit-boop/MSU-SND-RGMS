@@ -616,13 +616,6 @@ router.post('/chat/messages', authenticateToken, (req, res) => {
     }
     db.run(`INSERT INTO staff_messages (sender_staff_id, content) VALUES (?, ?)`, [senderId, content.trim()], function(err) {
         if (err) return res.status(500).json({ message: err.message });
-        
-        // Notify Admin (Mail Icon)
-        // type 'staff_chat'
-        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-            [`New message in Staff Communication Panel`, 'staff_chat']
-        );
-
         res.json({ id: this.lastID, message: 'Message posted' });
 
         // Send Push Notifications

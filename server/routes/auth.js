@@ -263,9 +263,8 @@ router.get('/debug-check-user/:username', (req, res) => {
 });
 
 
-// Cadet Login (No Password)
 router.post('/cadet-login', (req, res) => {
-    let { identifier } = req.body; // Can be Student ID or Email
+    let { identifier } = req.body;
 
     if (!identifier) {
         return res.status(400).json({ message: 'Please enter your Username or Email.' });
@@ -273,9 +272,6 @@ router.post('/cadet-login', (req, res) => {
     
     identifier = identifier.trim();
 
-    // Check by Username (Student ID) or Email
-    // Only for role = 'cadet'
-    // Join with cadets to get is_profile_completed status and Name
     const sql = `
         SELECT u.*, c.is_profile_completed, c.first_name, c.last_name
         FROM users u 
@@ -290,29 +286,87 @@ router.post('/cadet-login', (req, res) => {
             return res.status(400).json({ message: 'User not found. Please contact your administrator if you believe this is an error.' });
         }
 
-        // SMART ERROR: Wrong Role
         if (user.role !== 'cadet') {
             return res.status(400).json({ 
                 message: `You are trying to login as a Cadet, but this account belongs to a ${user.role === 'training_staff' ? 'Staff' : 'Admin'}. Please switch to the correct login tab.` 
             });
         }
 
-        // Token
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '1h' });
+        if (user.is_approved === 0) {
+            return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
+        }
 
-        // Update last_seen
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+
         const now = new Date().toISOString();
-        db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
+        db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err2) => { if(err2) console.error(err2); });
 
-        // Notify Admin
         const displayName = `${user.rank || 'Cadet'} ${user.last_name}`; 
         const msg = `${displayName} logged in (No Password).`;
         db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, [msg, 'login']);
 
+        const isProfileCompleted = !!user.is_profile_completed;
+
         res.json({ 
             token, 
-            role: user.role, 
-            is_profile_completed: !!user.is_profile_completed 
+            role: user.role,
+            cadetId: user.cadet_id,
+            staffId: user.staff_id,
+            isProfileCompleted
+        });
+    });
+});
+
+router.post('/staff-login-no-pass', (req, res) => {
+    let { identifier } = req.body;
+
+    if (!identifier) {
+        return res.status(400).json({ message: 'Please enter your Username or Email.' });
+    }
+    
+    identifier = identifier.trim();
+
+    const sql = `
+        SELECT u.*, s.is_profile_completed, s.first_name, s.last_name
+        FROM users u 
+        LEFT JOIN training_staff s ON u.staff_id = s.id 
+        WHERE (u.username = ? OR u.email = ?)
+    `;
+    
+    db.get(sql, [identifier, identifier], (err, user) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        if (!user) {
+            return res.status(400).json({ message: 'User not found. Please contact your administrator if you believe this is an error.' });
+        }
+
+        if (user.role !== 'training_staff') {
+            return res.status(400).json({ 
+                message: `You are trying to login as Staff, but this account belongs to a ${user.role === 'cadet' ? 'Cadet' : 'Admin'}. Please switch to the correct login tab.` 
+            });
+        }
+
+        if (user.is_approved === 0) {
+            return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
+        }
+
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+
+        const now = new Date().toISOString();
+        db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err2) => { if(err2) console.error(err2); });
+
+        const displayName = `${user.rank || 'Staff'} ${user.last_name}`; 
+        const msg = `${displayName} logged in (No Password).`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, [msg, 'login']);
+
+        const isProfileCompleted = !!user.is_profile_completed;
+
+        res.json({ 
+            token, 
+            role: user.role,
+            cadetId: user.cadet_id,
+            staffId: user.staff_id,
+            isProfileCompleted
         });
     });
 });

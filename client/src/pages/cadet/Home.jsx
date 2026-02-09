@@ -11,8 +11,37 @@ const CadetHome = () => {
     const [loading, setLoading] = useState(true);
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [lightboxIndex, setLightboxIndex] = useState(0);
-    const [slideDirection, setSlideDirection] = useState('right'); // 'right' (next) or 'left' (prev)
-    const [activeTab, setActiveTab] = useState('activities'); // 'activities' or 'announcements'
+    const [slideDirection, setSlideDirection] = useState('right');
+    const [activeTab, setActiveTab] = useState('activities');
+
+    const getImages = (activity) => {
+        if (!activity) return [];
+        let imgs = [];
+
+        if (Array.isArray(activity.images)) {
+            imgs = activity.images;
+        } else if (typeof activity.images === 'string') {
+            try {
+                const parsed = JSON.parse(activity.images);
+                if (Array.isArray(parsed)) imgs = parsed;
+            } catch {}
+        }
+
+        imgs = (imgs || []).filter(Boolean);
+
+        if (imgs.length === 0 && activity.image_path) {
+            const src = activity.image_path.startsWith('data:')
+                ? activity.image_path
+                : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
+            return [src];
+        }
+
+        return imgs.map((src) =>
+            src.startsWith('data:') || src.startsWith('http')
+                ? src
+                : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
+        );
+    };
 
     useEffect(() => {
         if (selectedActivity) {
@@ -53,7 +82,7 @@ const CadetHome = () => {
         if (!hasActivities) return;
         const interval = setInterval(() => {
             setCurrentIndex((prev) => (prev + 1) % filteredActivities.length);
-        }, 8000); 
+        }, 15000);
 
         return () => clearInterval(interval);
     }, [hasActivities, filteredActivities.length]);
@@ -121,19 +150,20 @@ const CadetHome = () => {
                                         className="w-full flex-shrink-0 bg-white"
                                         onClick={() => setSelectedActivity(activity)}
                                     >
-                                        {activity.image_path && (
-                                            <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
-                                                <img
-                                                    src={
-                                                        activity.image_path.startsWith('data:')
-                                                            ? activity.image_path
-                                                            : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`
-                                                    }
-                                                    alt={activity.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            const images = getImages(activity);
+                                            const primary = images[0];
+                                            if (!primary) return null;
+                                            return (
+                                                <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
+                                                    <img
+                                                        src={primary}
+                                                        alt={activity.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="p-6">
                                             <div className="flex items-center text-gray-500 text-sm mb-2">
                                                 <Calendar size={16} className="mr-2" />
@@ -214,12 +244,9 @@ const CadetHome = () => {
                              `}</style>
 
                              {(() => {
-                                const hasMultipleImages = selectedActivity.images && selectedActivity.images.length > 0;
-                                const currentImageSrc = hasMultipleImages
-                                    ? `/api/images/activity-images/${selectedActivity.images[lightboxIndex]}`
-                                    : (selectedActivity.image_path?.startsWith('data:')
-                                        ? selectedActivity.image_path
-                                        : `${import.meta.env.VITE_API_URL || ''}${selectedActivity.image_path?.replace(/\\/g, '/')}`);
+                                const images = getImages(selectedActivity);
+                                const hasImages = images.length > 0;
+                                const currentImageSrc = hasImages ? images[lightboxIndex] : null;
 
                                 return (
                                     <>
@@ -234,15 +261,14 @@ const CadetHome = () => {
                                             <div className="text-gray-500">No image available</div>
                                         )}
 
-                                        {/* Navigation Arrows */}
-                                        {hasMultipleImages && selectedActivity.images.length > 1 && (
+                                        {images.length > 1 && (
                                             <>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setSlideDirection('left');
                                                         setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev - 1 + selectedActivity.images.length) % selectedActivity.images.length);
+                                                            setLightboxIndex(prev => (prev - 1 + images.length) % images.length);
                                                         }, 0);
                                                     }}
                                                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
@@ -254,7 +280,7 @@ const CadetHome = () => {
                                                         e.stopPropagation();
                                                         setSlideDirection('right');
                                                         setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev + 1) % selectedActivity.images.length);
+                                                            setLightboxIndex(prev => (prev + 1) % images.length);
                                                         }, 0);
                                                     }}
                                                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
@@ -264,7 +290,7 @@ const CadetHome = () => {
                                                 
                                                 {/* Image Counter */}
                                                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
-                                                    {lightboxIndex + 1} / {selectedActivity.images.length}
+                                                    {lightboxIndex + 1} / {images.length}
                                                 </div>
                                             </>
                                         )}
