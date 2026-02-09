@@ -16,6 +16,10 @@ client/dev-dist/
 logs/
 *.log
 
+# Uploads
+uploads/
+server/uploads/
+client/public/uploads/
 
 .vscode/
 *.swp

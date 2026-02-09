@@ -494,6 +494,12 @@ async function initPgDb() {
             status TEXT DEFAULT 'pending',
             admin_reply TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS activity_images (
+            id SERIAL PRIMARY KEY,
+            activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
+            image_path TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
     ];
 
@@ -511,6 +517,22 @@ async function initPgDb() {
             }
         }
         console.log('Tables created successfully.');
+
+        // Migrate existing activity images to activity_images table
+        try {
+            const activities = await db.pool.query('SELECT id, image_path FROM activities WHERE image_path IS NOT NULL');
+            for (const activity of activities.rows) {
+                if (activity.image_path) {
+                    // Check if already migrated
+                    const existing = await db.pool.query('SELECT id FROM activity_images WHERE activity_id = $1 AND image_path = $2', [activity.id, activity.image_path]);
+                    if (existing.rows.length === 0) {
+                        await db.pool.query('INSERT INTO activity_images (activity_id, image_path) VALUES ($1, $2)', [activity.id, activity.image_path]);
+                    }
+                }
+            }
+        } catch (migErr) {
+            console.warn('Migration of activity images failed (non-critical):', migErr.message);
+        }
 
         // Consolidated Migrations
         console.log('Running consolidated migrations...');

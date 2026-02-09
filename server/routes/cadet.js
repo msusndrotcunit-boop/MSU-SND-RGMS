@@ -53,9 +53,10 @@ router.get('/my-grades', async (req, res) => {
         const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {
-            attendance_present: attendancePresent,
-            merit_points: meritPoints,
-            demerit_points: demeritPoints,
+            // Prioritize Admin's manual entry (gradeRow) over raw logs (calculated)
+            attendance_present: gradeRow ? gradeRow.attendance_present : attendancePresent,
+            merit_points: gradeRow ? gradeRow.merit_points : meritPoints,
+            demerit_points: gradeRow ? gradeRow.demerit_points : demeritPoints,
             prelim_score: gradeRow?.prelim_score || 0,
             midterm_score: gradeRow?.midterm_score || 0,
             final_score: gradeRow?.final_score || 0,
@@ -345,12 +346,30 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     });
 });
 
-router.get('/activities', (req, res) => {
-    // Return id, title, description, date, type
-    db.all(`SELECT id, title, description, date, type FROM activities ORDER BY date DESC`, [], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
+router.get('/activities', async (req, res) => {
+    try {
+        const activities = await new Promise((resolve, reject) => {
+            db.all(`SELECT id, title, description, date, type, image_path FROM activities ORDER BY date DESC`, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        // For each activity, fetch image IDs
+        const activitiesWithImages = await Promise.all(activities.map(async (activity) => {
+            const images = await new Promise((resolve) => {
+                db.all(`SELECT id FROM activity_images WHERE activity_id = ?`, [activity.id], (err, rows) => {
+                    if (err) resolve([]);
+                    else resolve(rows.map(r => r.id)); // Return array of IDs
+                });
+            });
+            return { ...activity, images };
+        }));
+
+        res.json(activitiesWithImages);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 // Acknowledge User Guide

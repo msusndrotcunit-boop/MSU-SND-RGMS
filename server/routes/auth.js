@@ -197,12 +197,14 @@ router.post('/login', (req, res) => {
             
             // Notify Admin of Login if it's a cadet (or staff?)
             if (user.role === 'cadet' || user.role === 'training_staff') {
-                const displayName = user.username; // Or fetch name if available
-                const notifMsg = `${displayName} (${user.role}) has logged in.`;
+                const displayName = user.username; 
+                const msg = `User ${displayName} (${user.role}) logged in to the portal.`;
+                
+                // Notify Admins (NULL user_id for global admin notifications)
                 db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-                    [notifMsg, 'login'], 
-                    (nErr) => {
-                        if (nErr) console.error("Error creating login notification:", nErr);
+                    [msg, 'login'], 
+                    (err) => {
+                        if (err) console.error('Error creating login notification:', err);
                     }
                 );
             }
@@ -228,9 +230,9 @@ router.post('/login', (req, res) => {
             } else {
                  res.json({ token, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id, isProfileCompleted });
             }
-        } catch (authError) {
-            console.error('Login Auth Error:', authError);
-            res.status(500).json({ message: 'Authentication failed due to server error.' });
+        } catch (err) {
+            console.error('[Login Error] Server:', err);
+            res.status(500).json({ message: 'Server error during login.' });
         }
     });
 });
@@ -280,150 +282,24 @@ router.post('/cadet-login', (req, res) => {
             });
         }
 
-        if (user.is_approved === 0) {
-            // Should be rare if imported, but safe check
-            return res.status(403).json({ message: 'Your account is not authorized.' });
-        }
-
-        // Generate Token
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '24h' }); // Longer session for cadets?
-        
-        // Notify Admin of Login
-        const displayName = (user.first_name && user.last_name) ? `${user.first_name} ${user.last_name}` : user.username;
-        const notifMsg = `${displayName} has accessed the portal.`;
-        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-            [notifMsg, 'login'], 
-            (nErr) => {
-                if (nErr) console.error("Error creating login notification:", nErr);
-            }
-        );
+        // Token
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id }, SECRET_KEY, { expiresIn: '1h' });
 
         // Update last_seen
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
 
-        res.json({ 
-            token, 
-            role: user.role, 
-            cadetId: user.cadet_id,
-            isProfileCompleted: user.is_profile_completed // Return this flag
-        });
-    });
-});
-
-// Staff Login (Same as Cadet Login but checks training_staff role)
-// User requested "login route for training staff in the cadet login route"
-router.post('/staff-login-no-pass', (req, res) => {
-    let { identifier } = req.body; 
-
-    if (!identifier) {
-        return res.status(400).json({ message: 'Please enter your Username or Email.' });
-    }
-    
-    identifier = identifier.trim();
-
-    const sql = `
-        SELECT u.*, s.is_profile_completed, s.first_name, s.last_name
-        FROM users u 
-        LEFT JOIN training_staff s ON u.staff_id = s.id 
-        WHERE (u.username = ? OR u.email = ?)
-    `;
-    
-    db.get(sql, [identifier, identifier], (err, user) => {
-        if (err) return res.status(500).json({ message: err.message });
-        
-        if (!user) {
-            return res.status(400).json({ message: 'Staff user not found.' });
-        }
-
-        // SMART ERROR: Wrong Role
-        if (user.role !== 'training_staff') {
-            return res.status(400).json({ 
-                message: `You are trying to login as Staff, but this account belongs to a ${user.role === 'cadet' ? 'Cadet' : 'Admin'}. Please switch to the correct login tab.` 
-            });
-        }
-
-        const token = jwt.sign({ id: user.id, role: user.role, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '24h' });
-        
-        // Update last_seen
-        const now = new Date().toISOString();
-        db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err) => { if(err) console.error(err); });
+        // Notify Admin
+        const displayName = `${user.rank || 'Cadet'} ${user.last_name}`; 
+        const msg = `${displayName} logged in (No Password).`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, [msg, 'login']);
 
         res.json({ 
             token, 
             role: user.role, 
-            staffId: user.staff_id,
-            isProfileCompleted: user.is_profile_completed
+            is_profile_completed: !!user.is_profile_completed 
         });
     });
-});
-
-// Seed Admin (Manual or specific admin)
-router.post('/seed-admin', async (req, res) => {
-    // Specific credentials from requirements
-    const username = 'msu-sndrotc_admin';
-    const password = 'admingrading@2026';
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Check if exists
-    db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
-        if (row) {
-             // Update password if exists
-             db.run("UPDATE users SET password = ?, is_approved = 1 WHERE username = ?", [hashedPassword, username], (err) => {
-                 if (err) return res.status(500).json({ message: err.message });
-                 res.json({ message: 'Admin updated' });
-             });
-        } else {
-            // Create
-            db.run(`INSERT INTO users (username, password, role, is_approved) VALUES (?, ?, ?, 1)`, 
-                [username, hashedPassword, 'admin'], 
-                (err) => {
-                    if (err) return res.status(500).json({ message: err.message });
-                    res.json({ message: 'Admin seeded' });
-                }
-            );
-        }
-    });
-});
-
-// EMERGENCY ROUTE: Force Reset Admin Password
-// This is a GET request so it can be triggered easily via browser
-router.get('/force-admin-reset', async (req, res) => {
-    const username = 'msu-sndrotc_admin';
-    const password = 'admingrading@2026';
-    
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        db.get("SELECT * FROM users WHERE username = ?", [username], (err, row) => {
-            if (err) return res.status(500).json({ message: 'DB Error finding admin', error: err.message });
-            
-            if (row) {
-                 db.run("UPDATE users SET password = ?, is_approved = 1 WHERE username = ?", [hashedPassword, username], (err) => {
-                     if (err) return res.status(500).json({ message: 'DB Error updating admin', error: err.message });
-                     res.json({ 
-                         message: 'SUCCESS: Admin password has been reset.', 
-                         details: 'You can now login with: msu-sndrotc_admin / admingrading@2026' 
-                     });
-                 });
-            } else {
-                // Create if missing
-                db.run(`INSERT INTO users (username, password, role, is_approved) VALUES (?, ?, 'admin', 1)`, 
-                    [username, hashedPassword], 
-                    (err) => {
-                        if (err) return res.status(500).json({ message: 'DB Error creating admin', error: err.message });
-                        res.json({ 
-                            message: 'SUCCESS: Admin account created.', 
-                            details: 'You can now login with: msu-sndrotc_admin / admingrading@2026' 
-                        });
-                    }
-                );
-            }
-        });
-    } catch (e) {
-        res.status(500).json({ message: 'Server Error', error: e.message });
-    }
 });
 
 module.exports = router;

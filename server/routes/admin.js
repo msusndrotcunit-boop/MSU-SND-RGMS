@@ -1,7 +1,6 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
@@ -9,14 +8,34 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
+const { upload } = require('../utils/cloudinary');
 
 const router = express.Router();
 
-// Multer Setup (Memory Storage for Base64)
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+// --- Search Cadets & Staff ---
+router.get('/search', authenticateToken, isAdmin, async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.json([]);
+
+    const searchTerm = `%${query}%`;
+    const sql = `
+        SELECT 'cadet' as type, id, first_name, last_name, rank, student_id as sub_info 
+        FROM cadets 
+        WHERE (first_name || ' ' || last_name) LIKE ? OR student_id LIKE ? OR last_name LIKE ?
+        UNION ALL
+        SELECT 'staff' as type, id, first_name, last_name, rank, email as sub_info 
+        FROM training_staff 
+        WHERE (first_name || ' ' || last_name) LIKE ? OR email LIKE ? OR last_name LIKE ?
+        LIMIT 10
+    `;
+
+    db.all(sql, [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm], (err, rows) => {
+        if (err) {
+            console.error('Search error:', err);
+            return res.status(500).json({ message: 'Search failed' });
+        }
+        res.json(rows);
+    });
 });
 
 // --- Import Helpers ---
@@ -48,14 +67,15 @@ const insertCadet = (cadet) => {
             battalion, company, platoon, 
             cadet_course, semester, status,
             is_profile_completed, is_archived
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '', 'Ongoing'
+            cadet.cadet_course || '', cadet.semester || '', 'Ongoing',
+            false, false // Use booleans for Postgres compatibility
         ];
 
         db.run(sql, params, function(err) {
@@ -1174,12 +1194,12 @@ router.post('/cadets/delete', async (req, res) => {
 
 // Update Grades for a Cadet
 router.put('/grades/:cadetId', (req, res) => {
-    const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status } = req.body;
+    const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
     const cadetId = req.params.cadetId;
 
-    // Note: attendance_present is excluded from manual update to prevent overwriting 
-    // the value synchronized from the Attendance module.
+    // Allow manual override of attendance_present
     db.run(`UPDATE grades SET 
+            attendance_present = ?,
             merit_points = ?, 
             demerit_points = ?, 
             prelim_score = ?, 
@@ -1187,7 +1207,7 @@ router.put('/grades/:cadetId', (req, res) => {
             final_score = ?,
             status = ?
             WHERE cadet_id = ?`,
-        [meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
+        [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
         function(err) {
             if (err) return res.status(500).json({ message: err.message });
             
@@ -1209,34 +1229,62 @@ router.put('/grades/:cadetId', (req, res) => {
 // --- Activity Management ---
 
 // Upload Activity
-router.post('/activities', upload.single('image'), (req, res) => {
+router.post('/activities', upload.array('images'), async (req, res) => {
     const { title, description, date, type } = req.body;
     
-    // Convert buffer to Base64 Data URI if file exists
-    let imagePath = null;
-    if (req.file) {
-        imagePath = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    }
-
+    // Use transaction-like logic (though db adapter might not support explicit transactions easily, we do sequential inserts)
     const activityType = type || 'activity';
 
-    db.run(`INSERT INTO activities (title, description, date, image_path, type) VALUES (?, ?, ?, ?, ?)`,
-        [title, description, date, imagePath, activityType],
-        function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            
-            // Create notification for the new activity
-            const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
-            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
-                [notifMsg], 
-                (nErr) => {
-                    if (nErr) console.error("Error creating activity notification:", nErr);
+    try {
+        // 1. Insert Activity
+        const activityId = await new Promise((resolve, reject) => {
+            db.run(`INSERT INTO activities (title, description, date, type) VALUES (?, ?, ?, ?)`,
+                [title, description, date, activityType],
+                function(err) {
+                    if (err) reject(err);
+                    else resolve(this.lastID);
                 }
             );
+        });
 
-            res.json({ id: this.lastID, message: 'Activity created' });
+        // 2. Process Images
+        if (req.files && req.files.length > 0) {
+            const imageInserts = req.files.map(file => {
+                // Use the file path (URL from Cloudinary or local path)
+                const imagePath = file.path; 
+                return new Promise((resolve, reject) => {
+                    db.run(`INSERT INTO activity_images (activity_id, image_path) VALUES (?, ?)`,
+                        [activityId, imagePath],
+                        (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        }
+                    );
+                });
+            });
+
+            await Promise.all(imageInserts);
+            
+            // Optional: Set first image as main image_path for legacy support
+            const firstImagePath = req.files[0].path;
+            db.run(`UPDATE activities SET image_path = ? WHERE id = ?`, [firstImagePath, activityId]);
         }
-    );
+
+        // 3. Create Notification
+        const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
+            [notifMsg], 
+            (nErr) => {
+                if (nErr) console.error("Error creating activity notification:", nErr);
+            }
+        );
+
+        res.json({ id: activityId, message: 'Activity created' });
+
+    } catch (err) {
+        console.error("Error creating activity:", err);
+        res.status(500).json({ message: err.message });
+    }
 });
 
 // Delete Activity
@@ -1333,7 +1381,8 @@ router.get('/profile', (req, res) => {
 
 // Update Admin Profile (Pic)
 router.put('/profile', upload.single('profilePic'), (req, res) => {
-    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
+    // Use file path/url instead of Base64
+    const profilePic = req.file ? req.file.path : null;
     
     if (profilePic) {
         db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [profilePic, req.user.id], function(err) {

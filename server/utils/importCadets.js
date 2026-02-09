@@ -29,14 +29,24 @@ const insertCadet = (cadet) => {
             student_id, email, contact_number, address, 
             course, year_level, school_year, 
             battalion, company, platoon, 
-            cadet_course, semester, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            cadet_course, semester, status,
+            is_profile_completed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        
+        // Fix: Explicitly cast boolean to integer (0/1) for SQLite/Postgres compatibility if needed, 
+        // OR use 'false'/'true' literals if using strict Postgres driver that requires boolean types.
+        // However, the error says: "column is boolean but expression is integer".
+        // This implies the DB expects TRUE/FALSE but we are sending 0/1 (or vice-versa depending on driver).
+        // Postgres pg driver usually handles true/false -> boolean.
+        // Let's use boolean literals.
+        
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '', 'Ongoing'
+            cadet.cadet_course || '', cadet.semester || '', 'Ongoing',
+            false // Send boolean false instead of integer 0
         ];
         db.run(sql, params, function(err) {
             if (err) reject(err);

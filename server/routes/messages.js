@@ -40,6 +40,12 @@ router.post('/', async (req, res) => {
 
     try {
         await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, ?, ?, ?)`, [userId, role, subject, message]);
+        
+        // Notify Admin
+        const type = 'ask_admin'; // Goes to Bell
+        const notifMsg = `New Ask Admin message from ${role} (User ID: ${userId})`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, [notifMsg, type]);
+
         res.status(201).json({ message: 'Message sent successfully' });
     } catch (err) {
         console.error('Error sending message:', err);
@@ -103,6 +109,15 @@ router.put('/:id/reply', async (req, res) => {
 
     try {
         await pRun(`UPDATE admin_messages SET admin_reply = ?, status = ? WHERE id = ?`, [admin_reply, status || 'resolved', id]);
+        
+        // Notify User (Cadet/Staff)
+        // First get the message to find the user_id
+        const msg = await pGet(`SELECT user_id FROM admin_messages WHERE id = ?`, [id]);
+        if (msg && msg.user_id) {
+            const notifMsg = `Admin replied to your message.`;
+            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`, [msg.user_id, notifMsg, 'ask_admin_reply']);
+        }
+
         res.json({ message: 'Reply sent successfully' });
     } catch (err) {
         console.error('Error replying to message:', err);

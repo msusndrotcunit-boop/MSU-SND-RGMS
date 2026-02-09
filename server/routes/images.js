@@ -42,9 +42,18 @@ const serveBase64Image = (res, imageSource) => {
     res.end(buffer);
 };
 
-// Get Activity Image
+// Get Activity Image (Legacy/Main)
 router.get('/activities/:id', (req, res) => {
     db.get('SELECT image_path FROM activities WHERE id = ?', [req.params.id], (err, row) => {
+        if (err) return res.status(500).send(err.message);
+        if (!row || !row.image_path) return res.status(404).send('Image not found');
+        serveBase64Image(res, row.image_path);
+    });
+});
+
+// Get Specific Activity Image (Gallery)
+router.get('/activity-images/:id', (req, res) => {
+    db.get('SELECT image_path FROM activity_images WHERE id = ?', [req.params.id], (err, row) => {
         if (err) return res.status(500).send(err.message);
         if (!row || !row.image_path) return res.status(404).send('Image not found');
         serveBase64Image(res, row.image_path);

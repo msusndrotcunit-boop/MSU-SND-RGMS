@@ -10,7 +10,16 @@ const CadetHome = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedActivity, setSelectedActivity] = useState(null);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [slideDirection, setSlideDirection] = useState('right'); // 'right' (next) or 'left' (prev)
     const [activeTab, setActiveTab] = useState('activities'); // 'activities' or 'announcements'
+
+    useEffect(() => {
+        if (selectedActivity) {
+            setLightboxIndex(0);
+            setSlideDirection('right');
+        }
+    }, [selectedActivity]);
 
     useEffect(() => {
         const fetchActivities = async () => {
@@ -181,45 +190,110 @@ const CadetHome = () => {
             {/* Activity Detail Modal */}
             {selectedActivity && (
                 <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-90 backdrop-blur-sm"
                     onClick={() => setSelectedActivity(null)}
                 >
                     <div 
-                        className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+                        className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto flex flex-col md:flex-row overflow-hidden"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
-                            <h3 className="text-xl font-bold text-gray-900 pr-8">{selectedActivity.title}</h3>
-                            <button 
-                                onClick={() => setSelectedActivity(null)}
-                                className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
-                            >
-                                <X size={24} />
-                            </button>
+                        {/* Image Section (Facebook Style) */}
+                        <div className="w-full md:w-2/3 bg-black flex items-center justify-center relative min-h-[300px] md:min-h-[600px] overflow-hidden">
+                             {/* CSS for Sliding Animation */}
+                             <style>{`
+                                @keyframes slideInRight {
+                                    from { transform: translateX(100%); opacity: 0; }
+                                    to { transform: translateX(0); opacity: 1; }
+                                }
+                                @keyframes slideInLeft {
+                                    from { transform: translateX(-100%); opacity: 0; }
+                                    to { transform: translateX(0); opacity: 1; }
+                                }
+                                .animate-slide-in-right { animation: slideInRight 0.3s ease-out forwards; }
+                                .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; }
+                             `}</style>
+
+                             {(() => {
+                                const hasMultipleImages = selectedActivity.images && selectedActivity.images.length > 0;
+                                const currentImageSrc = hasMultipleImages
+                                    ? `/api/images/activity-images/${selectedActivity.images[lightboxIndex]}`
+                                    : (selectedActivity.image_path?.startsWith('data:')
+                                        ? selectedActivity.image_path
+                                        : `${import.meta.env.VITE_API_URL || ''}${selectedActivity.image_path?.replace(/\\/g, '/')}`);
+
+                                return (
+                                    <>
+                                        {currentImageSrc ? (
+                                            <img
+                                                key={lightboxIndex}
+                                                src={currentImageSrc}
+                                                alt={selectedActivity.title}
+                                                className={`max-w-full max-h-full object-contain ${slideDirection === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left'}`}
+                                            />
+                                        ) : (
+                                            <div className="text-gray-500">No image available</div>
+                                        )}
+
+                                        {/* Navigation Arrows */}
+                                        {hasMultipleImages && selectedActivity.images.length > 1 && (
+                                            <>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSlideDirection('left');
+                                                        setTimeout(() => {
+                                                            setLightboxIndex(prev => (prev - 1 + selectedActivity.images.length) % selectedActivity.images.length);
+                                                        }, 0);
+                                                    }}
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
+                                                >
+                                                    <ChevronLeft size={32} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSlideDirection('right');
+                                                        setTimeout(() => {
+                                                            setLightboxIndex(prev => (prev + 1) % selectedActivity.images.length);
+                                                        }, 0);
+                                                    }}
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
+                                                >
+                                                    <ChevronRight size={32} />
+                                                </button>
+                                                
+                                                {/* Image Counter */}
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
+                                                    {lightboxIndex + 1} / {selectedActivity.images.length}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
-                        
-                        <div className="p-6">
-                            {selectedActivity.image_path && (
-                                <div className="mb-6 bg-gray-50 rounded-lg p-2 border">
-                                    <img
-                                        src={
-                                            selectedActivity.image_path.startsWith('data:')
-                                                ? selectedActivity.image_path
-                                                : `${import.meta.env.VITE_API_URL || ''}${selectedActivity.image_path.replace(/\\/g, '/')}`
-                                        }
-                                        alt={selectedActivity.title}
-                                        className="w-full h-auto max-h-[60vh] object-contain rounded mx-auto"
-                                    />
-                                </div>
-                            )}
-                            
-                            <div className="flex items-center text-gray-500 text-sm mb-4 bg-gray-50 p-2 rounded inline-block">
-                                <Calendar size={16} className="mr-2" />
-                                <span className="font-medium">{selectedActivity.date}</span>
+
+                        {/* Details Section */}
+                        <div className="w-full md:w-1/3 flex flex-col h-full bg-white">
+                            <div className="flex justify-between items-center p-4 border-b">
+                                <h3 className="text-xl font-bold text-gray-900 pr-4 truncate">{selectedActivity.title}</h3>
+                                <button 
+                                    onClick={() => setSelectedActivity(null)}
+                                    className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
+                                >
+                                    <X size={24} />
+                                </button>
                             </div>
                             
-                            <div className="prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed text-lg">
-                                {selectedActivity.description}
+                            <div className="p-6 overflow-y-auto flex-1">
+                                <div className="flex items-center text-gray-500 text-sm mb-4 bg-gray-50 p-2 rounded inline-block">
+                                    <Calendar size={16} className="mr-2" />
+                                    <span className="font-medium">{selectedActivity.date}</span>
+                                </div>
+                                
+                                <div className="prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed">
+                                    {selectedActivity.description}
+                                </div>
                             </div>
                         </div>
                     </div>
