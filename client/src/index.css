@@ -74,3 +74,27 @@ body {
   0% { background-position: -200px 0; }
   100% { background-position: 200px 0; }
 }
+
+@layer components {
+  .hover-highlight {
+    transition: all 150ms ease-in-out;
+  }
+  .hover-highlight:hover {
+    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
+    transform: translateY(-1px) scale(1.02);
+    filter: saturate(1.05);
+  }
+  .hover-icon-highlight {
+    transition: all 150ms ease-in-out;
+  }
+  .hover-icon-highlight:hover {
+    color: var(--primary-color);
+    transform: translateY(-1px) scale(1.05);
+  }
+  .hover-text-highlight {
+    transition: color 150ms ease-in-out;
+  }
+  .hover-text-highlight:hover {
+    color: var(--primary-color);
+  }
+}

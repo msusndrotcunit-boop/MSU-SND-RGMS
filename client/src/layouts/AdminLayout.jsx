@@ -30,6 +30,7 @@ const AdminLayout = () => {
     const [badgeMsg, setBadgeMsg] = useState(0);
     const [notifHighlight, setNotifHighlight] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
+    const [adminProfile, setAdminProfile] = useState(null);
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -99,6 +100,11 @@ const AdminLayout = () => {
         fetchMessages();
     }, []);
 
+    useEffect(() => {
+        axios.get('/api/admin/profile').then(res => {
+            setAdminProfile(res.data || null);
+        }).catch(() => {});
+    }, []);
     useEffect(() => {
         const fetchStatus = async () => {
             try {
@@ -274,11 +280,25 @@ const AdminLayout = () => {
                 "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
-                    <span>ROTC Admin</span>
-                    <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
-                        <X size={24} />
-                    </button>
+                <div className="p-6 border-b border-white/10">
+                    <div className="flex justify-between items-center">
+                        <span className="text-xl font-bold">ROTC Admin</span>
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="flex items-center mt-3">
+                        {adminProfile && adminProfile.profile_pic ? (
+                            <img src={adminProfile.profile_pic} alt="Profile" className="h-10 w-10 rounded-full border border-white/20 object-cover" />
+                        ) : (
+                            <div className="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
+                                {(adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase()}
+                            </div>
+                        )}
+                        <div className="ml-3">
+                            <div className="text-white font-semibold text-sm">{(adminProfile && adminProfile.username) || 'Admin'}</div>
+                        </div>
+                    </div>
                 </div>
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {navItems.map((item) => {
@@ -293,7 +313,7 @@ const AdminLayout = () => {
                                     <button
                                         onClick={() => toggleMenu(item.label)}
                                         className={clsx(
-                                            "w-full flex items-center justify-between p-3 rounded transition",
+                                            "w-full flex items-center justify-between p-3 rounded transition hover-highlight",
                                             isActiveParent ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
                                     >
@@ -314,7 +334,7 @@ const AdminLayout = () => {
                                                         to={child.path}
                                                         onClick={() => setIsSidebarOpen(false)}
                                                         className={clsx(
-                                                            "block p-2 text-sm rounded transition",
+                                                            "block p-2 text-sm rounded transition hover-highlight",
                                                             isChildActive ? "text-white font-medium bg-black/20" : "text-white/80 hover:text-white"
                                                         )}
                                                     >
@@ -335,7 +355,7 @@ const AdminLayout = () => {
                                 to={item.path}
                                 onClick={() => setIsSidebarOpen(false)}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                                     isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                 )}
                             >
@@ -348,7 +368,7 @@ const AdminLayout = () => {
                 <div className="p-4 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded transition"
+                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded transition hover-highlight"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
@@ -382,13 +402,13 @@ const AdminLayout = () => {
                             {searchOpen && (searchResults.cadets.length > 0 || searchResults.staff.length > 0) && (
                                 <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
                                     {searchResults.cadets.map(c => (
-                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100">
+                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 hover-highlight">
                                             <div className="font-medium">{c.rank} {c.first_name} {c.last_name}</div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400">{c.student_id}</div>
                                         </Link>
                                     ))}
                                     {searchResults.staff.map(s => (
-                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100">
+                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 hover-highlight">
                                             <div className="font-medium">{s.rank} {s.first_name} {s.last_name}</div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400">{s.afpsn || 'N/A'}</div>
                                         </Link>
@@ -399,7 +419,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-4 mr-4">
+                    <div className="flex items-center space-x-5 mr-2">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -419,13 +439,6 @@ const AdminLayout = () => {
                         />
 
                         <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
-                        
-                        <div className="flex items-center">
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 mr-2 hidden md:block">Admin</span>
-                            <div className="h-8 w-8 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
-                                A
-                            </div>
-                        </div>
                     </div>
                 </header>
 

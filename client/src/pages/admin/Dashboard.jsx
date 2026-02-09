@@ -353,7 +353,7 @@ const Dashboard = () => {
                         />
                         <button
                             onClick={sendGeneralUpdate}
-                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90 hover-highlight"
                         >
                             Send General Update
                         </button>
@@ -368,7 +368,7 @@ const Dashboard = () => {
                         />
                         <button
                             onClick={sendTrainingReminder}
-                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90 hover-highlight"
                         >
                             Send Training Reminder
                         </button>
@@ -420,7 +420,7 @@ const MiniStatus = ({ label, count, color }) => (
 );
 
 const ActionButton = ({ to, label, icon, className }) => (
-    <Link to={to} className={`flex items-center justify-center p-3 rounded text-white font-medium transition-colors ${className}`}>
+    <Link to={to} className={`flex items-center justify-center p-3 rounded text-white font-medium transition-colors hover-highlight ${className}`}>
         <span className="mr-2">{icon}</span>
         {label}
     </Link>

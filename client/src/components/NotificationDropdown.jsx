@@ -47,7 +47,7 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
         <div className="relative" ref={dropdownRef}>
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative p-2 text-gray-600 hover:text-green-700 transition-colors rounded-full hover:bg-gray-100" 
+                className="relative p-2 text-gray-600 hover:text-green-700 transition-colors rounded-full hover:bg-gray-100 hover-highlight hover-icon-highlight" 
                 title={type}
             >
                 <Icon size={22} />

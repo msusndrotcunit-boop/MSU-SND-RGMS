@@ -259,7 +259,7 @@ const StaffLayout = () => {
                         <div className="flex items-center space-x-3">
                             <button
                                 onClick={shareLocation}
-                                className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1"
+                                className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1 hover-highlight"
                             >
                                 <MapPin size={14} />
                                 <span>Share Location</span>
@@ -296,7 +296,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/home' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -314,7 +314,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -333,7 +333,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                                     location.pathname === '/staff/unit-dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -350,7 +350,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                                     location.pathname === '/staff/data-analysis' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -367,7 +367,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition",
+                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                                     location.pathname === '/staff/activities' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -387,7 +387,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/communication' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -407,7 +407,7 @@ const StaffLayout = () => {
                         to="/staff/ask-admin"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/ask-admin' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                         )}
                     >
@@ -420,7 +420,7 @@ const StaffLayout = () => {
                         to="/staff/profile"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/profile' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                         )}
                     >
@@ -437,7 +437,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/my-qr' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -455,7 +455,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/staff/settings' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -468,7 +468,7 @@ const StaffLayout = () => {
                 <div className="p-4 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/10 rounded transition"
+                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/10 rounded transition hover-highlight"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
@@ -518,7 +518,7 @@ const StaffLayout = () => {
                     <div className="border-t bg-white dark:bg-gray-900 px-3 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-4">
                         <Link
                             to="/staff/unit-dashboard"
-                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)] text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)] text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors hover-highlight"
                         >
                             <LayoutDashboard size={16} className="mr-1" />
                             <span className="hidden sm:inline">Unit Dashboard</span>
@@ -526,7 +526,7 @@ const StaffLayout = () => {
                         </Link>
                         <Link
                             to="/staff/data-analysis"
-                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)]/90 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)]/90 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors hover-highlight"
                         >
                             <PieChart size={16} className="mr-1" />
                             <span className="hidden sm:inline">Data Analysis</span>
@@ -534,7 +534,7 @@ const StaffLayout = () => {
                         </Link>
                         <Link
                             to="/staff/activities"
-                            className="flex-1 flex items-center justify-center bg-yellow-400 text-[var(--primary-color)] text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors"
+                            className="flex-1 flex items-center justify-center bg-yellow-400 text-[var(--primary-color)] text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors hover-highlight"
                         >
                             <Calendar size={16} className="mr-1" />
                             <span className="hidden sm:inline">Activities</span>
@@ -542,7 +542,7 @@ const StaffLayout = () => {
                         </Link>
                         <button
                             onClick={shareLocation}
-                            className="flex items-center justify-center bg-white dark:bg-gray-900 text-[var(--primary-color)] text-xs md:text-sm rounded-full px-3 py-2 border border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-colors"
+                            className="flex items-center justify-center bg-white dark:bg-gray-900 text-[var(--primary-color)] text-xs md:text-sm rounded-full px-3 py-2 border border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-colors hover-highlight"
                         >
                             <MapPin size={16} className="mr-1" />
                             <span className="hidden sm:inline">Share Location</span>
@@ -566,14 +566,14 @@ const StaffLayout = () => {
                             <button
                                 type="button"
                                 onClick={handlePermissionsSkip}
-                                className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover-highlight"
                             >
                                 Not now
                             </button>
                             <button
                                 type="button"
                                 onClick={handlePermissionsAccept}
-                                className="px-4 py-2 text-sm rounded bg-[var(--primary-color)] text-white hover:opacity-90"
+                                className="px-4 py-2 text-sm rounded bg-[var(--primary-color)] text-white hover:opacity-90 hover-highlight"
                             >
                                 Allow permissions
                             </button>

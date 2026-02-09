@@ -303,7 +303,7 @@ const CadetLayout = () => {
                         to="/cadet/home"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -314,7 +314,7 @@ const CadetLayout = () => {
                         to="/cadet/dashboard"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -325,7 +325,7 @@ const CadetLayout = () => {
                         to="/cadet/profile"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/profile' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -336,7 +336,7 @@ const CadetLayout = () => {
                         to="/cadet/ask-admin"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/ask-admin' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -347,7 +347,7 @@ const CadetLayout = () => {
                         to="/cadet/about"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/about' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -358,7 +358,7 @@ const CadetLayout = () => {
                         to="/cadet/settings"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition",
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
                             location.pathname === '/cadet/settings' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -369,7 +369,7 @@ const CadetLayout = () => {
                 <div className="p-4 border-t border-green-800">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-green-200 hover:text-white hover:bg-green-800 rounded transition"
+                        className="flex items-center space-x-3 p-3 w-full text-left text-green-200 hover:text-white hover:bg-green-800 rounded transition hover-highlight"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
@@ -447,13 +447,13 @@ const CadetLayout = () => {
                         </p>
                         <button
                             onClick={handleStartGuide}
-                            className="w-full bg-green-700 text-white py-3 rounded-lg font-bold hover:bg-green-800 transition flex items-center justify-center mb-3"
+                            className="w-full bg-green-700 text-white py-3 rounded-lg font-bold hover:bg-green-800 transition flex items-center justify-center mb-3 hover-highlight"
                         >
                             Start User Guide <ArrowRight size={20} className="ml-2" />
                         </button>
                         <button
                             onClick={handleSkipGuide}
-                            className="w-full bg-white border border-gray-300 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-50 transition"
+                            className="w-full bg-white border border-gray-300 text-gray-600 py-3 rounded-lg font-bold hover:bg-gray-50 transition hover-highlight"
                         >
                             Skip Guide
                         </button>
@@ -521,14 +521,14 @@ const CadetLayout = () => {
                             <button
                                 type="button"
                                 onClick={handlePermissionsSkip}
-                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50 hover-highlight"
                             >
                                 Not now
                             </button>
                             <button
                                 type="button"
                                 onClick={handlePermissionsAccept}
-                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800 hover-highlight"
                             >
                                 Allow permissions
                             </button>
