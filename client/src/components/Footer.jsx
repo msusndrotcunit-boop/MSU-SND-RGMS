@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
+    <footer className="bg-[var(--primary-color)] text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Brand Section */}
         <div>
@@ -14,10 +14,10 @@ const Footer = () => {
             </div>
             <div>
               <h3 className="font-bold text-lg tracking-wide">MSU-SND RGMS</h3>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
+              <p className="text-[10px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
             </div>
           </div>
-          <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+          <p className="text-green-100/80 text-sm mb-4 leading-relaxed">
             MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
           </p>
           <p className="text-yellow-500 font-mono text-sm font-semibold">Version 2.3.19</p>
@@ -26,7 +26,7 @@ const Footer = () => {
         {/* Quick Links */}
         <div>
           <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Quick Links</h4>
-          <ul className="space-y-3 text-gray-300 text-sm">
+          <ul className="space-y-3 text-green-50 text-sm">
             <li>
                 <Link to="/admin/dashboard" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
                     <span className="group-hover:translate-x-1 transition-transform">🏠</span> Dashboard
@@ -48,7 +48,7 @@ const Footer = () => {
         {/* Information */}
         <div>
           <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Information</h4>
-           <ul className="space-y-3 text-gray-300 text-sm">
+           <ul className="space-y-3 text-green-50 text-sm">
             <li>
                 <Link to="/admin/about" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
                     <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About of the App
@@ -68,7 +68,7 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+      <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-green-100/60">
         <div className="flex items-center gap-3 mb-4 md:mb-0">
            <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">C</div>
            <div>
@@ -78,10 +78,10 @@ const Footer = () => {
         </div>
         
         <div className="flex gap-4">
-          <a href="#" className="p-2 bg-gray-800 rounded hover:bg-yellow-600 hover:text-white transition-all"><Facebook size={16} /></a>
-          <a href="#" className="p-2 bg-gray-800 rounded hover:bg-yellow-600 hover:text-white transition-all"><Twitter size={16} /></a>
-          <a href="#" className="p-2 bg-gray-800 rounded hover:bg-yellow-600 hover:text-white transition-all"><Linkedin size={16} /></a>
-          <a href="#" className="p-2 bg-gray-800 rounded hover:bg-yellow-600 hover:text-white transition-all"><Mail size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Facebook size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Twitter size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Linkedin size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Mail size={16} /></a>
         </div>
       </div>
     </footer>
