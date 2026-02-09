@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   return (
     <footer className="bg-[var(--primary-color)] text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Brand Section */}
         <div>
           <div className="flex items-center gap-3 mb-4">
@@ -25,35 +25,13 @@ const Footer = () => {
           </p>
         </div>
 
-        {/* Quick Links */}
-        <div>
-          <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Quick Links</h4>
-          <ul className="space-y-3 text-green-50 text-sm">
-            <li>
-                <Link to="/admin/dashboard" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
-                    <span className="group-hover:translate-x-1 transition-transform">🏠</span> Dashboard
-                </Link>
-            </li>
-            <li>
-                <Link to="/admin/cadets" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
-                    <span className="group-hover:translate-x-1 transition-transform">📂</span> Cadet Management
-                </Link>
-            </li>
-            <li>
-                <Link to="/admin/cadets" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
-                    <span className="group-hover:translate-x-1 transition-transform">🔍</span> Searching Cadets
-                </Link>
-            </li>
-          </ul>
-        </div>
-
         {/* Information */}
         <div>
           <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Information</h4>
            <ul className="space-y-3 text-green-50 text-sm">
             <li>
                 <Link to="/admin/about" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
-                    <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About of the App
+                    <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About the App
                 </Link>
             </li>
             <li>
