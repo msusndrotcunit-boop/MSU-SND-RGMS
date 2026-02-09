@@ -5,6 +5,35 @@ import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
 
+const getImages = (activity) => {
+    if (!activity) return [];
+    let imgs = [];
+
+    if (Array.isArray(activity.images)) {
+        imgs = activity.images;
+    } else if (typeof activity.images === 'string') {
+        try {
+            const parsed = JSON.parse(activity.images);
+            if (Array.isArray(parsed)) imgs = parsed;
+        } catch {}
+    }
+
+    imgs = (imgs || []).filter(Boolean);
+
+    if (imgs.length === 0 && activity.image_path) {
+        const src = activity.image_path.startsWith('data:')
+            ? activity.image_path
+            : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
+        return [src];
+    }
+
+    return imgs.map((src) =>
+        src.startsWith('data:') || src.startsWith('http')
+            ? src
+            : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
+    );
+};
+
 const Activities = () => {
     const [activities, setActivities] = useState([]);
     const [activeTab, setActiveTab] = useState('activity');
@@ -178,48 +207,49 @@ const Activities = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {activities
                     .filter(a => (a.type || 'activity') === activeTab)
-                    .map(activity => (
-                    <div 
-                        key={activity.id} 
-                        className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => setSelectedActivity(activity)}
-                    >
-                        <div className="p-4">
-                            <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
-                            <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
-                                <Calendar size={14} className="mr-1" />
-                                {new Date(activity.date).toLocaleDateString()}
-                            </div>
-                            
-                            {/* Display Primary Image */}
-                            <div className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
-                                <img 
-                                    src={
-                                        activity.images && activity.images.length > 0 
-                                        ? `/api/images/activity-images/${activity.images[0]}`
-                                        : `/api/images/activities/${activity.id}`
-                                    }
-                                    alt={activity.title}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => e.target.style.display = 'none'} 
-                                />
-                                {activity.images && activity.images.length > 1 && (
-                                    <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-                                        +{activity.images.length - 1}
-                                    </div>
-                                )}
-                            </div>
+                    .map(activity => {
+                        const images = getImages(activity);
+                        const primary = images[0] || null;
 
-                            <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
-                            <button 
-                                onClick={(e) => handleDelete(activity.id, e)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
+                        return (
+                            <div 
+                                key={activity.id} 
+                                className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => setSelectedActivity(activity)}
                             >
-                                <Trash2 size={16} className="mr-1" /> Delete
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                                <div className="p-4">
+                                    <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
+                                    <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
+                                        <Calendar size={14} className="mr-1" />
+                                        {new Date(activity.date).toLocaleDateString()}
+                                    </div>
+                                    
+                                    <div className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden relative">
+                                        {primary && (
+                                            <img 
+                                                src={primary}
+                                                alt={activity.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        )}
+                                        {images.length > 1 && (
+                                            <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                                                +{images.length - 1}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
+                                    <button 
+                                        onClick={(e) => handleDelete(activity.id, e)}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
+                                    >
+                                        <Trash2 size={16} className="mr-1" /> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                })}
             </div>
             
             {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
@@ -398,13 +428,10 @@ const Activities = () => {
                                 .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; }
                              `}</style>
 
-                             {(() => {
-                                const hasMultipleImages = selectedActivity.images && selectedActivity.images.length > 0;
-                                const currentImageSrc = hasMultipleImages
-                                    ? `/api/images/activity-images/${selectedActivity.images[lightboxIndex]}`
-                                    : (selectedActivity.image_path?.startsWith('data:')
-                                        ? selectedActivity.image_path
-                                        : `/api/images/activities/${selectedActivity.id}`); // Fallback for admin
+                            {(() => {
+                                const images = getImages(selectedActivity);
+                                const hasImages = images.length > 0;
+                                const currentImageSrc = hasImages ? images[lightboxIndex] : null;
 
                                 return (
                                     <>
@@ -419,15 +446,14 @@ const Activities = () => {
                                             <div className="text-gray-500">No image available</div>
                                         )}
 
-                                        {/* Navigation Arrows */}
-                                        {hasMultipleImages && selectedActivity.images.length > 1 && (
+                                        {images.length > 1 && (
                                             <>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setSlideDirection('left');
                                                         setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev - 1 + selectedActivity.images.length) % selectedActivity.images.length);
+                                                            setLightboxIndex(prev => (prev - 1 + images.length) % images.length);
                                                         }, 0);
                                                     }}
                                                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
@@ -439,7 +465,7 @@ const Activities = () => {
                                                         e.stopPropagation();
                                                         setSlideDirection('right');
                                                         setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev + 1) % selectedActivity.images.length);
+                                                            setLightboxIndex(prev => (prev + 1) % images.length);
                                                         }, 0);
                                                     }}
                                                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
@@ -447,9 +473,8 @@ const Activities = () => {
                                                     <ChevronRight size={32} />
                                                 </button>
                                                 
-                                                {/* Image Counter */}
                                                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
-                                                    {lightboxIndex + 1} / {selectedActivity.images.length}
+                                                    {lightboxIndex + 1} / {images.length}
                                                 </div>
                                             </>
                                         )}
