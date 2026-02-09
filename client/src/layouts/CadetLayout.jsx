@@ -5,56 +5,13 @@ import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Setting
 import clsx from 'clsx';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
-import NotificationDropdown from '../components/NotificationDropdown';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-<<<<<<< HEAD
-    const [notifications, setNotifications] = useState([]);
-
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const res = await axios.get('/api/notifications');
-                setNotifications(res.data);
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-
-        if (user) {
-            fetchNotifications();
-            const interval = setInterval(fetchNotifications, 10000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    const handleMarkRead = async (id) => {
-        try {
-            await axios.delete(`/api/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (err) {
-            console.error("Error deleting notification:", err);
-        }
-    };
-
-    const handleClearAll = async (typeCategory) => {
-        const toDelete = typeCategory === 'Messages' 
-            ? notifications.filter(n => n.type === 'ask_admin_reply')
-            : notifications.filter(n => n.type !== 'ask_admin_reply');
-        
-        for (const n of toDelete) {
-            await handleMarkRead(n.id);
-        }
-    };
-
-    
-=======
     const [showPermissionModal, setShowPermissionModal] = useState(false);
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
     // Redirect to profile if not completed
     React.useEffect(() => {
@@ -398,28 +355,9 @@ const CadetLayout = () => {
                             {location.pathname.includes('/cadet/dashboard') && 'My Portal'}
                             {location.pathname.includes('/cadet/profile') && 'My Profile'}
                             {location.pathname.includes('/cadet/about') && 'About'}
+                            {location.pathname.includes('/cadet/settings') && 'Settings'}
                         </h1>
                     </div>
-<<<<<<< HEAD
-                    
-                    <div className="flex items-center space-x-4">
-                        <NotificationDropdown 
-                            type="Messages" 
-                            icon={Mail} 
-                            count={notifications.filter(n => n.type === 'ask_admin_reply').length}
-                            notifications={notifications.filter(n => n.type === 'ask_admin_reply')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Messages')}
-                        />
-                        <NotificationDropdown 
-                            type="Notifications" 
-                            icon={Bell} 
-                            count={notifications.filter(n => n.type !== 'ask_admin_reply').length}
-                            notifications={notifications.filter(n => n.type !== 'ask_admin_reply')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Notifications')}
-                        />
-=======
                     <div className="hidden md:flex items-center space-x-4">
                         <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
                             <Mail size={20} />
@@ -455,7 +393,6 @@ const CadetLayout = () => {
                                 ))}
                             </div>
                         )}
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                     </div>
                 </header>
                 {(health && health.db === 'disconnected') && (

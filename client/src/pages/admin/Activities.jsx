@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-<<<<<<< HEAD
-import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
-=======
-import { Trash2, Plus, Calendar, X, Upload, Zap } from 'lucide-react';
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+import { Trash2, Plus, Calendar, X, Upload, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
@@ -13,43 +9,43 @@ const Activities = () => {
     const [activities, setActivities] = useState([]);
     const [activeTab, setActiveTab] = useState('activity');
     const [isModalOpen, setIsModalOpen] = useState(false);
-<<<<<<< HEAD
-    const [form, setForm] = useState({ title: '', description: '', date: '', images: [], type: 'activity' });
-    
-    // View Modal State
-    const [selectedActivity, setSelectedActivity] = useState(null);
-    const [lightboxIndex, setLightboxIndex] = useState(0);
-    const [slideDirection, setSlideDirection] = useState('right');
-
-    const announcementTemplate = `WHAT: 
-WHEN: 
-WHERE: 
-WHO: 
-HOW: 
-
-NOTE: 
-REMINDERS: `;
-=======
-    
-    // Activity Form State
+    const [viewerActivity, setViewerActivity] = useState(null);
+    const [viewerIndex, setViewerIndex] = useState(0);
+    const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
     const [form, setForm] = useState({ title: '', description: '', date: '', images: [] });
-    
-    // Announcement Form State
     const [announcement, setAnnouncement] = useState({
         what: '', when: '', where: '', who: '', how: '', note: '', reminders: ''
     });
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
     useEffect(() => {
         fetchActivities();
     }, []);
 
+    const filteredActivities = activities.filter(a => (a.type || 'activity') === activeTab);
+
     useEffect(() => {
-        if (selectedActivity) {
-            setLightboxIndex(0);
-            setSlideDirection('right');
+        if (filteredActivities.length === 0) return;
+        const id = setInterval(() => {
+            setActiveFeaturedIndex(prev => {
+                const next = (prev + 1) % filteredActivities.length;
+                return next;
+            });
+        }, 15000);
+        return () => clearInterval(id);
+    }, [filteredActivities.length]);
+
+    const getImages = (activity) => {
+        if (!activity) return [];
+        if (Array.isArray(activity.images)) return activity.images;
+        if (typeof activity.images === 'string') {
+            try {
+                const parsed = JSON.parse(activity.images);
+                if (Array.isArray(parsed)) return parsed;
+            } catch {}
         }
-    }, [selectedActivity]);
+        if (activity.image_path) return [activity.image_path];
+        return [];
+    };
 
     const fetchActivities = async (forceRefresh = false) => {
         if (!forceRefresh) {
@@ -74,27 +70,8 @@ REMINDERS: `;
 
     const handleFileChange = async (e) => {
         const files = Array.from(e.target.files);
-<<<<<<< HEAD
-        if (files.length > 0) {
-            const options = {
-                maxSizeMB: 0.5,
-                maxWidthOrHeight: 1024,
-                useWebWorker: true,
-            };
-
-            const processedFiles = await Promise.all(files.map(async (file) => {
-                try {
-                    return await imageCompression(file, options);
-                } catch (error) {
-                    console.error("Image compression error:", error);
-                    return file;
-                }
-            }));
-
-            setForm({ ...form, images: processedFiles });
-=======
         const processedImages = [];
-        
+
         const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
 
         for (const file of files) {
@@ -105,9 +82,8 @@ REMINDERS: `;
                 console.error("Compression error", error);
                 processedImages.push(file);
             }
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         }
-        
+
         setForm(prev => ({ ...prev, images: [...prev.images, ...processedImages] }));
     };
 
@@ -130,20 +106,9 @@ REMINDERS: `;
 
         const formData = new FormData();
         formData.append('title', form.title);
-<<<<<<< HEAD
-        formData.append('description', form.description);
-        formData.append('date', form.date);
-        formData.append('type', form.type);
-        
-        if (form.images && form.images.length > 0) {
-            form.images.forEach(image => {
-                formData.append('images', image);
-            });
-        }
-=======
         formData.append('date', form.date || new Date().toISOString().split('T')[0]);
         formData.append('type', activeTab);
-        
+
         if (activeTab === 'announcement') {
             const desc = `WHAT: ${announcement.what}\nWHEN: ${announcement.when}\nWHERE: ${announcement.where}\nWHO: ${announcement.who}\nHOW: ${announcement.how}\n\nNOTE: ${announcement.note}\nREMINDERS: ${announcement.reminders}`;
             formData.append('description', desc);
@@ -154,7 +119,6 @@ REMINDERS: `;
         form.images.forEach((img) => {
             formData.append('images', img);
         });
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
         try {
             await axios.post('/api/admin/activities', formData, {
@@ -162,21 +126,12 @@ REMINDERS: `;
             });
             fetchActivities(true);
             setIsModalOpen(false);
-<<<<<<< HEAD
-            setForm({ title: '', description: '', date: '', images: [], type: activeTab });
-=======
             resetForms();
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         } catch (err) {
             alert('Error uploading activity: ' + (err.response?.data?.message || err.message));
         }
     };
 
-<<<<<<< HEAD
-    const handleDelete = async (id, e) => {
-        e.stopPropagation(); // Prevent opening modal
-        if (!confirm('Delete this activity?')) return;
-=======
     const resetForms = () => {
         setForm({ title: '', description: '', date: '', images: [] });
         setAnnouncement({ what: '', when: '', where: '', who: '', how: '', note: '', reminders: '' });
@@ -184,7 +139,6 @@ REMINDERS: `;
 
     const handleDelete = async (id) => {
         if (!confirm('Delete this item?')) return;
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         try {
             await axios.delete(`/api/admin/activities/${id}`);
             const updated = activities.filter(a => a.id !== id);
@@ -233,64 +187,221 @@ REMINDERS: `;
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {activities
-                    .filter(a => (a.type || 'activity') === activeTab)
-                    .map(activity => (
-<<<<<<< HEAD
-                    <div 
-                        key={activity.id} 
-                        className="bg-white rounded shadow overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => setSelectedActivity(activity)}
-                    >
-=======
-                    <div key={activity.id} className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800">
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
-                        <div className="p-4">
-                            <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
-                            <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
-                                <Calendar size={14} className="mr-1" />
-                                {new Date(activity.date).toLocaleDateString()}
-                            </div>
-                            
-                            {/* Display Primary Image */}
-                            <div className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
-                                <img 
-                                    src={
-                                        activity.images && activity.images.length > 0 
-                                        ? `/api/images/activity-images/${activity.images[0]}`
-                                        : `/api/images/activities/${activity.id}`
-                                    }
-                                    alt={activity.title}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => e.target.style.display = 'none'} 
-                                />
-                                {activity.images && activity.images.length > 1 && (
-                                    <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-                                        +{activity.images.length - 1}
+            {filteredActivities.length > 0 && (
+                <div className="mb-4 bg-white dark:bg-gray-900 rounded shadow border border-gray-100 dark:border-gray-800 overflow-hidden">
+                    {(() => {
+                        const activity = filteredActivities[Math.min(activeFeaturedIndex, filteredActivities.length - 1)];
+                        const images = getImages(activity);
+                        const primary = images[0];
+                        return (
+                            <div className="flex flex-col md:flex-row">
+                                <div className="md:w-1/2 h-56 md:h-64 relative bg-gray-200 dark:bg-gray-800">
+                                    {primary && (
+                                        <img
+                                            src={primary}
+                                            alt={activity.title}
+                                            className="w-full h-full object-cover cursor-pointer"
+                                            onClick={() => {
+                                                setViewerActivity(activity);
+                                                setViewerIndex(0);
+                                            }}
+                                        />
+                                    )}
+                                    {images.length > 1 && (
+                                        <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                                            {images.length} photos
+                                        </div>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveFeaturedIndex(prev => (prev - 1 + filteredActivities.length) % filteredActivities.length)}
+                                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveFeaturedIndex(prev => (prev + 1) % filteredActivities.length)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1 hover:bg-black/70"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                                <div className="md:w-1/2 p-4 md:p-6 flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100 line-clamp-2">
+                                            {activity.title}
+                                        </h3>
+                                        <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
+                                            <Calendar size={14} className="mr-1" />
+                                            {new Date(activity.date).toLocaleDateString()}
+                                        </div>
+                                        <p className="text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-line line-clamp-3">
+                                            {activity.description}
+                                        </p>
                                     </div>
-                                )}
+                                    <div className="flex justify-between items-center mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setViewerActivity(activity);
+                                                setViewerIndex(0);
+                                            }}
+                                            className="text-[var(--primary-color)] text-sm font-semibold"
+                                        >
+                                            View photos
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(activity.id)}
+                                            className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center"
+                                        >
+                                            <Trash2 size={16} className="mr-1" /> Delete
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+                        );
+                    })()}
+                </div>
+            )}
 
-                            <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
-                            <button 
-                                onClick={(e) => handleDelete(activity.id, e)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
-                            >
-                                <Trash2 size={16} className="mr-1" /> Delete
-                            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredActivities.map(activity => {
+                    const images = getImages(activity);
+                    const primary = images[0];
+                    return (
+                        <div key={activity.id} className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800">
+                            <div className="p-4">
+                                <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
+                                <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
+                                    <Calendar size={14} className="mr-1" />
+                                    {new Date(activity.date).toLocaleDateString()}
+                                </div>
+                                
+                                <div
+                                    className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden relative cursor-pointer"
+                                    onClick={() => {
+                                        setViewerActivity(activity);
+                                        setViewerIndex(0);
+                                    }}
+                                >
+                                    {primary && (
+                                        <img
+                                            src={primary}
+                                            alt={activity.title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    {images.length > 1 && (
+                                        <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                                            +{images.length - 1} more
+                                        </div>
+                                    )}
+                                </div>
+
+                                <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
+                                <button 
+                                    onClick={() => handleDelete(activity.id)}
+                                    className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
+                                >
+                                    <Trash2 size={16} className="mr-1" /> Delete
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
             
-            {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
+            {filteredActivities.length === 0 && (
                 <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                     No {activeTab}s found.
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
+            {viewerActivity && (() => {
+                const images = getImages(viewerActivity);
+                const current = images[viewerIndex] || null;
+                const nextImage = () => {
+                    if (images.length === 0) return;
+                    setViewerIndex(i => (i + 1) % images.length);
+                };
+                const prevImage = () => {
+                    if (images.length === 0) return;
+                    setViewerIndex(i => (i - 1 + images.length) % images.length);
+                };
+                return (
+                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                        <div className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-full flex flex-col">
+                            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-700">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-white">{viewerActivity.title}</h3>
+                                    <div className="text-xs text-gray-400 flex items-center mt-1">
+                                        <Calendar size={12} className="mr-1" />
+                                        {new Date(viewerActivity.date).toLocaleString()}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewerActivity(null)}
+                                    className="text-gray-300 hover:text-white"
+                                >
+                                    <X size={22} />
+                                </button>
+                            </div>
+                            <div className="flex-1 flex flex-col md:flex-row">
+                                <div className="relative flex-1 bg-black flex items-center justify-center">
+                                    {current && (
+                                        <img
+                                            src={current}
+                                            alt=""
+                                            className="max-h-[70vh] w-full object-contain"
+                                        />
+                                    )}
+                                    {images.length > 1 && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={prevImage}
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 text-white rounded-full p-2 hover:bg-black/80"
+                                            >
+                                                <ChevronLeft size={20} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={nextImage}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 text-white rounded-full p-2 hover:bg-black/80"
+                                            >
+                                                <ChevronRight size={20} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                {images.length > 1 && (
+                                    <div className="w-full md:w-40 bg-gray-950 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto">
+                                        <div className="grid grid-cols-5 md:grid-cols-1 gap-1 p-2">
+                                            {images.map((img, idx) => (
+                                                <button
+                                                    type="button"
+                                                    key={idx}
+                                                    onClick={() => setViewerIndex(idx)}
+                                                    className={`relative h-16 md:h-20 rounded overflow-hidden border ${idx === viewerIndex ? 'border-[var(--primary-color)]' : 'border-transparent'}`}
+                                                >
+                                                    <img
+                                                        src={img}
+                                                        alt=""
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
                     <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
@@ -366,24 +477,6 @@ REMINDERS: `;
                                     </div>
                                 </div>
                             )}
-<<<<<<< HEAD
-                            <input 
-                                type="date" 
-                                className="w-full border p-2 rounded" 
-                                value={form.date} 
-                                onChange={e => setForm({...form, date: e.target.value})} 
-                            />
-                            <input 
-                                type="file" 
-                                className="w-full border p-2 rounded" 
-                                onChange={handleFileChange} 
-                                accept="image/*"
-                                multiple
-                            />
-                            <div className="flex space-x-2">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 border py-2 rounded hover:bg-gray-50">Cancel</button>
-                                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Upload</button>
-=======
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Date</label>
@@ -446,127 +539,11 @@ REMINDERS: `;
                                 >
                                     Post {activeTab === 'activity' ? 'Activity' : 'Announcement'}
                                 </button>
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-
-<<<<<<< HEAD
-            {/* View Modal (Facebook Style with Sliding) */}
-            {selectedActivity && (
-                <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-90 backdrop-blur-sm"
-                    onClick={() => setSelectedActivity(null)}
-                >
-                    <div 
-                        className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto flex flex-col md:flex-row overflow-hidden"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Image Section */}
-                        <div className="w-full md:w-2/3 bg-black flex items-center justify-center relative min-h-[300px] md:min-h-[600px] overflow-hidden">
-                             {/* CSS for Sliding Animation */}
-                             <style>{`
-                                @keyframes slideInRight {
-                                    from { transform: translateX(100%); opacity: 0; }
-                                    to { transform: translateX(0); opacity: 1; }
-                                }
-                                @keyframes slideInLeft {
-                                    from { transform: translateX(-100%); opacity: 0; }
-                                    to { transform: translateX(0); opacity: 1; }
-                                }
-                                .animate-slide-in-right { animation: slideInRight 0.3s ease-out forwards; }
-                                .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; }
-                             `}</style>
-
-                             {(() => {
-                                const hasMultipleImages = selectedActivity.images && selectedActivity.images.length > 0;
-                                const currentImageSrc = hasMultipleImages
-                                    ? `/api/images/activity-images/${selectedActivity.images[lightboxIndex]}`
-                                    : (selectedActivity.image_path?.startsWith('data:')
-                                        ? selectedActivity.image_path
-                                        : `/api/images/activities/${selectedActivity.id}`); // Fallback for admin
-
-                                return (
-                                    <>
-                                        {currentImageSrc ? (
-                                            <img
-                                                key={lightboxIndex}
-                                                src={currentImageSrc}
-                                                alt={selectedActivity.title}
-                                                className={`max-w-full max-h-full object-contain ${slideDirection === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left'}`}
-                                            />
-                                        ) : (
-                                            <div className="text-gray-500">No image available</div>
-                                        )}
-
-                                        {/* Navigation Arrows */}
-                                        {hasMultipleImages && selectedActivity.images.length > 1 && (
-                                            <>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSlideDirection('left');
-                                                        setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev - 1 + selectedActivity.images.length) % selectedActivity.images.length);
-                                                        }, 0);
-                                                    }}
-                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
-                                                >
-                                                    <ChevronLeft size={32} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSlideDirection('right');
-                                                        setTimeout(() => {
-                                                            setLightboxIndex(prev => (prev + 1) % selectedActivity.images.length);
-                                                        }, 0);
-                                                    }}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-50 text-white rounded-full p-2 transition-all z-10"
-                                                >
-                                                    <ChevronRight size={32} />
-                                                </button>
-                                                
-                                                {/* Image Counter */}
-                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
-                                                    {lightboxIndex + 1} / {selectedActivity.images.length}
-                                                </div>
-                                            </>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-
-                        {/* Details Section */}
-                        <div className="w-full md:w-1/3 flex flex-col h-full bg-white">
-                            <div className="flex justify-between items-center p-4 border-b">
-                                <h3 className="text-xl font-bold text-gray-900 pr-4 truncate">{selectedActivity.title}</h3>
-                                <button 
-                                    onClick={() => setSelectedActivity(null)}
-                                    className="text-gray-500 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-                            
-                            <div className="p-6 overflow-y-auto flex-1">
-                                <div className="flex items-center text-gray-500 text-sm mb-4 bg-gray-50 p-2 rounded inline-block">
-                                    <Calendar size={16} className="mr-2" />
-                                    <span className="font-medium">{selectedActivity.date}</span>
-                                </div>
-                                
-                                <div className="prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed">
-                                    {selectedActivity.description}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-=======
             <div className="mt-6 bg-[var(--primary-color)] text-white rounded-lg p-4 shadow-md">
                 <div className="flex items-center mb-3 border-b border-white/20 pb-1">
                     <Zap size={18} className="text-yellow-400 mr-2" />
@@ -599,7 +576,6 @@ REMINDERS: `;
                     </Link>
                 </div>
             </div>
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         </div>
     );
 };

@@ -1,16 +1,10 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Search, Bell, Mail } from 'lucide-react';
-=======
 import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail, Activity, AlertCircle } from 'lucide-react';
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
-import Footer from '../components/Footer';
-import NotificationDropdown from '../components/NotificationDropdown';
 
 const AdminLayout = () => {
     const { logout } = useAuth();
@@ -21,14 +15,6 @@ const AdminLayout = () => {
         'Training Staff': true,
         'Grading Management': true
     });
-<<<<<<< HEAD
-    const [health, setHealth] = useState({ status: 'unknown' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [unreadMessages, setUnreadMessages] = useState(0);
-=======
     const [systemStatus, setSystemStatus] = useState(null);
     const [statusError, setStatusError] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -44,68 +30,11 @@ const AdminLayout = () => {
     const [badgeMsg, setBadgeMsg] = useState(0);
     const [notifHighlight, setNotifHighlight] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
     };
 
-<<<<<<< HEAD
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const res = await axios.get('/api/notifications');
-                setNotifications(res.data);
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 10000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (searchQuery.length > 2) {
-                try {
-                    const res = await axios.get(`/api/admin/search?query=${searchQuery}`);
-                    setSearchResults(res.data);
-                    setIsSearchOpen(true);
-                } catch (error) {
-                    console.error("Search failed", error);
-                }
-            } else {
-                setSearchResults([]);
-                setIsSearchOpen(false);
-            }
-        }, 300);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchQuery]);
-
-    const handleMarkRead = async (id) => {
-        try {
-            await axios.delete(`/api/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (err) {
-            console.error("Error deleting notification:", err);
-        }
-    };
-
-    const handleClearAll = async (typeCategory) => {
-        const toDelete = typeCategory === 'Messages' 
-            ? notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin')
-            : notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin');
-        
-        for (const n of toDelete) {
-            await handleMarkRead(n.id);
-        }
-    };
-
-=======
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
     useEffect(() => {
         const fetchStatus = async () => {
             try {
@@ -253,9 +182,6 @@ const AdminLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    // Filter logic for Footer
-    const shouldShowFooter = !['/admin/profile', '/admin/settings'].some(path => location.pathname.includes(path)) && !location.pathname.includes('/about');
-
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
@@ -382,104 +308,6 @@ const AdminLayout = () => {
             </div>
 
             {/* Main Content */}
-<<<<<<< HEAD
-            <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="bg-white shadow p-3 flex items-center justify-between z-10">
-                    <div className="flex items-center flex-1">
-                        <button 
-                            onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
-                        >
-                            <Menu size={24} />
-                        </button>
-                        
-                        {/* Search Bar - Uppermost Corner */}
-                        <div className="relative hidden md:flex items-center w-96 ml-4">
-                            <Search className="absolute left-3 text-gray-400" size={18} />
-                            <input 
-                                type="text" 
-                                placeholder="Search cadets, staff..." 
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onFocus={() => searchQuery.length > 2 && setIsSearchOpen(true)}
-                                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
-                            />
-                            {/* Search Results Dropdown */}
-                            {isSearchOpen && searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 max-h-96 overflow-y-auto">
-                                    {searchResults.map((result) => (
-                                        <div 
-                                            key={`${result.type}-${result.id}`}
-                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                                            onClick={() => {
-                                                navigate(result.type === 'cadet' ? `/admin/cadets` : `/admin/staff`);
-                                                setSearchQuery('');
-                                                setIsSearchOpen(false);
-                                            }}
-                                        >
-                                            <div>
-                                                <div className="font-medium text-gray-800">
-                                                    {result.last_name}, {result.first_name}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {result.rank} • {result.sub_info}
-                                                </div>
-                                            </div>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${result.type === 'cadet' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                                {result.type === 'cadet' ? 'Cadet' : 'Staff'}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Right Side Icons */}
-                    <div className="flex items-center space-x-4 mr-4">
-                        <NotificationDropdown 
-                            type="Messages" 
-                            icon={Mail} 
-                            count={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin').length}
-                            notifications={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Messages')}
-                        />
-                        
-                        <NotificationDropdown 
-                            type="Notifications" 
-                            icon={Bell} 
-                            count={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin').length}
-                            notifications={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Notifications')}
-                        />
-
-                        <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
-                        
-                        <div className="flex items-center">
-                            <span className="text-sm font-semibold text-gray-700 mr-2 hidden md:block">Admin</span>
-                            <div className="h-8 w-8 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
-                                A
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                {(health && health.db === 'disconnected') && (
-                    <div className="bg-red-600 text-white text-sm p-2 text-center">
-                        Degraded mode: Database disconnected. Writes are queued; some features may be limited.
-                    </div>
-                )}
-                <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
-                    <div className="flex-grow">
-                        <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
-                            <Outlet />
-                        </Suspense>
-                    </div>
-                    {shouldShowFooter && <Footer />}
-=======
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center">
                     <button 
@@ -591,7 +419,6 @@ const AdminLayout = () => {
                         <Outlet />
                     </Suspense>
                         
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                 </main>
             </div>
 

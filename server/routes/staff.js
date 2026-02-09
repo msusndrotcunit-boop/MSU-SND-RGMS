@@ -340,12 +340,6 @@ router.put('/profile', authenticateToken, (req, res) => {
 
 // Get Notifications (Staff)
 router.get('/notifications', authenticateToken, (req, res) => {
-<<<<<<< HEAD
-    // Fetch notifications where user_id is NULL (system/global) BUT only for relevant types (activity, announcement, staff_chat)
-    // OR matches staff's user ID
-    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ('activity', 'announcement', 'staff_chat')) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
-    db.all(sql, [req.user.id], (err, rows) => {
-=======
     const userId = req.user.id;
     const staffId = req.user.staffId;
     const baseTypes = "('activity','announcement')";
@@ -358,7 +352,6 @@ router.get('/notifications', authenticateToken, (req, res) => {
         });
     }
     db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         if (err) return res.status(500).json({ message: err.message });
         const role = row && row.role ? row.role : '';
         const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
@@ -623,13 +616,6 @@ router.post('/chat/messages', authenticateToken, (req, res) => {
     }
     db.run(`INSERT INTO staff_messages (sender_staff_id, content) VALUES (?, ?)`, [senderId, content.trim()], function(err) {
         if (err) return res.status(500).json({ message: err.message });
-        
-        // Notify Admin (Mail Icon)
-        // type 'staff_chat'
-        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-            [`New message in Staff Communication Panel`, 'staff_chat']
-        );
-
         res.json({ id: this.lastID, message: 'Message posted' });
 
         // Send Push Notifications
