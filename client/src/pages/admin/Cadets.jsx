@@ -958,7 +958,7 @@ const Cadets = () => {
                             <div className="md:col-span-1 space-y-6">
                                 <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg shadow-inner text-center">
                                     <div className="relative inline-block">
-                                        <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mx-auto border-4 border-white dark:border-gray-600 shadow-lg">
+                                        <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mx-auto border-4 border-white dark:border-gray-600 shadow-lg">
                                             {preview ? (
                                                 <img 
                                                     src={preview} 
