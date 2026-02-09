@@ -24,6 +24,10 @@ const Attendance = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
 
+    // Import (PDF/Image) State
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef(null);
+
     // Filters for marking
     const [filterCompany, setFilterCompany] = useState('');
     const [filterPlatoon, setFilterPlatoon] = useState('');
@@ -758,6 +762,43 @@ const Attendance = () => {
                                             title="Export CSV"
                                         >
                                             <Download size={16} className="mr-2" /> Export
+                                        </button>
+                                        <input 
+                                            ref={fileInputRef}
+                                            type="file" 
+                                            accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.bmp,.webp,.gif,.tiff"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                if (!selectedDay) return;
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setIsImporting(true);
+                                                try {
+                                                    const formData = new FormData();
+                                                    formData.append('file', file);
+                                                    formData.append('dayId', selectedDay.id);
+                                                    await axios.post('/api/attendance/import', formData, {
+                                                        headers: { 'Content-Type': 'multipart/form-data' }
+                                                    });
+                                                    toast.success('Import complete. Attendance updated');
+                                                    selectDay(selectedDay, true);
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    const msg = err.response?.data?.message || 'Failed to import file';
+                                                    toast.error(msg);
+                                                } finally {
+                                                    setIsImporting(false);
+                                                    if (e.target) e.target.value = '';
+                                                }
+                                            }}
+                                        />
+                                        <button 
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition disabled:opacity-50"
+                                            disabled={!selectedDay || isImporting}
+                                            title="Import ROTCMIS PDF or scanned photo"
+                                        >
+                                            <FileText size={16} className="mr-2" /> {isImporting ? 'Importing...' : 'Import'}
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}

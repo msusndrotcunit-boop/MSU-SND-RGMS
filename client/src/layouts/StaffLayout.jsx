@@ -32,6 +32,7 @@ const StaffLayout = () => {
     const [notifications, setNotifications] = useState([]);
     const [messages, setMessages] = useState([]);
     const [staffRole, setStaffRole] = useState(null);
+    const [staffProfile, setStaffProfile] = useState(null);
     const [hasAutoSharedLocation, setHasAutoSharedLocation] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
@@ -104,6 +105,7 @@ const StaffLayout = () => {
             try {
                 const res = await axios.get('/api/staff/me');
                 setStaffRole(res.data?.role || null);
+                setStaffProfile(res.data);
             } catch {}
         };
         fetchStaffRole();
@@ -247,20 +249,43 @@ const StaffLayout = () => {
                 "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
-                    <span>Training Staff</span>
-                    <div className="flex items-center space-x-3">
-                        <button
-                            onClick={shareLocation}
-                            className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1"
-                        >
-                            <MapPin size={14} />
-                            <span>Share Location</span>
-                        </button>
-                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white/80 hover:text-white">
-                            <X size={24} />
-                        </button>
+                <div className="p-6 border-b border-white/10">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-xl font-bold">
+                            {['Commandant', 'NSTP Director', 'Admin NCO', 'ROTC Coordinator'].includes(staffRole) 
+                                ? 'Command Group' 
+                                : 'Training Staff'}
+                        </span>
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={shareLocation}
+                                className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1"
+                            >
+                                <MapPin size={14} />
+                                <span>Share Location</span>
+                            </button>
+                            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white/80 hover:text-white">
+                                <X size={24} />
+                            </button>
+                        </div>
                     </div>
+                    
+                    {staffProfile && (
+                        <div className="flex flex-col items-center mt-4">
+                            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/50 mb-2 bg-gray-200">
+                                <img 
+                                    src={staffProfile.profile_pic || "https://via.placeholder.com/150?text=No+Image"} 
+                                    alt="Profile" 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=No+Image'}}
+                                />
+                            </div>
+                            <h3 className="text-white font-semibold text-center text-lg">
+                                {staffProfile.rank} {staffProfile.first_name} {staffProfile.last_name}
+                            </h3>
+                            <p className="text-white/70 text-sm text-center">{staffProfile.role}</p>
+                        </div>
+                    )}
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
                     {/* Home - Locked if profile incomplete */}

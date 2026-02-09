@@ -586,6 +586,14 @@ const extractFromRaw = (line) => {
             row['Name'] = preProgram;
         }
 
+        // 3. Extract Time In / Time Out (After Status columns)
+        // Match typical "7:53 AM" or "11:48 AM" formats
+        const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
+        if (timeMatches.length > 0) {
+            row['Time In'] = timeMatches[0];
+            if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
+        }
+
         return row;
     }
 
@@ -645,6 +653,13 @@ const extractFromRaw = (line) => {
 
     if (cleanName.length > 2) {
         row['Name'] = cleanName;
+    }
+
+    // Try to extract time fields even for generic lines
+    const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
+    if (timeMatches.length > 0) {
+        row['Time In'] = timeMatches[0];
+        if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
     }
 
     return row;
@@ -771,29 +786,35 @@ const findCadet = async (row, allCadets = []) => {
     return null;
 };
 
-const upsertAttendance = (dayId, cadetId, status, remarks) => {
+const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) => {
     return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
+        db.get('SELECT id, time_in as existing_time_in, time_out as existing_time_out FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?', [dayId, cadetId], (err, row) => {
             if (err) return reject(err);
 
             if (row) {
-                db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                    [status, remarks, row.id], 
+                const newTimeIn = (typeof time_in === 'string' && time_in.trim() && time_in.trim() !== '-') ? time_in.trim() : row.existing_time_in || null;
+                const newTimeOut = (typeof time_out === 'string' && time_out.trim() && time_out.trim() !== '-') ? time_out.trim() : row.existing_time_out || null;
+                db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
+                    [status, remarks, newTimeIn, newTimeOut, row.id], 
                     (err) => {
                         if (err) reject(err);
                         else {
                             updateTotalAttendance(cadetId, null); 
+                            broadcastEvent({ type: 'attendance_import_updated', cadetId, dayId, status, time_in: newTimeIn, time_out: newTimeOut });
                             resolve('updated');
                         }
                     }
                 );
             } else {
-                db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                    [dayId, cadetId, status, remarks], 
+                const insertTimeIn = (typeof time_in === 'string' && time_in.trim() && time_in.trim() !== '-') ? time_in.trim() : null;
+                const insertTimeOut = (typeof time_out === 'string' && time_out.trim() && time_out.trim() !== '-') ? time_out.trim() : null;
+                db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                    [dayId, cadetId, status, remarks, insertTimeIn, insertTimeOut], 
                     (err) => {
                         if (err) reject(err);
                         else {
                             updateTotalAttendance(cadetId, null); 
+                            broadcastEvent({ type: 'attendance_import_created', cadetId, dayId, status, time_in: insertTimeIn, time_out: insertTimeOut });
                             resolve('inserted');
                         }
                     }
@@ -846,7 +867,9 @@ const processAttendanceData = async (data, dayId) => {
             const cadet = await findCadet(row, allCadets);
             
             if (cadet) {
-                await upsertAttendance(dayId, cadet.id, status, remarks);
+                const time_in = row['Time In'] || row['time_in'] || row['TimeIn'];
+                const time_out = row['Time Out'] || row['time_out'] || row['TimeOut'];
+                await upsertAttendance(dayId, cadet.id, status, remarks, time_in, time_out);
                 successCount++;
             } else {
                 // User Request: "The names that are not in the system will not be included."

@@ -59,7 +59,7 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
+                <div className="absolute right-0 mt-2 w-[85vw] max-w-[20rem] sm:w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
                     <div className="py-2 px-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <span className="font-semibold text-sm text-gray-700">{type}</span>
                         {notifications.length > 0 && (
