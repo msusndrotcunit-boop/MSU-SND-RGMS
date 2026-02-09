@@ -20,7 +20,9 @@ const Footer = () => {
           <p className="text-green-100/80 text-sm mb-4 leading-relaxed">
             MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
           </p>
-          <p className="text-yellow-500 font-mono text-sm font-semibold">Version 2.3.19</p>
+          <p className="text-yellow-500 font-mono text-sm font-semibold">
+            Version {import.meta.env.PACKAGE_VERSION}
+          </p>
         </div>
 
         {/* Quick Links */}

@@ -64,8 +64,14 @@ const Login = () => {
             }
         } catch (err) {
             console.error("Login error:", err);
-            const serverMsg = err.response?.data?.message;
-            setError(serverMsg || `Login failed. Please check your credentials.`);
+            if (err.response) {
+                const serverMsg = err.response.data?.message;
+                setError(serverMsg || 'Login failed. Please check your credentials.');
+            } else if (err.request) {
+                setError('Cannot reach the server. Please check your WiFi or mobile data connection and try again.');
+            } else {
+                setError('Unexpected error during login. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
