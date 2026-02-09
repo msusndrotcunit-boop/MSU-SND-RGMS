@@ -30,6 +30,9 @@ const Dashboard = () => {
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locations, setLocations] = useState([]);
+    const [generalMessage, setGeneralMessage] = useState('');
+    const [trainingMessage, setTrainingMessage] = useState('');
+    const [broadcastStatus, setBroadcastStatus] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -132,6 +135,30 @@ const Dashboard = () => {
         if (['FAILED', 'FAIL'].includes(s)) return 'Failed';
         if (['DROP', 'DROPPED'].includes(s)) return 'Drop';
         return 'Ongoing'; // Default
+    };
+
+    const sendGeneralUpdate = async () => {
+        try {
+            setBroadcastStatus('Sending general update...');
+            const body = generalMessage && String(generalMessage).trim() ? { message: generalMessage } : {};
+            const res = await axios.post('/api/admin/cadet-notifications/general-update', body);
+            setBroadcastStatus(res.data?.message || 'General update sent.');
+            setGeneralMessage('');
+        } catch (err) {
+            setBroadcastStatus('Failed to send general update.');
+        }
+    };
+
+    const sendTrainingReminder = async () => {
+        try {
+            setBroadcastStatus('Sending training reminder...');
+            const body = trainingMessage && String(trainingMessage).trim() ? { message: trainingMessage } : {};
+            const res = await axios.post('/api/admin/cadet-notifications/training-reminder', body);
+            setBroadcastStatus(res.data?.message || 'Training reminder sent.');
+            setTrainingMessage('');
+        } catch (err) {
+            setBroadcastStatus('Failed to send training reminder.');
+        }
     };
 
     return (
@@ -309,6 +336,47 @@ const Dashboard = () => {
                         className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border-2 border-yellow-300"
                     />
                 </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
+                <div className="flex items-center mb-4">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Broadcast</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">General Update Message (optional)</label>
+                        <input
+                            value={generalMessage}
+                            onChange={(e) => setGeneralMessage(e.target.value)}
+                            className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                            placeholder="Enter a general update for cadets"
+                        />
+                        <button
+                            onClick={sendGeneralUpdate}
+                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                        >
+                            Send General Update
+                        </button>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Training Reminder Message (optional)</label>
+                        <input
+                            value={trainingMessage}
+                            onChange={(e) => setTrainingMessage(e.target.value)}
+                            className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                            placeholder="Enter a training reminder for cadets"
+                        />
+                        <button
+                            onClick={sendTrainingReminder}
+                            className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                        >
+                            Send Training Reminder
+                        </button>
+                    </div>
+                </div>
+                {broadcastStatus && (
+                    <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">{broadcastStatus}</div>
+                )}
             </div>
             
             

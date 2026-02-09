@@ -980,7 +980,64 @@ router.post('/cadet-notifications/weekly-reminder', authenticateToken, isAdmin, 
         });
         stmt.finalize((finalizeErr) => {
             if (finalizeErr) return res.status(500).json({ message: finalizeErr.message });
+            broadcastEvent({ type: 'cadet_notification', subtype: 'weekly_reminder', count: rows.length, sentAt: now.toISOString() });
             res.json({ message: `Weekly reminder notifications created for ${rows.length} cadets.`, count: rows.length, sentAt: now.toISOString() });
+        });
+    });
+});
+
+router.post('/cadet-notifications/general-update', authenticateToken, isAdmin, (req, res) => {
+    const now = new Date();
+    const defaultMessage = 'General update: Please check your dashboard for the latest announcements.';
+    const message = (req.body && req.body.message && String(req.body.message).trim()) || defaultMessage;
+    const sql = `
+        SELECT u.id AS user_id
+        FROM users u
+        JOIN cadets c ON u.cadet_id = c.id
+        WHERE u.role = 'cadet'
+          AND (c.is_archived IS NULL OR c.is_archived = FALSE)
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) return res.json({ message: 'No cadet users found for update.' });
+        const stmt = db.prepare(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'general_update')`);
+        rows.forEach(r => {
+            if (r.user_id) {
+                stmt.run([r.user_id, message]);
+            }
+        });
+        stmt.finalize((finalizeErr) => {
+            if (finalizeErr) return res.status(500).json({ message: finalizeErr.message });
+            broadcastEvent({ type: 'cadet_notification', subtype: 'general_update', count: rows.length, sentAt: now.toISOString() });
+            res.json({ message: `General update notifications created for ${rows.length} cadets.`, count: rows.length, sentAt: now.toISOString() });
+        });
+    });
+});
+
+router.post('/cadet-notifications/training-reminder', authenticateToken, isAdmin, (req, res) => {
+    const now = new Date();
+    const defaultMessage = 'Training reminder: Formation and training schedule are posted. Prepare accordingly.';
+    const message = (req.body && req.body.message && String(req.body.message).trim()) || defaultMessage;
+    const sql = `
+        SELECT u.id AS user_id
+        FROM users u
+        JOIN cadets c ON u.cadet_id = c.id
+        WHERE u.role = 'cadet'
+          AND (c.is_archived IS NULL OR c.is_archived = FALSE)
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) return res.json({ message: 'No cadet users found for training reminder.' });
+        const stmt = db.prepare(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'training_reminder')`);
+        rows.forEach(r => {
+            if (r.user_id) {
+                stmt.run([r.user_id, message]);
+            }
+        });
+        stmt.finalize((finalizeErr) => {
+            if (finalizeErr) return res.status(500).json({ message: finalizeErr.message });
+            broadcastEvent({ type: 'cadet_notification', subtype: 'training_reminder', count: rows.length, sentAt: now.toISOString() });
+            res.json({ message: `Training reminder notifications created for ${rows.length} cadets.`, count: rows.length, sentAt: now.toISOString() });
         });
     });
 });

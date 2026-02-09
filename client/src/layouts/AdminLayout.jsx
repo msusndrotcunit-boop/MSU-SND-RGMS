@@ -145,7 +145,7 @@ const AdminLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply' || data.type === 'ask_admin' || data.type === 'staff_chat') {
+                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply' || data.type === 'ask_admin' || data.type === 'staff_chat' || data.type === 'cadet_notification') {
                             fetchNotifications();
                             fetchMessages();
                             if (data.type === 'ask_admin' || data.type === 'staff_chat') {
