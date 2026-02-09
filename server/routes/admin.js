@@ -1,8 +1,9 @@
 const express = require('express');
-const db = require('../database');
+const { upload } = require('../utils/cloudinary');
 const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const path = require('path');
 const fs = require('fs');
+const db = require('../database');
 const xlsx = require('xlsx');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
@@ -110,13 +111,6 @@ function broadcastEvent(event) {
         console.error('SSE broadcast error', e);
     }
 }
-// Multer Setup (Memory Storage for Base64)
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
 
 // --- Import Helpers ---
 
@@ -1909,17 +1903,24 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 router.post('/activities', upload.array('images', 10), (req, res) => {
     const { title, description, date, type } = req.body;
     
-    // Convert buffer to Base64 Data URI if file exists
     let images = [];
     if (req.files && req.files.length > 0) {
-        images = req.files.map(file => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`);
-    } else if (req.file) {
-        // Fallback if client sends single 'image' field (though upload.array handles 'images' field)
-        // Note: upload.array('images') won't catch field 'image'. 
-        // We might need upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 }]) 
-        // but simpler to just expect client to use 'images'.
-        // If client sends 'image' but we use upload.array('images'), req.file is undefined.
-        // So we should stick to upload.array('images') and update client.
+        images = req.files.map(file => {
+            // Cloudinary returns a secure URL directly in file.path
+            if (file.path && (file.path.startsWith('http') || file.path.startsWith('https'))) {
+                return file.path;
+            }
+            // Local fallback: file.path is an absolute path. Convert to relative URL.
+            // Assuming file is saved in 'server/uploads' and served via '/uploads'
+            if (file.filename) {
+                return `/uploads/${file.filename}`;
+            }
+            // Fallback for memory storage (if ever reverted)
+            if (file.buffer) {
+                return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+            }
+            return null;
+        }).filter(Boolean);
     }
 
     const activityType = type || 'activity';
