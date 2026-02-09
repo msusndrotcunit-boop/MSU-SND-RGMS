@@ -121,23 +121,11 @@ router.put('/:id/reply', async (req, res) => {
 
     try {
         await pRun(`UPDATE admin_messages SET admin_reply = ?, status = ? WHERE id = ?`, [admin_reply, status || 'resolved', id]);
-<<<<<<< HEAD
-        
-        // Notify User (Cadet/Staff)
-        // First get the message to find the user_id
-        const msg = await pGet(`SELECT user_id FROM admin_messages WHERE id = ?`, [id]);
-        if (msg && msg.user_id) {
-            const notifMsg = `Admin replied to your message.`;
-            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`, [msg.user_id, notifMsg, 'ask_admin_reply']);
-        }
-
-=======
         const msg = await pGet(`SELECT user_id FROM admin_messages WHERE id = ?`, [id]);
         if (msg && msg.user_id) {
             db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [msg.user_id, 'Admin replied to your inquiry.', 'ask_admin_reply']);
             broadcastEvent({ type: 'ask_admin_reply', userId: msg.user_id, messageId: id });
         }
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         res.json({ message: 'Reply sent successfully' });
     } catch (err) {
         console.error('Error replying to message:', err);

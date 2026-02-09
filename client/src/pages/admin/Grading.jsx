@@ -117,6 +117,7 @@ const Grading = () => {
         if (!videoRef.current || !canvasRef.current) return;
 
         setIsProcessing(true);
+        setScanResult(null);
         try {
             const video = videoRef.current;
             const canvas = canvasRef.current;
@@ -136,54 +137,89 @@ const Grading = () => {
 
             const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng');
             
-            // Analyze Text against Key
-            const key = scanConfig.correctAnswers.toUpperCase().replace(/[^A-Z]/g, '');
-            // Clean scanned text: remove non-letters, ignore small words/noise if possible?
-            // For now, just keep letters
-            const scannedText = text.toUpperCase().replace(/[^A-Z]/g, '');
+            // --- VALIDATION: Check if it's a test paper ---
+            // 1. Check for common keywords
+            const keywords = ['NAME', 'SCORE', 'GRADE', 'TEST', 'EXAM', 'SUBJECT', 'DATE', 'SECTION', 'NO.', 'ITEM', 'TOTAL'];
+            const upperText = text.toUpperCase();
+            const hasKeyword = keywords.some(k => upperText.includes(k));
+
+            // 2. Try to detect answers format (e.g., "1. A", "2. B")
+            const answerRegex = /\b(\d+)\s*[\.\-\)\:]+\s*([A-E])\b/gi;
+            const matches = [...text.matchAll(answerRegex)];
             
+            // Reject if no keywords AND fewer than 3 detectable answers
+            if (!hasKeyword && matches.length < 3) {
+                alert("Non-test paper detected.\n\nPlease scan a valid test paper containing:\n- Headers (Name, Test, Score)\n- Or answers formatted as '1. A', '2. B'");
+                setIsProcessing(false);
+                return;
+            }
+
+            // --- GRADING LOGIC ---
+            const key = scanConfig.correctAnswers.toUpperCase().replace(/[^A-Z]/g, '');
             let correctCount = 0;
             let wrongCount = 0;
-            let totalItems = key.length || 50;
+            let totalItems = key.length || 0;
             let calculatedScore = 0;
             
             if (key.length > 0) {
-                // Key Matching Logic
-                // We assume the scanned text starts with the answers. 
-                // To be more robust, we might need to find where the sequence starts.
-                // But for a simple scanner, we'll take the first N letters.
-                
-                const answers = scannedText.substring(0, key.length);
-                
-                for (let i = 0; i < key.length; i++) {
-                    if (answers[i] === key[i]) {
-                        correctCount++;
+                // Key Matching Mode
+                if (matches.length === 0) {
+                    // Try fallback: plain sequence of letters if explicit numbering isn't found
+                    // Only if text looks like a block of answers
+                    const possibleAnswers = upperText.replace(/[^A-E]/g, '');
+                    if (possibleAnswers.length >= key.length * 0.5) {
+                        // Very basic fallback: just compare sequence
+                        const limit = Math.min(possibleAnswers.length, key.length);
+                        for (let i = 0; i < limit; i++) {
+                            if (possibleAnswers[i] === key[i]) correctCount++;
+                            else wrongCount++;
+                        }
+                        if (key.length > limit) wrongCount += (key.length - limit);
                     } else {
-                        wrongCount++;
+                        alert("Could not detect answer format.\nPlease format answers as '1. A', '2. B' for best results.");
+                        setIsProcessing(false);
+                        return;
+                    }
+                } else {
+                    // Smart Matching using Question Numbers
+                    const studentAnswers = {};
+                    matches.forEach(m => {
+                        const qNum = parseInt(m[1], 10);
+                        const ans = m[2].toUpperCase();
+                        studentAnswers[qNum] = ans;
+                    });
+
+                    for (let i = 0; i < key.length; i++) {
+                        const qNum = i + 1;
+                        const correct = key[i];
+                        const student = studentAnswers[qNum];
+                        
+                        if (student) {
+                            if (student === correct) correctCount++;
+                            else wrongCount++;
+                        } else {
+                            wrongCount++; // Unanswered or undetected
+                        }
                     }
                 }
-                // If scanned text is shorter than key, remaining are wrong
-                if (answers.length < key.length) {
-                    wrongCount += (key.length - answers.length);
-                }
+                totalItems = key.length;
             } else {
-                // No key provided: Try to find a score pattern (e.g. "45/50" or "Score: 45")
-                const scoreMatch = text.match(/(\d+)\s*\/\s*(\d+)/); // Matches 45/50
-                const simpleScoreMatch = text.match(/(?:Score|Grade|Total):\s*(\d+)/i); // Matches Score: 45
+                // No key provided: Look for Score/Grade
+                const scoreMatch = text.match(/(?:Score|Grade|Total)\s*[:\-\s]?\s*(\d+)(?:\s*\/\s*(\d+))?/i);
+                const fractionMatch = text.match(/(\d+)\s*\/\s*(\d+)/);
                 
                 if (scoreMatch) {
                     correctCount = parseInt(scoreMatch[1], 10);
-                    totalItems = parseInt(scoreMatch[2], 10);
+                    totalItems = scoreMatch[2] ? parseInt(scoreMatch[2], 10) : 100; // Default to 100 items if denominator missing
                     wrongCount = totalItems - correctCount;
-                } else if (simpleScoreMatch) {
-                    correctCount = parseInt(simpleScoreMatch[1], 10);
-                    // Assume total is correctCount + random wrong if unknown, or default 50
-                    totalItems = 50; 
+                } else if (fractionMatch) {
+                    correctCount = parseInt(fractionMatch[1], 10);
+                    totalItems = parseInt(fractionMatch[2], 10);
                     wrongCount = totalItems - correctCount;
                 } else {
-                    // Fallback if no numbers found
-                     wrongCount = Math.floor(Math.random() * (totalItems * 0.2)); 
-                     correctCount = totalItems - wrongCount;
+                    alert("No Answer Key provided and no Score found on paper.\n\nPlease either:\n1. Enter an Answer Key (e.g. ABCD)\n2. Or write 'Score: XX/YY' on the paper.");
+                    setIsProcessing(false);
+                    return;
                 }
             }
 
@@ -198,8 +234,53 @@ const Grading = () => {
                 rawText: text
             });
 
+            // --- AUTO-SAVE LOGIC ---
+            // If validated (which it is if we reached here) and cadet selected, save automatically
+            if (targetCadetId) {
+                const cadet = cadets.find(c => c.id === Number(targetCadetId));
+                if (cadet) {
+                    try {
+                        const scoreField = 
+                            scanConfig.examType === 'prelim' ? 'prelimScore' :
+                            scanConfig.examType === 'midterm' ? 'midtermScore' :
+                            'finalScore';
+
+                        const updateData = {
+                            prelimScore: cadet.prelim_score || 0,
+                            midtermScore: cadet.midterm_score || 0,
+                            finalScore: cadet.final_score || 0,
+                            attendancePresent: cadet.attendance_present || 0,
+                            meritPoints: cadet.merit_points || 0,
+                            demeritPoints: cadet.demerit_points || 0,
+                            status: cadet.grade_status || 'active',
+                            [scoreField]: Number(calculatedScore)
+                        };
+
+                        await axios.put(`/api/admin/grades/${cadet.id}`, updateData);
+                        
+                        // Update UI to show saved
+                        setLastScanned({
+                            name: `${cadet.last_name}, ${cadet.first_name}`,
+                            score: calculatedScore,
+                            type: scanConfig.examType
+                        });
+
+                        // Refresh cadet list in background
+                        fetchCadets(true);
+                        
+                        // Optional: Brief success indicator or just rely on Last Scanned box
+                        // We keep the captured image/result open so they can review, but it's already saved.
+                    } catch (saveErr) {
+                        console.error("Auto-save failed:", saveErr);
+                        alert("Auto-save failed. Please try syncing manually.");
+                    }
+                }
+            } else {
+                alert("Score calculated but NOT saved: Please select a cadet first.");
+            }
+
         } catch (err) {
-            console.error(err);
+            console.error("Scan analysis error:", err);
             alert("Analysis Failed: " + err.message);
         } finally {
             setIsProcessing(false);
@@ -499,7 +580,7 @@ const Grading = () => {
                                                 value={scanConfig.correctAnswers}
                                                 onChange={e => setScanConfig({...scanConfig, correctAnswers: e.target.value})}
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Total Items: {scanConfig.correctAnswers.length || 50}</p>
+                                            <p className="text-xs text-gray-500 mt-1">Total Items: {scanConfig.correctAnswers.length || 100}</p>
                                         </div>
                                     </div>
                                 </div>

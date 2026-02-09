@@ -8,11 +8,10 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
-const { upload } = require('../utils/cloudinary');
+// const { upload } = require('../utils/cloudinary'); // Removed in favor of local memory storage
 
 const router = express.Router();
 
-<<<<<<< HEAD
 // --- Search Cadets & Staff ---
 router.get('/search', authenticateToken, isAdmin, async (req, res) => {
     const { query } = req.query;
@@ -37,7 +36,8 @@ router.get('/search', authenticateToken, isAdmin, async (req, res) => {
         }
         res.json(rows);
     });
-=======
+});
+
 router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const start = Date.now();
     const results = {};
@@ -111,11 +111,11 @@ function broadcastEvent(event) {
     }
 }
 // Multer Setup (Memory Storage for Base64)
+const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ 
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 });
 
 // --- Import Helpers ---
@@ -1513,22 +1513,6 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 // --- Activity Management ---
 
 // Upload Activity
-<<<<<<< HEAD
-router.post('/activities', upload.array('images'), async (req, res) => {
-    const { title, description, date, type } = req.body;
-    
-    // Use transaction-like logic (though db adapter might not support explicit transactions easily, we do sequential inserts)
-    const activityType = type || 'activity';
-
-    try {
-        // 1. Insert Activity
-        const activityId = await new Promise((resolve, reject) => {
-            db.run(`INSERT INTO activities (title, description, date, type) VALUES (?, ?, ?, ?)`,
-                [title, description, date, activityType],
-                function(err) {
-                    if (err) reject(err);
-                    else resolve(this.lastID);
-=======
 router.post('/activities', upload.array('images', 10), (req, res) => {
     const { title, description, date, type } = req.body;
     
@@ -1563,55 +1547,17 @@ router.post('/activities', upload.array('images', 10), (req, res) => {
         function(err) {
             if (err) return res.status(500).json({ message: err.message });
             
+            const activityId = this.lastID;
             // Create notification for the new activity
             const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
             db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
                 [notifMsg], 
                 (nErr) => {
                     if (nErr) console.error("Error creating activity notification:", nErr);
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+                    res.json({ id: activityId, message: 'Activity created' });
                 }
             );
         });
-
-        // 2. Process Images
-        if (req.files && req.files.length > 0) {
-            const imageInserts = req.files.map(file => {
-                // Use the file path (URL from Cloudinary or local path)
-                const imagePath = file.path; 
-                return new Promise((resolve, reject) => {
-                    db.run(`INSERT INTO activity_images (activity_id, image_path) VALUES (?, ?)`,
-                        [activityId, imagePath],
-                        (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        }
-                    );
-                });
-            });
-
-            await Promise.all(imageInserts);
-            
-            // Optional: Set first image as main image_path for legacy support
-            const firstImagePath = req.files[0].path;
-            db.run(`UPDATE activities SET image_path = ? WHERE id = ?`, [firstImagePath, activityId]);
-        }
-
-        // 3. Create Notification
-        const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
-        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
-            [notifMsg], 
-            (nErr) => {
-                if (nErr) console.error("Error creating activity notification:", nErr);
-            }
-        );
-
-        res.json({ id: activityId, message: 'Activity created' });
-
-    } catch (err) {
-        console.error("Error creating activity:", err);
-        res.status(500).json({ message: err.message });
-    }
 });
 
 // Delete Activity
@@ -1707,14 +1653,8 @@ router.get('/profile', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Update Admin Profile (Pic)
-<<<<<<< HEAD
-router.put('/profile', upload.single('profilePic'), (req, res) => {
-    // Use file path/url instead of Base64
-    const profilePic = req.file ? req.file.path : null;
-=======
 router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
     const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
     
     if (profilePic) {
         db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [profilePic, req.user.id], function(err) {

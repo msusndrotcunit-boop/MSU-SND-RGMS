@@ -2,17 +2,10 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail } from 'lucide-react';
-import { Toaster, toast } from 'react-hot-toast';
-import clsx from 'clsx';
-import NotificationDropdown from '../components/NotificationDropdown';
-
-=======
 import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar, MapPin } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+import NotificationDropdown from '../components/NotificationDropdown';
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -33,56 +26,69 @@ const StaffLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-<<<<<<< HEAD
-    const [notifications, setNotifications] = useState([]);
-
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const res = await axios.get('/api/notifications');
-                setNotifications(res.data);
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-
-        if (user) {
-            fetchNotifications();
-            const interval = setInterval(fetchNotifications, 10000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    const handleMarkRead = async (id) => {
-        try {
-            await axios.delete(`/api/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (err) {
-            console.error("Error deleting notification:", err);
-        }
-    };
-
-    const handleClearAll = async (typeCategory) => {
-        const toDelete = typeCategory === 'Messages' 
-            ? notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin_reply')
-            : notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin_reply');
-        
-        for (const n of toDelete) {
-            await handleMarkRead(n.id);
-        }
-    };
-=======
     const [badgeNotif, setBadgeNotif] = useState(0);
     const [badgeMsg, setBadgeMsg] = useState(0);
     const [notifHighlight, setNotifHighlight] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [messages, setMessages] = useState([]);
-    const [notifOpen, setNotifOpen] = useState(false);
-    const [messageOpen, setMessageOpen] = useState(false);
     const [staffRole, setStaffRole] = useState(null);
     const [hasAutoSharedLocation, setHasAutoSharedLocation] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await axios.get('/api/staff/notifications');
+            setNotifications(res.data || []);
+            setBadgeNotif(res.data?.length || 0);
+        } catch (err) { console.error(err); }
+    };
+
+    const fetchMessages = async () => {
+        try {
+            const res = await axios.get('/api/messages/my');
+            setMessages(res.data || []);
+            setBadgeMsg(res.data?.length || 0);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleMarkReadNotif = async (id) => {
+        try {
+            await axios.delete(`/api/notifications/${id}`);
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            setBadgeNotif(prev => Math.max(0, prev - 1));
+        } catch (err) { console.error(err); }
+    };
+
+    const handleMarkReadMsg = async (id) => {
+        try {
+            await axios.delete(`/api/messages/${id}`);
+            setMessages(prev => prev.filter(m => m.id !== id));
+            setBadgeMsg(prev => Math.max(0, prev - 1));
+        } catch (err) { console.error(err); }
+    };
+
+    const handleClearNotifs = async () => {
+        try {
+            await axios.delete('/api/staff/notifications/delete-all');
+            setNotifications([]);
+            setBadgeNotif(0);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleClearMessages = async () => {
+        try {
+            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`)));
+            setMessages([]);
+            setBadgeMsg(0);
+        } catch (err) { console.error(err); }
+    };
+
+    React.useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            fetchMessages();
+        }
+    }, [user]);
 
     
 
@@ -192,19 +198,6 @@ const StaffLayout = () => {
     React.useEffect(() => {
         axios.post('/api/staff/access').catch(() => {});
 
-        const fetchInitialCounts = async () => {
-            try {
-                const [notifRes, msgRes] = await Promise.all([
-                    axios.get('/api/staff/notifications'),
-                    axios.get('/api/messages/my')
-                ]);
-                setBadgeNotif((notifRes.data || []).length || 0);
-                setBadgeMsg((msgRes.data || []).length || 0);
-            } catch {}
-        };
-
-        fetchInitialCounts();
-
         let es;
         const connect = () => {
             try {
@@ -212,8 +205,9 @@ const StaffLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'ask_admin_reply') {
-                            setBadgeNotif((b) => b + 1);
+                        if (data.type === 'ask_admin_reply' || data.type === 'staff_chat') {
+                            fetchNotifications();
+                            fetchMessages();
                             if (navigator.vibrate) navigator.vibrate(80);
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
@@ -229,26 +223,6 @@ const StaffLayout = () => {
         connect();
         return () => { try { es && es.close(); } catch {} };
     }, []);
-
-    const openNotifications = async () => {
-        setNotifOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/staff/notifications');
-            setNotifications(res.data || []);
-            setBadgeNotif(0);
-            await axios.delete('/api/staff/notifications/delete-all');
-        } catch {}
-    };
-
-    const openMessages = async () => {
-        setMessageOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/messages/my');
-            setMessages(res.data || []);
-            setBadgeMsg(0);
-            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
-        } catch {}
-    };
     
 
     
@@ -489,61 +463,23 @@ const StaffLayout = () => {
                         <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>
 
-<<<<<<< HEAD
                     <div className="flex items-center space-x-4">
                         <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
-                            count={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin_reply').length}
-                            notifications={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin_reply')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Messages')}
+                            count={badgeMsg}
+                            notifications={messages}
+                            onMarkRead={handleMarkReadMsg}
+                            onClear={handleClearMessages}
                         />
                         <NotificationDropdown 
                             type="Notifications" 
                             icon={Bell} 
-                            count={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin_reply').length}
-                            notifications={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin_reply')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Notifications')}
+                            count={badgeNotif}
+                            notifications={notifications}
+                            onMarkRead={handleMarkReadNotif}
+                            onClear={handleClearNotifs}
                         />
-=======
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                        <button onClick={openMessages} className="relative text-gray-600 dark:text-gray-300 hover:text-[var(--primary-color)]">
-                            <Mail size={20} />
-                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
-                        </button>
-                        <button 
-                            onClick={openNotifications} 
-                            className={clsx(
-                                "relative transition-colors",
-                                notifHighlight ? "text-[var(--primary-color)]" : "text-gray-600 dark:text-gray-300 hover:text-[var(--primary-color)]"
-                            )}
-                        >
-                            <Bell size={20} />
-                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
-                        </button>
-                        {(notifOpen && notifications.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow w-80 z-50">
-                                {notifications.map(n => (
-                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800 dark:text-gray-100">{n.message}</div>
-                                        <div className="text-xs text-gray-400 dark:text-gray-400">{n.type}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {(messageOpen && messages.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded shadow w-80 z-50">
-                                {messages.map(m => (
-                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800 dark:text-gray-100">{m.subject}</div>
-                                        <div className="text-xs text-gray-400 dark:text-gray-400">{m.sender_role}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                     </div>
                 </header>
 

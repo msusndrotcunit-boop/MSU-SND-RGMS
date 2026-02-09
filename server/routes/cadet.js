@@ -72,10 +72,7 @@ router.get('/my-grades', async (req, res) => {
         const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {
-<<<<<<< HEAD
             // Prioritize Admin's manual entry (gradeRow) over raw logs (calculated)
-=======
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
             attendance_present: gradeRow ? gradeRow.attendance_present : attendancePresent,
             merit_points: gradeRow ? gradeRow.merit_points : meritPoints,
             demerit_points: gradeRow ? gradeRow.demerit_points : demeritPoints,
@@ -385,32 +382,6 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     });
 });
 
-<<<<<<< HEAD
-router.get('/activities', async (req, res) => {
-    try {
-        const activities = await new Promise((resolve, reject) => {
-            db.all(`SELECT id, title, description, date, type, image_path FROM activities ORDER BY date DESC`, [], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
-
-        // For each activity, fetch image IDs
-        const activitiesWithImages = await Promise.all(activities.map(async (activity) => {
-            const images = await new Promise((resolve) => {
-                db.all(`SELECT id FROM activity_images WHERE activity_id = ?`, [activity.id], (err, rows) => {
-                    if (err) resolve([]);
-                    else resolve(rows.map(r => r.id)); // Return array of IDs
-                });
-            });
-            return { ...activity, images };
-        }));
-
-        res.json(activitiesWithImages);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-=======
 router.get('/activities', (req, res) => {
     db.all(
         `SELECT id, title, description, date, type, image_path, images 
@@ -422,7 +393,6 @@ router.get('/activities', (req, res) => {
             res.json(rows);
         }
     );
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 });
 
 // Acknowledge User Guide

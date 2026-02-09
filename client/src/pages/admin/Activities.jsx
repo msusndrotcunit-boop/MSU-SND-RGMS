@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-<<<<<<< HEAD
-import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
-=======
-import { Trash2, Plus, Calendar, X, Upload, Zap } from 'lucide-react';
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X, Upload, Zap } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
@@ -13,23 +9,6 @@ const Activities = () => {
     const [activities, setActivities] = useState([]);
     const [activeTab, setActiveTab] = useState('activity');
     const [isModalOpen, setIsModalOpen] = useState(false);
-<<<<<<< HEAD
-    const [form, setForm] = useState({ title: '', description: '', date: '', images: [], type: 'activity' });
-    
-    // View Modal State
-    const [selectedActivity, setSelectedActivity] = useState(null);
-    const [lightboxIndex, setLightboxIndex] = useState(0);
-    const [slideDirection, setSlideDirection] = useState('right');
-
-    const announcementTemplate = `WHAT: 
-WHEN: 
-WHERE: 
-WHO: 
-HOW: 
-
-NOTE: 
-REMINDERS: `;
-=======
     
     // Activity Form State
     const [form, setForm] = useState({ title: '', description: '', date: '', images: [] });
@@ -38,7 +17,11 @@ REMINDERS: `;
     const [announcement, setAnnouncement] = useState({
         what: '', when: '', where: '', who: '', how: '', note: '', reminders: ''
     });
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+
+    // View Modal State
+    const [selectedActivity, setSelectedActivity] = useState(null);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [slideDirection, setSlideDirection] = useState('right');
 
     useEffect(() => {
         fetchActivities();
@@ -74,25 +57,6 @@ REMINDERS: `;
 
     const handleFileChange = async (e) => {
         const files = Array.from(e.target.files);
-<<<<<<< HEAD
-        if (files.length > 0) {
-            const options = {
-                maxSizeMB: 0.5,
-                maxWidthOrHeight: 1024,
-                useWebWorker: true,
-            };
-
-            const processedFiles = await Promise.all(files.map(async (file) => {
-                try {
-                    return await imageCompression(file, options);
-                } catch (error) {
-                    console.error("Image compression error:", error);
-                    return file;
-                }
-            }));
-
-            setForm({ ...form, images: processedFiles });
-=======
         const processedImages = [];
         
         const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
@@ -105,7 +69,6 @@ REMINDERS: `;
                 console.error("Compression error", error);
                 processedImages.push(file);
             }
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         }
         
         setForm(prev => ({ ...prev, images: [...prev.images, ...processedImages] }));
@@ -113,6 +76,11 @@ REMINDERS: `;
 
     const removeImage = (index) => {
         setForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+    };
+
+    const resetForms = () => {
+        setForm({ title: '', description: '', date: '', images: [] });
+        setAnnouncement({ what: '', when: '', where: '', who: '', how: '', note: '', reminders: '' });
     };
 
     const handleSubmit = async (e) => {
@@ -130,17 +98,6 @@ REMINDERS: `;
 
         const formData = new FormData();
         formData.append('title', form.title);
-<<<<<<< HEAD
-        formData.append('description', form.description);
-        formData.append('date', form.date);
-        formData.append('type', form.type);
-        
-        if (form.images && form.images.length > 0) {
-            form.images.forEach(image => {
-                formData.append('images', image);
-            });
-        }
-=======
         formData.append('date', form.date || new Date().toISOString().split('T')[0]);
         formData.append('type', activeTab);
         
@@ -154,7 +111,6 @@ REMINDERS: `;
         form.images.forEach((img) => {
             formData.append('images', img);
         });
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
         try {
             await axios.post('/api/admin/activities', formData, {
@@ -162,29 +118,15 @@ REMINDERS: `;
             });
             fetchActivities(true);
             setIsModalOpen(false);
-<<<<<<< HEAD
-            setForm({ title: '', description: '', date: '', images: [], type: activeTab });
-=======
             resetForms();
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         } catch (err) {
             alert('Error uploading activity: ' + (err.response?.data?.message || err.message));
         }
     };
 
-<<<<<<< HEAD
     const handleDelete = async (id, e) => {
-        e.stopPropagation(); // Prevent opening modal
-        if (!confirm('Delete this activity?')) return;
-=======
-    const resetForms = () => {
-        setForm({ title: '', description: '', date: '', images: [] });
-        setAnnouncement({ what: '', when: '', where: '', who: '', how: '', note: '', reminders: '' });
-    };
-
-    const handleDelete = async (id) => {
+        if (e) e.stopPropagation();
         if (!confirm('Delete this item?')) return;
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         try {
             await axios.delete(`/api/admin/activities/${id}`);
             const updated = activities.filter(a => a.id !== id);
@@ -237,15 +179,11 @@ REMINDERS: `;
                 {activities
                     .filter(a => (a.type || 'activity') === activeTab)
                     .map(activity => (
-<<<<<<< HEAD
                     <div 
                         key={activity.id} 
-                        className="bg-white rounded shadow overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                        className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-lg transition-shadow"
                         onClick={() => setSelectedActivity(activity)}
                     >
-=======
-                    <div key={activity.id} className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800">
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                         <div className="p-4">
                             <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
                             <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
@@ -366,24 +304,6 @@ REMINDERS: `;
                                     </div>
                                 </div>
                             )}
-<<<<<<< HEAD
-                            <input 
-                                type="date" 
-                                className="w-full border p-2 rounded" 
-                                value={form.date} 
-                                onChange={e => setForm({...form, date: e.target.value})} 
-                            />
-                            <input 
-                                type="file" 
-                                className="w-full border p-2 rounded" 
-                                onChange={handleFileChange} 
-                                accept="image/*"
-                                multiple
-                            />
-                            <div className="flex space-x-2">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 border py-2 rounded hover:bg-gray-50">Cancel</button>
-                                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Upload</button>
-=======
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Date</label>
@@ -446,14 +366,12 @@ REMINDERS: `;
                                 >
                                     Post {activeTab === 'activity' ? 'Activity' : 'Announcement'}
                                 </button>
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-<<<<<<< HEAD
             {/* View Modal (Facebook Style with Sliding) */}
             {selectedActivity && (
                 <div 
@@ -566,7 +484,7 @@ REMINDERS: `;
                     </div>
                 </div>
             )}
-=======
+
             <div className="mt-6 bg-[var(--primary-color)] text-white rounded-lg p-4 shadow-md">
                 <div className="flex items-center mb-3 border-b border-white/20 pb-1">
                     <Zap size={18} className="text-yellow-400 mr-2" />
@@ -599,7 +517,6 @@ REMINDERS: `;
                     </Link>
                 </div>
             </div>
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         </div>
     );
 };

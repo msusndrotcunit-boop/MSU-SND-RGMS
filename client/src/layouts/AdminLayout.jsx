@@ -1,11 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Search, Bell, Mail } from 'lucide-react';
-=======
 import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail, Activity, AlertCircle } from 'lucide-react';
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -21,14 +17,6 @@ const AdminLayout = () => {
         'Training Staff': true,
         'Grading Management': true
     });
-<<<<<<< HEAD
-    const [health, setHealth] = useState({ status: 'unknown' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [unreadMessages, setUnreadMessages] = useState(0);
-=======
     const [systemStatus, setSystemStatus] = useState(null);
     const [statusError, setStatusError] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -36,76 +24,81 @@ const AdminLayout = () => {
     const [searchResults, setSearchResults] = useState({ cadets: [], staff: [] });
     const [cadetsData, setCadetsData] = useState([]);
     const [staffData, setStaffData] = useState([]);
-    const [notifOpen, setNotifOpen] = useState(false);
-    const [messageOpen, setMessageOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [messages, setMessages] = useState([]);
     const [badgeNotif, setBadgeNotif] = useState(0);
     const [badgeMsg, setBadgeMsg] = useState(0);
     const [notifHighlight, setNotifHighlight] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
     const toggleMenu = (label) => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
     };
 
-<<<<<<< HEAD
-    useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const res = await axios.get('/api/notifications');
-                setNotifications(res.data);
-            } catch (err) {
-                console.error("Error fetching notifications:", err);
-            }
-        };
-
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 10000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (searchQuery.length > 2) {
-                try {
-                    const res = await axios.get(`/api/admin/search?query=${searchQuery}`);
-                    setSearchResults(res.data);
-                    setIsSearchOpen(true);
-                } catch (error) {
-                    console.error("Search failed", error);
-                }
-            } else {
-                setSearchResults([]);
-                setIsSearchOpen(false);
-            }
-        }, 300);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchQuery]);
-
-    const handleMarkRead = async (id) => {
+    const fetchNotifications = async () => {
         try {
-            await axios.delete(`/api/notifications/${id}`);
+            const res = await axios.get('/api/admin/notifications');
+            setNotifications(res.data || []);
+        } catch (err) {
+            console.error("Error fetching notifications:", err);
+        }
+    };
+
+    const fetchMessages = async () => {
+        try {
+            const res = await axios.get('/api/messages');
+            setMessages(res.data || []);
+        } catch (err) {
+            console.error("Error fetching messages:", err);
+        }
+    };
+
+    const handleMarkReadNotif = async (id) => {
+        try {
+            await axios.delete(`/api/admin/notifications/${id}`);
             setNotifications(prev => prev.filter(n => n.id !== id));
+            setBadgeNotif(prev => Math.max(0, prev - 1));
         } catch (err) {
             console.error("Error deleting notification:", err);
         }
     };
 
-    const handleClearAll = async (typeCategory) => {
-        const toDelete = typeCategory === 'Messages' 
-            ? notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin')
-            : notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin');
-        
-        for (const n of toDelete) {
-            await handleMarkRead(n.id);
+    const handleMarkReadMsg = async (id) => {
+        try {
+            await axios.delete(`/api/messages/${id}`);
+            setMessages(prev => prev.filter(m => m.id !== id));
+            setBadgeMsg(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error("Error deleting message:", err);
         }
     };
 
-=======
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+    const handleClearNotifs = async () => {
+        try {
+            await axios.delete('/api/admin/notifications/delete-all');
+            setNotifications([]);
+            setBadgeNotif(0);
+        } catch (err) {
+            console.error("Error clearing notifications:", err);
+        }
+    };
+
+    const handleClearMessages = async () => {
+        try {
+            const ids = messages.map(m => m.id);
+            await Promise.all(ids.map(id => axios.delete(`/api/messages/${id}`)));
+            setMessages([]);
+            setBadgeMsg(0);
+        } catch (err) {
+            console.error("Error clearing messages:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+        fetchMessages();
+    }, []);
+
     useEffect(() => {
         const fetchStatus = async () => {
             try {
@@ -152,12 +145,14 @@ const AdminLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'portal_access') {
-                            setBadgeNotif((b) => b + 1);
-                        } else if (data.type === 'ask_admin_reply') {
-                            setBadgeNotif((b) => b + 1);
-                        }
-                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply') {
+                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply' || data.type === 'ask_admin' || data.type === 'staff_chat') {
+                            fetchNotifications();
+                            fetchMessages();
+                            if (data.type === 'ask_admin' || data.type === 'staff_chat') {
+                                setBadgeMsg(b => b + 1);
+                            } else {
+                                setBadgeNotif(b => b + 1);
+                            }
                             if (navigator.vibrate) navigator.vibrate(80);
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
@@ -190,26 +185,6 @@ const AdminLayout = () => {
         }).slice(0, 5);
         setSearchResults({ cadets: cad, staff: stf });
     }, [searchQuery, cadetsData, staffData]);
-
-    const openNotifications = async () => {
-        setNotifOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/admin/notifications');
-            setNotifications(res.data || []);
-            setBadgeNotif(0);
-            await axios.delete('/api/admin/notifications/delete-all');
-        } catch {}
-    };
-
-    const openMessages = async () => {
-        setMessageOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/messages');
-            setMessages(res.data || []);
-            setBadgeMsg(0);
-            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
-        } catch {}
-    };
     
 
     const handleLogout = () => {
@@ -382,54 +357,41 @@ const AdminLayout = () => {
             </div>
 
             {/* Main Content */}
-<<<<<<< HEAD
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="bg-white shadow p-3 flex items-center justify-between z-10">
+                <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between z-10">
                     <div className="flex items-center flex-1">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden"
                         >
                             <Menu size={24} />
                         </button>
                         
-                        {/* Search Bar - Uppermost Corner */}
+                        {/* Search Bar */}
                         <div className="relative hidden md:flex items-center w-96 ml-4">
-                            <Search className="absolute left-3 text-gray-400" size={18} />
-                            <input 
-                                type="text" 
-                                placeholder="Search cadets, staff..." 
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                            <Search className="absolute left-3 text-gray-400 dark:text-gray-300" size={18} />
+                            <input
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                onFocus={() => searchQuery.length > 2 && setIsSearchOpen(true)}
-                                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
+                                onFocus={() => setSearchOpen(true)}
+                                onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                                placeholder="Search cadets, staff..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent text-sm"
                             />
                             {/* Search Results Dropdown */}
-                            {isSearchOpen && searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 max-h-96 overflow-y-auto">
-                                    {searchResults.map((result) => (
-                                        <div 
-                                            key={`${result.type}-${result.id}`}
-                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                                            onClick={() => {
-                                                navigate(result.type === 'cadet' ? `/admin/cadets` : `/admin/staff`);
-                                                setSearchQuery('');
-                                                setIsSearchOpen(false);
-                                            }}
-                                        >
-                                            <div>
-                                                <div className="font-medium text-gray-800">
-                                                    {result.last_name}, {result.first_name}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {result.rank} • {result.sub_info}
-                                                </div>
-                                            </div>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${result.type === 'cadet' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                                {result.type === 'cadet' ? 'Cadet' : 'Staff'}
-                                            </span>
-                                        </div>
+                            {searchOpen && (searchResults.cadets.length > 0 || searchResults.staff.length > 0) && (
+                                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
+                                    {searchResults.cadets.map(c => (
+                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100">
+                                            <div className="font-medium">{c.rank} {c.first_name} {c.last_name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{c.student_id}</div>
+                                        </Link>
+                                    ))}
+                                    {searchResults.staff.map(s => (
+                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-800 dark:text-gray-100">
+                                            <div className="font-medium">{s.rank} {s.first_name} {s.last_name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{s.afpsn || 'N/A'}</div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
@@ -438,28 +400,28 @@ const AdminLayout = () => {
 
                     {/* Right Side Icons */}
                     <div className="flex items-center space-x-4 mr-4">
-                        <NotificationDropdown 
+                         <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
-                            count={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin').length}
-                            notifications={notifications.filter(n => n.type === 'staff_chat' || n.type === 'ask_admin')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Messages')}
+                            count={badgeMsg}
+                            notifications={messages}
+                            onMarkRead={handleMarkReadMsg}
+                            onClear={handleClearMessages}
                         />
                         
                         <NotificationDropdown 
                             type="Notifications" 
                             icon={Bell} 
-                            count={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin').length}
-                            notifications={notifications.filter(n => n.type !== 'staff_chat' && n.type !== 'ask_admin')}
-                            onMarkRead={handleMarkRead}
-                            onClear={() => handleClearAll('Notifications')}
+                            count={badgeNotif}
+                            notifications={notifications}
+                            onMarkRead={handleMarkReadNotif}
+                            onClear={handleClearNotifs}
                         />
 
                         <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
                         
                         <div className="flex items-center">
-                            <span className="text-sm font-semibold text-gray-700 mr-2 hidden md:block">Admin</span>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 mr-2 hidden md:block">Admin</span>
                             <div className="h-8 w-8 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
                                 A
                             </div>
@@ -467,95 +429,7 @@ const AdminLayout = () => {
                     </div>
                 </header>
 
-                {(health && health.db === 'disconnected') && (
-                    <div className="bg-red-600 text-white text-sm p-2 text-center">
-                        Degraded mode: Database disconnected. Writes are queued; some features may be limited.
-                    </div>
-                )}
-                <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
-                    <div className="flex-grow">
-                        <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
-                            <Outlet />
-                        </Suspense>
-                    </div>
-                    {shouldShowFooter && <Footer />}
-=======
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center">
-                    <button 
-                        onClick={toggleSidebar} 
-                        className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden"
-                    >
-                        <Menu size={24} />
-                    </button>
-                    <h1 className="text-sm md:text-xl font-semibold text-gray-800 dark:text-gray-100 flex-1 truncate">
-                        {navItems.find(i => i.path === location.pathname)?.label || 'Admin Panel'}
-                    </h1>
-
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                        <div className="relative">
-                            <div className="flex items-center border rounded-md px-2 py-1 md:px-3 md:py-2 w-32 md:w-64 focus-within:ring-2 focus-within:ring-[var(--primary-color)] dark:border-gray-700">
-                                <Search size={18} className="text-gray-400 dark:text-gray-300 mr-2" />
-                                <input
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onFocus={() => setSearchOpen(true)}
-                                    onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
-                                    placeholder="Search..."
-                                    className="w-full outline-none text-xs md:text-sm bg-transparent dark:text-gray-100"
-                                />
-                            </div>
-                            {searchOpen && (searchResults.cadets.length > 0 || searchResults.staff.length > 0) && (
-                                <div className="absolute mt-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-64 z-50">
-                                    {searchResults.cadets.map(c => (
-                                        <Link key={`c-${c.id}`} to={`/admin/cadets`} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
-                                            {c.rank} {c.first_name} {c.last_name} • {c.student_id}
-                                        </Link>
-                                    ))}
-                                    {searchResults.staff.map(s => (
-                                        <Link key={`s-${s.id}`} to={`/admin/staff`} className="block px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
-                                            {s.rank} {s.first_name} {s.last_name} • {s.afpsn || 'N/A'}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={openMessages} className="relative text-gray-600 dark:text-gray-200 hover:text-[var(--primary-color)]">
-                            <Mail size={20} />
-                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
-                        </button>
-                        <button 
-                            onClick={openNotifications} 
-                            className={clsx(
-                                "relative transition-colors",
-                                notifHighlight ? "text-[var(--primary-color)]" : "text-gray-600 dark:text-gray-200 hover:text-[var(--primary-color)]"
-                            )}
-                        >
-                            <Bell size={20} />
-                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
-                        </button>
-                        {(notifOpen && notifications.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-80 z-50">
-                                {notifications.map(n => (
-                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800 dark:text-gray-100">{n.message}</div>
-                                        <div className="text-xs text-gray-400 dark:text-gray-400">{n.type}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {(messageOpen && messages.length > 0) && (
-                            <div className="absolute right-4 top-14 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded shadow w-80 z-50">
-                                {messages.map(m => (
-                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
-                                        <div className="text-sm text-gray-800 dark:text-gray-100">{m.subject}</div>
-                                        <div className="text-xs text-gray-400 dark:text-gray-400">{m.sender_role}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </header>
+                {/* System Status Bar */}
                 {(() => {
                     const appStatus = systemStatus && systemStatus.app ? systemStatus.app.status : 'unknown';
                     const dbStatus = systemStatus && systemStatus.database ? systemStatus.database.status : 'unknown';
@@ -586,12 +460,14 @@ const AdminLayout = () => {
                         </div>
                     );
                 })()}
-                <main className="flex-1 overflow-auto p-4 md:p-6">
-                    <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
-                        <Outlet />
-                    </Suspense>
-                        
->>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
+
+                <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
+                    <div className="flex-grow">
+                        <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
+                            <Outlet />
+                        </Suspense>
+                    </div>
+                    {shouldShowFooter && <Footer />}
                 </main>
             </div>
 
