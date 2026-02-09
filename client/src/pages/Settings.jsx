@@ -10,6 +10,7 @@ const Settings = ({ role }) => {
     const [saving, setSaving] = useState(false);
     const [broadcasting, setBroadcasting] = useState(false);
     const [broadcastingStaff, setBroadcastingStaff] = useState(false);
+    const [sendingCadetTemplate, setSendingCadetTemplate] = useState(null);
 
     // Sync local state with context when context updates (initial load)
     useEffect(() => {
@@ -129,6 +130,38 @@ const Settings = ({ role }) => {
             toast.error(error.response?.data?.message || 'Failed to send staff broadcast email.');
         } finally {
             setBroadcastingStaff(false);
+        }
+    };
+
+    const handleSendCadetEmailTemplate = async (templateKey) => {
+        let confirmMessage = 'This will send an email to all eligible cadets. Continue?';
+        if (templateKey === 'cadet_general_update') {
+            confirmMessage = 'This will send a general information email to all verified, active cadets with a registered email address. Continue?';
+        } else if (templateKey === 'cadet_training_reminder') {
+            confirmMessage = 'This will send a training and activities reminder email to all verified, active cadets with a registered email address. Continue?';
+        }
+
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        setSendingCadetTemplate(templateKey);
+        try {
+            const response = await axios.post(
+                '/api/admin/cadet-email/send-template',
+                { templateKey },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
+            toast.success(response.data.message || 'Cadet notification emails sent.');
+        } catch (error) {
+            console.error('Cadet email notification failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to send cadet notification emails.');
+        } finally {
+            setSendingCadetTemplate(null);
         }
     };
 
@@ -303,6 +336,30 @@ const Settings = ({ role }) => {
                                     <MailIcon size={16} />
                                     <span>{broadcastingStaff ? 'Sending to staff...' : 'Send Onboarding Email to Training Staff Only'}</span>
                                 </button>
+                            </div>
+                            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                                <h4 className="font-medium text-gray-800 mb-2">Cadet Email Notifications</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Send predefined email notifications to all verified, active cadets with a registered email address.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                                    <button
+                                        onClick={() => handleSendCadetEmailTemplate('cadet_general_update')}
+                                        disabled={sendingCadetTemplate === 'cadet_general_update'}
+                                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                                    >
+                                        <MailIcon size={16} />
+                                        <span>{sendingCadetTemplate === 'cadet_general_update' ? 'Sending general update...' : 'Send General Update to Cadets'}</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleSendCadetEmailTemplate('cadet_training_reminder')}
+                                        disabled={sendingCadetTemplate === 'cadet_training_reminder'}
+                                        className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 transition-colors disabled:opacity-60"
+                                    >
+                                        <MailIcon size={16} />
+                                        <span>{sendingCadetTemplate === 'cadet_training_reminder' ? 'Sending training reminder...' : 'Send Training Reminder to Cadets'}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </section>

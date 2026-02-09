@@ -864,6 +864,180 @@ router.post('/broadcast-onboarding-staff', authenticateToken, isAdmin, (req, res
     });
 });
 
+router.post('/cadet-email/send-template', authenticateToken, isAdmin, (req, res) => {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+        return res.status(500).json({
+            message: 'Email sending is not configured on the server. Please set EMAIL_USER and EMAIL_PASS environment variables to enable cadet notification emails.'
+        });
+    }
+
+    const { templateKey } = req.body || {};
+    const allowedTemplates = ['cadet_general_update', 'cadet_training_reminder'];
+
+    if (!templateKey || !allowedTemplates.includes(templateKey)) {
+        return res.status(400).json({ message: 'Invalid or missing email template key.' });
+    }
+
+    const sql = `
+        SELECT 
+            c.id AS cadet_id,
+            c.first_name,
+            c.middle_name,
+            c.last_name,
+            c.student_id,
+            u.username,
+            u.email
+        FROM cadets c
+        JOIN users u ON c.id = u.cadet_id
+        WHERE u.role = 'cadet'
+          AND u.is_approved = 1
+          AND u.email IS NOT NULL
+          AND u.email <> ''
+          AND (u.is_archived IS FALSE OR u.is_archived IS NULL)
+          AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+    `;
+
+    db.all(sql, [], async (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ message: 'No eligible cadets with email found.' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const appUrl = `${baseUrl}/login`;
+
+        const buildEmail = (key, cadet) => {
+            const nameParts = [];
+            if (cadet.first_name) nameParts.push(cadet.first_name);
+            if (cadet.middle_name) nameParts.push(cadet.middle_name);
+            if (cadet.last_name) nameParts.push(cadet.last_name);
+            const fullName = nameParts.join(' ') || 'Cadet';
+            const studentId = cadet.student_id || 'N/A';
+            const username = cadet.username || 'N/A';
+
+            if (key === 'cadet_general_update') {
+                const subject = 'MSU-SND ROTC Grading System - Important Update';
+                const textLines = [
+                    `Dear ${fullName},`,
+                    '',
+                    'This is an official notification from the MSU-SND ROTC Grading Management System.',
+                    'Please log in to the portal to review any new announcements, activities, or changes related to your ROTC participation.',
+                    '',
+                    `Student ID: ${studentId}`,
+                    `Username: ${username}`,
+                    `Email: ${cadet.email}`,
+                    `Portal link: ${appUrl}`,
+                    '',
+                    'For security reasons, your password is not sent via email. Use your existing ROTC system password or contact your ROTC administrator if you cannot log in.',
+                    '',
+                    'Keep your login credentials secure and regularly monitor the system for updates.',
+                    '',
+                    'Best regards,',
+                    'MSU-SND ROTC Administration'
+                ];
+                const text = textLines.join('\n');
+                const html = `
+                    <p>Dear <strong>${fullName}</strong>,</p>
+                    <p>This is an official notification from the <strong>MSU-SND ROTC Grading Management System</strong>.</p>
+                    <p>Please log in to the portal to review any new announcements, activities, or changes related to your ROTC participation.</p>
+                    <p>
+                        Student ID: <strong>${studentId}</strong><br/>
+                        Username: <strong>${username}</strong><br/>
+                        Email: <strong>${cadet.email}</strong><br/>
+                        Portal link: <a href="${appUrl}">${appUrl}</a>
+                    </p>
+                    <p>
+                        <em>For security reasons, your password is not sent via email. Use your existing ROTC system password or contact your ROTC administrator if you cannot log in.</em>
+                    </p>
+                    <p>Keep your login credentials secure and regularly monitor the system for updates.</p>
+                    <p>
+                        Best regards,<br/>
+                        <strong>MSU-SND ROTC Administration</strong>
+                    </p>
+                `;
+                return { subject, text, html };
+            }
+
+            if (key === 'cadet_training_reminder') {
+                const subject = 'MSU-SND ROTC - Training and Activities Reminder';
+                const textLines = [
+                    `Dear ${fullName},`,
+                    '',
+                    'This is a reminder regarding your ROTC trainings and activities.',
+                    'Please check the ROTC Grading Management System for your latest schedule, attendance status, and any new announcements.',
+                    '',
+                    'Make sure to:',
+                    '• Review upcoming training days and requirements',
+                    '• Monitor your attendance and performance',
+                    '• Read all posted announcements and activities',
+                    '',
+                    `Portal link: ${appUrl}`,
+                    '',
+                    'Regular participation and awareness of updates are important for your standing in the ROTC program.',
+                    '',
+                    'Best regards,',
+                    'MSU-SND ROTC Administration'
+                ];
+                const text = textLines.join('\n');
+                const html = `
+                    <p>Dear <strong>${fullName}</strong>,</p>
+                    <p>
+                        This is a reminder regarding your ROTC trainings and activities. Please check the
+                        <strong>MSU-SND ROTC Grading Management System</strong> for your latest schedule,
+                        attendance status, and any new announcements.
+                    </p>
+                    <p><strong>Make sure to:</strong></p>
+                    <ul>
+                        <li>Review upcoming training days and requirements</li>
+                        <li>Monitor your attendance and performance</li>
+                        <li>Read all posted announcements and activities</li>
+                    </ul>
+                    <p>
+                        Portal link: <a href="${appUrl}">${appUrl}</a>
+                    </p>
+                    <p>
+                        Regular participation and awareness of updates are important for your standing in the ROTC program.
+                    </p>
+                    <p>
+                        Best regards,<br/>
+                        <strong>MSU-SND ROTC Administration</strong>
+                    </p>
+                `;
+                return { subject, text, html };
+            }
+
+            return null;
+        };
+
+        try {
+            const tasks = rows.map((cadet) => {
+                if (!cadet.email) return false;
+                const emailContent = buildEmail(templateKey, cadet);
+                if (!emailContent) return false;
+                return sendEmail(cadet.email, emailContent.subject, emailContent.text, emailContent.html);
+            });
+
+            const results = await Promise.all(tasks);
+            const successCount = results.filter(Boolean).length;
+            const failCount = rows.length - successCount;
+
+            if (successCount === 0) {
+                return res.status(500).json({
+                    message: 'Failed to send cadet notification emails. Please check email configuration (EMAIL_USER/EMAIL_PASS) and server logs.'
+                });
+            }
+
+            res.json({ message: `Cadet notification email sent to ${successCount} cadets. Failed: ${failCount}.` });
+        } catch (e) {
+            console.error('Cadet notification email error:', e);
+            res.status(500).json({ message: 'Failed to send cadet notification emails due to an unexpected server error.' });
+        }
+    });
+});
+
 // --- Import Official Cadet List ---
 
 const getDirectDownloadUrl = (url) => {
