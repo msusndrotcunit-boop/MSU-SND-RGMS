@@ -29,6 +29,7 @@ const insertCadet = (cadet) => {
             student_id, email, contact_number, address, 
             course, year_level, school_year, 
             battalion, company, platoon, 
+<<<<<<< HEAD
             cadet_course, semester, status,
             is_profile_completed
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -40,13 +41,21 @@ const insertCadet = (cadet) => {
         // Postgres pg driver usually handles true/false -> boolean.
         // Let's use boolean literals.
         
+=======
+            cadet_course, semester, status, is_profile_completed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
+<<<<<<< HEAD
             cadet.cadet_course || '', cadet.semester || '', 'Ongoing',
             false // Send boolean false instead of integer 0
+=======
+            cadet.cadet_course || '', cadet.semester || '', 'Ongoing', false
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         ];
         db.run(sql, params, function(err) {
             if (err) reject(err);
@@ -98,8 +107,8 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                 
                 const insertUser = (uName) => {
                     db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                        [uName, dummyHash, 'cadet', cadetId, 1, email], 
-                        (err) => {
+                    [uName, dummyHash, 'cadet', cadetId, 0, email], 
+                    (err) => {
                             if (err) {
                                 if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate key')) {
                                     const newUsername = uName + Math.floor(Math.random() * 1000);
@@ -118,7 +127,7 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                 };
                 insertUser(baseUsername);
             } else {
-                let sql = `UPDATE users SET email = ?, is_approved = 1`;
+                let sql = `UPDATE users SET email = ?, is_approved = 0`;
                 const params = [email];
                 if (customUsername && customUsername !== existingUser.username) {
                     sql += `, username = ?`;

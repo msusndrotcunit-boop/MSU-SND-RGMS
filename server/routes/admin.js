@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../database');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
@@ -12,6 +12,7 @@ const { upload } = require('../utils/cloudinary');
 
 const router = express.Router();
 
+<<<<<<< HEAD
 // --- Search Cadets & Staff ---
 router.get('/search', authenticateToken, isAdmin, async (req, res) => {
     const { query } = req.query;
@@ -36,6 +37,85 @@ router.get('/search', authenticateToken, isAdmin, async (req, res) => {
         }
         res.json(rows);
     });
+=======
+router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
+    const start = Date.now();
+    const results = {};
+
+    const pGet = (sql, params = []) => new Promise((resolve) => {
+        db.get(sql, params, (err, row) => {
+            if (err) resolve({ error: err.message });
+            else resolve(row || {});
+        });
+    });
+
+    Promise.all([
+        pGet('SELECT 1 as ok'),
+        pGet('SELECT COUNT(*) as total FROM cadets'),
+        pGet('SELECT COUNT(*) as total FROM users'),
+        pGet('SELECT COUNT(*) as total FROM training_days'),
+        pGet('SELECT COUNT(*) as total FROM activities'),
+        pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = 0')
+    ]).then(([dbCheck, cadets, users, trainingDays, activities, unreadNotifications]) => {
+        const latencyMs = Date.now() - start;
+
+        results.app = {
+            status: 'ok',
+            uptimeSeconds: Math.floor(process.uptime()),
+            time: new Date().toISOString()
+        };
+
+        results.database = {
+            status: dbCheck && !dbCheck.error ? 'ok' : 'error',
+            latencyMs
+        };
+
+        results.metrics = {
+            cadets: cadets && cadets.total !== undefined ? cadets.total : null,
+            users: users && users.total !== undefined ? users.total : null,
+            trainingDays: trainingDays && trainingDays.total !== undefined ? trainingDays.total : null,
+            activities: activities && activities.total !== undefined ? activities.total : null,
+            unreadNotifications: unreadNotifications && unreadNotifications.total !== undefined ? unreadNotifications.total : null
+        };
+
+        if (results.database.status !== 'ok') {
+            results.app.status = 'degraded';
+        }
+
+        res.json(results);
+    }).catch((err) => {
+        res.status(500).json({
+            app: {
+                status: 'error',
+                uptimeSeconds: Math.floor(process.uptime()),
+                time: new Date().toISOString()
+            },
+            database: {
+                status: 'error',
+                error: err.message
+            }
+        });
+    });
+});
+
+// SSE broadcast helper using global registry created in attendance routes
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+// Multer Setup (Memory Storage for Base64)
+const storage = multer.memoryStorage();
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 });
 
 // --- Import Helpers ---
@@ -141,8 +221,8 @@ const upsertUser = (cadetId, studentId, email, customUsername, firstName) => {
                     }
                 );
             } else {
-                let sql = `UPDATE users SET email = ?, is_approved = 1`;
-                const params = [email];
+                let sql = `UPDATE users SET email = ?, is_approved = ?`;
+                const params = [email, 1];
                 if (customUsername && customUsername !== existingUser.username) {
                     sql += `, username = ?`;
                     params.push(customUsername);
@@ -277,7 +357,125 @@ const processCadetData = async (data) => {
 };
 
 router.use(authenticateToken);
-router.use(isAdmin);
+router.use(isAdminOrPrivilegedStaff);
+
+router.get('/locations', (req, res) => {
+    const sql = `
+        SELECT 
+            u.id,
+            u.username,
+            u.role,
+            u.cadet_id,
+            u.staff_id,
+            u.last_latitude,
+            u.last_longitude,
+            u.last_location_at,
+            c.first_name AS cadet_first_name,
+            c.last_name AS cadet_last_name,
+            c.company AS cadet_company,
+            c.platoon AS cadet_platoon,
+            s.first_name AS staff_first_name,
+            s.last_name AS staff_last_name,
+            s.rank AS staff_rank,
+            s.role AS staff_role
+        FROM users u
+        LEFT JOIN cadets c ON u.cadet_id = c.id
+        LEFT JOIN training_staff s ON u.staff_id = s.id
+        WHERE u.last_latitude IS NOT NULL
+          AND u.last_longitude IS NOT NULL
+          AND (u.is_archived IS FALSE OR u.is_archived IS NULL)
+        ORDER BY u.last_location_at DESC
+        LIMIT 200
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows || []);
+    });
+});
+
+router.post('/broadcast-onboarding', (req, res) => {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+        return res.status(500).json({
+            message: 'Email sending is not configured on the server. Please set EMAIL_USER and EMAIL_PASS environment variables to enable onboarding emails.'
+        });
+    }
+
+    const sql = `
+        SELECT 
+            id,
+            username,
+            email,
+            role
+        FROM users
+        WHERE email IS NOT NULL
+          AND email <> ''
+          AND (is_archived IS FALSE OR is_archived IS NULL)
+    `;
+    db.all(sql, [], async (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ message: 'No users with email found.' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const appUrl = `${baseUrl}/login`;
+
+        const subject = 'MSU-SND ROTC Grading Management System Access Details';
+
+        const tasks = rows.map((u) => {
+            const textLines = [
+                'Maayong adlaw!',
+                '',
+                'You are registered in the MSU-SND ROTC Grading Management System. This system is used for cadet grading, attendance, announcements, communication, and safety notifications such as weather and location-related advisories.',
+                '',
+                `Web app link: ${appUrl}`,
+                '',
+                'Your login details:',
+                `Username: ${u.username}`,
+                `Email: ${u.email}`,
+                '',
+                'Use your existing password for this account. For security reasons, passwords are not sent through email. If you forgot your password, please use the reset process provided in the portal or contact the ROTC office.',
+                '',
+                'Daghang salamat.'
+            ];
+            const text = textLines.join('\n');
+
+            const html = `
+                <p>Maayong adlaw!</p>
+                <p>You are registered in the <strong>MSU-SND ROTC Grading Management System</strong>.</p>
+                <p>This system is used for cadet grading, attendance, announcements, communication, and safety notifications such as weather and location-related advisories.</p>
+                <p><strong>Web app link:</strong> <a href="${appUrl}">${appUrl}</a></p>
+                <p><strong>Your login details:</strong><br/>
+                Username: <strong>${u.username}</strong><br/>
+                Email: <strong>${u.email}</strong></p>
+                <p>Use your existing password for this account. For security reasons, passwords are not sent through email. If you forgot your password, please use the reset process provided in the portal or contact the ROTC office.</p>
+                <p>Daghang salamat.</p>
+            `;
+
+            return sendEmail(u.email, subject, text, html);
+        });
+
+        try {
+            const results = await Promise.all(tasks);
+            const successCount = results.filter(Boolean).length;
+            const failCount = rows.length - successCount;
+
+            if (successCount === 0) {
+                return res.status(500).json({
+                    message: 'Failed to send onboarding emails. Please check email configuration (EMAIL_USER/EMAIL_PASS) and server logs.'
+                });
+            }
+
+            res.json({ message: `Onboarding email sent to ${successCount} users. Failed: ${failCount}.` });
+        } catch (e) {
+            console.error('Broadcast onboarding email error:', e);
+            res.status(500).json({ message: 'Failed to send onboarding emails due to an unexpected server error.' });
+        }
+    });
+});
 
 // --- Import Official Cadet List ---
 
@@ -900,7 +1098,7 @@ router.get('/analytics', (req, res) => {
                             SELECT c.cadet_course, c.status, COUNT(*) as count 
                             FROM cadets c
                             LEFT JOIN users u ON u.cadet_id = c.id
-                            WHERE u.is_approved = 1 AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                            WHERE c.is_profile_completed IS TRUE AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
                             GROUP BY c.cadet_course, c.status
                         `;
                         db.all(sql, [], (err, rows) => {
@@ -1090,32 +1288,55 @@ router.get('/cadets', (req, res) => {
 });
 
 // Update Cadet Personal Info
-router.put('/cadets/:id', (req, res) => {
+router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
     const { 
         rank, firstName, middleName, lastName, suffixName, 
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
         cadetCourse, semester, status,
-        username // Add username to destructuring
+        username
     } = req.body;
 
-    const sql = `UPDATE cadets SET 
-        rank=?, first_name=?, middle_name=?, last_name=?, suffix_name=?, 
-        student_id=?, email=?, contact_number=?, address=?, 
-        course=?, year_level=?, school_year=?, 
-        battalion=?, company=?, platoon=?, 
-        cadet_course=?, semester=?, status=? 
-        WHERE id=?`;
+    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
+
+    const setFields = [
+        'rank = ?',
+        'first_name = ?',
+        'middle_name = ?',
+        'last_name = ?',
+        'suffix_name = ?',
+        'student_id = ?',
+        'email = ?',
+        'contact_number = ?',
+        'address = ?',
+        'course = ?',
+        'year_level = ?',
+        'school_year = ?',
+        'battalion = ?',
+        'company = ?',
+        'platoon = ?',
+        'cadet_course = ?',
+        'semester = ?',
+        'status = ?'
+    ];
 
     const params = [
         rank, firstName, middleName, lastName, suffixName, 
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
-        cadetCourse, semester, status, 
-        req.params.id
+        cadetCourse, semester, status
     ];
+
+    if (profilePic) {
+        setFields.push('profile_pic = ?');
+        params.push(profilePic);
+    }
+
+    params.push(req.params.id);
+
+    const sql = `UPDATE cadets SET ${setFields.join(', ')} WHERE id = ?`;
 
     db.run(sql, params, (err) => {
             if (err) return res.status(500).json({ message: err.message });
@@ -1197,38 +1418,102 @@ router.put('/grades/:cadetId', (req, res) => {
     const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
     const cadetId = req.params.cadetId;
 
-    // Allow manual override of attendance_present
-    db.run(`UPDATE grades SET 
-            attendance_present = ?,
-            merit_points = ?, 
-            demerit_points = ?, 
-            prelim_score = ?, 
-            midterm_score = ?, 
-            final_score = ?,
-            status = ?
-            WHERE cadet_id = ?`,
-        [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
-        function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            
-            // Send Email Notification
-            db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
-                if (!err && cadet && cadet.email) {
-                    const subject = 'ROTC Grading System - Grades Updated';
-                    const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
-                    const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+    // Check if row exists, if not create it
+    db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        const runUpdate = (currentMerit, currentDemerit) => {
+            db.run(`UPDATE grades SET 
+                    attendance_present = ?,
+                    merit_points = ?, 
+                    demerit_points = ?, 
+                    prelim_score = ?, 
+                    midterm_score = ?, 
+                    final_score = ?,
+                    status = ?
+                    WHERE cadet_id = ?`,
+                [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
+                function(err) {
+                    if (err) return res.status(500).json({ message: err.message });
                     
-                    await sendEmail(cadet.email, subject, text, html);
+                    // Sync Logs: Create manual adjustment logs if points changed
+                    const meritDiff = (meritPoints || 0) - (currentMerit || 0);
+                    const demeritDiff = (demeritPoints || 0) - (currentDemerit || 0);
+                    
+                    const logPromises = [];
+                    if (meritDiff !== 0) {
+                        logPromises.push(new Promise(resolve => {
+                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'merit', ?, 'Manual Adjustment by Admin')`, 
+                                [cadetId, meritDiff], resolve);
+                        }));
+                    }
+                    if (demeritDiff !== 0) {
+                        logPromises.push(new Promise(resolve => {
+                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin')`, 
+                                [cadetId, demeritDiff], resolve);
+                        }));
+                    }
+                    
+                    Promise.all(logPromises).then(() => {
+                        // Send Email Notification
+                        db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                            if (!err && cadet && cadet.email) {
+                                const subject = 'ROTC Grading System - Grades Updated';
+                                const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
+                                const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+                                
+                                await sendEmail(cadet.email, subject, text, html);
+                            }
+                            broadcastEvent({ type: 'grade_updated', cadetId });
+                            res.json({ message: 'Grades updated' });
+                        });
+                    });
                 }
-                res.json({ message: 'Grades updated' });
+            );
+        };
+
+        if (!row) {
+            // Initialize with defaults if missing
+            db.run(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) 
+                    VALUES (?, 0, 0, 0, 0, 0, 0, 'active')`, [cadetId], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
+                runUpdate(0, 0);
             });
+        } else {
+            runUpdate(row.merit_points, row.demerit_points);
         }
-    );
+    });
+});
+
+// --- Notifications (Admin scope) ---
+router.get('/notifications', authenticateToken, isAdmin, (req, res) => {
+    const userId = req.user.id;
+    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL OR user_id = ?) ORDER BY created_at DESC LIMIT 50`;
+    db.all(sql, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+router.delete('/notifications/:id', authenticateToken, isAdmin, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res) => {
+    const userId = req.user.id;
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All notifications deleted' });
+    });
 });
 
 // --- Activity Management ---
 
 // Upload Activity
+<<<<<<< HEAD
 router.post('/activities', upload.array('images'), async (req, res) => {
     const { title, description, date, type } = req.body;
     
@@ -1243,6 +1528,48 @@ router.post('/activities', upload.array('images'), async (req, res) => {
                 function(err) {
                     if (err) reject(err);
                     else resolve(this.lastID);
+=======
+router.post('/activities', upload.array('images', 10), (req, res) => {
+    const { title, description, date, type } = req.body;
+    
+    // Convert buffer to Base64 Data URI if file exists
+    let images = [];
+    if (req.files && req.files.length > 0) {
+        images = req.files.map(file => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`);
+    } else if (req.file) {
+        // Fallback if client sends single 'image' field (though upload.array handles 'images' field)
+        // Note: upload.array('images') won't catch field 'image'. 
+        // We might need upload.fields([{ name: 'images', maxCount: 10 }, { name: 'image', maxCount: 1 }]) 
+        // but simpler to just expect client to use 'images'.
+        // If client sends 'image' but we use upload.array('images'), req.file is undefined.
+        // So we should stick to upload.array('images') and update client.
+    }
+
+    const activityType = type || 'activity';
+
+    // Server-side validation for image count
+    if (activityType === 'activity' && images.length < 3) {
+        return res.status(400).json({ message: 'Activities require at least 3 photos.' });
+    }
+    if (activityType === 'announcement' && images.length < 1) {
+        return res.status(400).json({ message: 'Announcements require at least 1 photo.' });
+    }
+
+    const imagesJson = JSON.stringify(images);
+    const primaryImage = images[0] || null;
+
+    db.run(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?)`,
+        [title, description, date, primaryImage, imagesJson, activityType],
+        function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            
+            // Create notification for the new activity
+            const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
+            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
+                [notifMsg], 
+                (nErr) => {
+                    if (nErr) console.error("Error creating activity notification:", nErr);
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                 }
             );
         });
@@ -1370,9 +1697,9 @@ router.delete('/users/:id', (req, res) => {
 });
 
 // --- Admin Profile ---
-
+//
 // Get Current Admin Profile
-router.get('/profile', (req, res) => {
+router.get('/profile', authenticateToken, isAdmin, (req, res) => {
     db.get(`SELECT id, username, email, profile_pic FROM users WHERE id = ?`, [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(row);
@@ -1380,9 +1707,14 @@ router.get('/profile', (req, res) => {
 });
 
 // Update Admin Profile (Pic)
+<<<<<<< HEAD
 router.put('/profile', upload.single('profilePic'), (req, res) => {
     // Use file path/url instead of Base64
     const profilePic = req.file ? req.file.path : null;
+=======
+router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
+    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
     
     if (profilePic) {
         db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [profilePic, req.user.id], function(err) {
@@ -1431,6 +1763,7 @@ router.post('/merit-logs', (req, res) => {
                             
                             await sendEmail(cadet.email, subject, text, html);
                         }
+                        broadcastEvent({ type: 'grade_updated', cadetId });
                         res.json({ message: 'Log added and points updated' });
                     });
                 });
@@ -1469,6 +1802,7 @@ router.delete('/merit-logs/:id', (req, res) => {
             
             db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (err) => {
                 if (err) console.error("Error updating grades after log deletion", err);
+                broadcastEvent({ type: 'grade_updated', cadetId: log.cadet_id });
                 res.json({ message: 'Log deleted and points reverted' });
             });
         });

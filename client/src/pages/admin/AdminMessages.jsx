@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { MessageSquare, Search, Filter, CheckCircle, Clock, Send, User } from 'lucide-react';
+import { MessageSquare, Search, Filter, CheckCircle, Clock, Send, User, Zap } from 'lucide-react';
 import clsx from 'clsx';
+import { Link } from 'react-router-dom';
 
 const AdminMessages = () => {
     const [messages, setMessages] = useState([]);
@@ -63,7 +64,7 @@ const AdminMessages = () => {
     });
 
     return (
-        <div className="flex h-[calc(100vh-100px)] gap-4">
+        <div className="flex flex-col h-[calc(100vh-100px)] gap-4">
             {/* List View */}
             <div className={clsx(
                 "flex-1 bg-white rounded-lg shadow-md flex flex-col",
@@ -220,6 +221,39 @@ const AdminMessages = () => {
                     Select a message to view details
                 </div>
             )}
+
+            <div className="mt-2 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
+                </div>
+            </div>
         </div>
     );
 };

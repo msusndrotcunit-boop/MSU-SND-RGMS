@@ -2,26 +2,30 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const bcrypt = require('bcryptjs');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
 const path = require('path');
 const webpush = require('web-push');
 
 // Multer (local disk storage) removed in favor of Cloudinary
 
-// Middleware to check if admin
-const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Access denied. Admins only.' });
-    }
-    next();
-};
-
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
 
-// GET Staff Analytics (Admin)
-router.get('/analytics/overview', authenticateToken, isAdmin, (req, res) => {
+// SSE broadcast helper
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
+router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const cachedStats = cache.get("staff_analytics");
     if (cachedStats) {
         return res.json(cachedStats);
@@ -106,6 +110,49 @@ router.get('/', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Portal Access Telemetry (Staff)
+router.post('/access', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Not a staff account' });
+    broadcastEvent({ type: 'portal_access', role: 'staff', userId: req.user.id, staffId: req.user.staffId, at: Date.now() });
+    db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Staff portal accessed', 'portal_access']);
+    res.json({ message: 'access recorded' });
+});
+
+router.get('/notifications', authenticateToken, (req, res, next) => {
+    next();
+});
+
+router.delete('/notifications/:id', authenticateToken, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All notifications deleted' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ?`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All notifications deleted' });
+        });
+    });
+});
 // Wrapper for upload middleware to handle errors gracefully
 const uploadProfilePic = (req, res, next) => {
     upload.single('image')(req, res, (err) => {
@@ -267,30 +314,60 @@ router.put('/profile', authenticateToken, (req, res) => {
         });
     };
 
-    // Check email uniqueness if email is changing
-    if (email) {
-        db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
-            if (err) return res.status(500).json({ message: err.message });
-            if (row) {
-                return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
-            }
+    // Enforce lock after profile completion; block further edits when completed
+    db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [req.user.staffId], (lockErr, lockRow) => {
+        if (lockErr) return res.status(500).json({ message: lockErr.message });
+        const isCompleted = !!(lockRow && (lockRow.is_profile_completed === 1 || lockRow.is_profile_completed === true));
+        if (isCompleted) {
+            return res.status(403).json({ message: 'Profile is locked after completion. Contact admin for changes.' });
+        }
+        // Check email uniqueness if email is changing
+        if (email) {
+            db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
+                if (err) return res.status(500).json({ message: err.message });
+                if (row) {
+                    return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
+                }
+                proceedUpdate();
+            });
+        } else {
             proceedUpdate();
-        });
-    } else {
-        proceedUpdate();
-    }
+        }
+    })
 });
 
 // --- Notifications ---
 
 // Get Notifications (Staff)
 router.get('/notifications', authenticateToken, (req, res) => {
+<<<<<<< HEAD
     // Fetch notifications where user_id is NULL (system/global) BUT only for relevant types (activity, announcement, staff_chat)
     // OR matches staff's user ID
     const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ('activity', 'announcement', 'staff_chat')) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
     db.all(sql, [req.user.id], (err, rows) => {
+=======
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        return db.all(sql, [userId], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows);
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
         if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        db.all(sql, [userId], (err2, rows) => {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json(rows);
+        });
     });
 });
 
@@ -304,10 +381,27 @@ router.put('/notifications/:id/read', authenticateToken, (req, res) => {
 
 // Mark All as Read
 router.put('/notifications/read-all', authenticateToken, (req, res) => {
-    // Updates both global (NULL) and personal notifications visible to this user
-    db.run(`UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ?) AND is_read = FALSE`, [req.user.id], function(err) {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?) AND is_read = FALSE`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All marked as read' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'All marked as read' });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${types}) OR user_id = ?) AND is_read = FALSE`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All marked as read' });
+        });
     });
 });
 

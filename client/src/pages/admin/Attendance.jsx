@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText } from 'lucide-react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText, Download, RefreshCw, X } from 'lucide-react';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
+import { toast } from 'react-hot-toast';
 
 const Attendance = () => {
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
@@ -15,11 +15,14 @@ const Attendance = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createForm, setCreateForm] = useState({ date: '', title: '', description: '' });
     
-    // Scanner State
+    // Scanner State (Smart OCR)
     const [isScannerOpen, setIsScannerOpen] = useState(false);
-    const [scanResult, setScanResult] = useState(null);
-    const scannerRef = useRef(null);
-    const lastScanRef = useRef(0);
+    const [scanResults, setScanResults] = useState([]); // Array of detected records
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
 
     // Filters for marking
     const [filterCompany, setFilterCompany] = useState('');
@@ -149,122 +152,203 @@ const Attendance = () => {
         }
     };
 
-    useEffect(() => {
-        let scanner = null;
-        if (isScannerOpen && !scanResult) {
-            // Delay to ensure DOM is ready
-            setTimeout(() => {
-                if (!document.getElementById("reader")) return;
-                
-                scanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0,
-                        showTorchButtonIfSupported: true,
-                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
-                        useBarCodeDetectorIfSupported: true,
-                        disableFlip: true
-                    },
-                    /* verbose= */ false
-                );
+    // --- SMART SCANNER LOGIC ---
 
-                scanner.render(onScanSuccess, (err) => { /* ignore failures */ });
-                scannerRef.current = scanner;
-            }, 100);
-        }
-
-        return () => {
-            if (scanner) {
-                scanner.clear().catch(console.error);
-            }
-        };
-    }, [isScannerOpen, scanResult]);
-
-    const onScanSuccess = async (decodedText, decodedResult) => {
-        const now = Date.now();
-        if (now - lastScanRef.current < 2000) return;
-        lastScanRef.current = now;
-
-        if (scannerRef.current) {
-            scannerRef.current.pause(true);
-        }
-
-        // Parse Data
-        let data = { raw: decodedText, originalText: decodedText };
+    const startCamera = async () => {
         try {
-            const parsed = JSON.parse(decodedText);
-            data = { ...data, ...parsed };
-        } catch (e) {
-            // Raw text
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setIsCameraActive(true);
+                setCapturedImage(null);
+                setScanResults([]);
+            }
+        } catch (err) {
+            console.error("Camera Error", err);
+            toast.error("Failed to access camera. Please check permissions.");
         }
-
-        setScanResult(data);
     };
 
-    const handleScanConfirm = async (status) => {
-        if (!scanResult || !selectedDay) return;
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            setIsCameraActive(false);
+        }
+    };
 
+    useEffect(() => {
+        if (!isScannerOpen) stopCamera();
+        return () => stopCamera();
+    }, [isScannerOpen]);
+
+    const captureAndScan = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        
+        setIsProcessing(true);
         try {
-            const endpoint = attendanceType === 'cadet' ? '/api/attendance/scan' : '/api/attendance/staff/scan';
-            const payload = {
-                dayId: selectedDay.id,
-                qrData: JSON.stringify(scanResult), // Send as JSON string or raw if it was raw
-                status: status
-            };
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // If scanResult was just raw text and we stringify it, the backend should handle it.
-            // My backend expects `qrData` which it tries to parse as JSON.
-            // If `scanResult` is an object, `JSON.stringify` works.
-            // If `scanResult` came from `JSON.parse` in `onScanSuccess`, it's an object.
-            // If it failed parse, it's `{ raw: decodedText }`.
-            // So I should probably just send `scanResult.raw` if I want to match my backend logic 
-            // OR ensure `qrData` sent matches what backend expects.
-            // Backend: `try { JSON.parse(qrData) ... }`
-            // If I send `JSON.stringify({ raw: "..." })`, backend parses it. `parsed.student_id` or `parsed.id` might be missing.
-            // The backend falls back to `cadetIdentifier = qrData` (the string) if JSON parse fails or keys missing.
-            // But if I send a JSON string of `{raw: "..."}` it will parse successfully but might not have `id`.
-            
-            // Let's refine `onScanSuccess` to keep `decodedText` as the main payload source.
-            // I'll send `qrData: scanResult.raw || JSON.stringify(scanResult)`?
-            // Actually, best to just send the original `decodedText`.
-            // So `scanResult` should store `originalText`.
-            
-            const res = await axios.post(endpoint, {
-                dayId: selectedDay.id,
-                qrData: scanResult.originalText,
-                status: status
-            });
+            const dataUrl = canvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            stopCamera();
 
-            alert(`Marked ${status.toUpperCase()}: ${res.data.cadet?.name || res.data.staff?.name || 'Success'}`);
-            
-            // Refresh records
-            selectDay(selectedDay);
-            
-            // Close result modal, resume scanner
-            setScanResult(null);
-            if (scannerRef.current) {
-                setTimeout(() => scannerRef.current.resume(), 1000);
+            // Check if Tesseract is loaded
+            if (!window.Tesseract) {
+                throw new Error("OCR Library not loaded. Check internet connection.");
             }
+
+            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng');
+            
+            processOCRText(text);
 
         } catch (err) {
             console.error(err);
-            alert('Scan failed: ' + (err.response?.data?.message || err.message));
-            // Resume scanner even on error
-            setScanResult(null);
-            if (scannerRef.current) {
-                setTimeout(() => scannerRef.current.resume(), 1000);
-            }
+            toast.error(err.message || "OCR Failed");
+            setIsProcessing(false);
         }
     };
 
-    const closeScanner = () => {
-        setIsScannerOpen(false);
-        setScanResult(null);
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(console.error);
-            scannerRef.current = null;
+    const processOCRText = (text) => {
+        // We have the full text of the image.
+        // We need to find which cadets from 'attendanceRecords' are present in this text.
+        // Improved heuristic: Search for "Rank Lastname" or "Lastname, Firstname"
+        
+        const lines = text.split('\n');
+        const matches = [];
+        
+        // Regex for time: 12-hour format with AM/PM (optional space, case insensitive)
+        const timeRegex = /(\d{1,2}:\d{2}\s*[APap][Mm]?)/g;
+        
+        attendanceRecords.forEach(record => {
+            // Construct patterns to search for
+            // 1. Lastname, Firstname (Standard List format)
+            // 2. Rank Lastname (e.g. Cdt Smith)
+            
+            const lastName = record.last_name.replace(/[^a-zA-Z0-9]/g, ''); // Clean for regex
+            const firstName = record.first_name.split(' ')[0].replace(/[^a-zA-Z0-9]/g, ''); // First word of first name
+            
+            // Flexible pattern: Lastname followed by Firstname OR Rank followed by Lastname
+            // We use the line as the context
+            
+            const namePattern = new RegExp(`${lastName}`, 'i');
+            
+            // Check if any line contains the last name
+            const matchingLines = lines.filter(l => namePattern.test(l));
+            
+            let bestMatchLine = null;
+            
+            // Refine match: check for first name or rank in those lines
+            for (const line of matchingLines) {
+                if (line.toLowerCase().includes(firstName.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+                if (record.rank && line.toLowerCase().includes(record.rank.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+            }
+            
+            // If we found a line with the name
+            if (bestMatchLine) {
+                let status = 'present'; // Default to present if found on sheet
+                const lowerLine = bestMatchLine.toLowerCase();
+                
+                if (lowerLine.includes('absent')) status = 'absent';
+                else if (lowerLine.includes('excused')) status = 'excused';
+                else if (lowerLine.includes('late')) status = 'late';
+
+                // Extract times from this line
+                const times = bestMatchLine.match(timeRegex) || [];
+                // Sort times to ensure Time In is earlier (simple heuristic, or just take first two)
+                // Usually Time In is first column, Time Out is second
+                const timeIn = times[0] || '';
+                const timeOut = times[1] || '';
+
+                // Extract/Verify Course
+                let detectedCourse = null;
+                if (record.cadet_course) {
+                    // Simple check if the course acronym is in the line
+                    // We remove special chars from course code for regex
+                    const cleanCourse = record.cadet_course.replace(/[^a-zA-Z0-9]/g, '');
+                    if (cleanCourse.length > 0) {
+                        const courseRegex = new RegExp(`\\b${cleanCourse}\\b`, 'i');
+                        if (courseRegex.test(bestMatchLine.replace(/[^a-zA-Z0-9\s]/g, ''))) {
+                             detectedCourse = record.cadet_course;
+                        }
+                    }
+                }
+                
+                // If not found by record, try to find generic course pattern (optional enhancement)
+                // const genericCourseMatch = bestMatchLine.match(/\b(BS\w+|AB\w+)\b/i);
+                // if (!detectedCourse && genericCourseMatch) detectedCourse = genericCourseMatch[0];
+
+                matches.push({
+                    id: attendanceType === 'cadet' ? record.cadet_id : record.staff_id,
+                    name: `${record.last_name}, ${record.first_name}`,
+                    rank: record.rank, // Pass rank for display
+                    detectedStatus: status,
+                    timeIn,
+                    timeOut,
+                    detectedCourse,
+                    recordCourse: record.cadet_course,
+                    originalRecord: record
+                });
+            }
+        });
+
+        // Remove duplicates (in case multiple lines match the same person? Unlikely with this logic but possible)
+        const uniqueMatches = Array.from(new Map(matches.map(m => [m.id, m])).values());
+
+        setScanResults(uniqueMatches);
+        setIsProcessing(false);
+        
+        if (uniqueMatches.length === 0) {
+            toast.error("No matching names found in scan. Ensure the image is clear and contains names from the list.");
+        } else {
+            toast.success(`Found ${uniqueMatches.length} records! Review before confirming.`);
+        }
+    };
+
+    const handleConfirmScan = async () => {
+        if (scanResults.length === 0) return;
+
+        try {
+            const promises = scanResults.map(match => {
+                const payload = {
+                    dayId: selectedDay.id,
+                    [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: match.id,
+                    status: match.detectedStatus,
+                    remarks: `Smart Scan: ${match.timeIn ? 'In ' + match.timeIn : ''} ${match.timeOut ? 'Out ' + match.timeOut : ''}`.trim(),
+                    time_in: match.timeIn,
+                    time_out: match.timeOut
+                };
+                const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+                return axios.post(endpoint, payload);
+            });
+
+            await Promise.all(promises);
+            
+            toast.success(`Successfully updated ${scanResults.length} records`);
+            
+            // Refresh
+            selectDay(selectedDay, true);
+            
+            // Reset
+            setScanResults([]);
+            setCapturedImage(null);
+            setIsScannerOpen(false);
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update some records");
         }
     };
 
@@ -418,39 +502,204 @@ const Attendance = () => {
         return acc;
     }, {});
 
+    const handleExport = () => {
+        if (!selectedDay) return;
+        const headers = ["Cadet/Staff ID", "Name", "Role/Rank", "Status", "Time In", "Time Out", "Remarks"];
+        
+        const csvContent = [
+            headers.join(','),
+            ...filteredRecords.map(r => {
+                const name = `"${r.last_name}, ${r.first_name}"`;
+                const id = attendanceType === 'cadet' ? r.cadet_id : r.staff_id;
+                const role = attendanceType === 'cadet' ? r.rank : (r.role || 'Instructor');
+                return [
+                    id,
+                    name,
+                    role,
+                    r.status,
+                    r.time_in,
+                    r.time_out,
+                    `"${r.remarks || ''}"`
+                ].join(',');
+            })
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_${selectedDay.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="h-full flex flex-col gap-4">
-            <div className="flex justify-between items-center bg-white p-4 rounded shadow">
-                <h1 className="text-2xl font-bold text-gray-800">Attendance & Excuses</h1>
-                <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-900 p-4 rounded shadow gap-4">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">Attendance & Excuses</h1>
+                <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
                     <button 
                         onClick={() => setViewMode('attendance')}
-                        className={`px-4 py-2 rounded flex items-center transition ${viewMode === 'attendance' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'attendance' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
                     >
                         <Calendar size={18} className="mr-2" />
-                        Training Days
+                        <span className="whitespace-nowrap">Training Days</span>
                     </button>
                     <button 
                         onClick={() => setViewMode('excuse')}
-                        className={`px-4 py-2 rounded flex items-center transition ${viewMode === 'excuse' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'excuse' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
                     >
                         <FileText size={18} className="mr-2" />
-                        Excuse Letters
+                        <span className="whitespace-nowrap">Excuse Letters</span>
                     </button>
                 </div>
             </div>
+
+            {/* Smart Scanner Modal */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
+                        <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
+                            <X size={24} />
+                        </button>
+
+                        {/* Camera Section */}
+                        <div className="w-full md:w-1/2 bg-black flex flex-col relative">
+                            <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay playsInline muted 
+                                    className={`absolute inset-0 w-full h-full object-cover ${capturedImage ? 'hidden' : ''}`}
+                                />
+                                <canvas ref={canvasRef} className="hidden" />
+                                {capturedImage && (
+                                    <img src={capturedImage} alt="Scan" className="absolute inset-0 w-full h-full object-contain" />
+                                )}
+                                
+                                {!isCameraActive && !capturedImage && (
+                                    <div className="text-white text-center">
+                                        <Camera size={48} className="mx-auto mb-2 opacity-50" />
+                                        <p>Camera is inactive</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="p-4 bg-gray-900 flex justify-center gap-4">
+                                {!isCameraActive ? (
+                                    <button 
+                                        onClick={startCamera}
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90"
+                                    >
+                                        <Camera size={20} /> Start Camera
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={captureAndScan}
+                                        disabled={isProcessing}
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
+                                    >
+                                        {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
+                                        {isProcessing ? 'Processing...' : 'Capture & Scan'}
+                                    </button>
+                                )}
+                                {capturedImage && (
+                                    <button 
+                                        onClick={() => { setCapturedImage(null); setScanResults([]); startCamera(); }}
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full"
+                                    >
+                                        Retake
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Results Section */}
+                        <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 flex flex-col">
+                            <div className="p-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Scan Results</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {scanResults.length > 0 ? `Found ${scanResults.length} records matching current list.` : 'Capture an attendance sheet to detect names.'}
+                                </p>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                {scanResults.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                                        <FileText size={48} className="mb-2 opacity-20" />
+                                        <p>No records detected yet</p>
+                                    </div>
+                                ) : (
+                                    scanResults.map((res, idx) => (
+                                        <div key={idx} className="bg-white p-3 rounded shadow-sm border flex flex-col gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-bold text-gray-800">{res.name}</div>
+                                                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                        <span>{res.rank}</span>
+                                                        {res.recordCourse && (
+                                                            <span className={`px-1 rounded ${res.detectedCourse ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {res.detectedCourse ? res.detectedCourse : `Mismatch: ${res.recordCourse}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className={`px-2 py-0.5 text-xs rounded font-bold uppercase ${
+                                                    res.detectedStatus === 'present' ? 'bg-green-100 text-green-800' : 
+                                                    res.detectedStatus === 'absent' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {res.detectedStatus}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 text-sm text-gray-600">
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">IN</span>
+                                                    {res.timeIn || '--:--'}
+                                                </div>
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">OUT</span>
+                                                    {res.timeOut || '--:--'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {scanResults.length > 0 && (
+                                <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
+                                    <button 
+                                        onClick={handleConfirmScan}
+                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2"
+                                    >
+                                        <CheckCircle size={20} />
+                                        Confirm & Update {scanResults.length} Records
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {viewMode === 'excuse' ? (
                 <ExcuseLetterManager />
             ) : (
                 <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-180px)] gap-6">
                     {/* Sidebar List */}
-                    <div className={`w-full md:w-1/3 bg-white rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t">
-                            <h2 className="font-bold text-lg text-gray-700">Training Days</h2>
+                    <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-800 rounded-t">
+                            <h2 className="font-bold text-lg text-gray-700 dark:text-gray-100">Training Days</h2>
                             <button 
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-green-700 text-white p-2 rounded hover:bg-green-800"
+                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90"
                                 title="Add Training Day"
                             >
                                 <Plus size={20} />
@@ -462,13 +711,15 @@ const Attendance = () => {
                                     key={day.id}
                                     onClick={() => selectDay(day)}
                                     className={`p-4 rounded border cursor-pointer transition ${
-                                        selectedDay?.id === day.id ? 'bg-green-50 border-green-500' : 'hover:bg-gray-50'
+                                        selectedDay?.id === day.id 
+                                            ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]' 
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
                                     }`}
                                 >
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <div className="font-bold text-gray-800">{day.title}</div>
-                                            <div className="text-sm text-gray-500 flex items-center mt-1">
+                                            <div className="font-bold text-gray-800 dark:text-gray-100">{day.title}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
                                                 <Calendar size={14} className="mr-1" />
                                                 {new Date(day.date).toLocaleDateString()}
                                             </div>
@@ -482,30 +733,39 @@ const Attendance = () => {
                                     </div>
                                 </div>
                             ))}
-                            {days.length === 0 && <div className="p-4 text-center text-gray-500">No training days found.</div>}
+                            {days.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400">No training days found.</div>}
                         </div>
                     </div>
 
                     {/* Main Content */}
-                    <div className={`w-full md:w-2/3 bg-white rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
+                    <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
                         {selectedDay ? (
                             <>
-                        <div className="p-4 border-b bg-gray-50 rounded-t">
+                        <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
                             <div className="flex flex-col md:flex-row justify-between items-start mb-4">
                                 <div>
-                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 mb-2 flex items-center text-sm">
+                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 dark:text-gray-400 mb-2 flex items-center text-sm">
                                         <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
                                     </button>
-                                    <h2 className="text-2xl font-bold text-gray-800">{selectedDay.title}</h2>
-                                    <p className="text-gray-600 mt-1">{selectedDay.description || 'No description'}</p>
+                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
-                                    <button 
-                                        onClick={() => setIsScannerOpen(true)}
-                                        className="flex items-center text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
-                                    >
-                                        <Camera size={16} className="mr-2" /> Scan Attendance
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleExport}
+                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition"
+                                            title="Export CSV"
+                                        >
+                                            <Download size={16} className="mr-2" /> Export
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsScannerOpen(true)}
+                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition"
+                                        >
+                                            <Camera size={16} className="mr-2" /> Smart Scan
+                                        </button>
+                                    </div>
                                     <div className="flex flex-wrap gap-2 text-sm">
                                         <div className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
                                         <div className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded"><XCircle size={16} className="mr-1"/> Absent: {stats.absent || 0}</div>
@@ -518,15 +778,23 @@ const Attendance = () => {
                             {/* Filters */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                 <div className="md:col-span-3 flex justify-center mb-2">
-                                    <div className="bg-gray-200 rounded p-1 flex">
+                                    <div className="bg-gray-200 dark:bg-gray-800 rounded p-1 flex">
                                         <button
-                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'cadet' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'cadet' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
                                             onClick={() => setAttendanceType('cadet')}
                                         >
                                             Cadets
                                         </button>
                                         <button
-                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${attendanceType === 'staff' ? 'bg-white shadow text-green-800' : 'text-gray-600'}`}
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'staff' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
                                             onClick={() => setAttendanceType('staff')}
                                         >
                                             Training Staff
@@ -536,21 +804,21 @@ const Attendance = () => {
 
                                 <input 
                                     placeholder="Search Name..." 
-                                    className="border p-2 rounded"
+                                    className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
                                 {attendanceType === 'cadet' && (
                                     <>
                                         <input 
-                                            placeholder="Filter Company" 
-                                            className="border p-2 rounded"
+                                            placeholder="Company (A/B/C)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                             value={filterCompany}
                                             onChange={e => setFilterCompany(e.target.value)}
                                         />
                                         <input 
-                                            placeholder="Filter Platoon" 
-                                            className="border p-2 rounded"
+                                            placeholder="Platoon (1/2/3)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                             value={filterPlatoon}
                                             onChange={e => setFilterPlatoon(e.target.value)}
                                         />
@@ -559,182 +827,155 @@ const Attendance = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-100 sticky top-0 z-10">
-                                    <tr>
-                                        <th className="p-3 border-b">{attendanceType === 'cadet' ? 'Cadet' : 'Staff Member'}</th>
-                                        <th className="p-3 border-b text-center">Status</th>
-                                        <th className="p-3 border-b">Time In</th>
-                                        <th className="p-3 border-b">Time Out</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredRecords.map(record => {
-                                        const id = attendanceType === 'cadet' ? record.cadet_id : record.staff_id;
-                                        return (
-                                        <tr key={id} className="border-b hover:bg-gray-50">
-                                            <td className="p-3">
-                                                <div className="font-medium">{record.last_name}, {record.first_name}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    {record.rank} | {attendanceType === 'cadet' ? `${record.company || '-'}/${record.platoon || '-'}` : (record.role || 'Instructor')}
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {filteredRecords.length === 0 ? (
+                                <div className="text-center text-gray-500 dark:text-gray-400 py-10">
+                                    No records found matching filters.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {filteredRecords.map(record => (
+                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition border-gray-200 dark:border-gray-700">
+                                            <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
+                                                <div className="flex items-center">
+                                                    <span className="font-bold text-gray-800 dark:text-gray-100 mr-2">
+                                                        {record.last_name}, {record.first_name}
+                                                    </span>
+                                                    {attendanceType === 'cadet' && (
+                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                                                            {record.company}/{record.platoon}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex justify-center space-x-1">
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'present')}
-                                                        className={`p-1 rounded ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'text-gray-300 hover:text-green-500'}`}
-                                                        title="Present"
-                                                    >
-                                                        <CheckCircle size={20} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'absent')}
-                                                        className={`p-1 rounded ${record.status === 'absent' ? 'bg-red-100 text-red-700' : 'text-gray-300 hover:text-red-500'}`}
-                                                        title="Absent"
-                                                    >
-                                                        <XCircle size={20} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'late')}
-                                                        className={`p-1 rounded ${record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-300 hover:text-yellow-500'}`}
-                                                        title="Late"
-                                                    >
-                                                        <Clock size={20} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(id, 'excused')}
-                                                        className={`p-1 rounded ${record.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:text-blue-500'}`}
-                                                        title="Excused"
-                                                    >
-                                                        <AlertTriangle size={20} />
-                                                    </button>
+                                                <div className="text-sm text-gray-500 dark:text-gray-300 flex flex-wrap gap-4 mt-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">In:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                                            value={record.time_in || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">Out:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                                            value={record.time_out || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <input 
+                                                        className="border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs w-32 bg-transparent dark:text-gray-100"
+                                                        placeholder="Remarks..."
+                                                        value={record.remarks || ''}
+                                                        onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
+                                                        onBlur={(e) => saveRemark(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value, record.status)}
+                                                    />
                                                 </div>
-                                            </td>
-                                            <td className="p-3">
-                                                <input 
-                                                    type="time"
-                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
-                                                    value={record.time_in || ''}
-                                                    onChange={(e) => handleTimeChange(id, 'time_in', e.target.value)}
-                                                    onBlur={(e) => saveTime(id, 'time_in', e.target.value)}
-                                                />
-                                            </td>
-                                            <td className="p-3">
-                                                <input 
-                                                    type="time"
-                                                    className="border-b border-gray-300 focus:border-green-500 outline-none w-full text-sm py-1 bg-transparent"
-                                                    value={record.time_out || ''}
-                                                    onChange={(e) => handleTimeChange(id, 'time_out', e.target.value)}
-                                                    onBlur={(e) => saveTime(id, 'time_out', e.target.value)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    )})}
-                                </tbody>
-                            </table>
+                                            </div>
+                                            
+                                        <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
+                                                    title="Present"
+                                                >
+                                                    <CheckCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'late')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'late' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'}`}
+                                                    title="Late"
+                                                >
+                                                    <Clock size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'absent')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'absent' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`}
+                                                    title="Absent"
+                                                >
+                                                    <XCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'excused')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'excused' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'}`}
+                                                    title="Excused"
+                                                >
+                                                    <AlertTriangle size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                        <Calendar size={64} className="mb-4 opacity-50" />
-                        <p className="text-lg">Select a training day to view or mark attendance</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Create Modal */}
-            {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h3 className="text-xl font-bold mb-4">New Training Day</h3>
-                        <form onSubmit={handleCreateDay} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Date</label>
-                                <input 
-                                    type="date" 
-                                    required
-                                    className="w-full border p-2 rounded"
-                                    value={createForm.date}
-                                    onChange={e => setCreateForm({...createForm, date: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Title</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    placeholder="e.g., Drill Day 1"
-                                    className="w-full border p-2 rounded"
-                                    value={createForm.title}
-                                    onChange={e => setCreateForm({...createForm, title: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea 
-                                    className="w-full border p-2 rounded"
-                                    rows="3"
-                                    value={createForm.description}
-                                    onChange={e => setCreateForm({...createForm, description: e.target.value})}
-                                ></textarea>
-                            </div>
-                            <div className="flex space-x-3 pt-4">
-                                <button 
-                                    type="button"
-                                    onClick={() => setIsCreateModalOpen(false)}
-                                    className="flex-1 py-2 border rounded hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="flex-1 py-2 bg-green-700 text-white rounded hover:bg-green-800"
-                                >
-                                    Create
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {/* Scanner Modal */}
-            {isScannerOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-lg relative">
-                        <button 
-                            onClick={closeScanner}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-                        >
-                            <XCircle size={24} />
-                        </button>
-                        
-                        <h3 className="text-xl font-bold mb-4">Scan QR Code</h3>
-                        
-                        {!scanResult ? (
-                            <div id="reader" className="w-full"></div>
+                            </>
                         ) : (
-                            <div className="text-center space-y-4">
-                                <div className="bg-green-100 text-green-800 p-4 rounded">
-                                    <p className="font-bold text-lg">Scanned Successfully!</p>
-                                    <p className="font-mono mt-2 break-all">{scanResult.raw}</p>
-                                    {scanResult.name && <p className="text-lg font-semibold mt-2">{scanResult.name}</p>}
-                                </div>
-                                
-                                <p className="text-gray-600">Mark attendance as:</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button onClick={() => handleScanConfirm('present')} className="bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700">PRESENT</button>
-                                    <button onClick={() => handleScanConfirm('late')} className="bg-yellow-500 text-white p-3 rounded font-bold hover:bg-yellow-600">LATE</button>
-                                    <button onClick={() => handleScanConfirm('excused')} className="bg-blue-500 text-white p-3 rounded font-bold hover:bg-blue-600">EXCUSED</button>
-                                    <button onClick={() => { setScanResult(null); if(scannerRef.current) setTimeout(() => scannerRef.current.resume(), 500); }} className="bg-gray-500 text-white p-3 rounded font-bold hover:bg-gray-600">CANCEL</button>
-                                </div>
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                                <Calendar size={64} className="mb-4 opacity-20" />
+                                <p className="text-lg">Select a training day to view attendance</p>
                             </div>
                         )}
                     </div>
                 </div>
             )}
-            </div>
+            
+            {/* Create Day Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded p-6 w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-gray-100">New Training Day</h3>
+                        <form onSubmit={handleCreateDay} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Date</label>
+                                <input 
+                                    type="date" required
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.date}
+                                    onChange={e => setCreateForm({...createForm, date: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
+                                <input 
+                                    type="text" required
+                                    placeholder="e.g. Drill Day 1"
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.title}
+                                    onChange={e => setCreateForm({...createForm, title: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
+                                <textarea 
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.description}
+                                    onChange={e => setCreateForm({...createForm, description: e.target.value})}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                                >
+                                    Create Day
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

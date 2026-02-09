@@ -9,6 +9,36 @@ const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
 const axios = require('axios');
 
+// Simple SSE clients registry (shared via global)
+const SSE_CLIENTS = global.__sseClients || [];
+global.__sseClients = SSE_CLIENTS;
+
+function broadcastEvent(event) {
+    try {
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        SSE_CLIENTS.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
+// Server-Sent Events endpoint
+router.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    res.write('retry: 5000\n\n');
+    SSE_CLIENTS.push(res);
+
+    req.on('close', () => {
+        const idx = SSE_CLIENTS.indexOf(res);
+        if (idx !== -1) SSE_CLIENTS.splice(idx, 1);
+    });
+});
 // Multer config for file upload (Memory storage for immediate parsing)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -100,7 +130,7 @@ router.get('/records/:dayId', authenticateToken, isAdmin, (req, res) => {
         FROM cadets c
         JOIN users u ON c.id = u.cadet_id
         LEFT JOIN attendance_records ar ON c.id = ar.cadet_id AND ar.training_day_id = ?
-        WHERE u.is_approved = 1 AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+        WHERE u.is_approved = 1 AND (c.is_archived IS FALSE OR c.is_archived IS NULL) AND c.is_profile_completed IS TRUE
     `;
     const params = [dayId];
 
@@ -159,6 +189,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -181,6 +212,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
+                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -275,6 +307,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                     (err) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
+                        broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -304,6 +337,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                     (err) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
+                        broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -336,7 +370,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
 
 // Staff Attendance Scan Endpoint
 router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
-    const { dayId, qrData, status: providedStatus } = req.body;
+    const { dayId, qrData, status: providedStatus, time_in: providedTimeIn, time_out: providedTimeOut } = req.body;
     
     try {
         let staffData;
@@ -356,20 +390,28 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
             if (err) return res.status(500).json({ message: err.message });
             if (!staff) return res.status(404).json({ message: 'Staff not found' });
 
-            // Mark Attendance
             const status = providedStatus || 'present';
             const remarks = 'Scanned via QR';
 
-            db.get('SELECT id FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
+            db.get('SELECT id, time_in, time_out FROM staff_attendance_records WHERE training_day_id = ? AND staff_id = ?', [dayId, staffId], (err, row) => {
                 if (err) return res.status(500).json({ message: err.message });
 
                 if (row) {
-                    // Update
-                    db.run('UPDATE staff_attendance_records SET status = ?, remarks = ? WHERE id = ?', 
-                        [status, remarks, row.id], 
+                    let timeIn = row.time_in;
+                    let timeOut = row.time_out;
+
+                    if (!timeIn && status === 'present') {
+                        timeIn = providedTimeIn || new Date().toLocaleTimeString();
+                    } else if (timeIn && !timeOut && status === 'present') {
+                        timeOut = providedTimeOut || new Date().toLocaleTimeString();
+                    }
+
+                    db.run('UPDATE staff_attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
+                        [status, remarks, timeIn, timeOut, row.id], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
+                            broadcastEvent({ type: 'staff_attendance_updated', staffId, dayId, status });
                             // Notify Staff
                             db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
                                 if (uRow) {
@@ -392,12 +434,19 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
                         }
                     );
                 } else {
-                    // Insert
-                    db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks) VALUES (?, ?, ?, ?)', 
-                        [dayId, staffId, status, remarks], 
+                    let timeIn = null;
+                    let timeOut = null;
+
+                    if (status === 'present') {
+                        timeIn = providedTimeIn || new Date().toLocaleTimeString();
+                    }
+
+                    db.run('INSERT INTO staff_attendance_records (training_day_id, staff_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
+                        [dayId, staffId, status, remarks, timeIn, timeOut], 
                         (err) => {
                             if (err) return res.status(500).json({ message: err.message });
                             
+                            broadcastEvent({ type: 'staff_attendance_updated', staffId, dayId, status });
                             // Notify Staff
                             db.get('SELECT id FROM users WHERE staff_id = ?', [staffId], (uErr, uRow) => {
                                 if (uRow) {
@@ -945,7 +994,9 @@ router.get('/records/staff/:dayId', authenticateToken, isAdmin, (req, res) => {
             s.first_name, 
             s.rank,
             sar.status, 
-            sar.remarks
+            sar.remarks,
+            sar.time_in,
+            sar.time_out
         FROM training_staff s
         LEFT JOIN staff_attendance_records sar ON s.id = sar.staff_id AND sar.training_day_id = ?
         WHERE (s.is_archived IS FALSE OR s.is_archived IS NULL)

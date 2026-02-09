@@ -122,11 +122,15 @@ const Profile = () => {
             status: data.status || 'Ongoing'
         });
         if (data.profile_pic) {
-            if (data.profile_pic.startsWith('data:')) {
+            if (data.profile_pic.startsWith('data:') || data.profile_pic.startsWith('http')) {
                 setPreview(data.profile_pic);
             } else {
                 let normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                if (!normalizedPath.startsWith('/')) {
+                // Remove absolute path prefix if present (look for /uploads/)
+                const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                if (uploadsIndex !== -1) {
+                    normalizedPath = normalizedPath.substring(uploadsIndex);
+                } else if (!normalizedPath.startsWith('/')) {
                     normalizedPath = '/' + normalizedPath;
                 }
                 setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
@@ -231,10 +235,10 @@ const Profile = () => {
     if (loading) return <div className="text-center p-10 dark:text-white">Loading...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-10">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">My Profile</h1>
-                <div className="flex space-x-2">
+        <div className="max-w-4xl mx-auto space-y-6 pb-10 px-4 sm:px-0">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">My Profile</h1>
+                <div className="flex space-x-2 self-start sm:self-auto">
                     <button 
                         onClick={toggleDarkMode}
                         className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-full transition"
@@ -274,7 +278,7 @@ const Profile = () => {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                 {/* Left Column: Photo & Settings */}
                 <div className="md:col-span-1 space-y-6">
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center">
@@ -325,7 +329,7 @@ const Profile = () => {
                 </div>
 
                 {/* Right Column: Form Fields */}
-                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
+                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 lg:p-8 rounded-lg shadow">
                     <h3 className="text-xl font-bold mb-6 border-b pb-2 dark:text-white">Personal Information</h3>
                     
                     <div className="space-y-4">
@@ -358,7 +362,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank <span className="text-xs text-red-500">(Read-only)</span></label>
                                 <input className="w-full border dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 p-2 rounded cursor-not-allowed" value={profile.rank} disabled />
@@ -369,7 +373,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name <span className="text-red-500">*</span></label>
                                 <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.firstName} onChange={e => setProfile({...profile, firstName: e.target.value})} disabled={isLocked} required />
@@ -398,7 +402,7 @@ const Profile = () => {
 
                         <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2 dark:text-white">Military &amp; School Info</h3>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course <span className="text-red-500">*</span></label>
                                 <select
@@ -446,7 +450,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Battalion <span className="text-red-500">*</span></label>
                                 <select
@@ -494,7 +498,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cadet Course <span className="text-red-500">*</span></label>
                                 <select

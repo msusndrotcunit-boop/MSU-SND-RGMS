@@ -5,7 +5,7 @@ const KeepAlive = () => {
     useEffect(() => {
         // Ping the server every 1 minute to prevent sleep
         const ping = () => {
-            axios.get('/health')
+            axios.get('/api/health')
                 .then(() => console.log('[KeepAlive] Ping successful'))
                 .catch(err => console.error('[KeepAlive] Ping failed', err));
         };

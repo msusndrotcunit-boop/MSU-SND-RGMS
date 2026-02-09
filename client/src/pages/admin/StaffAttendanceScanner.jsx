@@ -1,29 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { QrCode } from 'lucide-react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const StaffAttendanceScanner = () => {
     const [scanResult, setScanResult] = useState(null);
     const [trainingDays, setTrainingDays] = useState([]);
     const [selectedDay, setSelectedDay] = useState('');
-    
-    // New State for Modal
-    const [scannedData, setScannedData] = useState(null);
-    const [showModal, setShowModal] = useState(false);
-
+    const [pendingQrData, setPendingQrData] = useState(null);
+    const [pendingStaff, setPendingStaff] = useState(null);
+    const [isChoosingStatus, setIsChoosingStatus] = useState(false);
     const scannerRef = useRef(null);
-    const selectedDayRef = useRef(selectedDay);
-    const lastScanRef = useRef(0);
-    const beepRef = useRef(null);
-    const [staffList, setStaffList] = useState([]);
-    const [manualStaffId, setManualStaffId] = useState('');
-    const [manualRemarks, setManualRemarks] = useState('');
-
-    // Sync ref with state
-    useEffect(() => {
-        selectedDayRef.current = selectedDay;
-    }, [selectedDay]);
 
     // Fetch training days
     useEffect(() => {
@@ -38,7 +26,6 @@ const StaffAttendanceScanner = () => {
             });
             setTrainingDays(res.data);
             if (res.data.length > 0) {
-                // Select today if exists, else first
                 const today = new Date().toISOString().split('T')[0];
                 const todayDay = res.data.find(d => d.date === today);
                 setSelectedDay(todayDay ? todayDay.id : res.data[0].id);
@@ -49,219 +36,97 @@ const StaffAttendanceScanner = () => {
         }
     };
 
+    // Initialize QR scanner for staff QR codes
     useEffect(() => {
-        const loadStaff = async () => {
-            if (!selectedDay) {
-                setStaffList([]);
-                return;
-            }
-            try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get(`/api/attendance/records/staff/${selectedDay}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setStaffList(res.data || []);
-            } catch (err) {
-                console.error(err);
-                toast.error("Failed to load staff list");
-            }
-        };
-        loadStaff();
-    }, [selectedDay]);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const initScanner = async () => {
-            // Check if element exists
-            if (!document.getElementById("reader")) return;
-            
-            // If scanner exists, clear it first
-            if (scannerRef.current) {
-                try {
-                    await scannerRef.current.clear();
-                } catch (e) {
-                    console.error("Error clearing existing scanner:", e);
-                }
-                scannerRef.current = null;
-            }
-
-            if (!isMounted) return;
-
-            try {
-                const scanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0,
-                        showTorchButtonIfSupported: true,
-                        rememberLastUsedCamera: true,
-                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
-                        useBarCodeDetectorIfSupported: true,
-                        disableFlip: true
-                    },
-                    /* verbose= */ false
-                );
-
-                scanner.render(onScanSuccess, onScanFailure);
-                scannerRef.current = scanner;
-            } catch (err) {
-                console.error("Failed to initialize scanner:", err);
-                toast.error("Failed to start camera");
-            }
-        };
-
-        // Initialize scanner with a slight delay to ensure DOM is ready
-        const timeoutId = setTimeout(initScanner, 500);
-
-        return () => {
-            isMounted = false;
-            clearTimeout(timeoutId);
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(error => {
-                    console.error("Failed to clear html5-qrcode scanner. ", error);
-                });
-                scannerRef.current = null;
-            }
-        };
-    }, []);
-
-    const onScanSuccess = async (decodedText, decodedResult) => {
-        const now = Date.now();
-        if (now - lastScanRef.current < 2000) return;
-        lastScanRef.current = now;
-        if (!selectedDayRef.current) {
-            toast.error("Please select a training day first.");
-            // Pause to avoid spamming errors
-            if (scannerRef.current) {
-                scannerRef.current.pause(true);
-                setTimeout(() => scannerRef.current.resume(), 2000);
-            }
+        if (!selectedDay) {
             return;
         }
-        
-        try {
-            // Pause scanner immediately
-            if (scannerRef.current) {
-                scannerRef.current.pause(true);
-            }
 
-            // Try to parse JSON from QR
-            let data = {};
-            try {
-                data = JSON.parse(decodedText);
-            } catch (e) {
-                // If not JSON, assume it's just an ID? Or fail.
-                console.error("QR Parse Error", e);
-                // For now, if it's not JSON, we can't easily display a name unless we fetch it.
-                // But let's wrap it in an object to pass through.
-                data = { id: decodedText, name: 'Unverified Staff' }; 
-            }
-
-            setScannedData({ ...data, rawQr: decodedText });
-            setShowModal(true);
-            try { beepRef.current && beepRef.current.play(); } catch {}
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Scan processing failed");
-            if (scannerRef.current) scannerRef.current.resume();
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(() => {});
+            scannerRef.current = null;
         }
-    };
 
-    const handleAttendanceAction = async (status) => {
-        if (!scannedData || !selectedDayRef.current) return;
+        const config = {
+            fps: 10,
+            qrbox: {
+                width: 250,
+                height: 250
+            }
+        };
 
+        const scanner = new Html5QrcodeScanner('staff-qr-reader', config, false);
+
+        const onScanSuccess = (decodedText) => {
+            if (!decodedText || isChoosingStatus) return;
+            try {
+                const data = JSON.parse(decodedText);
+                if (!data.id) {
+                    toast.error('Invalid staff QR code');
+                    return;
+                }
+                setPendingQrData(decodedText);
+                setPendingStaff({
+                    name: data.name || '',
+                    afpsn: data.afpsn || ''
+                });
+                setIsChoosingStatus(true);
+                if (navigator.vibrate) navigator.vibrate(40);
+            } catch (e) {
+                toast.error('Invalid QR Code format');
+            }
+        };
+
+        const onScanFailure = () => {};
+
+        scanner.render(onScanSuccess, onScanFailure);
+        scannerRef.current = scanner;
+
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(() => {});
+                scannerRef.current = null;
+            }
+        };
+    }, [selectedDay]);
+
+    const handleStatusChoice = async (status) => {
+        if (!pendingQrData || !selectedDay) return;
         try {
             const token = localStorage.getItem('token');
             const res = await axios.post('/api/attendance/staff/scan', {
-                dayId: selectedDayRef.current,
-                qrData: scannedData.rawQr,
-                status: status
+                dayId: selectedDay,
+                qrData: pendingQrData,
+                status
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             setScanResult(res.data);
-            toast.success(`Marked as ${status.toUpperCase()}`);
-            
+            setIsChoosingStatus(false);
+            setPendingQrData(null);
+            toast.success(`Staff marked as ${status}`);
+            if (navigator.vibrate) navigator.vibrate(60);
         } catch (err) {
             console.error(err);
-            toast.error(err.response?.data?.message || "Attendance update failed");
-        } finally {
-            // Close modal and resume scanner
-            setShowModal(false);
-            setScannedData(null);
-            if (scannerRef.current) {
-                // Resume after short delay to prevent immediate re-scan
-                setTimeout(() => scannerRef.current.resume(), 1000);
-            }
-        }
-    };
-
-    const onScanFailure = (error) => {
-        // console.warn(`Code scan error = ${error}`);
-    };
-
-    const handleMarkAbsent = async () => {
-        if (!manualStaffId || !selectedDayRef.current) {
-            toast.error("Select training day and staff");
-            return;
-        }
-
-        const staffMember = staffList.find(s => s.staff_id === parseInt(manualStaffId) || s.staff_id === manualStaffId);
-        
-        if (!staffMember) {
-            toast.error("Selected staff not found in list");
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            const res = await axios.post('/api/attendance/mark/staff', {
-                dayId: selectedDayRef.current,
-                staffId: manualStaffId,
-                status: 'absent',
-                remarks: manualRemarks
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            // Safety check for response data
-            if (res.data && res.data.staff) {
-                setScanResult(res.data);
-            } else {
-                // If backend doesn't return full staff object, construct a temporary one for display
-                setScanResult({
-                    status: 'absent',
-                    staff: staffMember,
-                    message: 'Marked absent manually'
-                });
-            }
-
-            toast.success("Marked as ABSENT");
-            const updated = staffList.map(s => s.staff_id === manualStaffId ? { ...s, status: 'absent', remarks: manualRemarks } : s);
-            setStaffList(updated);
-            setManualStaffId('');
-            setManualRemarks('');
-        } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.message || "Attendance update failed");
+            const message = err.response?.data?.message || 'Failed to record staff attendance';
+            toast.error(message);
         }
     };
 
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4 text-green-800">Staff Attendance Scanner</h2>
-            <p className="mb-4 text-gray-600">Select a training day and scan staff QR codes to record attendance.</p>
+            <h2 className="text-2xl font-bold mb-4 text-[var(--primary-color)]">Staff QR Attendance Scanner</h2>
+            <p className="mb-4 text-gray-600 dark:text-gray-300">
+                Scan each training staff&apos;s unique QR code to record their attendance.
+            </p>
             
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Training Day</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Select Training Day</label>
                 <select 
                     value={selectedDay} 
                     onChange={(e) => setSelectedDay(e.target.value)}
-                    className="w-full md:w-1/3 p-2 border rounded shadow-sm focus:ring-green-500 focus:border-green-500"
+                    className="w-full md:w-1/3 p-2 border rounded shadow-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"
                 >
                     <option value="">-- Select Day --</option>
                     {trainingDays.map(day => (
@@ -273,112 +138,70 @@ const StaffAttendanceScanner = () => {
             </div>
 
             <div className="flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-1/2 bg-white p-4 rounded shadow">
-                    <div id="reader" width="100%"></div>
-                    <audio ref={beepRef} src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAFAAABAAACAAACcQBhdWRpby1tcDMAAABNAAACcAAACmYAAABaQW5kcmV3b2xmcwAAABQAAP/9AAA=" />
+                {/* QR Scanner Section */}
+                <div className="w-full md:w-1/2 bg-white dark:bg-gray-900 p-4 rounded shadow">
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-color-soft)] text-[var(--primary-color)]">
+                            <QrCode size={20} />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Live QR Scanner</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Point the camera at the staff QR code.</div>
+                        </div>
+                    </div>
+                    <div id="staff-qr-reader" className="w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700" />
                 </div>
                 
+                {/* Results Section */}
                 <div className="w-full md:w-1/2">
-                    <h3 className="text-lg font-semibold mb-3">Last Scan Result</h3>
+                    <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Last Scan Result</h3>
+                    {isChoosingStatus && (
+                        <div className="mb-4 p-4 bg-[var(--primary-color-soft)] border border-[var(--primary-color)] rounded">
+                            <div className="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
+                                {pendingStaff?.name || 'Scanned staff'} {pendingStaff?.afpsn ? `(${pendingStaff.afpsn})` : ''}
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                                Choose attendance status. First scan records time in (7:30–9:00 window), second scan records time out (11:30–12:00).
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => handleStatusChoice('present')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-[var(--primary-color)] text-white hover:bg-teal-800"
+                                >
+                                    Present
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChoice('absent')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-red-100 text-red-700 hover:bg-red-200"
+                                >
+                                    Absent
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChoice('excused')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                >
+                                    Excused
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {scanResult ? (
-                        <div className="p-6 bg-white border-l-4 border-green-500 rounded shadow animate-pulse-once">
+                        <div className="p-6 bg-white dark:bg-gray-900 border-l-4 border-[var(--primary-color)] rounded shadow animate-pulse-once">
                             <div className="flex justify-between items-start mb-2">
-                                <h4 className="text-xl font-bold text-gray-800">{scanResult.staff.name}</h4>
-                                <span className="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
-                                    {scanResult.status.toUpperCase()}
+                                <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100">{scanResult.staff?.name || scanResult.staff?.last_name}</h4>
+                                <span className="px-2 py-1 text-xs font-semibold rounded bg-[var(--primary-color-soft)] text-[var(--primary-color)]">
+                                    {scanResult.status?.toUpperCase()}
                                 </span>
                             </div>
-                            <p className="text-gray-600 mb-1"><strong>AFPSN:</strong> {scanResult.staff.afpsn}</p>
-                            <p className="text-sm text-gray-500 mt-4 italic">{scanResult.message}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-300 mt-2">{scanResult.message}</p>
                         </div>
                     ) : (
-                        <div className="p-6 bg-gray-50 border rounded text-center text-gray-500">
+                        <div className="p-6 bg-gray-50 dark:bg-gray-800 border rounded text-center text-gray-500 dark:text-gray-300">
                             Waiting for scan...
                         </div>
                     )}
-                    
-                    <div className="mt-8">
-                        <h3 className="text-lg font-semibold mb-3">Manual Absent</h3>
-                        <div className="bg-white p-4 rounded border shadow-sm space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
-                                <select
-                                    value={manualStaffId}
-                                    onChange={(e) => setManualStaffId(e.target.value)}
-                                    className="w-full p-2 border rounded shadow-sm focus:ring-green-500 focus:border-green-500"
-                                >
-                                    <option value="">-- Select Staff --</option>
-                                    {staffList.map(s => (
-                                        <option key={s.staff_id} value={s.staff_id}>
-                                            {s.rank} {s.first_name} {s.last_name} {s.status ? `(${s.status})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
-                                <input
-                                    type="text"
-                                    value={manualRemarks}
-                                    onChange={(e) => setManualRemarks(e.target.value)}
-                                    placeholder="Optional"
-                                    className="w-full p-2 border rounded shadow-sm focus:ring-green-500 focus:border-green-500"
-                                />
-                            </div>
-                            <button
-                                onClick={handleMarkAbsent}
-                                className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded transition"
-                            >
-                                Mark ABSENT
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
-
-            {/* Modal for Present/Absent Selection */}
-            {showModal && scannedData && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-scale-in">
-                        <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Mark Attendance</h3>
-                        
-                        <div className="bg-gray-50 p-4 rounded mb-6 text-center">
-                            <p className="text-sm text-gray-500 mb-1">Scanned Staff</p>
-                            <p className="font-bold text-lg text-gray-800">{scannedData.name || 'Staff Member'}</p>
-                            <p className="text-xs text-gray-400 break-all truncate">{scannedData.id || scannedData.rawQr}</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={() => handleAttendanceAction('present')}
-                                className="flex flex-col items-center justify-center p-4 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition border border-green-200"
-                            >
-                                <span className="text-2xl mb-1">✅</span>
-                                <span className="font-bold">PRESENT</span>
-                            </button>
-                            
-                            <button
-                                onClick={() => handleAttendanceAction('excused')}
-                                className="flex flex-col items-center justify-center p-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition border border-blue-200"
-                            >
-                                <span className="text-2xl mb-1">📝</span>
-                                <span className="font-bold">EXCUSE</span>
-                            </button>
-                        </div>
-                        
-                        <button
-                            onClick={() => {
-                                setShowModal(false);
-                                setScannedData(null);
-                                if (scannerRef.current) scannerRef.current.resume();
-                            }}
-                            className="mt-6 w-full py-2 text-gray-500 hover:text-gray-700 text-sm font-medium"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

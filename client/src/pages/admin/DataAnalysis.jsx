@@ -3,7 +3,8 @@ import axios from 'axios';
 import { 
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend 
 } from 'recharts';
-import { FileText, Printer, Building2, Download } from 'lucide-react';
+import { FileText, Printer, Building2, Download, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -29,9 +30,12 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
+    const shortName = (name || '').length > 12 ? `${(name || '').slice(0, 12)}…` : (name || '');
+    const fontSize = 10;
+
     return percent > 0 ? (
-        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight="bold">
-            {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={fontSize} fontWeight="bold">
+            {`${shortName}: ${value} (${(percent * 100).toFixed(0)}%)`}
         </text>
     ) : null;
 };
@@ -281,8 +285,8 @@ const DataAnalysis = () => {
     ].filter(d => d.value > 0);
 
     const combinedData = [
-        { name: 'Basic Cadets', value: stats.ongoing.basic.total },
-        { name: 'Advance Cadets', value: stats.ongoing.advance.total }
+        { name: 'Basic', value: stats.ongoing.basic.total },
+        { name: 'Advance', value: stats.ongoing.advance.total }
     ].filter(d => d.value > 0);
 
     // Completed Data for simple pie
@@ -311,25 +315,6 @@ const DataAnalysis = () => {
 
     return (
         <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
-            {/* Header */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between">
-                <div>
-                    <div className="flex items-center text-sm text-blue-600 mb-1">
-                        <span className="mr-1">📊</span> Generate Data Analysis <span className="mx-2">›</span> <span className="font-semibold">Data Analysis</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <span className="text-yellow-500 text-2xl">📊</span>
-                        <h1 className="text-2xl font-bold text-gray-800">Generate Data Analysis</h1>
-                    </div>
-                </div>
-                <button 
-                    onClick={generatePDF}
-                    className="mt-4 md:mt-0 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg flex items-center shadow-lg transition-all"
-                >
-                    <FileText size={18} className="mr-2" />
-                    <span>Generate PDF Report</span>
-                </button>
-            </div>
 
             {/* School Info Card */}
             <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden border-t-4 border-yellow-500">
@@ -499,7 +484,7 @@ const DataAnalysis = () => {
             </div>
 
             {/* Completed & Incomplete Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Completed Chart */}
                 <div className="bg-white rounded-lg shadow-md border-t-4 border-green-600 h-80">
@@ -565,6 +550,39 @@ const DataAnalysis = () => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            <div className="mt-4 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
                 </div>
             </div>
         </div>

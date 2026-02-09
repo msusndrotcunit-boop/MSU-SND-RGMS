@@ -22,10 +22,14 @@ if (isCloudinaryConfigured) {
     // Configure Storage
     storage = new CloudinaryStorage({
         cloudinary: cloudinary,
-        params: {
-            folder: 'rotc-grading-system', // Folder name in Cloudinary
-            allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-            transformation: [{ width: 500, height: 500, crop: 'limit' }] // Resize large images
+        params: async (req, file) => {
+            const isImage = file.mimetype.startsWith('image/');
+            return {
+                folder: 'rotc-grading-system',
+                allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'pdf', 'doc', 'docx'],
+                resource_type: 'auto',
+                transformation: isImage ? [{ width: 500, height: 500, crop: 'limit' }] : undefined
+            };
         }
     });
 } else {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CheckCircle, XCircle, ExternalLink, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, ExternalLink, Filter, Trash2, Download } from 'lucide-react';
 import { cacheData, getCachedData } from '../utils/db';
 
 const ExcuseLetterManager = () => {
@@ -35,6 +35,20 @@ const ExcuseLetterManager = () => {
             fetchLetters();
         } catch (err) {
             alert('Failed to update status');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this excuse letter? This action cannot be undone.')) return;
+        try {
+            await axios.delete(`/api/excuse/${id}`);
+            setLetters(letters.filter(l => l.id !== id));
+            // Update cache
+            const newLetters = letters.filter(l => l.id !== id);
+            await cacheData('excuse_letters', newLetters);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete excuse letter');
         }
     };
 
@@ -84,9 +98,23 @@ const ExcuseLetterManager = () => {
                                 <td className="p-3">{new Date(letter.date_absent).toLocaleDateString()}</td>
                                 <td className="p-3 max-w-xs truncate" title={letter.reason}>{letter.reason}</td>
                                 <td className="p-3">
-                                    <a href={letter.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                                        <ExternalLink size={14} className="mr-1" /> View
-                                    </a>
+                                    <div className="flex flex-col space-y-1">
+                                        <a 
+                                            href={letter.file_url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-blue-600 hover:underline flex items-center"
+                                        >
+                                            <ExternalLink size={14} className="mr-1" /> View
+                                        </a>
+                                        <a 
+                                            href={letter.file_url} 
+                                            download 
+                                            className="text-green-700 hover:underline flex items-center text-xs"
+                                        >
+                                            <Download size={12} className="mr-1" /> Download
+                                        </a>
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
@@ -97,7 +125,7 @@ const ExcuseLetterManager = () => {
                                         {letter.status}
                                     </span>
                                 </td>
-                                <td className="p-3 space-x-2">
+                                <td className="p-3 space-x-2 flex items-center">
                                     {letter.status === 'pending' && (
                                         <>
                                             <button 
@@ -115,6 +143,16 @@ const ExcuseLetterManager = () => {
                                                 <XCircle size={18} />
                                             </button>
                                         </>
+                                    )}
+                                    {/* Delete option for approved/rejected (or all if desired, but user specified 'after approved') */}
+                                    {['approved', 'rejected'].includes(letter.status) && (
+                                        <button 
+                                            onClick={() => handleDelete(letter.id)}
+                                            className="text-gray-500 hover:text-red-600 ml-2"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
                                     )}
                                 </td>
                             </tr>

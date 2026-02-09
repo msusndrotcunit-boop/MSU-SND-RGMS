@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Lock, Mail, Phone, Shield, QrCode, MapPin, Calendar, Ruler, Activity, Flag, Globe, Facebook, Briefcase, Edit, Save, X, Printer, AlertTriangle, Camera } from 'lucide-react';
-import QRCode from 'qrcode';
+import { User, Lock, Mail, Phone, Shield, MapPin, Calendar, Ruler, Activity, Flag, Globe, Facebook, Briefcase, Edit, Save, X, AlertTriangle, Camera } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -81,12 +80,9 @@ const StaffProfile = () => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({});
     
-    // For printing QR
-    const qrRef = useRef(null);
     // For file upload
     const fileInputRef = useRef(null);
 
@@ -110,7 +106,6 @@ const StaffProfile = () => {
                 
                 setProfile(data);
                 setFormData(data);
-                generateQRCode(data);
                 setLoading(false);
 
                 // If cache is fresh (< 5 mins), skip fetch
@@ -122,7 +117,6 @@ const StaffProfile = () => {
             const res = await axios.get('/api/staff/me');
             setProfile(res.data);
             setFormData(res.data);
-            generateQRCode(res.data);
             setLoading(false);
             
             // Update cache with timestamp
@@ -143,23 +137,6 @@ const StaffProfile = () => {
                 setError('Failed to load profile data.');
                 setLoading(false);
             }
-        }
-    };
-
-    const generateQRCode = async (data) => {
-        if (!data) return;
-        const qrData = JSON.stringify({
-            id: data.id,
-            name: `${data.rank} ${data.first_name} ${data.last_name}`,
-            afpsn: data.afpsn,
-            role: 'training_staff'
-        });
-        
-        try {
-            const url = await QRCode.toDataURL(qrData);
-            setQrCodeUrl(url);
-        } catch (err) {
-            console.error(err);
         }
     };
 
@@ -293,45 +270,23 @@ const StaffProfile = () => {
         }
     };
 
-    const handlePrintQR = () => {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Staff QR Code - ${profile.rank} ${profile.last_name}</title>
-                    <style>
-                        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-                        img { width: 300px; height: 300px; }
-                        h2 { margin-top: 20px; }
-                        p { color: #666; }
-                    </style>
-                </head>
-                <body>
-                    <img src="${qrCodeUrl}" />
-                    <h2>${profile.rank} ${profile.first_name} ${profile.last_name}</h2>
-                    <p>AFPSN: ${profile.afpsn}</p>
-                    <p>Role: Training Staff</p>
-                    <script>
-                        window.onload = function() { window.print(); window.close(); }
-                    </script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-    };
-
     if (loading) return <div className="p-8 text-center">Loading profile...</div>;
     if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
     if (!profile) return <div className="p-8 text-center">No profile found.</div>;
 
     const getProfileImage = () => {
-        if (profile.profile_pic) {
-             if (profile.profile_pic.startsWith('data:')) return profile.profile_pic;
-             // Ensure correct path format
-             const normalizedPath = profile.profile_pic.replace(/\\/g, '/');
-             return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
+        if (!profile.profile_pic) return null;
+        if (profile.profile_pic.startsWith('data:') || profile.profile_pic.startsWith('http')) {
+            return profile.profile_pic;
         }
-        return null;
+        let normalizedPath = profile.profile_pic.replace(/\\/g, '/');
+        const uploadsIndex = normalizedPath.indexOf('/uploads/');
+        if (uploadsIndex !== -1) {
+            normalizedPath = normalizedPath.substring(uploadsIndex);
+        } else if (!normalizedPath.startsWith('/')) {
+            normalizedPath = '/' + normalizedPath;
+        }
+        return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
     };
 
     const commonProps = {
@@ -466,17 +421,7 @@ const StaffProfile = () => {
                             </div>
                         </div>
                         
-                        {/* QR Code Card */}
-                        <div className="bg-white p-3 rounded-lg shadow-lg hidden md:flex flex-col items-center">
-                            {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32" />}
-                            <div className="text-center text-green-900 text-xs font-bold mt-1">SCAN ME</div>
-                            <button 
-                                onClick={handlePrintQR}
-                                className="mt-2 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1 rounded flex items-center gap-1"
-                            >
-                                <Printer size={12} /> Print
-                            </button>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -534,24 +479,7 @@ const StaffProfile = () => {
                             </div>
                         </div>
 
-                        {/* QR Code for Mobile */}
-                        <div className="bg-white rounded-lg shadow p-6 md:hidden flex flex-col items-center">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 text-green-800">My QR Code</h3>
-                            {qrCodeUrl ? (
-                                <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 border-4 border-green-800 rounded-lg" />
-                            ) : (
-                                <div className="w-48 h-48 bg-gray-100 flex items-center justify-center text-gray-400">Loading...</div>
-                            )}
-                            <div className="flex gap-2 mt-4">
-                                <button 
-                                    type="button"
-                                    onClick={handlePrintQR}
-                                    className="bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-800"
-                                >
-                                    <Printer size={16} /> Print QR
-                                </button>
-                            </div>
-                        </div>
+                        
 
                         {profile.is_profile_completed && !isEditing && (
                             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">

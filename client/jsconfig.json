@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "lib": ["dom", "es2020"],
+    "forceConsistentCasingInFileNames": false
+  },
+  "include": ["src/**/*"]
+}

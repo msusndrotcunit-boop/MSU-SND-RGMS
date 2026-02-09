@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);
@@ -103,7 +103,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                                 type="file" 
                                 onChange={(e) => setFile(e.target.files[0])} 
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                accept="image/*,application/pdf"
+                                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             />
                             {file ? (
                                 <div className="text-sm text-green-600 font-medium truncate">
@@ -112,7 +112,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                             ) : (
                                 <div className="text-gray-500 text-sm">
                                     <Upload className="mx-auto mb-2 text-gray-400" />
-                                    Click to upload (PDF or Image)
+                                    Click to upload (PDF, Word, or Image)
                                 </div>
                             )}
                         </div>
@@ -156,9 +156,23 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                                         </span>
                                     </td>
                                     <td className="p-2">
-                                        <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                                            <ExternalLink size={14} className="mr-1" /> View
-                                        </a>
+                                        <div className="flex flex-col space-y-1">
+                                            <a 
+                                                href={item.file_url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="text-blue-600 hover:underline flex items-center"
+                                            >
+                                                <ExternalLink size={14} className="mr-1" /> View
+                                            </a>
+                                            <a 
+                                                href={item.file_url} 
+                                                download 
+                                                className="text-green-700 hover:underline flex items-center text-xs"
+                                            >
+                                                <Download size={12} className="mr-1" /> Download
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             )) : (

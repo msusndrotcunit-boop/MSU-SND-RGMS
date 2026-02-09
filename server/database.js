@@ -352,7 +352,10 @@ async function initPgDb() {
             is_approved INTEGER DEFAULT 0,
             email TEXT,
             profile_pic TEXT,
-            is_archived BOOLEAN DEFAULT FALSE
+            is_archived BOOLEAN DEFAULT FALSE,
+            last_latitude DOUBLE PRECISION,
+            last_longitude DOUBLE PRECISION,
+            last_location_at TIMESTAMP
         )`,
         `CREATE TABLE IF NOT EXISTS grades (
             id SERIAL PRIMARY KEY,
@@ -370,7 +373,9 @@ async function initPgDb() {
             title TEXT NOT NULL,
             description TEXT,
             date TEXT,
-            image_path TEXT
+            image_path TEXT,
+            images TEXT,
+            type TEXT
         )`,
         `CREATE TABLE IF NOT EXISTS merit_demerit_logs (
             id SERIAL PRIMARY KEY,
@@ -576,8 +581,13 @@ async function initPgDb() {
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_latitude DOUBLE PRECISION`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_longitude DOUBLE PRECISION`,
+            `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
-            `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`
+            `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`,
+            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`
         ];
 
         for (const query of simpleMigrations) {
@@ -670,6 +680,9 @@ function initSqliteDb() {
             profile_pic TEXT,
             is_archived INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_latitude REAL,
+            last_longitude REAL,
+            last_location_at TEXT,
             FOREIGN KEY (cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
         )`);
 
@@ -693,8 +706,14 @@ function initSqliteDb() {
             title TEXT NOT NULL,
             description TEXT,
             date TEXT,
-            image_path TEXT
+            image_path TEXT,
+            images TEXT,
+            type TEXT
         )`);
+
+        // Ensure new columns exist for legacy databases
+        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`);
+        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT`);
 
         // Merit/Demerit Ledger Table
         db.run(`CREATE TABLE IF NOT EXISTS merit_demerit_logs (
@@ -835,12 +854,12 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN has_seen_guide INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
 
-        // Migration: Add last_seen to users
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
-        // Migration: Add is_archived to users
         db.run(`ALTER TABLE users ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});
-        // Migration: Add created_at to users
         db.run(`ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
+        db.run(`ALTER TABLE users ADD COLUMN last_latitude REAL`, (err) => {});
+        db.run(`ALTER TABLE users ADD COLUMN last_longitude REAL`, (err) => {});
+        db.run(`ALTER TABLE users ADD COLUMN last_location_at TEXT`, (err) => {});
         
         // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
         // Ensure new users table creation has correct check.

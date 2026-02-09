@@ -11,6 +11,25 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
+// SSE broadcast helper
+function broadcastEvent(event) {
+    try {
+        const clients = global.__sseClients || [];
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        clients.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
+
+// Portal Access Telemetry
+router.post('/access', (req, res) => {
+    broadcastEvent({ type: 'portal_access', role: 'cadet', userId: req.user.id, cadetId: req.user.cadetId, at: Date.now() });
+    db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Cadet portal accessed', 'portal_access']);
+    res.json({ message: 'access recorded' });
+});
 // Helper: Transmuted Grade Logic (Consistent with admin.js)
 const calculateTransmutedGrade = (finalGrade, status) => {
     if (status && ['DO', 'INC', 'T'].includes(status)) {
@@ -53,7 +72,10 @@ router.get('/my-grades', async (req, res) => {
         const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {
+<<<<<<< HEAD
             // Prioritize Admin's manual entry (gradeRow) over raw logs (calculated)
+=======
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
             attendance_present: gradeRow ? gradeRow.attendance_present : attendancePresent,
             merit_points: gradeRow ? gradeRow.merit_points : meritPoints,
             demerit_points: gradeRow ? gradeRow.demerit_points : demeritPoints,
@@ -154,6 +176,20 @@ router.put('/notifications/read-all', (req, res) => {
     });
 });
 
+router.delete('/notifications/:id', (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', (req, res) => {
+    const userId = req.user.id;
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'All notifications deleted' });
+    });
+});
 
 router.get('/profile', (req, res) => {
     const cadetId = req.user.cadetId;
@@ -278,6 +314,9 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 sql += `, is_profile_completed=?`;
                 // Use 1 for TRUE to be safe across SQLite/Postgres
                 params.push(1);
+                // Also mark cadet as verified
+                sql += `, status=?`;
+                params.push('Verified');
             }
             
             sql += ` WHERE id=?`;
@@ -300,8 +339,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     
                 // 3. Update Users Table (Username/Email sync)
                 if (username && email) {
-                    const userSql = `UPDATE users SET username=?, email=? WHERE cadet_id=?`;
-                    db.run(userSql, [username, email, cadetId], (uErr) => {
+                    const userSql = `UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`;
+                    db.run(userSql, [username, email, 1, cadetId], (uErr) => {
                         if (uErr) console.error("Error updating user credentials:", uErr);
                         
                         let returnPath = null;
@@ -346,6 +385,7 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     });
 });
 
+<<<<<<< HEAD
 router.get('/activities', async (req, res) => {
     try {
         const activities = await new Promise((resolve, reject) => {
@@ -370,6 +410,19 @@ router.get('/activities', async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
+=======
+router.get('/activities', (req, res) => {
+    db.all(
+        `SELECT id, title, description, date, type, image_path, images 
+         FROM activities 
+         ORDER BY date DESC`,
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows);
+        }
+    );
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 });
 
 // Acknowledge User Guide

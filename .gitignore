@@ -23,4 +23,5 @@ client/public/uploads/
 
 .vscode/
 *.swp
+*.zip
 dist-electron/

@@ -19,7 +19,7 @@ export const SettingsProvider = ({ children }) => {
             compactMode: false
         },
         theme: {
-            primaryColor: 'blue'
+            primaryColor: 'default'
         }
     });
     const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export const SettingsProvider = ({ children }) => {
                         compactMode: !!res.data.compact_mode
                     },
                     theme: {
-                        primaryColor: res.data.primary_color || 'blue'
+                        primaryColor: res.data.primary_color || 'default'
                     }
                 });
             }
@@ -79,15 +79,39 @@ export const SettingsProvider = ({ children }) => {
             document.body.classList.remove('compact-mode');
         }
 
-        // Theme Color (CSS Variable)
-        const colors = {
-            blue: '#3b82f6',
-            green: '#10b981',
-            red: '#ef4444',
-            purple: '#8b5cf6',
-            orange: '#f97316'
+        const palettes = {
+            default: {
+                main: '#0f766e',
+                soft: 'rgba(15, 118, 110, 0.18)'
+            },
+            blue: {
+                main: '#2563eb',
+                soft: 'rgba(37, 99, 235, 0.18)'
+            },
+            green: {
+                main: '#16a34a',
+                soft: 'rgba(22, 163, 74, 0.18)'
+            },
+            red: {
+                main: '#dc2626',
+                soft: 'rgba(220, 38, 38, 0.18)'
+            },
+            purple: {
+                main: '#7c3aed',
+                soft: 'rgba(124, 58, 237, 0.18)'
+            },
+            orange: {
+                main: '#ea580c',
+                soft: 'rgba(234, 88, 12, 0.18)'
+            },
+            teal: {
+                main: '#0f766e',
+                soft: 'rgba(15, 118, 110, 0.22)'
+            }
         };
-        document.documentElement.style.setProperty('--primary-color', colors[settings.theme.primaryColor] || colors.blue);
+        const palette = palettes[settings.theme.primaryColor] || palettes.blue;
+        document.documentElement.style.setProperty('--primary-color', palette.main);
+        document.documentElement.style.setProperty('--primary-color-soft', palette.soft);
 
     }, [settings]);
 

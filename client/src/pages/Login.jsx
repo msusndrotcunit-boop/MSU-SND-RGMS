@@ -260,8 +260,8 @@ const Login = () => {
                             onClick={() => handleHelpClick('mobile')}
                             className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
                         >
-                            <Smartphone size={16} className="text-gray-400 group-hover:text-green-600" />
-                            How to download it in mobile
+                            <Download size={16} className="text-gray-400 group-hover:text-green-600" />
+                            Download Mobile App
                         </button>
                     </div>
                 </div>
@@ -393,12 +393,31 @@ const Login = () => {
                                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 text-green-700">
                                     <Download size={32} />
                                 </div>
-                                <p className="text-gray-600 font-medium">
-                                    Install RGMS on your mobile device for easier access.
+                                <h4 className="text-xl font-bold text-gray-800 mb-2">Download Mobile App</h4>
+                                <p className="text-gray-600 font-medium mb-4">
+                                    Get the official RGMS mobile app for the best experience.
+                                </p>
+                                
+                                <a 
+                                    href="/downloads/rgms-app.apk" 
+                                    download="rgms-app.apk"
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transform hover:-translate-y-1 transition-all w-full sm:w-auto"
+                                >
+                                    <Download size={20} />
+                                    Download APK (Android)
+                                </a>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Note: You may need to allow installation from unknown sources.
                                 </p>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-200"></div>
+                                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR USE WEB VERSION</span>
+                                <div className="flex-grow border-t border-gray-200"></div>
+                            </div>
+
+                            <div className="space-y-4 mt-4">
                                 {/* Android Instructions */}
                                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                                     <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2 text-sm">

@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 
 const StaffDashboard = () => {
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [staffRole, setStaffRole] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -46,6 +48,23 @@ const StaffDashboard = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const fetchStaffRole = async () => {
+            try {
+                const res = await axios.get('/api/staff/me');
+                setStaffRole(res.data?.role || null);
+            } catch {}
+        };
+        fetchStaffRole();
+    }, []);
+
+    const canReviewExcuses =
+        staffRole === 'Commandant' ||
+        staffRole === 'Assistant Commandant' ||
+        staffRole === 'NSTP Director' ||
+        staffRole === 'ROTC Coordinator' ||
+        staffRole === 'Admin NCO';
+
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
     const presentCount = attendanceLogs.filter(log => log.status === 'present').length;
@@ -75,7 +94,12 @@ const StaffDashboard = () => {
                 </div>
             </div>
 
-            {/* Attendance History */}
+            {canReviewExcuses && (
+                <div>
+                    <ExcuseLetterManager />
+                </div>
+            )}
+
             <div className="bg-white rounded shadow p-6">
                 <h2 className="text-xl font-bold mb-4 border-b pb-2 flex items-center">
                     <Calendar className="mr-2" size={20} />

@@ -18,20 +18,21 @@ const WeatherAdvisory = () => {
 
     useEffect(() => {
         const loadWeather = async () => {
+            // 1. Show cached data immediately if available (optimistic UI)
             try {
-                // Try cache first
                 const cached = await getSingleton('analytics', CACHE_KEY);
                 if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
                     setWeather(cached.data);
                     setLocationName(cached.locationName);
                     setIsUsingCurrentLocation(cached.isUsingCurrentLocation);
                     setLoading(false);
-                    return;
+                    // Do NOT return here. We must check real-time location.
                 }
             } catch (e) {
                 console.warn("Weather cache read error", e);
             }
 
+            // 2. Try to get real-time location
             getLocation();
         };
 
@@ -48,17 +49,20 @@ const WeatherAdvisory = () => {
             setWeather(weatherData);
             setLoading(false);
 
-            // Cache the result
+            // Cache the result with coordinates
             await cacheSingleton('analytics', CACHE_KEY, {
                 data: weatherData,
                 locationName: locName,
                 isUsingCurrentLocation: isCurrentLoc,
+                lat: lat,
+                lon: lon,
                 timestamp: Date.now()
             });
 
         } catch (err) {
             console.error("Error fetching weather:", err);
-            setError("Unable to load weather data.");
+            // If we have no weather data at all, show error
+            if (!weather) setError("Unable to load weather data.");
             setLoading(false);
         }
     };
@@ -88,6 +92,23 @@ const WeatherAdvisory = () => {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     const { latitude, longitude } = position.coords;
+                    
+                    // Check if cache is already valid for this location
+                    try {
+                        const cached = await getSingleton('analytics', CACHE_KEY);
+                        if (cached && 
+                            Math.abs(cached.lat - latitude) < 0.01 && 
+                            Math.abs(cached.lon - longitude) < 0.01 &&
+                            (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                                // Cache is fresh and location matches - no need to refetch
+                                setWeather(cached.data);
+                                setLocationName(cached.locationName);
+                                setIsUsingCurrentLocation(true);
+                                setLoading(false);
+                                return;
+                        }
+                    } catch (_) {}
+
                     setIsUsingCurrentLocation(true);
                     const locName = await fetchLocationName(latitude, longitude);
                     setLocationName(locName);
@@ -95,22 +116,42 @@ const WeatherAdvisory = () => {
                 },
                 async (error) => {
                     console.warn("Geolocation permission denied or error:", error);
-                    // Try IP-based geolocation before defaulting
+                    // Only try IP/fallback if we don't have valid cached data displayed
+                    // But if cache was for a different location (e.g. user moved), we might want to update via IP
+                    // For now, let's try IP based update if GPS fails
                     try {
                         const ipResp = await axios.get('https://ipapi.co/json/');
                         const ipLat = ipResp.data?.latitude;
                         const ipLon = ipResp.data?.longitude;
                         const ipCity = ipResp.data?.city;
                         if (ipLat && ipLon) {
+                            // Check cache for IP location
+                            try {
+                                const cached = await getSingleton('analytics', CACHE_KEY);
+                                if (cached && 
+                                    Math.abs(cached.lat - ipLat) < 0.01 && 
+                                    Math.abs(cached.lon - ipLon) < 0.01 &&
+                                    (Date.now() - cached.timestamp < CACHE_DURATION)) {
+                                        return;
+                                }
+                            } catch (_) {}
+
                             const locName = ipCity || await fetchLocationName(ipLat, ipLon);
-                            setIsUsingCurrentLocation(false);
+                            setIsUsingCurrentLocation(false); // IP is not "current location" precision
                             setLocationName(locName);
                             return fetchWeather(ipLat, ipLon, locName, false);
                         }
                     } catch (e) {
                         console.warn("IP geolocation failed:", e.message);
                     }
-                    // Final fallback to default
+                    
+                    // Final fallback: if no cache and no location, use default
+                    // If we already loaded cache (lines 20-30), we don't need to force default unless cache was empty
+                    // But checking cache existence here is hard without state. 
+                    // Let's just fetch default if we haven't set weather yet?
+                    // But 'weather' state might not be updated yet due to closure.
+                    // We can check the DB again or just rely on the fact that if cache existed, we showed it.
+                    // If we want to ensure data is shown:
                     fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'Sultan Naga Dimaporo', false);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 5 * 60 * 1000 }
@@ -197,34 +238,21 @@ const WeatherAdvisory = () => {
                         <p className="text-blue-100 text-sm">{getWeatherDescription(current.weather_code)}</p>
                     </div>
                 </div>
-
-                <div className="flex items-center justify-around w-full md:w-auto gap-2 sm:gap-6 bg-white/10 p-3 rounded-lg backdrop-blur-sm">
-                    <div className="text-center px-2">
-                        <div className="flex items-center justify-center gap-1">
-                            <Thermometer size={18} className="text-yellow-300" />
-                            <span className="text-2xl font-bold">{current.temperature_2m}°C</span>
-                        </div>
-                        <p className="text-xs text-blue-200 uppercase tracking-wider">Temp</p>
+                
+                <div className="text-right">
+                    <div className="text-4xl font-bold flex items-center justify-end">
+                        {Math.round(current.temperature_2m)}°C
                     </div>
-                    
-                    <div className="w-px h-8 bg-blue-400/30"></div>
-
-                    <div className="text-center px-2">
-                        <div className="flex items-center justify-center gap-1">
-                            <Wind size={18} className="text-gray-300" />
-                            <span className="text-xl font-semibold">{current.wind_speed_10m} <span className="text-xs">km/h</span></span>
+                    <div className="flex items-center gap-4 text-sm text-blue-100">
+                        <div className="flex items-center gap-1">
+                            <Wind size={14} />
+                            {current.wind_speed_10m} km/h
                         </div>
-                        <p className="text-xs text-blue-200 uppercase tracking-wider">Wind</p>
-                    </div>
-
-                    <div className="w-px h-8 bg-blue-400/30"></div>
-
-                    <div className="text-center px-2">
-                        <div className="flex items-center justify-center gap-1">
-                            <CloudRain size={18} className="text-blue-300" />
-                            <span className="text-xl font-semibold">{current.relative_humidity_2m}%</span>
+                        <div className="flex items-center gap-1">
+                            <Thermometer size={14} />
+                            H: {Math.round(weather.daily.temperature_2m_max[0])}° 
+                            L: {Math.round(weather.daily.temperature_2m_min[0])}°
                         </div>
-                        <p className="text-xs text-blue-200 uppercase tracking-wider">Humidity</p>
                     </div>
                 </div>
             </div>

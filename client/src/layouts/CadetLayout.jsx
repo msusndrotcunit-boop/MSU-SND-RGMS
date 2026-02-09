@@ -12,6 +12,7 @@ const CadetLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+<<<<<<< HEAD
     const [notifications, setNotifications] = useState([]);
 
     useEffect(() => {
@@ -51,6 +52,9 @@ const CadetLayout = () => {
     };
 
     
+=======
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
 
     // Redirect to profile if not completed
     React.useEffect(() => {
@@ -59,12 +63,28 @@ const CadetLayout = () => {
         }
     }, [user, location.pathname, navigate]);
 
+    React.useEffect(() => {
+        try {
+            const seen = localStorage.getItem('rgms_permissions_seen');
+            if (!seen && typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                setShowPermissionModal(true);
+            }
+        } catch {}
+    }, []);
+
     // Welcome & Guide States
     const [profile, setProfile] = useState(null);
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [guideStep, setGuideStep] = useState(0);
     const [health, setHealth] = useState({ status: 'unknown' });
+    const [badgeNotif, setBadgeNotif] = useState(0);
+    const [badgeMsg, setBadgeMsg] = useState(0);
+    const [notifHighlight, setNotifHighlight] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [messageOpen, setMessageOpen] = useState(false);
 
     const guideSteps = [
         {
@@ -107,6 +127,33 @@ const CadetLayout = () => {
         };
         checkGuideStatus();
     }, [user]);
+
+    React.useEffect(() => {
+        axios.post('/api/cadet/access').catch(() => {});
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'ask_admin_reply') {
+                            setBadgeNotif((b) => b + 1);
+                            if (navigator.vibrate) navigator.vibrate(80);
+                            setNotifHighlight(true);
+                            setTimeout(() => setNotifHighlight(false), 1200);
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    if (es) es.close();
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
 
     React.useEffect(() => {
         const fetchHealth = async () => {
@@ -156,6 +203,40 @@ const CadetLayout = () => {
         }
     };
 
+    const handlePermissionsAccept = () => {
+        try {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    () => {},
+                    () => {},
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        } catch {}
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        try {
+                            stream.getTracks().forEach(t => t.stop());
+                        } catch {}
+                    })
+                    .catch(() => {});
+            }
+        } catch {}
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
+    const handlePermissionsSkip = () => {
+        try {
+            localStorage.setItem('rgms_permissions_seen', 'true');
+        } catch {}
+        setShowPermissionModal(false);
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -163,9 +244,28 @@ const CadetLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+    const openNotifications = async () => {
+        setNotifOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/cadet/notifications');
+            setNotifications(res.data || []);
+            setBadgeNotif(0);
+            await axios.delete('/api/cadet/notifications/delete-all');
+        } catch {}
+    };
+
+    const openMessages = async () => {
+        setMessageOpen((o) => !o);
+        try {
+            const res = await axios.get('/api/messages/my');
+            setMessages(res.data || []);
+            setBadgeMsg(0);
+            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
+        } catch {}
+    };
     
 
-    return (
+        return (
         <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
@@ -178,10 +278,10 @@ const CadetLayout = () => {
 
              {/* Sidebar - simplified for Cadet */}
              <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-green-800 flex justify-between items-center">
+                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>ROTC Cadet</span>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                         <X size={24} />
@@ -189,7 +289,7 @@ const CadetLayout = () => {
                 </div>
                 
                 {/* User Info Section */}
-                <div className="px-6 py-4 border-b border-green-800 flex flex-col items-center text-center">
+                <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <div className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
                         {profile?.profile_pic ? (
                             <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover" />
@@ -300,6 +400,7 @@ const CadetLayout = () => {
                             {location.pathname.includes('/cadet/about') && 'About'}
                         </h1>
                     </div>
+<<<<<<< HEAD
                     
                     <div className="flex items-center space-x-4">
                         <NotificationDropdown 
@@ -318,6 +419,43 @@ const CadetLayout = () => {
                             onMarkRead={handleMarkRead}
                             onClear={() => handleClearAll('Notifications')}
                         />
+=======
+                    <div className="hidden md:flex items-center space-x-4">
+                        <button onClick={openMessages} className="relative text-gray-600 hover:text-green-700">
+                            <Mail size={20} />
+                            {badgeMsg > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeMsg}</span>}
+                        </button>
+                        <button 
+                            onClick={openNotifications} 
+                            className={clsx(
+                                "relative transition-colors",
+                                notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                            )}
+                        >
+                            <Bell size={20} />
+                            {badgeNotif > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-1">{badgeNotif}</span>}
+                        </button>
+                        {(notifOpen && notifications.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {notifications.map(n => (
+                                    <div key={n.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{n.message}</div>
+                                        <div className="text-xs text-gray-400">{n.type}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {(messageOpen && messages.length > 0) && (
+                            <div className="absolute right-4 top-14 bg-white border rounded shadow w-80 z-50">
+                                {messages.map(m => (
+                                    <div key={m.id} className="px-4 py-2 border-b last:border-b-0">
+                                        <div className="text-sm text-gray-800">{m.subject}</div>
+                                        <div className="text-xs text-gray-400">{m.sender_role}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+>>>>>>> d84a7e1793311a5b46d3a3dca2e515967d01d196
                     </div>
                 </header>
                 {(health && health.db === 'disconnected') && (
@@ -330,6 +468,23 @@ const CadetLayout = () => {
                         <Outlet />
                     </Suspense>
                 </main>
+            </div>
+
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
+                <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
+                    <Mail size={20} />
+                    {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
+                </button>
+                <button 
+                    onClick={openNotifications} 
+                    className={clsx(
+                        "relative bg-white shadow-lg rounded-full p-3 transition-colors",
+                        notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
+                    )}
+                >
+                    <Bell size={20} />
+                    {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
+                </button>
             </div>
 
             {/* Welcome Modal */}
@@ -408,6 +563,36 @@ const CadetLayout = () => {
                             >
                                 {guideStep === guideSteps.length - 1 ? 'Get Started' : 'Next'}
                                 {guideStep < guideSteps.length - 1 && <ChevronRight size={20} className="ml-1" />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPermissionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
+                        <p className="text-sm text-gray-600 mb-3">
+                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                        </p>
+                        <p className="text-xs text-gray-500 mb-4">
+                            You can change these permissions anytime in your browser or device settings.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={handlePermissionsSkip}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                                Not now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePermissionsAccept}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Allow permissions
                             </button>
                         </div>
                     </div>

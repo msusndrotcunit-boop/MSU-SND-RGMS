@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator
+    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -29,6 +29,7 @@ const Dashboard = () => {
     });
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [locations, setLocations] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -59,41 +60,53 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const fetchLocations = async () => {
+            try {
+                const res = await axios.get('/api/admin/locations');
+                setLocations(res.data || []);
+            } catch (err) {
+                console.error('Location fetch error:', err);
+            }
+        };
+        fetchLocations();
+        const id = setInterval(fetchLocations, 60000);
+        return () => clearInterval(id);
+    }, []);
+
     const processData = (data) => {
         const rawStats = data.demographics?.courseStats || [];
-        
-        // Initialize aggregation
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
-
-        // Courses we expect (ordered)
         const courses = ['COQC', 'MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42'];
+        const verifiedCourses = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
+
         courses.forEach(c => {
             byCourse[c] = { name: c, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
         });
 
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
-            const course = item.cadet_course || 'Unknown';
-            const count = item.count;
+            const course = (item.cadet_course || 'Unknown').toUpperCase();
+            const count = Number(item.count) || 0;
+            const includeInTotals = verifiedCourses.has(course);
 
-            if (total[status] !== undefined) {
+            if (includeInTotals && total[status] !== undefined) {
                 total[status] += count;
             }
 
-            if (byCourse[course]) {
-                byCourse[course][status] += count;
-                byCourse[course].total += count;
-            } else if (course !== 'Unknown') {
-                // Handle unexpected courses if any
-                byCourse[course] = { 
-                    name: course, 
+            const courseKey = course || 'Unknown';
+
+            if (!byCourse[courseKey] && courseKey !== 'Unknown') {
+                byCourse[courseKey] = { 
+                    name: courseKey, 
                     Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 
                 };
-                if (byCourse[course][status] !== undefined) {
-                    byCourse[course][status] += count;
-                    byCourse[course].total += count;
-                }
+            }
+
+            if (byCourse[courseKey] && byCourse[courseKey][status] !== undefined) {
+                byCourse[courseKey][status] += count;
+                byCourse[courseKey].total += count;
             }
         });
 
@@ -111,13 +124,14 @@ const Dashboard = () => {
     };
 
     const normalizeStatus = (status) => {
-        if (!status) return 'Ongoing'; // Default
-        const s = status.toLowerCase();
-        if (s.includes('complete') && !s.includes('in')) return 'Completed';
-        if (s.includes('incomplete') || s.includes('inc')) return 'Incomplete';
-        if (s.includes('fail')) return 'Failed';
-        if (s.includes('drop')) return 'Drop';
-        return 'Ongoing'; // Default/Active
+        if (!status) return 'Unknown';
+        const s = status.toUpperCase();
+        if (['ONGOING', 'ENROLLED', 'ACTIVE'].includes(s)) return 'Ongoing';
+        if (['COMPLETED', 'GRADUATED', 'PASSED'].includes(s)) return 'Completed';
+        if (['INC', 'INCOMPLETE', 'T', 'DO'].includes(s)) return 'Incomplete';
+        if (['FAILED', 'FAIL'].includes(s)) return 'Failed';
+        if (['DROP', 'DROPPED'].includes(s)) return 'Drop';
+        return 'Ongoing'; // Default
     };
 
     return (
@@ -125,8 +139,8 @@ const Dashboard = () => {
             
             {/* Header */}
             <div>
-                <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                    <span className="border-l-4 border-yellow-500 pl-3">ROTC Unit Dashboard</span>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">ROTC Unit Dashboard</span>
                 </h2>
             </div>
 
@@ -167,10 +181,10 @@ const Dashboard = () => {
             </div>
 
             {/* Chart Section */}
-            <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-gray-800">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-gray-800 dark:border-[var(--primary-color)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-gray-800 flex items-center">
-                        <BookOpen size={20} className="text-yellow-600 mr-2" />
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                        <BookOpen size={20} className="text-[var(--primary-color)] mr-2" />
                         Cadet Status Distribution by Course (Verified Only)
                     </h3>
                 </div>
@@ -205,17 +219,69 @@ const Dashboard = () => {
                 ))}
             </div>
 
+            {locations.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
+                    <div className="flex items-center mb-4">
+                        <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
+                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">User</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Role</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Location</th>
+                                    <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {locations.map((u) => {
+                                    const name =
+                                        u.role === 'cadet'
+                                            ? `${u.cadet_last_name || ''}, ${u.cadet_first_name || ''}`.trim()
+                                            : u.role === 'training_staff'
+                                            ? `${u.staff_rank || ''} ${u.staff_last_name || ''}`.trim()
+                                            : u.username;
+                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
+                                    const when = u.last_location_at
+                                        ? new Date(u.last_location_at).toLocaleString()
+                                        : '';
+                                    return (
+                                        <tr key={u.id}>
+                                            <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{name || u.username}</td>
+                                            <td className="px-4 py-2 capitalize text-gray-600 dark:text-gray-300">{u.role}</td>
+                                            <td className="px-4 py-2">
+                                                <a
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[var(--primary-color)] hover:underline"
+                                                >
+                                                    {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
+                                                </a>
+                                            </td>
+                                            <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{when}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             {/* Quick Actions */}
             <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">
                 <div className="flex items-center mb-4 border-b border-green-600 pb-2">
                     <Zap className="text-yellow-400 mr-2" size={20} />
                     <h3 className="font-bold text-yellow-50">Quick Actions</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <ActionButton 
-                        to="/admin/cadets" 
-                        label="Cadet Management" 
-                        icon={<Users size={18} />} 
+                        to="/admin/data-analysis" 
+                        label="Data Analysis" 
+                        icon={<Activity size={18} />} 
                         className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
@@ -231,6 +297,12 @@ const Dashboard = () => {
                         className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
+                        to="/admin/messages" 
+                        label="Messages" 
+                        icon={<Mail size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                    />
+                    <ActionButton 
                         to="/admin/activities" 
                         label="Activities" 
                         icon={<Calendar size={18} />} 
@@ -239,50 +311,7 @@ const Dashboard = () => {
                 </div>
             </div>
             
-            {/* Footer Info */}
-            <div className="bg-gray-900 text-gray-400 p-8 rounded-lg mt-8 border-t-4 border-yellow-600">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mb-8">
-                    <div>
-                        <div className="flex items-center text-white text-xl font-bold mb-4">
-                            <span className="bg-yellow-500 text-gray-900 p-1.5 rounded mr-3 shadow-lg shadow-yellow-500/20">🛡️</span>
-                            <div>
-                                <div className="tracking-wide">MSU-SND RGMS</div>
-                                <div className="text-[10px] font-normal text-gray-500 uppercase tracking-wider">integrated with Training Staff Attendance System</div>
-                            </div>
-                        </div>
-                        <p className="mb-4 text-gray-500 leading-relaxed">MSU-Sultan Naga Dimporo ROTC Unit Grading Management System</p>
-                        <p className="text-xs font-mono text-yellow-500/80">Version {import.meta.env.PACKAGE_VERSION || '2.3.19'}</p>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="text-yellow-500 font-bold mb-2">QUICK LINKS</h4>
-                        <Link to="/admin/dashboard" className="hover:text-white flex items-center"><span className="mr-2">🏠</span> Dashboard</Link>
-                        <Link to="/admin/cadets" className="hover:text-white flex items-center"><span className="mr-2">📂</span> Cadet Management</Link>
-                        <Link to="/admin/search" className="hover:text-white flex items-center"><span className="mr-2">🔍</span> Searching Cadets</Link>
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="text-yellow-500 font-bold mb-2">INFORMATION</h4>
-                        <Link to="/about" className="hover:text-white flex items-center"><span className="mr-2">ℹ️</span> About of the App</Link>
-                        <Link to="/docs" className="hover:text-white flex items-center"><span className="mr-2">📄</span> Documentation</Link>
-                        <Link to="/support" className="hover:text-white flex items-center"><span className="mr-2">🎧</span> Support</Link>
-                    </div>
-                </div>
-                
-                <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center text-xs">
-                    <div className="flex items-center mb-4 md:mb-0">
-                        <span className="bg-yellow-600 text-white p-1 rounded-full mr-2 font-bold text-[10px]">C</span>
-                        <div>
-                            <p className="text-gray-300 font-bold">2026 MSU-SND ROTC UNIT</p>
-                            <p>All rights reserved.</p>
-                        </div>
-                    </div>
-                    <div className="flex space-x-4">
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-600 hover:text-white transition-colors"><Facebook size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-sky-500 hover:text-white transition-colors"><Twitter size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-blue-700 hover:text-white transition-colors"><Linkedin size={16} /></a>
-                        <a href="#" className="bg-gray-800 p-2 rounded hover:bg-red-500 hover:text-white transition-colors"><Mail size={16} /></a>
-                    </div>
-                </div>
-            </div>
+            
             
         </div>
     );
@@ -302,7 +331,7 @@ const CourseCard = ({ data }) => (
             <span className="text-yellow-500 mr-2">🎓</span>
             <h3 className="text-white font-bold">{data.name}</h3>
         </div>
-        <div className="p-4 grid grid-cols-5 gap-2 text-center">
+        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-center">
             <MiniStatus label="Ongoing" count={data.Ongoing} color="bg-cyan-100 text-cyan-800" />
             <MiniStatus label="Completed" count={data.Completed} color="bg-green-100 text-green-800" />
             <MiniStatus label="Incomplete" count={data.Incomplete} color="bg-amber-100 text-amber-800" />
@@ -317,8 +346,8 @@ const CourseCard = ({ data }) => (
 
 const MiniStatus = ({ label, count, color }) => (
     <div className={`rounded p-2 flex flex-col items-center justify-center ${color}`}>
-        <span className="text-lg font-bold">{count}</span>
-        <span className="text-[10px] uppercase">{label}</span>
+        <span className="text-base md:text-lg font-bold">{count}</span>
+        <span className="text-[9px] md:text-[10px] uppercase tracking-wide">{label}</span>
     </div>
 );
 
