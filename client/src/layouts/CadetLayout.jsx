@@ -53,8 +53,10 @@ const CadetLayout = () => {
     const fetchMessages = async () => {
         try {
             const res = await axios.get('/api/messages/my');
-            setMessages(res.data || []);
-            setBadgeMsg(res.data?.length || 0);
+            const data = res.data || [];
+            setMessages(data);
+            const repliedCount = data.filter((m) => m.admin_reply && String(m.admin_reply).trim() !== '').length;
+            setBadgeMsg(repliedCount);
         } catch (err) { console.error(err); }
     };
 
@@ -443,23 +445,7 @@ const CadetLayout = () => {
                 </main>
             </div>
 
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-3 md:hidden">
-                <button onClick={openMessages} className="relative bg-white shadow-lg rounded-full p-3 text-gray-600 hover:text-green-700">
-                    <Mail size={20} />
-                    {badgeMsg > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeMsg}</span>}
-                </button>
-                <button 
-                    onClick={openNotifications} 
-                    className={clsx(
-                        "relative bg-white shadow-lg rounded-full p-3 transition-colors",
-                        notifHighlight ? "text-green-800" : "text-gray-600 hover:text-green-700"
-                    )}
-                >
-                    <Bell size={20} />
-                    {badgeNotif > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{badgeNotif}</span>}
-                </button>
-            </div>
-
+            
             {/* Welcome Modal */}
             {showWelcomeModal && profile && (
                 <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4">

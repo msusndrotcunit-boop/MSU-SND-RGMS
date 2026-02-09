@@ -1541,17 +1541,32 @@ router.put('/grades/:cadetId', (req, res) => {
                     }
                     
                     Promise.all(logPromises).then(() => {
-                        // Send Email Notification
-                        db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
+                        db.get(`SELECT id, email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
                             if (!err && cadet && cadet.email) {
                                 const subject = 'ROTC Grading System - Grades Updated';
                                 const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
                                 const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
                                 
                                 await sendEmail(cadet.email, subject, text, html);
+
+                                db.get(`SELECT id FROM users WHERE cadet_id = ? AND role = 'cadet'`, [cadetId], (uErr, userRow) => {
+                                    if (!uErr && userRow && userRow.id) {
+                                        const notifMessage = 'Your grades have been updated. Please check your portal.';
+                                        db.run(
+                                            `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`,
+                                            [userRow.id, notifMessage, 'grade'],
+                                            (nErr) => {
+                                                if (nErr) console.error('Error creating grade notification:', nErr);
+                                            }
+                                        );
+                                    }
+                                    broadcastEvent({ type: 'grade_updated', cadetId });
+                                    res.json({ message: 'Grades updated' });
+                                });
+                            } else {
+                                broadcastEvent({ type: 'grade_updated', cadetId });
+                                res.json({ message: 'Grades updated' });
                             }
-                            broadcastEvent({ type: 'grade_updated', cadetId });
-                            res.json({ message: 'Grades updated' });
                         });
                     });
                 }
