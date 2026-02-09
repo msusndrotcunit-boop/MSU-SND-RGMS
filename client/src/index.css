@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #0f766e;
-  --primary-color-soft: rgba(15, 118, 110, 0.16);
+  --primary-color: #354f32;
+  --primary-color-soft: rgba(53, 79, 50, 0.16);
 }
 
 body {
@@ -27,9 +27,17 @@ body {
 .app-bg {
   background-color: #e5e7eb;
   background-image: 
-    radial-gradient(at 0% 0%, var(--primary-color-soft) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, var(--primary-color-soft) 0px, transparent 50%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 10px);
+    linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+    url('./assets/background_1.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.dark .app-bg {
+  background-image: 
+    linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),
+    url('./assets/background_1.jpg');
 }
 
 .weather-bg {
