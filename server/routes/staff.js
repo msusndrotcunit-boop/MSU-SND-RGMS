@@ -118,13 +118,8 @@ router.post('/access', authenticateToken, (req, res) => {
     res.json({ message: 'access recorded' });
 });
 
-router.get('/notifications', authenticateToken, (req, res) => {
-    const userId = req.user.id;
-    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL OR user_id = ?) ORDER BY created_at DESC LIMIT 50`;
-    db.all(sql, [userId], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
+router.get('/notifications', authenticateToken, (req, res, next) => {
+    next();
 });
 
 router.delete('/notifications/:id', authenticateToken, (req, res) => {
@@ -136,9 +131,26 @@ router.delete('/notifications/:id', authenticateToken, (req, res) => {
 
 router.delete('/notifications/delete-all', authenticateToken, (req, res) => {
     const userId = req.user.id;
-    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [userId], function(err) {
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All notifications deleted' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'All notifications deleted' });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ?`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All notifications deleted' });
+        });
     });
 });
 // Wrapper for upload middleware to handle errors gracefully
@@ -328,12 +340,27 @@ router.put('/profile', authenticateToken, (req, res) => {
 
 // Get Notifications (Staff)
 router.get('/notifications', authenticateToken, (req, res) => {
-    // Fetch notifications where user_id is NULL (system/global) BUT only for relevant types (activity, announcement)
-    // OR matches staff's user ID
-    const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
-    db.all(sql, [req.user.id], (err, rows) => {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        return db.all(sql, [userId], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows);
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        db.all(sql, [userId], (err2, rows) => {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json(rows);
+        });
     });
 });
 
@@ -347,10 +374,27 @@ router.put('/notifications/:id/read', authenticateToken, (req, res) => {
 
 // Mark All as Read
 router.put('/notifications/read-all', authenticateToken, (req, res) => {
-    // Updates both global (NULL) and personal notifications visible to this user
-    db.run(`UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ('activity', 'announcement')) OR user_id = ?) AND is_read = FALSE`, [req.user.id], function(err) {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement','portal_access','login')";
+    if (!staffId) {
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?) AND is_read = FALSE`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All marked as read' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'All marked as read' });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${types}) OR user_id = ?) AND is_read = FALSE`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All marked as read' });
+        });
     });
 });
 

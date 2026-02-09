@@ -382,11 +382,16 @@ router.put('/profile', uploadProfilePic, (req, res) => {
 });
 
 router.get('/activities', (req, res) => {
-    // Return id, title, description, date, type
-    db.all(`SELECT id, title, description, date, type FROM activities ORDER BY date DESC`, [], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
+    db.all(
+        `SELECT id, title, description, date, type, image_path, images 
+         FROM activities 
+         ORDER BY date DESC`,
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows);
+        }
+    );
 });
 
 // Acknowledge User Guide
