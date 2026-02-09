@@ -923,21 +923,23 @@ const Cadets = () => {
             )}
 
 
-            {/* Edit Modal */}
+            {/* Edit / View Cadet Modal */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-                    <div className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-5xl mx-auto p-6 flex flex-col my-8 shadow-xl ${darkMode ? 'dark' : ''}`}>
-                        <div className="flex justify-between items-center mb-6 border-b pb-4 dark:border-gray-700">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start md:items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+                    <div className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-5xl mx-auto p-4 sm:p-6 flex flex-col my-6 sm:my-8 shadow-xl max-h-[90vh] overflow-y-auto text-sm sm:text-base ${darkMode ? 'dark' : ''}`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 border-b pb-3 sm:pb-4 dark:border-gray-700 gap-3">
                             <div className="flex items-center space-x-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsEditModalOpen(false)}
-                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                                 >
                                     <ChevronLeft size={16} className="mr-1" />
                                     Back to List
                                 </button>
-                                <h3 className="text-2xl font-bold dark:text-white">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
+                                <h3 className="text-lg sm:text-2xl font-bold dark:text-white">
+                                    {isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}
+                                </h3>
                             </div>
                             <div className="flex items-center space-x-4">
                                 <button 
@@ -953,7 +955,7 @@ const Cadets = () => {
                             </div>
                         </div>
                         
-                        <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 overflow-y-auto">
+                        <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
                             {/* Left Column: Photo & Status */}
                             <div className="md:col-span-1 space-y-6">
                                 <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg shadow-inner text-center">
@@ -1042,7 +1044,7 @@ const Cadets = () => {
                             </div>
 
                             {/* Right Column: Form Fields */}
-                            <div className="md:col-span-2 space-y-6 pb-6">
+                            <div className="md:col-span-2 space-y-6 pb-4 sm:pb-6">
                                 {/* Credentials */}
                                 <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-lg border border-green-100 dark:border-green-800">
                                     <h4 className="font-bold text-green-800 dark:text-green-300 mb-4 text-sm uppercase tracking-wide flex items-center">
@@ -1194,10 +1196,33 @@ const Cadets = () => {
                                 
                                 {!isViewMode && (
                                     <div className="pt-4 border-t dark:border-gray-700 flex justify-end space-x-3">
-                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors">Cancel</button>
-                                        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md transition-transform hover:scale-105">Save Changes</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditModalOpen(false)}
+                                            className="px-4 sm:px-6 py-2 border rounded text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors text-sm sm:text-base"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-md transition-transform hover:scale-105 text-sm sm:text-base"
+                                        >
+                                            Save Changes
+                                        </button>
                                     </div>
                                 )}
+
+                                {/* Mobile Back Button */}
+                                <div className="mt-4 pt-3 border-t dark:border-gray-700 md:hidden">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="w-full inline-flex items-center justify-center px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-sm font-medium"
+                                    >
+                                        <ChevronLeft size={16} className="mr-1" />
+                                        Back to Cadet List
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>

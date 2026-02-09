@@ -120,10 +120,6 @@ const Activities = () => {
             alert('Please upload at least 3 photos for an activity.');
             return;
         }
-        if (activeTab === 'announcement' && form.images.length < 1) {
-            alert('Please upload at least 1 photo for an announcement.');
-            return;
-        }
 
         const formData = new FormData();
         formData.append('title', form.title);

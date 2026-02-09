@@ -144,7 +144,7 @@ const Grading = () => {
             const hasKeyword = keywords.some(k => upperText.includes(k));
 
             // 2. Try to detect answers format (e.g., "1. A", "2. B")
-            const answerRegex = /\b(\d+)\s*[\.\-\)\:]+\s*([A-E])\b/gi;
+            const answerRegex = /\b(\d+)\s*[.\-):]+\s*([A-E])\b/gi;
             const matches = [...text.matchAll(answerRegex)];
             
             // Reject if no keywords AND fewer than 3 detectable answers

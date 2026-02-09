@@ -258,28 +258,7 @@ const CadetLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    const openNotifications = async () => {
-        setNotifOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/cadet/notifications');
-            setNotifications(res.data || []);
-            setBadgeNotif(0);
-            await axios.delete('/api/cadet/notifications/delete-all');
-        } catch {}
-    };
-
-    const openMessages = async () => {
-        setMessageOpen((o) => !o);
-        try {
-            const res = await axios.get('/api/messages/my');
-            setMessages(res.data || []);
-            setBadgeMsg(0);
-            await Promise.all((res.data || []).map(m => axios.delete(`/api/messages/${m.id}`)));
-        } catch {}
-    };
-    
-
-        return (
+    return (
         <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}

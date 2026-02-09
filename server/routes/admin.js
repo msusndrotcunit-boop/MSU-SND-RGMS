@@ -1668,13 +1668,10 @@ router.post('/activities', upload.array('images', 10), (req, res) => {
     }
 
     const activityType = type || 'activity';
-
+    
     // Server-side validation for image count
     if (activityType === 'activity' && images.length < 3) {
         return res.status(400).json({ message: 'Activities require at least 3 photos.' });
-    }
-    if (activityType === 'announcement' && images.length < 1) {
-        return res.status(400).json({ message: 'Announcements require at least 1 photo.' });
     }
 
     const imagesJson = JSON.stringify(images);
