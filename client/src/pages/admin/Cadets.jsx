@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin, ChevronLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
@@ -928,7 +928,17 @@ const Cadets = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
                     <div className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-5xl mx-auto p-6 flex flex-col my-8 shadow-xl ${darkMode ? 'dark' : ''}`}>
                         <div className="flex justify-between items-center mb-6 border-b pb-4 dark:border-gray-700">
-                            <h3 className="text-2xl font-bold dark:text-white">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
+                            <div className="flex items-center space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                >
+                                    <ChevronLeft size={16} className="mr-1" />
+                                    Back to List
+                                </button>
+                                <h3 className="text-2xl font-bold dark:text-white">{isViewMode ? 'View Cadet Profile' : 'Edit Cadet Info'}</h3>
+                            </div>
                             <div className="flex items-center space-x-4">
                                 <button 
                                     onClick={toggleDarkMode}
