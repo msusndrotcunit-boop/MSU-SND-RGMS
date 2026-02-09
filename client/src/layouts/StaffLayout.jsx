@@ -513,7 +513,6 @@ const StaffLayout = () => {
                         </Link>
                         <button
                             onClick={shareLocation}
-                            onClick={shareLocation}
                             className="flex items-center justify-center bg-white dark:bg-gray-900 text-[var(--primary-color)] text-xs md:text-sm rounded-full px-3 py-2 border border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-colors"
                         >
                             <MapPin size={16} className="mr-1" />

@@ -1201,32 +1201,55 @@ router.get('/cadets', (req, res) => {
 });
 
 // Update Cadet Personal Info
-router.put('/cadets/:id', (req, res) => {
+router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
     const { 
         rank, firstName, middleName, lastName, suffixName, 
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
         cadetCourse, semester, status,
-        username // Add username to destructuring
+        username
     } = req.body;
 
-    const sql = `UPDATE cadets SET 
-        rank=?, first_name=?, middle_name=?, last_name=?, suffix_name=?, 
-        student_id=?, email=?, contact_number=?, address=?, 
-        course=?, year_level=?, school_year=?, 
-        battalion=?, company=?, platoon=?, 
-        cadet_course=?, semester=?, status=? 
-        WHERE id=?`;
+    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
+
+    const setFields = [
+        'rank = ?',
+        'first_name = ?',
+        'middle_name = ?',
+        'last_name = ?',
+        'suffix_name = ?',
+        'student_id = ?',
+        'email = ?',
+        'contact_number = ?',
+        'address = ?',
+        'course = ?',
+        'year_level = ?',
+        'school_year = ?',
+        'battalion = ?',
+        'company = ?',
+        'platoon = ?',
+        'cadet_course = ?',
+        'semester = ?',
+        'status = ?'
+    ];
 
     const params = [
         rank, firstName, middleName, lastName, suffixName, 
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
-        cadetCourse, semester, status, 
-        req.params.id
+        cadetCourse, semester, status
     ];
+
+    if (profilePic) {
+        setFields.push('profile_pic = ?');
+        params.push(profilePic);
+    }
+
+    params.push(req.params.id);
+
+    const sql = `UPDATE cadets SET ${setFields.join(', ')} WHERE id = ?`;
 
     db.run(sql, params, (err) => {
             if (err) return res.status(500).json({ message: err.message });
@@ -1533,9 +1556,9 @@ router.delete('/users/:id', (req, res) => {
 });
 
 // --- Admin Profile ---
-
+//
 // Get Current Admin Profile
-router.get('/profile', (req, res) => {
+router.get('/profile', authenticateToken, isAdmin, (req, res) => {
     db.get(`SELECT id, username, email, profile_pic FROM users WHERE id = ?`, [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(row);
@@ -1543,7 +1566,7 @@ router.get('/profile', (req, res) => {
 });
 
 // Update Admin Profile (Pic)
-router.put('/profile', upload.single('profilePic'), (req, res) => {
+router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
     const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
     
     if (profilePic) {

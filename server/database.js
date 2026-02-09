@@ -373,7 +373,9 @@ async function initPgDb() {
             title TEXT NOT NULL,
             description TEXT,
             date TEXT,
-            image_path TEXT
+            image_path TEXT,
+            images TEXT,
+            type TEXT
         )`,
         `CREATE TABLE IF NOT EXISTS merit_demerit_logs (
             id SERIAL PRIMARY KEY,
@@ -561,7 +563,9 @@ async function initPgDb() {
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_longitude DOUBLE PRECISION`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
-            `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`
+            `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
+            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`,
+            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`
         ];
 
         for (const query of simpleMigrations) {
@@ -680,8 +684,14 @@ function initSqliteDb() {
             title TEXT NOT NULL,
             description TEXT,
             date TEXT,
-            image_path TEXT
+            image_path TEXT,
+            images TEXT,
+            type TEXT
         )`);
+
+        // Ensure new columns exist for legacy databases
+        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`);
+        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT`);
 
         // Merit/Demerit Ledger Table
         db.run(`CREATE TABLE IF NOT EXISTS merit_demerit_logs (
