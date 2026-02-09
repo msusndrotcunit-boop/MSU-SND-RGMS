@@ -10,6 +10,7 @@ const Settings = ({ role }) => {
     const [localSettings, setLocalSettings] = useState(settings);
     const [saving, setSaving] = useState(false);
     const [sendingCadetTemplate, setSendingCadetTemplate] = useState(null);
+    const [sendingWeeklyReminder, setSendingWeeklyReminder] = useState(false);
 
     // Sync local state with context when context updates (initial load)
     useEffect(() => {
@@ -113,6 +114,31 @@ const Settings = ({ role }) => {
             toast.error(error.response?.data?.message || 'Failed to send cadet notification emails.');
         } finally {
             setSendingCadetTemplate(null);
+        }
+    };
+
+    const handleSendWeeklyCadetReminder = async () => {
+        if (!window.confirm('This will create an in-app reminder notification for all active cadets. Continue?')) {
+            return;
+        }
+
+        setSendingWeeklyReminder(true);
+        try {
+            const response = await axios.post(
+                '/api/admin/cadet-notifications/weekly-reminder',
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
+            toast.success(response.data.message || 'Weekly reminder notifications created for cadets.');
+        } catch (error) {
+            console.error('Weekly cadet reminder failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to create weekly cadet reminders.');
+        } finally {
+            setSendingWeeklyReminder(false);
         }
     };
 
@@ -269,7 +295,7 @@ const Settings = ({ role }) => {
                             <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                                 <h4 className="font-medium text-gray-800 mb-2">Cadet Email Notifications</h4>
                                 <p className="text-sm text-gray-600 mb-4">
-                                    Send predefined email notifications to all verified, active cadets with a registered email address.
+                                    Send predefined email notifications to all verified, active cadets with a registered email address, and create in-app reminders for formation.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
                                     <button
@@ -287,6 +313,14 @@ const Settings = ({ role }) => {
                                     >
                                         <MailIcon size={16} />
                                         <span>{sendingCadetTemplate === 'cadet_training_reminder' ? 'Sending training reminder...' : 'Send Training Reminder to Cadets'}</span>
+                                    </button>
+                                    <button
+                                        onClick={handleSendWeeklyCadetReminder}
+                                        disabled={sendingWeeklyReminder}
+                                        className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition-colors disabled:opacity-60"
+                                    >
+                                        <MailIcon size={16} />
+                                        <span>{sendingWeeklyReminder ? 'Creating reminders...' : 'Send Friday Formation Reminder (In-App)'}</span>
                                     </button>
                                 </div>
                             </div>

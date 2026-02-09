@@ -955,6 +955,36 @@ router.post('/sync-cadets', async (req, res) => {
     });
 });
 
+router.post('/cadet-notifications/weekly-reminder', authenticateToken, isAdmin, (req, res) => {
+    const now = new Date();
+    const defaultMessage = 'Reminder: Please prepare for ROTC formation tomorrow. Ensure your uniform and requirements are ready.';
+    const message = (req.body && req.body.message && String(req.body.message).trim()) || defaultMessage;
+
+    const sql = `
+        SELECT u.id AS user_id
+        FROM users u
+        JOIN cadets c ON u.cadet_id = c.id
+        WHERE u.role = 'cadet'
+          AND (c.is_archived IS NULL OR c.is_archived = FALSE)
+    `;
+
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!rows || rows.length === 0) return res.json({ message: 'No cadet users found for reminder.' });
+
+        const stmt = db.prepare(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'weekly_reminder')`);
+        rows.forEach(r => {
+            if (r.user_id) {
+                stmt.run([r.user_id, message]);
+            }
+        });
+        stmt.finalize((finalizeErr) => {
+            if (finalizeErr) return res.status(500).json({ message: finalizeErr.message });
+            res.json({ message: `Weekly reminder notifications created for ${rows.length} cadets.`, count: rows.length, sentAt: now.toISOString() });
+        });
+    });
+});
+
 router.post('/import-cadets-remote', async (req, res) => {
     const { baseUrl, username, password } = req.body || {};
     if (!baseUrl || !username || !password) {
