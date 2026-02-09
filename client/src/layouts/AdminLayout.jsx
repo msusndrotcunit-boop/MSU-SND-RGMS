@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail, Activity, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -15,7 +15,8 @@ const AdminLayout = () => {
         'Training Staff': true,
         'Grading Management': true
     });
-    const [health, setHealth] = useState({ status: 'unknown' });
+    const [systemStatus, setSystemStatus] = useState(null);
+    const [statusError, setStatusError] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchResults, setSearchResults] = useState({ cadets: [], staff: [] });
@@ -34,19 +35,18 @@ const AdminLayout = () => {
         setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
     };
 
-    
-
     useEffect(() => {
-        const fetchHealth = async () => {
+        const fetchStatus = async () => {
             try {
-                const res = await axios.get('/api/health');
-                setHealth(res.data || { status: 'ok', db: 'connected' });
-            } catch (_) {
-                setHealth({ status: 'ok', db: 'disconnected' });
+                const res = await axios.get('/api/admin/system-status');
+                setSystemStatus(res.data || null);
+                setStatusError(false);
+            } catch {
+                setStatusError(true);
             }
         };
-        fetchHealth();
-        const id = setInterval(fetchHealth, 15000);
+        fetchStatus();
+        const id = setInterval(fetchStatus, 30000);
         return () => clearInterval(id);
     }, []);
 
@@ -384,11 +384,36 @@ const AdminLayout = () => {
                         )}
                     </div>
                 </header>
-                {(health && health.db === 'disconnected') && (
-                    <div className="bg-red-600 text-white text-sm p-2 text-center">
-                        Degraded mode: Database disconnected. Writes are queued; some features may be limited.
-                    </div>
-                )}
+                {(() => {
+                    const appStatus = systemStatus && systemStatus.app ? systemStatus.app.status : 'unknown';
+                    const dbStatus = systemStatus && systemStatus.database ? systemStatus.database.status : 'unknown';
+                    const metrics = systemStatus && systemStatus.metrics ? systemStatus.metrics : {};
+                    const hasIssue = statusError || appStatus === 'error' || dbStatus === 'error' || appStatus === 'degraded';
+                    const bgClass = hasIssue ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800';
+                    const iconClass = hasIssue ? 'text-red-600' : 'text-green-600';
+                    const label = hasIssue ? 'System alerts detected' : 'System operating normally';
+                    const updated = systemStatus && systemStatus.app && systemStatus.app.time ? new Date(systemStatus.app.time) : null;
+                    if (!systemStatus && !statusError) return null;
+                    return (
+                        <div className={clsx('text-xs md:text-sm px-3 py-2 border-b flex flex-wrap items-center gap-3', bgClass)}>
+                            <div className="flex items-center gap-2 mr-2">
+                                {hasIssue ? <AlertCircle size={14} className={iconClass} /> : <Activity size={14} className={iconClass} />}
+                                <span className="font-semibold">{label}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                <span>App: <span className="font-semibold capitalize">{appStatus}</span></span>
+                                <span>DB: <span className="font-semibold capitalize">{dbStatus}</span></span>
+                                {typeof metrics.cadets === 'number' && <span>Cadets: <span className="font-semibold">{metrics.cadets}</span></span>}
+                                {typeof metrics.users === 'number' && <span>Users: <span className="font-semibold">{metrics.users}</span></span>}
+                                {typeof metrics.trainingDays === 'number' && <span>Training days: <span className="font-semibold">{metrics.trainingDays}</span></span>}
+                                {typeof metrics.activities === 'number' && <span>Activities: <span className="font-semibold">{metrics.activities}</span></span>}
+                                {typeof metrics.unreadNotifications === 'number' && <span>Unread notif: <span className="font-semibold">{metrics.unreadNotifications}</span></span>}
+                                {updated && <span>Updated: <span className="font-mono">{updated.toLocaleTimeString()}</span></span>}
+                                {statusError && <span className="font-semibold">Status API unreachable</span>}
+                            </div>
+                        </div>
+                    );
+                })()}
                 <main className="flex-1 overflow-auto p-4 md:p-6">
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                         <Outlet />

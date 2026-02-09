@@ -12,6 +12,66 @@ const { processStaffData } = require('../utils/importCadets');
 
 const router = express.Router();
 
+router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
+    const start = Date.now();
+    const results = {};
+
+    const pGet = (sql, params = []) => new Promise((resolve) => {
+        db.get(sql, params, (err, row) => {
+            if (err) resolve({ error: err.message });
+            else resolve(row || {});
+        });
+    });
+
+    Promise.all([
+        pGet('SELECT 1 as ok'),
+        pGet('SELECT COUNT(*) as total FROM cadets'),
+        pGet('SELECT COUNT(*) as total FROM users'),
+        pGet('SELECT COUNT(*) as total FROM training_days'),
+        pGet('SELECT COUNT(*) as total FROM activities'),
+        pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = 0')
+    ]).then(([dbCheck, cadets, users, trainingDays, activities, unreadNotifications]) => {
+        const latencyMs = Date.now() - start;
+
+        results.app = {
+            status: 'ok',
+            uptimeSeconds: Math.floor(process.uptime()),
+            time: new Date().toISOString()
+        };
+
+        results.database = {
+            status: dbCheck && !dbCheck.error ? 'ok' : 'error',
+            latencyMs
+        };
+
+        results.metrics = {
+            cadets: cadets && cadets.total !== undefined ? cadets.total : null,
+            users: users && users.total !== undefined ? users.total : null,
+            trainingDays: trainingDays && trainingDays.total !== undefined ? trainingDays.total : null,
+            activities: activities && activities.total !== undefined ? activities.total : null,
+            unreadNotifications: unreadNotifications && unreadNotifications.total !== undefined ? unreadNotifications.total : null
+        };
+
+        if (results.database.status !== 'ok') {
+            results.app.status = 'degraded';
+        }
+
+        res.json(results);
+    }).catch((err) => {
+        res.status(500).json({
+            app: {
+                status: 'error',
+                uptimeSeconds: Math.floor(process.uptime()),
+                time: new Date().toISOString()
+            },
+            database: {
+                status: 'error',
+                error: err.message
+            }
+        });
+    });
+});
+
 // SSE broadcast helper using global registry created in attendance routes
 function broadcastEvent(event) {
     try {
