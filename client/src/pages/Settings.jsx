@@ -9,8 +9,6 @@ const Settings = ({ role }) => {
     const { settings, updateSettings } = useSettings();
     const [localSettings, setLocalSettings] = useState(settings);
     const [saving, setSaving] = useState(false);
-    const [broadcasting, setBroadcasting] = useState(false);
-    const [broadcastingStaff, setBroadcastingStaff] = useState(false);
     const [sendingCadetTemplate, setSendingCadetTemplate] = useState(null);
 
     // Sync local state with context when context updates (initial load)
@@ -83,54 +81,6 @@ const Settings = ({ role }) => {
         } catch (error) {
             console.error('Prune failed:', error);
             toast.error('Failed to delete graduates: ' + (error.response?.data?.message || error.message));
-        }
-    };
-
-    const handleBroadcastOnboarding = async () => {
-        if (!window.confirm('This will send an email to all active users (cadets and training staff) with a registered email address, containing app information and their login username. Continue?')) {
-            return;
-        }
-        setBroadcasting(true);
-        try {
-            const response = await axios.post(
-                '/api/admin/broadcast-onboarding',
-                {},
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            toast.success(response.data.message || 'Broadcast email sent.');
-        } catch (error) {
-            console.error('Broadcast failed:', error);
-            toast.error(error.response?.data?.message || 'Failed to send broadcast email.');
-        } finally {
-            setBroadcasting(false);
-        }
-    };
-
-    const handleBroadcastStaffOnboarding = async () => {
-        if (!window.confirm('This will send the onboarding email only to training staff accounts with a registered email address. Cadets will not receive this broadcast. Continue?')) {
-            return;
-        }
-        setBroadcastingStaff(true);
-        try {
-            const response = await axios.post(
-                '/api/admin/broadcast-onboarding-staff',
-                {},
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            toast.success(response.data.message || 'Staff broadcast email sent.');
-        } catch (error) {
-            console.error('Staff broadcast failed:', error);
-            toast.error(error.response?.data?.message || 'Failed to send staff broadcast email.');
-        } finally {
-            setBroadcastingStaff(false);
         }
     };
 
@@ -315,34 +265,6 @@ const Settings = ({ role }) => {
                                         Delete from Database
                                     </button>
                                 </div>
-                            </div>
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <h4 className="font-medium text-gray-800 mb-2">Broadcast Onboarding Email</h4>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Send an information email to all registered users (cadets and training staff) with their username, email, and the link to this web app. Passwords are not included for security.
-                                </p>
-                                <button
-                                    onClick={handleBroadcastOnboarding}
-                                    disabled={broadcasting}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors disabled:opacity-60"
-                                >
-                                    <MailIcon size={16} />
-                                    <span>{broadcasting ? 'Sending...' : 'Send Onboarding Email to All Users'}</span>
-                                </button>
-                            </div>
-                            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                                <h4 className="font-medium text-gray-800 mb-2">Broadcast Staff Onboarding Email Only</h4>
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Send the onboarding email only to training staff accounts. Cadets will not receive this broadcast.
-                                </p>
-                                <button
-                                    onClick={handleBroadcastStaffOnboarding}
-                                    disabled={broadcastingStaff}
-                                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors disabled:opacity-60"
-                                >
-                                    <MailIcon size={16} />
-                                    <span>{broadcastingStaff ? 'Sending to staff...' : 'Send Onboarding Email to Training Staff Only'}</span>
-                                </button>
                             </div>
                             <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                                 <h4 className="font-medium text-gray-800 mb-2">Cadet Email Notifications</h4>
