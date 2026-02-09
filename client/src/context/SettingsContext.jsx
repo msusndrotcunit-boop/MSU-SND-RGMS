@@ -19,7 +19,7 @@ export const SettingsProvider = ({ children }) => {
             compactMode: false
         },
         theme: {
-            primaryColor: 'blue'
+            primaryColor: 'default'
         }
     });
     const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export const SettingsProvider = ({ children }) => {
                         compactMode: !!res.data.compact_mode
                     },
                     theme: {
-                        primaryColor: res.data.primary_color || 'blue'
+                        primaryColor: res.data.primary_color || 'default'
                     }
                 });
             }
@@ -80,6 +80,10 @@ export const SettingsProvider = ({ children }) => {
         }
 
         const palettes = {
+            default: {
+                main: '#0f766e',
+                soft: 'rgba(15, 118, 110, 0.18)'
+            },
             blue: {
                 main: '#2563eb',
                 soft: 'rgba(37, 99, 235, 0.18)'

@@ -222,7 +222,7 @@ const CadetLayout = () => {
     };
     
 
-    return (
+        return (
         <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
@@ -235,10 +235,10 @@ const CadetLayout = () => {
 
              {/* Sidebar - simplified for Cadet */}
              <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 text-xl font-bold border-b border-green-800 flex justify-between items-center">
+                <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>ROTC Cadet</span>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                         <X size={24} />
@@ -246,7 +246,7 @@ const CadetLayout = () => {
                 </div>
                 
                 {/* User Info Section */}
-                <div className="px-6 py-4 border-b border-green-800 flex flex-col items-center text-center">
+                <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <div className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
                         {profile?.profile_pic ? (
                             <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover" />

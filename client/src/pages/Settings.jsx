@@ -181,8 +181,9 @@ const Settings = ({ role }) => {
                         <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
                         <div className="flex gap-4 flex-wrap">
-                            {['blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
+                            {['default', 'blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
                                 const swatches = {
+                                    default: '#0f766e',
                                     blue: '#2563eb',
                                     green: '#16a34a',
                                     red: '#dc2626',
@@ -190,6 +191,12 @@ const Settings = ({ role }) => {
                                     orange: '#ea580c',
                                     teal: '#0f766e'
                                 };
+                                const label =
+                                    color === 'default'
+                                        ? 'Default'
+                                        : color === 'teal'
+                                        ? 'Teal (Outdoor)'
+                                        : color;
                                 return (
                                     <button
                                         key={color}
@@ -198,7 +205,7 @@ const Settings = ({ role }) => {
                                             localSettings.theme.primaryColor === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
                                         }`}
                                         style={{ backgroundColor: swatches[color] }}
-                                        aria-label={color === 'teal' ? 'Teal (Neutral outdoor)' : color}
+                                        aria-label={label}
                                     />
                                 );
                             })}
