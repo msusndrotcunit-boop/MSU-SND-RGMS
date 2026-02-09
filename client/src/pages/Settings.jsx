@@ -178,22 +178,30 @@ const Settings = ({ role }) => {
                         <PaintBucket size={20} />
                         Theme Customization
                     </h3>
-                    <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                        <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
-                        <div className="flex gap-4">
-                            {['blue', 'green', 'red', 'purple', 'orange'].map(color => (
-                                <button
-                                    key={color}
-                                    onClick={() => handleChange('theme', 'primaryColor', color)}
-                                    className={`w-10 h-10 rounded-full border-2 ${
-                                        localSettings.theme.primaryColor === color ? 'border-gray-800 scale-110' : 'border-transparent'
-                                    }`}
-                                    style={{ backgroundColor: color === 'blue' ? '#3b82f6' : 
-                                                            color === 'green' ? '#10b981' :
-                                                            color === 'red' ? '#ef4444' :
-                                                            color === 'purple' ? '#8b5cf6' : '#f97316' }}
-                                />
-                            ))}
+                        <div className="flex gap-4 flex-wrap">
+                            {['blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
+                                const swatches = {
+                                    blue: '#2563eb',
+                                    green: '#16a34a',
+                                    red: '#dc2626',
+                                    purple: '#7c3aed',
+                                    orange: '#ea580c',
+                                    teal: '#0f766e'
+                                };
+                                return (
+                                    <button
+                                        key={color}
+                                        onClick={() => handleChange('theme', 'primaryColor', color)}
+                                        className={`w-10 h-10 rounded-full border-2 transition-transform ${
+                                            localSettings.theme.primaryColor === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
+                                        }`}
+                                        style={{ backgroundColor: swatches[color] }}
+                                        aria-label={color === 'teal' ? 'Teal (Neutral outdoor)' : color}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 </section>
