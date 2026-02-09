@@ -229,7 +229,7 @@ const AdminLayout = () => {
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     // Filter logic for Footer
-    const shouldShowFooter = !['/admin/profile', '/admin/settings'].some(path => location.pathname.includes(path)) && !location.pathname.includes('/about');
+    const shouldShowFooter = location.pathname === '/admin/dashboard';
 
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
