@@ -5,6 +5,7 @@
 :root {
   --primary-color: #354f32;
   --primary-color-soft: rgba(53, 79, 50, 0.16);
+  --bg-image: url('./assets/background_1.jpg');
 }
 
 body {
@@ -28,7 +29,7 @@ body {
   background-color: #e5e7eb;
   background-image: 
     linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-    url('./assets/background_1.jpg');
+    var(--bg-image);
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -37,7 +38,7 @@ body {
 .dark .app-bg {
   background-image: 
     linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),
-    url('./assets/background_1.jpg');
+    var(--bg-image);
 }
 
 .weather-bg {

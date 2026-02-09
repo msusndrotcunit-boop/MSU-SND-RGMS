@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Save, Bell, Monitor, PaintBucket, Database, Download, Trash2, Mail as MailIcon } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { toast } from 'react-hot-toast';
+import BackgroundUploader from '../components/BackgroundUploader';
 
 const Settings = ({ role }) => {
     const { settings, updateSettings } = useSettings();
@@ -244,37 +245,43 @@ const Settings = ({ role }) => {
                         <PaintBucket size={20} />
                         Theme Customization
                     </h3>
-                        <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
-                        <div className="flex gap-4 flex-wrap">
-                            {['default', 'blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
-                                const swatches = {
-                                    default: '#0f766e',
-                                    blue: '#2563eb',
-                                    green: '#16a34a',
-                                    red: '#dc2626',
-                                    purple: '#7c3aed',
-                                    orange: '#ea580c',
-                                    teal: '#0f766e'
-                                };
-                                const label =
-                                    color === 'default'
-                                        ? 'Default'
-                                        : color === 'teal'
-                                        ? 'Teal (Outdoor)'
-                                        : color;
-                                return (
-                                    <button
-                                        key={color}
-                                        onClick={() => handleChange('theme', 'primaryColor', color)}
-                                        className={`w-10 h-10 rounded-full border-2 transition-transform ${
-                                            localSettings.theme.primaryColor === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
-                                        }`}
-                                        style={{ backgroundColor: swatches[color] }}
-                                        aria-label={label}
-                                    />
-                                );
-                            })}
+                    <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
+                            <div className="flex gap-4 flex-wrap">
+                                {['default', 'blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
+                                    const swatches = {
+                                        default: '#0f766e',
+                                        blue: '#2563eb',
+                                        green: '#16a34a',
+                                        red: '#dc2626',
+                                        purple: '#7c3aed',
+                                        orange: '#ea580c',
+                                        teal: '#0f766e'
+                                    };
+                                    const label =
+                                        color === 'default'
+                                            ? 'Default'
+                                            : color === 'teal'
+                                            ? 'Teal (Outdoor)'
+                                            : color;
+                                    return (
+                                        <button
+                                            key={color}
+                                            onClick={() => handleChange('theme', 'primaryColor', color)}
+                                            className={`w-10 h-10 rounded-full border-2 transition-transform ${
+                                                localSettings.theme.primaryColor === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
+                                            }`}
+                                            style={{ backgroundColor: swatches[color] }}
+                                            aria-label={label}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div>
+                             <BackgroundUploader />
                         </div>
                     </div>
                 </section>

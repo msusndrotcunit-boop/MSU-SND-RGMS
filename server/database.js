@@ -481,7 +481,8 @@ async function initPgDb() {
             activity_updates BOOLEAN DEFAULT TRUE,
             dark_mode BOOLEAN DEFAULT FALSE,
             compact_mode BOOLEAN DEFAULT FALSE,
-            primary_color TEXT DEFAULT 'blue'
+            primary_color TEXT DEFAULT 'blue',
+            custom_bg TEXT
         )`,
         `CREATE TABLE IF NOT EXISTS push_subscriptions (
             id SERIAL PRIMARY KEY,
@@ -587,7 +588,8 @@ async function initPgDb() {
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`,
-            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`
+            `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`,
+            `ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_bg TEXT`
         ];
 
         for (const query of simpleMigrations) {

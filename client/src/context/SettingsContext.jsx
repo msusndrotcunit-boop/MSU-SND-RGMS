@@ -48,11 +48,12 @@ export const SettingsProvider = ({ children }) => {
                         compactMode: !!res.data.compact_mode
                     },
                     theme: {
-                        primaryColor: res.data.primary_color || 'default'
-                    }
-                });
-            }
-        } catch (error) {
+                    primaryColor: res.data.primary_color || 'default',
+                    customBg: res.data.custom_bg
+                }
+            });
+        }
+    } catch (error) {
             console.error('Error fetching settings:', error);
         } finally {
             setLoading(false);
@@ -77,6 +78,13 @@ export const SettingsProvider = ({ children }) => {
             document.body.classList.add('compact-mode');
         } else {
             document.body.classList.remove('compact-mode');
+        }
+
+        // Custom Background
+        if (settings.theme.customBg) {
+            document.documentElement.style.setProperty('--bg-image', `url('${settings.theme.customBg}')`);
+        } else {
+            document.documentElement.style.removeProperty('--bg-image');
         }
 
         const palettes = {

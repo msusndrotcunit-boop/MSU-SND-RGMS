@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 const { SECRET_KEY, authenticateToken } = require('../middleware/auth');
+const { upload } = require('../utils/cloudinary');
 
 const router = express.Router();
 
@@ -64,7 +65,8 @@ router.get('/settings', authenticateToken, (req, res) => {
             activity_updates: !!row.activity_updates,
             dark_mode: !!row.dark_mode,
             compact_mode: !!row.compact_mode,
-            primary_color: row.primary_color
+            primary_color: row.primary_color,
+            custom_bg: row.custom_bg
         };
         // console.log(`Settings for user ${userId}:`, settings);
         res.json(settings);
@@ -80,7 +82,8 @@ router.put('/settings', authenticateToken, (req, res) => {
         activity_updates, 
         dark_mode, 
         compact_mode, 
-        primary_color 
+        primary_color,
+        custom_bg
     } = req.body;
 
     console.log(`Updating settings for user ${userId}:`, req.body);
@@ -95,39 +98,63 @@ router.put('/settings', authenticateToken, (req, res) => {
     const d = dark_mode;
     const c = compact_mode;
     const col = primary_color || 'blue';
+    const bg = custom_bg;
 
     db.get("SELECT 1 FROM user_settings WHERE user_id = ?", [userId], (err, row) => {
         if (err) {
-            console.error("Error checking settings existence:", err);
             return res.status(500).json({ message: err.message });
         }
-        
+
         if (row) {
             // Update
-            const sql = `UPDATE user_settings SET 
-                email_alerts = ?, 
-                push_notifications = ?, 
-                activity_updates = ?, 
-                dark_mode = ?, 
-                compact_mode = ?, 
-                primary_color = ? 
-                WHERE user_id = ?`;
-            db.run(sql, [e, p, a, d, c, col, userId], (updateErr) => {
-                if (updateErr) {
-                    console.error("Error updating settings:", updateErr);
-                    return res.status(500).json({ message: updateErr.message });
-                }
+            const sql = `
+                UPDATE user_settings 
+                SET email_alerts = ?, push_notifications = ?, activity_updates = ?, 
+                    dark_mode = ?, compact_mode = ?, primary_color = ?, custom_bg = ?
+                WHERE user_id = ?
+            `;
+            db.run(sql, [e, p, a, d, c, col, bg, userId], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
                 res.json({ message: 'Settings updated' });
             });
         } else {
             // Insert
-            const sql = `INSERT INTO user_settings (user_id, email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-            db.run(sql, [userId, e, p, a, d, c, col], (insertErr) => {
-                if (insertErr) {
-                    console.error("Error creating settings:", insertErr);
-                    return res.status(500).json({ message: insertErr.message });
-                }
+            const sql = `
+                INSERT INTO user_settings (user_id, email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color, custom_bg)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            db.run(sql, [userId, e, p, a, d, c, col, bg], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
                 res.json({ message: 'Settings created' });
+            });
+        }
+    });
+});
+
+// POST /api/auth/settings/background - Upload custom background
+router.post('/settings/background', authenticateToken, upload.single('image'), (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
+    
+    const userId = req.user.id;
+    const imageUrl = req.file.path; // Cloudinary URL or local path
+
+    db.get("SELECT 1 FROM user_settings WHERE user_id = ?", [userId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+
+        if (row) {
+            db.run("UPDATE user_settings SET custom_bg = ? WHERE user_id = ?", [imageUrl, userId], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
+                res.json({ message: 'Background updated', url: imageUrl });
+            });
+        } else {
+            // Create default settings with this background
+            const sql = `
+                INSERT INTO user_settings (user_id, custom_bg)
+                VALUES (?, ?)
+            `;
+            db.run(sql, [userId, imageUrl], (err) => {
+                if (err) return res.status(500).json({ message: err.message });
+                res.json({ message: 'Background updated', url: imageUrl });
             });
         }
     });
