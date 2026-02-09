@@ -384,7 +384,7 @@ const AdminLayout = () => {
                         )}
                     </div>
                 </header>
-                {(() => {
+                {location.pathname === '/admin/dashboard' && (() => {
                     const appStatus = systemStatus && systemStatus.app ? systemStatus.app.status : 'unknown';
                     const dbStatus = systemStatus && systemStatus.database ? systemStatus.database.status : 'unknown';
                     const metrics = systemStatus && systemStatus.metrics ? systemStatus.metrics : {};
