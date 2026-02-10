@@ -143,7 +143,6 @@ const CadetLayout = () => {
     }, [user]);
 
     React.useEffect(() => {
-        axios.post('/api/cadet/access').catch(() => {});
         let es;
         const connect = () => {
             try {

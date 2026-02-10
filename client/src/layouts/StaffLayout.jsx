@@ -198,7 +198,6 @@ const StaffLayout = () => {
     }, [isPrivilegedStaff, hasAutoSharedLocation]);
 
     React.useEffect(() => {
-        axios.post('/api/staff/access').catch(() => {});
 
         let es;
         const connect = () => {
