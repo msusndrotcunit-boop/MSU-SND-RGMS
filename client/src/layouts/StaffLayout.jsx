@@ -500,44 +500,7 @@ const StaffLayout = () => {
                     <Outlet />
                 </main>
 
-                {isPrivilegedStaff &&
-                    user?.isProfileCompleted &&
-                    !['/staff/communication', '/staff/profile', '/staff/settings'].includes(location.pathname) && (
-                    <div className="border-t bg-white dark:bg-gray-900 px-3 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-4">
-                        <Link
-                            to="/staff/unit-dashboard"
-                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)] text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors hover-highlight"
-                        >
-                            <LayoutDashboard size={16} className="mr-1" />
-                            <span className="hidden sm:inline">Unit Dashboard</span>
-                            <span className="sm:hidden">Unit</span>
-                        </Link>
-                        <Link
-                            to="/staff/data-analysis"
-                            className="flex-1 flex items-center justify-center bg-[var(--primary-color)]/90 text-white text-xs md:text-sm rounded-full px-3 py-2 hover:opacity-90 transition-colors hover-highlight"
-                        >
-                            <PieChart size={16} className="mr-1" />
-                            <span className="hidden sm:inline">Data Analysis</span>
-                            <span className="sm:hidden">Data</span>
-                        </Link>
-                        <Link
-                            to="/staff/activities"
-                            className="flex-1 flex items-center justify-center bg-yellow-400 text-[var(--primary-color)] text-xs md:text-sm font-semibold rounded-full px-3 py-2 hover:bg-yellow-300 transition-colors hover-highlight"
-                        >
-                            <Calendar size={16} className="mr-1" />
-                            <span className="hidden sm:inline">Activities</span>
-                            <span className="sm:hidden">Acts</span>
-                        </Link>
-                        <button
-                            onClick={shareLocation}
-                            className="flex items-center justify-center bg-white dark:bg-gray-900 text-[var(--primary-color)] text-xs md:text-sm rounded-full px-3 py-2 border border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-colors hover-highlight"
-                        >
-                            <MapPin size={16} className="mr-1" />
-                            <span className="hidden sm:inline">Share Location</span>
-                            <span className="sm:hidden">Location</span>
-                        </button>
-                    </div>
-                )}
+                
             </div>
 
             {showPermissionModal && (
