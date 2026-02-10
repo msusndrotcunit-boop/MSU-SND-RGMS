@@ -1348,15 +1348,15 @@ router.post('/cadets', async (req, res) => {
                 student_id, email, contact_number, address, 
                 course, year_level, school_year, 
                 battalion, company, platoon, 
-                cadet_course, semester, status, is_profile_completed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                cadet_course, semester, corp_position, status, is_profile_completed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
             const params = [
                 cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
                 cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-                cadet.cadetCourse || '', cadet.semester || '', cadet.status || 'Ongoing', 0
+                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', cadet.status || 'Ongoing', 0
             ];
 
             db.run(insertSql, params, function(err) {
@@ -1413,7 +1413,7 @@ router.get('/cadets', (req, res) => {
                    c.student_id, c.email, c.contact_number, c.address, 
                    c.course, c.year_level, c.school_year, 
                    c.battalion, c.company, c.platoon, 
-                   c.cadet_course, c.semester, c.status, c.is_profile_completed,
+                   c.cadet_course, c.semester, c.corp_position, c.status, c.is_profile_completed,
                    u.username,
                    g.attendance_present, g.merit_points, g.demerit_points, 
                    g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
@@ -1491,6 +1491,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
         'platoon = ?',
         'cadet_course = ?',
         'semester = ?',
+        'corp_position = ?',
         'status = ?'
     ];
 
@@ -1499,7 +1500,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
-        cadetCourse, semester, status
+        cadetCourse, semester, req.body.corpPosition || '', status
     ];
 
     if (profilePic) {

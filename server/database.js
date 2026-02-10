@@ -337,6 +337,7 @@ async function initPgDb() {
             platoon TEXT,
             cadet_course TEXT,
             semester TEXT,
+            corp_position TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -660,6 +661,7 @@ function initSqliteDb() {
             platoon TEXT,
             cadet_course TEXT,
             semester TEXT,
+            corp_position TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -855,6 +857,8 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN is_profile_completed INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN has_seen_guide INTEGER DEFAULT 0`, (err) => {});
         db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
+        // Migration: Add corp_position to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN corp_position TEXT`, (err) => {});
 
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
         db.run(`ALTER TABLE users ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});

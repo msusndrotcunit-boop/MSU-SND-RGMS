@@ -480,8 +480,17 @@ const Grading = () => {
 
     const handleExport = () => {
         const headers = ["Student ID", "Last Name", "First Name", "Company", "Platoon", "Prelim", "Midterm", "Final", "Subject Score", "Merits", "Demerits", "Attendance Present", "Attendance Score", "Final Grade", "Transmuted"];
+        const now = new Date();
+        const generatedAt = now.toLocaleString();
+        const totalRecords = filteredCadets.length;
         
-        const csvContent = [
+        const headerBlock = [
+            `Report,Grading List`,
+            `Generated,"${generatedAt}"`,
+            ''
+        ].join('\n');
+
+        const bodyBlock = [
             headers.join(','),
             ...filteredCadets.map(c => [
                 c.student_id,
@@ -501,6 +510,15 @@ const Grading = () => {
                 c.transmutedGrade
             ].join(','))
         ].join('\n');
+
+        const footerBlock = [
+            '',
+            `Prepared By,"Wilmer B Montejo","SSg (Inf) PA • Admin NCO"`,
+            `Certified Correct,"INDIHRA D TAWANTAWAN","LTC (RES) PA • Commandant"`,
+            `Total Records,${totalRecords}`,
+        ].join('\n');
+
+        const csvContent = [headerBlock, bodyBlock, footerBlock].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);

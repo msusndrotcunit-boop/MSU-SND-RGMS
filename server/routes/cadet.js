@@ -279,14 +279,14 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 email=?, contact_number=?, address=?,
                 course=?, year_level=?, school_year=?,
                 battalion=?, company=?, platoon=?,
-                cadet_course=?, semester=?`;
+                cadet_course=?, semester=?, corp_position=?`;
             
             const params = [
                 safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
                 safeParam(email), safeParam(contactNumber), safeParam(address),
                 safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
                 safeParam(battalion), safeParam(company), safeParam(platoon),
-                safeParam(cadetCourse), safeParam(semester)
+                safeParam(cadetCourse), safeParam(semester), safeParam(req.body.corpPosition)
             ];
 
             if (req.file) {

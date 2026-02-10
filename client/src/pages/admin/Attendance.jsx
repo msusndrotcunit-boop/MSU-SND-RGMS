@@ -509,8 +509,35 @@ const Attendance = () => {
     const handleExport = () => {
         if (!selectedDay) return;
         const headers = ["Cadet/Staff ID", "Name", "Role/Rank", "Status", "Time In", "Time Out", "Remarks"];
+        const now = new Date();
+        const generatedAt = now.toLocaleString();
+        const totalRecords = filteredRecords.length;
+        // Resolve dynamic signatories based on cadet positions
+        let s1 = null;
+        let commander = null;
+        if (attendanceType === 'cadet') {
+            const byPosition = (r) => (r.corp_position || r.battalion || '').toLowerCase();
+            // Prefer Brigade S1; fallback to any S1
+            s1 = attendanceRecords.find(r => byPosition(r).includes('bde s1')) 
+                || attendanceRecords.find(r => byPosition(r).includes('s1'));
+            // Match Corp Commander
+            commander = attendanceRecords.find(r => {
+                const p = byPosition(r);
+                return p.includes('corp cmdr') || p.includes('corp commander') || p.includes('corps commander');
+            });
+        }
+        const preparedName = s1 ? `${s1.first_name} ${s1.last_name}` : 'VINCENT R URTAL';
+        const preparedRole = s1 ? `${s1.rank} • S1/Personnel Officer` : 'CDT LIEUTENANT COLONEL (1CL) • S1/Personnel Officer';
+        const certifiedName = commander ? `${commander.first_name} ${commander.last_name}` : 'JOHN MARK C LANGUIDO';
+        const certifiedRole = commander ? `${commander.rank} • Corp Commander` : 'CDT COLONEL (1CL) • Corp Commander';
         
-        const csvContent = [
+        const headerBlock = [
+            `Report,Attendance,Day,"${selectedDay.title}"`,
+            `Generated,"${generatedAt}"`,
+            ''
+        ].join('\n');
+
+        const bodyBlock = [
             headers.join(','),
             ...filteredRecords.map(r => {
                 const name = `"${r.last_name}, ${r.first_name}"`;
@@ -527,6 +554,15 @@ const Attendance = () => {
                 ].join(',');
             })
         ].join('\n');
+
+        const footerBlock = [
+            '',
+            `Prepared By,"${preparedName}","${preparedRole}"`,
+            `Certified Correct,"${certifiedName}","${certifiedRole}"`,
+            `Total Records,${totalRecords}`,
+        ].join('\n');
+
+        const csvContent = [headerBlock, bodyBlock, footerBlock].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);

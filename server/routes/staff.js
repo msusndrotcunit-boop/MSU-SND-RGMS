@@ -52,6 +52,21 @@ router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (
     });
 });
 
+// Limited Staff List for Command Group visibility
+router.get('/list', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
+    const sql = `
+        SELECT s.id, s.rank, s.first_name, s.last_name, s.role, s.email, s.contact_number
+        FROM training_staff s
+        WHERE s.is_archived IS FALSE OR s.is_archived IS NULL
+        ORDER BY s.last_name ASC
+        LIMIT 200
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
 // Edit a message
 router.put('/chat/messages/:id', authenticateToken, (req, res) => {
     const { content } = req.body;

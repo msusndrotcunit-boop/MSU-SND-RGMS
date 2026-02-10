@@ -125,6 +125,7 @@ router.get('/records/:dayId', authenticateToken, isAdmin, (req, res) => {
             c.rank,
             c.company,
             c.platoon,
+            c.corp_position,
             MAX(ar.status) as status, 
             MAX(ar.remarks) as remarks
         FROM cadets c
