@@ -239,13 +239,14 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             cadetCourse, semester,
             is_profile_completed // Frontend sends this as 'true'
         } = req.body;
+        const isComplete = (is_profile_completed === 'true' || is_profile_completed === true || is_profile_completed === 1 || is_profile_completed === '1');
 
         // Ensure optional fields are null if undefined/empty strings (optional)
         // But mainly ensure they are NOT undefined for the DB driver
         const safeParam = (val) => val === undefined ? null : val;
 
         // 2. Mandatory Field Validation (Only if completing profile)
-        if (is_profile_completed === 'true') {
+        if (isComplete) {
             const requiredFields = [
                 'username', 'firstName', 'lastName', 'email', 'contactNumber', 'address',
                 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon',
@@ -307,7 +308,7 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             }
     
             // Set completion status if requested
-            if (is_profile_completed === 'true') {
+            if (isComplete) {
                 sql += `, is_profile_completed=?`;
                 // Use 1 for TRUE to be safe across SQLite/Postgres
                 params.push(1);
