@@ -162,7 +162,7 @@ const Login = () => {
                                         onChange={handleChange}
                                         required
                                         className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
-                                        placeholder={loginType === 'cadet' ? "Enter Student ID or Email" : "Enter Staff Username"}
+                                        placeholder={loginType === 'cadet' ? "Enter ROTCMIS Username or Email" : "Enter Staff Username"}
                                     />
                                 </div>
                             </div>
