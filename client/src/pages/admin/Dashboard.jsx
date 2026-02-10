@@ -1,8 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import axios from 'axios';
-import { 
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
-} from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
     BookOpen, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
@@ -10,7 +7,35 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getSingleton, cacheSingleton } from '../../utils/db';
-import WeatherAdvisory from '../../components/WeatherAdvisory';
+const WeatherAdvisoryLazy = React.lazy(() => import('../../components/WeatherAdvisory'));
+const ChartSection = React.lazy(async () => {
+    const mod = await import('recharts');
+    const Section = ({ data }) => (
+        <div className="h-80 w-full">
+            <mod.ResponsiveContainer width="100%" height="100%">
+                <mod.BarChart
+                    data={data}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                    <mod.CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <mod.XAxis dataKey="name" axisLine={false} tickLine={false} />
+                    <mod.YAxis axisLine={false} tickLine={false} />
+                    <mod.Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                        cursor={{ fill: '#f3f4f6' }}
+                    />
+                    <mod.Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                    <mod.Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
+                    <mod.Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
+                    <mod.Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
+                    <mod.Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
+                    <mod.Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
+                </mod.BarChart>
+            </mod.ResponsiveContainer>
+        </div>
+    );
+    return { default: Section };
+});
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -223,7 +248,9 @@ const Dashboard = () => {
                 </h2>
             </div>
 
-            <WeatherAdvisory />
+            <Suspense fallback={<div className="bg-white p-4 rounded-lg shadow animate-pulse h-32 flex items-center justify-center"><span className="text-gray-400">Loading Weather...</span></div>}>
+                <WeatherAdvisoryLazy />
+            </Suspense>
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -267,28 +294,9 @@ const Dashboard = () => {
                         Cadet Status Distribution by Course (Verified Only)
                     </h3>
                 </div>
-                <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={courseData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                            <YAxis axisLine={false} tickLine={false} />
-                            <Tooltip 
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                cursor={{ fill: '#f3f4f6' }}
-                            />
-                            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                            <Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
-                            <Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
-                            <Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
-                            <Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
-                            <Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <Suspense fallback={<div className="h-80 w-full flex items-center justify-center"><span className="text-gray-400">Loading Chart...</span></div>}>
+                    <ChartSection data={courseData} />
+                </Suspense>
             </div>
 
             
