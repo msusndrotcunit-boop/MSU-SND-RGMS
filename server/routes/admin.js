@@ -1282,6 +1282,21 @@ router.get('/analytics', (req, res) => {
                     new Promise((resolve, reject) => {
                         const sql = `
                             SELECT 
+                                UPPER(TRIM(c.course)) AS course,
+                                c.status,
+                                COUNT(*) AS count
+                            FROM cadets c
+                            WHERE c.course IS NOT NULL AND c.course != ''
+                              AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                            GROUP BY UPPER(TRIM(c.course)), c.status
+                        `;
+                        db.all(sql, [], (err, rows) => {
+                            if (err) reject(err); else resolve({ type: 'academic_course_stats', rows });
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT 
                                 UPPER(TRIM(c.cadet_course)) AS cadet_course,
                                 CASE 
                                     WHEN UPPER(TRIM(c.gender)) = 'MALE' THEN 'Male'
@@ -1340,6 +1355,8 @@ router.get('/analytics', (req, res) => {
                                 demographics.status = result.rows.map(r => ({ name: r.status || 'Unverified', value: r.count }));
                             } else if (result.type === 'course_stats') {
                                 demographics.courseStats = result.rows;
+                            } else if (result.type === 'academic_course_stats') {
+                                demographics.academicCourseStats = result.rows;
                             } else if (result.type === 'gender_by_course') {
                                 demographics.genderByCourse = result.rows;
                             } else if (result.type === 'course_totals') {

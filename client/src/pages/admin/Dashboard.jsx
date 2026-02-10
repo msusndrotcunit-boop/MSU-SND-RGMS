@@ -74,17 +74,19 @@ const Dashboard = () => {
     }, []);
 
     const processData = (data) => {
-        const rawStats = (data && data.demographics && data.demographics.courseStats) || [];
+        const rawStats =
+            (data && data.demographics && data.demographics.academicCourseStats) ||
+            (data && data.demographics && data.demographics.courseStats) ||
+            [];
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
-        const allowedCourses = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
 
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
-            const course = (item.cadet_course || 'Unknown').toUpperCase();
+            const course = ((item.course || item.cadet_course || 'Unknown') + '').toUpperCase();
             const count = Number(item.count) || 0;
 
-            if (total[status] !== undefined && allowedCourses.has(course)) {
+            if (total[status] !== undefined) {
                 total[status] += count;
             }
 
@@ -105,7 +107,9 @@ const Dashboard = () => {
             drop: total.Drop
         });
 
-        const chartData = Object.values(byCourse).filter(d => allowedCourses.has(d.name));
+        const chartData = Object.values(byCourse)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 10);
         setCourseData(chartData);
     };
 
@@ -169,7 +173,7 @@ const Dashboard = () => {
             {/* Chart Section */}
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                 <div className="flex items-center mb-4">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status by Course</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status by Academic Course</h3>
                 </div>
                 <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
