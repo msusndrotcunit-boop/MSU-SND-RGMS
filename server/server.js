@@ -346,12 +346,12 @@ app.use((err, req, res, next) => {
 });
 
 // --- RENDER FREE TIER SELF-PING KEEP-ALIVE ---
-// Pings the server every 14 minutes to prevent 15-minute inactivity spin-down
-const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 minutes
+// Pings the server periodically to prevent inactivity spin-down
+const KEEP_ALIVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const TARGET_URL = process.env.RENDER_EXTERNAL_URL || 'https://msu-snd-rgms-jcsg.onrender.com';
 
 function startKeepAlive() {
-    console.log(`[KeepAlive] Service configured to ping ${TARGET_URL} every 14 minutes.`);
+    console.log(`[KeepAlive] Service configured to ping ${TARGET_URL} every ${KEEP_ALIVE_INTERVAL / 60000} minutes.`);
     
     // Initial ping after 1 minute to verify connectivity
     setTimeout(() => {
