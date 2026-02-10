@@ -80,6 +80,7 @@ const Cadets = () => {
     const [importing, setImporting] = useState(false);
     const [linkedUrl, setLinkedUrl] = useState(null);
     const [syncing, setSyncing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Form States
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -138,6 +139,19 @@ const Cadets = () => {
         }
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await cacheSingleton('admin', 'cadets_list', null);
+            await fetchCadets(true);
+            toast.success('Refreshed');
+        } catch (err) {
+            console.error("Refresh failed", err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const fetchCadets = async (forceRefresh = false) => {
         if (!forceRefresh) {
             try {
@@ -151,16 +165,13 @@ const Cadets = () => {
                         data = cached.data;
                         timestamp = cached.timestamp;
                     } else if (Array.isArray(cached)) {
-                        // Handle legacy array format
                         data = cached;
                     }
                     
                     if (Array.isArray(data)) {
                         setCadets(data);
                         setLoading(false);
-                        
-                        // If fresh (< 2 mins), skip fetch
-                        if (timestamp && (Date.now() - timestamp < 2 * 60 * 1000)) {
+                        if (timestamp && (Date.now() - timestamp < 2 * 60 * 1000) && data.length > 0) {
                             return;
                         }
                     }
@@ -556,6 +567,14 @@ const Cadets = () => {
                             <span>Delete ({selectedCadets.length})</span>
                         </button>
                     )}
+                    <button 
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className={`flex-1 md:flex-none bg-gray-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-gray-700 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+                        <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+                    </button>
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
                         className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-blue-700"
