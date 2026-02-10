@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Save, User, Moon, Sun, Camera, Lock, AlertTriangle } from 'lucide-react';
+import { Save, User, Moon, Sun, Camera, Image as ImageIcon, Lock, AlertTriangle } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { useAuth } from '../../context/AuthContext';
 import { cacheSingleton, getSingleton } from '../../utils/db';
@@ -45,6 +45,7 @@ const Profile = () => {
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
+    const fileInputRef = useRef(null);
 
     // If profile is completed, it's locked.
     // However, we rely on user.isProfileCompleted from context which might be stale if we just updated it.
@@ -171,6 +172,23 @@ const Profile = () => {
             }
         }
     };
+    const openFilePicker = (mode) => {
+        if (!fileInputRef.current || isLocked) return;
+        try {
+            if (mode === 'camera') {
+                fileInputRef.current.setAttribute('capture', 'environment');
+            } else {
+                fileInputRef.current.removeAttribute('capture');
+            }
+            if (fileInputRef.current.showPicker) {
+                fileInputRef.current.showPicker();
+            } else {
+                fileInputRef.current.click();
+            }
+        } catch {
+            try { fileInputRef.current.click(); } catch {}
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -210,7 +228,8 @@ const Profile = () => {
 
         try {
             const res = await axios.put('/api/cadet/profile', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 60000
             });
             
             if (!isLocked) {
@@ -225,8 +244,33 @@ const Profile = () => {
                 }
             }
         } catch (err) {
-            console.error(err);
-            alert('Error updating profile: ' + (err.response?.data?.message || err.message));
+            const msg = err.response?.data?.message || err.message || '';
+            const isTimeout = msg.toLowerCase().includes('timeout') || err.code === 'ECONNABORTED';
+            if (isTimeout && profilePic) {
+                try {
+                    const retryData = new FormData();
+                    Object.keys(profile).forEach(key => retryData.append(key, profile[key]));
+                    if (!isLocked) retryData.append('is_profile_completed', 'true');
+                    const res2 = await axios.put('/api/cadet/profile', retryData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                        timeout: 60000
+                    });
+                    if (!isLocked) {
+                        alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials.');
+                        try { await cacheSingleton('profiles', user?.cadetId ? `cadet:${user.cadetId}` : 'cadet', null); } catch {}
+                        logout();
+                        navigate('/login');
+                    } else {
+                        alert('Profile updated successfully! (Saved without photo due to timeout)');
+                    }
+                    return;
+                } catch (err2) {
+                    const msg2 = err2.response?.data?.message || err2.message;
+                    alert('Error updating profile after retry: ' + msg2);
+                    return;
+                }
+            }
+            alert('Error updating profile: ' + msg);
         }
     };
 
@@ -304,10 +348,15 @@ const Profile = () => {
                                 )}
                             </div>
                             {!isLocked && (
-                                <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md">
-                                    <Camera size={18} />
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                </label>
+                                <>
+                                    <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                    <button type="button" onClick={() => openFilePicker('camera')} className="absolute bottom-2 left-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 shadow-md">
+                                        <Camera size={18} />
+                                    </button>
+                                    <button type="button" onClick={() => openFilePicker('files')} className="absolute bottom-2 right-2 bg-gray-700 text-white p-2 rounded-full hover:bg-gray-800 shadow-md">
+                                        <ImageIcon size={18} />
+                                    </button>
+                                </>
                             )}
                         </div>
                         <h2 className="mt-4 text-xl font-bold dark:text-white">{profile.lastName}, {profile.firstName}</h2>
