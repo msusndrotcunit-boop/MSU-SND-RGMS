@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ROTC Grading System</string>
-    <string name="title_activity_main">ROTC Grading System</string>
+    <string name="app_name">Mobile RGMS</string>
+    <string name="title_activity_main">Mobile RGMS</string>
     <string name="package_name">com.msusnd.rotc.grading</string>
     <string name="custom_url_scheme">com.msusnd.rotc.grading</string>
 </resources>
