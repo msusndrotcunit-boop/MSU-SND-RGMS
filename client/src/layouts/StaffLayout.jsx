@@ -286,7 +286,7 @@ const StaffLayout = () => {
                         </div>
                     )}
                 </div>
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="flex-1 p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto text-sm md:text-base">
                     {/* Home - Locked if profile incomplete */}
                     <Link
                         to={user?.isProfileCompleted ? "/staff/home" : "#"}
