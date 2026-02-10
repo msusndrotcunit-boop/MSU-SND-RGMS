@@ -19,19 +19,21 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = useCallback(async (userData) => {
+        const normalizedRole = (userData.role || '').toLowerCase();
         localStorage.setItem('token', userData.token);
-        localStorage.setItem('role', userData.role);
+        localStorage.setItem('role', normalizedRole);
         if (userData.cadetId) localStorage.setItem('cadetId', userData.cadetId);
         if (userData.isProfileCompleted !== undefined) localStorage.setItem('isProfileCompleted', userData.isProfileCompleted);
         
-        setUser(userData);
+        setUser({ ...userData, role: normalizedRole });
         axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
     }, []);
 
     useEffect(() => {
         const initAuth = async () => {
             const token = localStorage.getItem('token');
-            const role = localStorage.getItem('role');
+            const roleRaw = localStorage.getItem('role');
+            const role = (roleRaw || '').toLowerCase();
             const cadetId = localStorage.getItem('cadetId');
             const isProfileCompleted = localStorage.getItem('isProfileCompleted');
             
