@@ -594,7 +594,20 @@ async function initPgDb() {
             `ALTER TABLE training_staff ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`,
             `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`,
-            `ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_bg TEXT`
+            `ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_bg TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_cadets_company ON cadets(company)`,
+            `CREATE INDEX IF NOT EXISTS idx_cadets_platoon ON cadets(platoon)`,
+            `CREATE INDEX IF NOT EXISTS idx_cadets_status ON cadets(status)`,
+            `CREATE INDEX IF NOT EXISTS idx_cadets_course ON cadets(course)`,
+            `CREATE INDEX IF NOT EXISTS idx_users_is_approved ON users(is_approved)`,
+            `CREATE INDEX IF NOT EXISTS idx_users_cadet_id ON users(cadet_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_attendance_cadet_id ON attendance_records(cadet_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_attendance_training_day_id ON attendance_records(training_day_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_staff_attendance_staff_id ON staff_attendance_records(staff_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_staff_attendance_training_day_id ON staff_attendance_records(training_day_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_admin_messages_user_id ON admin_messages(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_training_days_date ON training_days(date)`
         ];
 
         for (const query of simpleMigrations) {
