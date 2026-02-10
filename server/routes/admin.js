@@ -1421,7 +1421,7 @@ router.get('/cadets', (req, res) => {
             FROM cadets c
             LEFT JOIN users u ON u.cadet_id = c.id
             LEFT JOIN grades g ON c.id = g.cadet_id
-            WHERE (c.is_archived IS FALSE OR c.is_archived IS NULL)
+            WHERE c.is_archived IS NOT TRUE
         `;
         db.all(sql, [], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
