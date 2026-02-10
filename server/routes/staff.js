@@ -37,7 +37,7 @@ router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (
         if (err) return res.status(500).json({ message: err.message });
         analytics.totalStaff = row.total;
 
-        db.all("SELECT rank, COUNT(*) as count FROM training_staff GROUP BY rank", [], (err, rows) => {
+        db.all("SELECT UPPER(TRIM(rank)) as rank, COUNT(*) as count FROM training_staff GROUP BY UPPER(TRIM(rank))", [], (err, rows) => {
             if (err) return res.status(500).json({ message: err.message });
             analytics.staffByRank = rows;
 
@@ -148,7 +148,7 @@ router.delete('/notifications/delete-all', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const staffId = req.user.staffId;
     const baseTypes = "('activity','announcement')";
-    const privTypes = "('activity','announcement','portal_access','login')";
+    const privTypes = "('activity','announcement')";
     if (!staffId) {
         const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?`;
         return db.run(sql, [userId], function(err) {
@@ -358,7 +358,7 @@ router.get('/notifications', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const staffId = req.user.staffId;
     const baseTypes = "('activity','announcement')";
-    const privTypes = "('activity','announcement','portal_access','login')";
+    const privTypes = "('activity','announcement')";
     if (!staffId) {
         const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
         return db.all(sql, [userId], (err, rows) => {
@@ -392,7 +392,7 @@ router.put('/notifications/read-all', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const staffId = req.user.staffId;
     const baseTypes = "('activity','announcement')";
-    const privTypes = "('activity','announcement','portal_access','login')";
+    const privTypes = "('activity','announcement')";
     if (!staffId) {
         const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?) AND is_read = FALSE`;
         return db.run(sql, [userId], function(err) {

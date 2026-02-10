@@ -29,15 +29,15 @@ const insertCadet = (cadet) => {
             student_id, email, contact_number, address, 
             course, year_level, school_year, 
             battalion, company, platoon, 
-            cadet_course, semester, status, is_profile_completed
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            cadet_course, semester, gender, blood_type, status, is_profile_completed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.student_id, cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '', 'Ongoing', false
+            cadet.cadet_course || '', cadet.semester || '', cadet.gender || '', cadet.blood_type || '', 'Ongoing', false
         ];
         db.run(sql, params, function(err) {
             if (err) reject(err);
@@ -53,14 +53,14 @@ const updateCadet = (id, cadet) => {
             email = ?, contact_number = ?, address = ?, 
             course = ?, year_level = ?, school_year = ?, 
             battalion = ?, company = ?, platoon = ?, 
-            cadet_course = ?, semester = ?
+            cadet_course = ?, semester = ?, gender = ?, blood_type = ?
             WHERE id = ?`;
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
             cadet.email || '', cadet.contact_number || '', cadet.address || '',
             cadet.course || '', cadet.year_level || '', cadet.school_year || '',
             cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-            cadet.cadet_course || '', cadet.semester || '',
+            cadet.cadet_course || '', cadet.semester || '', cadet.gender || '', cadet.blood_type || '',
             id
         ];
         db.run(sql, params, (err) => {
@@ -197,6 +197,29 @@ const processCadetData = async (data) => {
             studentId = `${cleanFirst}.${cleanLast}`;
         }
 
+        const normalizeGender = (g) => {
+            const s = (g || '').toString().trim().toUpperCase();
+            if (!s) return '';
+            if (s.startsWith('M')) return 'Male';
+            if (s.startsWith('F')) return 'Female';
+            return '';
+        };
+        const normalizeBloodType = (b) => {
+            let s = (b || '').toString().trim().toUpperCase().replace(/\s+/g, '');
+            if (!s) return '';
+            const map = {
+                'APOS': 'A+','ANEG': 'A-',
+                'BPOS': 'B+','BNEG': 'B-',
+                'ABPOS': 'AB+','ABNEG': 'AB-',
+                'OPOS': 'O+','ONEG': 'O-'
+            };
+            if (map[s]) return map[s];
+            if (/^(A|B|AB|O)[+-]$/.test(s)) return s;
+            return '';
+        };
+        const genderRaw = findColumnValue(row, ['Gender', 'gender', 'Sex', 'sex']);
+        const bloodRaw = findColumnValue(row, ['Blood Type', 'blood_type', 'BloodType', 'Blood Group', 'Blood', 'BT']);
+
         const cadetData = {
             student_id: studentId,
             last_name: lastName,
@@ -214,7 +237,9 @@ const processCadetData = async (data) => {
             company: findColumnValue(row, ['Company', 'company']) || '',
             platoon: findColumnValue(row, ['Platoon', 'platoon']) || '',
             cadet_course: findColumnValue(row, ['Cadet Course', 'cadet_course']) || '',
-            semester: findColumnValue(row, ['Semester', 'semester']) || ''
+            semester: findColumnValue(row, ['Semester', 'semester']) || '',
+            gender: normalizeGender(genderRaw),
+            blood_type: normalizeBloodType(bloodRaw)
         };
         
         try {

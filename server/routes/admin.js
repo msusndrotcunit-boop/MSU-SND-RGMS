@@ -1280,6 +1280,57 @@ router.get('/analytics', (req, res) => {
                         });
                     }),
                     new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT 
+                                UPPER(TRIM(c.cadet_course)) AS cadet_course,
+                                CASE 
+                                    WHEN UPPER(TRIM(c.gender)) = 'MALE' THEN 'Male'
+                                    WHEN UPPER(TRIM(c.gender)) = 'FEMALE' THEN 'Female'
+                                    ELSE 'Unknown'
+                                END AS gender,
+                                COUNT(*) AS count
+                            FROM cadets c
+                            WHERE c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                              AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                            GROUP BY UPPER(TRIM(c.cadet_course)), gender
+                        `;
+                        db.all(sql, [], (err, rows) => {
+                            if (err) reject(err); else resolve({ type: 'gender_by_course', rows });
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT 
+                                CASE 
+                                    WHEN c.blood_type IS NULL OR TRIM(c.blood_type) = '' THEN 'Unknown'
+                                    ELSE UPPER(TRIM(c.blood_type))
+                                END AS blood_type,
+                                COUNT(*) AS count
+                            FROM cadets c
+                            WHERE (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                            GROUP BY 
+                                CASE 
+                                    WHEN c.blood_type IS NULL OR TRIM(c.blood_type) = '' THEN 'Unknown'
+                                    ELSE UPPER(TRIM(c.blood_type))
+                                END
+                        `;
+                        db.all(sql, [], (err, rows) => {
+                            if (err) reject(err); else resolve({ type: 'blood_types', rows });
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
+                        const sql = `
+                            SELECT UPPER(TRIM(c.cadet_course)) AS cadet_course, COUNT(*) AS count
+                            FROM cadets c
+                            WHERE c.cadet_course IS NOT NULL AND c.cadet_course != ''
+                              AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                            GROUP BY UPPER(TRIM(c.cadet_course))
+                        `;
+                        db.all(sql, [], (err, rows) => {
+                            if (err) reject(err); else resolve({ type: 'course_totals', rows });
+                        });
+                    }),
+                    new Promise((resolve, reject) => {
                         db.get("SELECT COUNT(*) as total FROM cadets", [], (err, row) => {
                             if (err) reject(err); else resolve({ type: 'total', count: row.total });
                         });
@@ -1309,6 +1360,12 @@ router.get('/analytics', (req, res) => {
                                 demographics.status = result.rows.map(r => ({ name: r.status || 'Unverified', value: r.count }));
                             } else if (result.type === 'course_stats') {
                                 demographics.courseStats = result.rows;
+                            } else if (result.type === 'gender_by_course') {
+                                demographics.genderByCourse = result.rows;
+                            } else if (result.type === 'blood_types') {
+                                demographics.bloodTypes = result.rows;
+                            } else if (result.type === 'course_totals') {
+                                demographics.courseTotals = result.rows;
                             }
                         });
 

@@ -51,7 +51,7 @@ const Footer = () => {
                 <button 
                   type="button"
                   onClick={toggleAdminMap}
-                  className="underline decoration-dotted underline-offset-4 hover:text-yellow-300 transition-colors"
+                  className="hover:text-yellow-300 transition-colors"
                   title="Toggle Admin Map"
                 >
                   RGMS

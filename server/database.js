@@ -580,6 +580,8 @@ async function initPgDb() {
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS has_seen_guide BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS corp_position TEXT`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS gender TEXT`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS blood_type TEXT`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
@@ -860,6 +862,9 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
         // Migration: Add corp_position to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN corp_position TEXT`, (err) => {});
+        // Migration: Add gender and blood_type to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN gender TEXT`, (err) => {});
+        db.run(`ALTER TABLE cadets ADD COLUMN blood_type TEXT`, (err) => {});
 
         db.run(`ALTER TABLE users ADD COLUMN last_seen TEXT`, (err) => {});
         db.run(`ALTER TABLE users ADD COLUMN is_archived INTEGER DEFAULT 0`, (err) => {});

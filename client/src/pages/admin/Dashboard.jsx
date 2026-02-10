@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react';
 import axios from 'axios';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
+    BookOpen, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin, Users
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -51,6 +51,9 @@ const Dashboard = () => {
     const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const [hideAdminMap, setHideAdminMap] = useState(true);
     const [locations, setLocations] = useState([]);
+    const [staffRole, setStaffRole] = useState(null);
+    const [staffList, setStaffList] = useState([]);
+    const [staffAnalytics, setStaffAnalytics] = useState({ totalStaff: 0, staffByRank: [], attendanceStats: [] });
 
     const loadGoogleMaps = (key) => {
         return new Promise((resolve, reject) => {
@@ -159,6 +162,55 @@ const Dashboard = () => {
 
         fetchData();
     }, []);
+
+    useEffect(() => {
+        const fetchStaffRole = async () => {
+            if (user?.role !== 'training_staff') return;
+            try {
+                const res = await axios.get('/api/staff/me');
+                setStaffRole(res.data?.role || null);
+            } catch {}
+        };
+        fetchStaffRole();
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.role !== 'training_staff') return;
+        if (
+            staffRole !== 'Commandant' &&
+            staffRole !== 'Assistant Commandant' &&
+            staffRole !== 'NSTP Director' &&
+            staffRole !== 'ROTC Coordinator' &&
+            staffRole !== 'Admin NCO'
+        ) {
+            return;
+        }
+        const fetchStaffData = async () => {
+            try {
+                const cachedList = await getSingleton('analytics', 'cg_staff_list_unit');
+                const cachedAnalytics = await getSingleton('analytics', 'cg_staff_analytics_unit');
+                if (cachedList && cachedList.data && (Date.now() - cachedList.timestamp < 5 * 60 * 1000)) {
+                    setStaffList(cachedList.data);
+                }
+                if (cachedAnalytics && cachedAnalytics.data && (Date.now() - cachedAnalytics.timestamp < 5 * 60 * 1000)) {
+                    setStaffAnalytics(cachedAnalytics.data);
+                }
+                const [listRes, analyticsRes] = await Promise.allSettled([
+                    axios.get('/api/staff/list'),
+                    axios.get('/api/staff/analytics/overview')
+                ]);
+                if (listRes.status === 'fulfilled' && Array.isArray(listRes.value.data)) {
+                    setStaffList(listRes.value.data);
+                    await cacheSingleton('analytics', 'cg_staff_list_unit', { data: listRes.value.data, timestamp: Date.now() });
+                }
+                if (analyticsRes.status === 'fulfilled' && analyticsRes.value && analyticsRes.value.data) {
+                    setStaffAnalytics(analyticsRes.value.data);
+                    await cacheSingleton('analytics', 'cg_staff_analytics_unit', { data: analyticsRes.value.data, timestamp: Date.now() });
+                }
+            } catch {}
+        };
+        fetchStaffData();
+    }, [user, staffRole]);
 
     useEffect(() => {
         const fetchLocations = async () => {
@@ -305,6 +357,107 @@ const Dashboard = () => {
                     <CourseCard key={course.name} data={course} />
                 ))}
             </div>
+
+            {user?.role === 'training_staff' && (
+                <>
+                    {(staffRole === 'Commandant' ||
+                      staffRole === 'Assistant Commandant' ||
+                      staffRole === 'NSTP Director' ||
+                      staffRole === 'ROTC Coordinator' ||
+                      staffRole === 'Admin NCO') && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
+                                <div className="flex items-center mb-4">
+                                    <Users className="text-[var(--primary-color)] mr-2" size={20} />
+                                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Training Staff Overview</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">Total Staff</div>
+                                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{staffAnalytics.totalStaff || 0}</div>
+                                    </div>
+                                    <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">Roles</div>
+                                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{new Set(staffList.map(s => s.role)).size || 0}</div>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <BarChart data={staffAnalytics.staffByRank || []} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="rank" />
+                                            <YAxis allowDecimals={false} />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar dataKey="count" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)] md:col-span-2">
+                                <div className="flex items-center mb-4">
+                                    <ClipboardCheck className="text-[var(--primary-color)] mr-2" size={20} />
+                                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Staff Attendance Stats</h3>
+                                </div>
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <BarChart data={(staffAnalytics.attendanceStats || []).map(a => ({ status: a.status, count: a.count }))} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="status" />
+                                        <YAxis allowDecimals={false} />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+
+                    {(staffRole === 'Commandant' ||
+                      staffRole === 'Assistant Commandant' ||
+                      staffRole === 'NSTP Director' ||
+                      staffRole === 'ROTC Coordinator' ||
+                      staffRole === 'Admin NCO') && (
+                        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                                    <Users size={20} className="text-[var(--primary-color)] mr-2" />
+                                    Training Staff List
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Rank</th>
+                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Name</th>
+                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Role</th>
+                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Email</th>
+                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Contact</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {(staffList || []).slice(0, 20).map((s) => (
+                                            <tr key={s.id}>
+                                                <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{s.rank || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{`${s.last_name || ''}, ${s.first_name || ''}`}</td>
+                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.role || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.email || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.contact_number || '-'}</td>
+                                            </tr>
+                                        ))}
+                                        {(!staffList || staffList.length === 0) && (
+                                            <tr>
+                                                <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No training staff found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
 
             {user?.role === 'admin' && locations.length > 0 && !hideAdminMap && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
