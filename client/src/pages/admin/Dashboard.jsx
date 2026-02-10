@@ -27,6 +27,7 @@ const Dashboard = () => {
         drop: 0
     });
     const [courseData, setCourseData] = useState([]);
+    const [courseCards, setCourseCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locations, setLocations] = useState([]);
 
@@ -99,15 +100,16 @@ const Dashboard = () => {
             [];
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
-        const allowed = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
+        const allowed = new Set(['COQC','MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
         const normalizeCourse = (s) => {
             const t = (s || '').toUpperCase().replace(/\s+/g, '').replace(/[-_.]/g, '');
             return allowed.has(t) ? t : null;
         };
 
+        const courseAgg = {};
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
-            const courseRaw = item.cadet_course || '';
+            const courseRaw = item.cadet_course || item.course || '';
             const course = normalizeCourse(courseRaw);
             const count = Number(item.count) || 0;
 
@@ -120,6 +122,12 @@ const Dashboard = () => {
                 byCourse[course] = { name: course, total: 0 };
             }
             byCourse[course].total += count;
+            if (!courseAgg[course]) {
+                courseAgg[course] = { name: course, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
+            }
+            if (courseAgg[course][status] !== undefined) {
+                courseAgg[course][status] += count;
+            }
         });
 
         setStats({
@@ -134,6 +142,11 @@ const Dashboard = () => {
             .sort((a, b) => b.total - a.total)
             .slice(0, 10);
         setCourseData(chartData);
+        const ordered = ['COQC','MS1','MS2','MS31','MS32','MS41','MS42'].map(k => ({
+            name: k,
+            ...(courseAgg[k] || { name: k, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 })
+        }));
+        setCourseCards(ordered);
     };
 
     const normalizeStatus = (status) => {
@@ -196,7 +209,7 @@ const Dashboard = () => {
             {/* Chart Section */}
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                 <div className="flex items-center mb-4">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Count by Course (MS1–MS42)</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status Distribution by Course (Verified Only)</h3>
                 </div>
                 <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
@@ -212,6 +225,23 @@ const Dashboard = () => {
                 </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {courseCards.map((c) => (
+                    <div key={c.name} className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-gray-800 dark:text-gray-100">{c.name}</h4>
+                            <div className="text-xs text-gray-500">Total: {(c.Ongoing + c.Completed + c.Incomplete + c.Failed + c.Drop) || 0}</div>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2">
+                            <MiniStat label="Ongoing" value={c.Ongoing} color="text-cyan-600" />
+                            <MiniStat label="Completed" value={c.Completed} color="text-green-600" />
+                            <MiniStat label="Incomplete" value={c.Incomplete} color="text-amber-600" />
+                            <MiniStat label="Failed" value={c.Failed} color="text-red-600" />
+                            <MiniStat label="Drop" value={c.Drop} color="text-gray-600" />
+                        </div>
+                    </div>
+                ))}
+            </div>
             {locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
@@ -330,4 +360,11 @@ const ActionButton = ({ to, label, icon, className }) => (
         <span className="mr-2">{icon}</span>
         <span className="text-xs md:text-sm">{label}</span>
     </Link>
+);
+
+const MiniStat = ({ label, value, color }) => (
+    <div className="rounded bg-gray-50 dark:bg-gray-800 p-2 text-center">
+        <div className="text-[10px] text-gray-500 dark:text-gray-400">{label}</div>
+        <div className={`text-lg font-bold ${color}`}>{value || 0}</div>
+    </div>
 );

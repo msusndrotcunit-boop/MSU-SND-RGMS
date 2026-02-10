@@ -14,6 +14,7 @@ const StaffDashboard = () => {
     const [staffRole, setStaffRole] = useState(null);
     const [staffList, setStaffList] = useState([]);
     const [staffAnalytics, setStaffAnalytics] = useState({ totalStaff: 0, staffByRank: [], attendanceStats: [] });
+    const [courseCards, setCourseCards] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -52,6 +53,43 @@ const StaffDashboard = () => {
             }
         };
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const fetchCourseStats = async () => {
+            try {
+                const res = await axios.get('/api/admin/analytics');
+                const rawStats =
+                    (res.data && res.data.demographics && res.data.demographics.academicCourseStats) ||
+                    (res.data && res.data.demographics && res.data.demographics.courseStats) ||
+                    [];
+                const allowed = new Set(['COQC','MS1','MS2','MS31','MS32','MS41','MS42']);
+                const normalizeCourse = (s) => {
+                    const t = (s || '').toUpperCase().replace(/\s+/g, '').replace(/[-_.]/g, '');
+                    return allowed.has(t) ? t : null;
+                };
+                const agg = {};
+                rawStats.forEach(item => {
+                    const courseRaw = item.cadet_course || item.course || '';
+                    const course = normalizeCourse(courseRaw);
+                    const status = (item.status || '').toUpperCase();
+                    const count = Number(item.count) || 0;
+                    if (!course) return;
+                    if (!agg[course]) agg[course] = { name: course, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
+                    if (['ONGOING','ENROLLED','ACTIVE'].includes(status)) agg[course].Ongoing += count;
+                    else if (['COMPLETED','GRADUATED','PASSED'].includes(status)) agg[course].Completed += count;
+                    else if (['INC','INCOMPLETE','T','DO'].includes(status)) agg[course].Incomplete += count;
+                    else if (['FAILED','FAIL'].includes(status)) agg[course].Failed += count;
+                    else if (['DROP','DROPPED'].includes(status)) agg[course].Drop += count;
+                });
+                const ordered = ['COQC','MS1','MS2','MS31','MS32','MS41','MS42'].map(k => ({
+                    name: k,
+                    ...(agg[k] || { name: k, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 })
+                }));
+                setCourseCards(ordered);
+            } catch (e) {}
+        };
+        fetchCourseStats();
     }, []);
 
     useEffect(() => {
@@ -193,6 +231,25 @@ const StaffDashboard = () => {
                 </div>
             )}
 
+            {/* Cadet Status by Course (Verified Only) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {courseCards.map((c) => (
+                    <div key={c.name} className="bg-white rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-gray-800">{c.name}</h4>
+                            <div className="text-xs text-gray-500">Total: {(c.Ongoing + c.Completed + c.Incomplete + c.Failed + c.Drop) || 0}</div>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2">
+                            <MiniStat label="Ongoing" value={c.Ongoing} color="text-cyan-600" />
+                            <MiniStat label="Completed" value={c.Completed} color="text-green-600" />
+                            <MiniStat label="Incomplete" value={c.Incomplete} color="text-amber-600" />
+                            <MiniStat label="Failed" value={c.Failed} color="text-red-600" />
+                            <MiniStat label="Drop" value={c.Drop} color="text-gray-600" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {canReviewExcuses && (
                 <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex justify-between items-center mb-4">
@@ -284,3 +341,10 @@ const StaffDashboard = () => {
 };
 
 export default StaffDashboard;
+
+const MiniStat = ({ label, value, color }) => (
+    <div className="rounded bg-gray-50 p-2 text-center">
+        <div className="text-[10px] text-gray-500">{label}</div>
+        <div className={`text-lg font-bold ${color}`}>{value || 0}</div>
+    </div>
+);
