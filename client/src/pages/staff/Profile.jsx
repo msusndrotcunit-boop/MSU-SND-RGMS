@@ -85,6 +85,7 @@ const StaffProfile = () => {
     
     // For file upload
     const fileInputRef = useRef(null);
+    const [showUploadConsent, setShowUploadConsent] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -352,7 +353,7 @@ const StaffProfile = () => {
                                 {/* Camera Overlay */}
                                 <div 
                                     className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                    onClick={() => fileInputRef.current.click()}
+                                    onClick={() => setShowUploadConsent(true)}
                                 >
                                     <Camera className="text-white" size={32} />
                                 </div>
@@ -535,6 +536,60 @@ const StaffProfile = () => {
                     </div>
                 )}
             </form>
+            
+            {showUploadConsent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h4 className="text-lg font-bold text-gray-800 mb-2">Allow Camera or Files Access</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            To update your profile picture, choose whether to use your camera or select from your gallery/files.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadConsent(false)}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        if (navigator.mediaDevices?.getUserMedia) {
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+                                        }
+                                    } catch {}
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.setAttribute('capture', 'environment');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                                Use Camera
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.removeAttribute('capture');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Choose Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

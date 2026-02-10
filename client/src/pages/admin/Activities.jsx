@@ -84,6 +84,8 @@ const Activities = () => {
         } catch (err) { console.error(err); }
     };
 
+    const [showUploadConsent, setShowUploadConsent] = useState(false);
+    const fileInputRef = React.useRef(null);
     const handleFileChange = async (e) => {
         const files = Array.from(e.target.files);
         const processedImages = [];
@@ -350,9 +352,19 @@ const Activities = () => {
                                     <div className="space-y-1 text-center">
                                         <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                                         <div className="flex text-sm text-gray-600 dark:text-gray-300">
-                                            <label className="relative cursor-pointer bg-white dark:bg-gray-900 rounded-md font-medium text-[var(--primary-color)] hover:opacity-90 focus-within:outline-none">
+                                            <label 
+                                                className="relative cursor-pointer bg-white dark:bg-gray-900 rounded-md font-medium text-[var(--primary-color)] hover:opacity-90 focus-within:outline-none"
+                                                onClick={(e) => { e.preventDefault(); setShowUploadConsent(true); }}
+                                            >
                                                 <span>Upload files</span>
-                                                <input type="file" multiple className="sr-only" onChange={handleFileChange} accept="image/*" />
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    className="sr-only" 
+                                                    onChange={handleFileChange} 
+                                                    accept="image/*" 
+                                                    ref={fileInputRef}
+                                                />
                                             </label>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 5MB</p>
@@ -538,6 +550,60 @@ const Activities = () => {
                     </Link>
                 </div>
             </div>
+            
+            {showUploadConsent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Allow Camera or Files Access</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                            To post images for activities or announcements, choose camera or gallery/files.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadConsent(false)}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        if (navigator.mediaDevices?.getUserMedia) {
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+                                        }
+                                    } catch {}
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.setAttribute('capture', 'environment');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                                Use Camera
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.removeAttribute('capture');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Choose Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

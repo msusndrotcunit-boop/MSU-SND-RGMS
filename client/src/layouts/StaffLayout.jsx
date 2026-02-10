@@ -145,17 +145,6 @@ const StaffLayout = () => {
             }
         } catch {}
         try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => {
-                        try {
-                            stream.getTracks().forEach(t => t.stop());
-                        } catch {}
-                    })
-                    .catch(() => {});
-            }
-        } catch {}
-        try {
             localStorage.setItem('rgms_permissions_seen', 'true');
         } catch {}
         setShowPermissionModal(false);
@@ -471,12 +460,12 @@ const StaffLayout = () => {
             {showPermissionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
                     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Allow App Permissions</h2>
+                        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Allow Location Access</h2>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                            To display local weather advisories, the app requests your location. You may decline; we will use approximate location or defaults.
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            You can change these permissions anytime in your browser or device settings.
+                            You can change location permission anytime in your browser or device settings.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button

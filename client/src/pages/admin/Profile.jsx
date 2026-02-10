@@ -11,6 +11,8 @@ const AdminProfile = () => {
     const [error, setError] = useState(null);
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [showUploadConsent, setShowUploadConsent] = useState(false);
+    const fileInputRef = React.useRef(null);
 
     const getProfileImageSrc = () => {
         if (!profile?.profile_pic) return null;
@@ -105,9 +107,18 @@ const AdminProfile = () => {
                                 </div>
                             )}
                             
-                            <label className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md transition-colors">
+                            <label 
+                                className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
+                                onClick={(e) => { e.preventDefault(); setShowUploadConsent(true); }}
+                            >
                                 <Camera size={20} />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={handleFileChange} 
+                                    ref={fileInputRef}
+                                />
                             </label>
                         </div>
 
@@ -202,6 +213,60 @@ const AdminProfile = () => {
                     </div>
                 </div>
             </div>
+
+            {showUploadConsent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h4 className="text-lg font-bold text-gray-800 mb-2">Allow Camera or Files Access</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            To update your profile photo, choose whether to use your camera or select from your gallery/files.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadConsent(false)}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        if (navigator.mediaDevices?.getUserMedia) {
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+                                        }
+                                    } catch {}
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.setAttribute('capture', 'environment');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                                Use Camera
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.removeAttribute('capture');
+                                        fileInputRef.current?.click();
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Choose Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

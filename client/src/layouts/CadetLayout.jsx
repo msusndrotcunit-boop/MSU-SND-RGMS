@@ -236,17 +236,6 @@ const CadetLayout = () => {
             }
         } catch {}
         try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => {
-                        try {
-                            stream.getTracks().forEach(t => t.stop());
-                        } catch {}
-                    })
-                    .catch(() => {});
-            }
-        } catch {}
-        try {
             localStorage.setItem('rgms_permissions_seen', 'true');
         } catch {}
         setShowPermissionModal(false);
@@ -499,12 +488,12 @@ const CadetLayout = () => {
             {showPermissionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
                     <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow App Permissions</h2>
+                        <h2 className="text-lg font-bold text-gray-800 mb-2">Allow Location Access</h2>
                         <p className="text-sm text-gray-600 mb-3">
-                            This app uses your device location for weather and safety checks, and your camera or file uploads for excuse letters and other documents.
+                            To show local weather advisories, this app requests access to your location. You may decline; we will use approximate location or defaults.
                         </p>
                         <p className="text-xs text-gray-500 mb-4">
-                            You can change these permissions anytime in your browser or device settings.
+                            You can change location permission anytime in your browser or device settings.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button
@@ -519,7 +508,7 @@ const CadetLayout = () => {
                                 onClick={handlePermissionsAccept}
                                 className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800 hover-highlight"
                             >
-                                Allow permissions
+                                Allow location
                             </button>
                         </div>
                     </div>

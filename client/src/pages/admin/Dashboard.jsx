@@ -321,8 +321,8 @@ const Dashboard = () => {
                                     const latSpan = Math.max(0.0001, maxLat - minLat);
                                     const lonSpan = Math.max(0.0001, maxLon - minLon);
                                     return locations.slice(0, 50).map((u) => {
-                                        const x = ((u.last_longitude - minLon) / lonSpan) * 100;
-                                        const y = (1 - (u.last_latitude - minLat) / latSpan) * 100;
+                                        const xPos = ((u.last_longitude - minLon) / lonSpan) * 100;
+                                        const yPos = (1 - (u.last_latitude - minLat) / latSpan) * 100;
                                         const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
                                         return (
                                             <a
@@ -331,7 +331,7 @@ const Dashboard = () => {
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="absolute"
-                                                style={{ left: `${x}%`, top: `${y}%` }}
+                                                style={{ left: `${isFinite(xPos) ? xPos : 0}%`, top: `${isFinite(yPos) ? yPos : 0}%` }}
                                                 title={`${u.username || ''} • ${new Date(u.last_location_at).toLocaleString()}`}
                                             >
                                                 <span className="block w-3 h-3 rounded-full bg-red-600 border border-white shadow" />

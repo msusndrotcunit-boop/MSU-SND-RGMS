@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
 
@@ -10,6 +10,9 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [history, setHistory] = useState([]);
+    const [showUploadConsent, setShowUploadConsent] = useState(false);
+    const fileInputRef = useRef(null);
+    const ORIGINAL_ACCEPT = "image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
     useEffect(() => {
         fetchHistory();
@@ -98,11 +101,17 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Upload Letter/Proof</label>
-                        <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center cursor-pointer hover:bg-gray-50 transition relative">
+                        <div 
+                            className="border-2 border-dashed border-gray-300 rounded p-4 text-center hover:bg-gray-50 transition relative"
+                            onClick={() => setShowUploadConsent(true)}
+                        >
                             <input 
                                 type="file" 
+                                ref={fileInputRef}
                                 onChange={(e) => setFile(e.target.files[0])} 
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                className="absolute inset-0 w-full h-full opacity-0"
+                                style={{ pointerEvents: 'none' }}
+                                tabIndex={-1}
                                 accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             />
                             {file ? (
@@ -184,6 +193,66 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                     </table>
                 </div>
             </div>
+
+            {showUploadConsent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                        <h4 className="text-lg font-bold text-gray-800 mb-2">Allow Camera or Files Access</h4>
+                        <p className="text-sm text-gray-600 mb-4">
+                            To submit your excuse letter, choose whether to use your camera to take a photo or select from your gallery/files.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        if (navigator.mediaDevices?.getUserMedia) {
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+                                        }
+                                    } catch {}
+                                    try {
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.setAttribute('accept', 'image/*');
+                                            fileInputRef.current.setAttribute('capture', 'environment');
+                                            fileInputRef.current.click();
+                                        }
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                                Use Camera
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    try {
+                                        if (fileInputRef.current) {
+                                            fileInputRef.current.setAttribute('accept', ORIGINAL_ACCEPT);
+                                            fileInputRef.current.removeAttribute('capture');
+                                            fileInputRef.current.click();
+                                        }
+                                    } catch {}
+                                    setShowUploadConsent(false);
+                                }}
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                            >
+                                Choose Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
