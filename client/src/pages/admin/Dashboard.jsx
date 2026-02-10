@@ -26,7 +26,7 @@ const Dashboard = () => {
     const mapInstanceRef = useRef(null);
     const markersRef = useRef([]);
     const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    const [hideAdminMap, setHideAdminMap] = useState(false);
+    const [hideAdminMap, setHideAdminMap] = useState(true);
 
     const loadGoogleMaps = (key) => {
         return new Promise((resolve, reject) => {
