@@ -52,7 +52,7 @@ const Login = () => {
             const role = (user.role || '').toLowerCase();
 
             if (role === 'admin') {
-                navigate('/admin/dashboard');
+                navigate('/admin/cadets');
             } else if (role === 'training_staff') {
                 navigate('/staff/dashboard');
             } else if (role === 'cadet') {
