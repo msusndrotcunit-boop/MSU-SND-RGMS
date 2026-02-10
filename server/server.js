@@ -67,6 +67,13 @@ app.get('/api/health', (req, res) => {
     }
 });
 
+app.get('/api/cloudinary/status', (req, res) => {
+    const mod = require('./utils/cloudinary');
+    const cfg = mod.cloudinary.config();
+    const source = process.env.CLOUDINARY_URL ? 'url' : (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET ? 'keys' : 'none');
+    res.json({ configured: !!mod.isCloudinaryConfigured, cloud_name: cfg.cloud_name || null, source });
+});
+
 // Host-based Redirect (Old domain -> New domain)
 const REDIRECT_ENABLED = (process.env.REDIRECT_ENABLED || 'true').toLowerCase() === 'true';
 const REDIRECT_FROM_HOSTS = (process.env.REDIRECT_FROM_HOSTS || 'msu-snd-rgms.onrender.com')
