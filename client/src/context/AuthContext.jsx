@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { clearCache } from '../utils/db';
 
 const AuthContext = createContext();
 
@@ -14,6 +15,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('role');
         localStorage.removeItem('cadetId');
         localStorage.removeItem('isProfileCompleted');
+        try { await clearCache('profiles'); } catch {}
         setUser(null);
         delete axios.defaults.headers.common['Authorization'];
     }, []);
@@ -27,6 +29,7 @@ export const AuthProvider = ({ children }) => {
         
         setUser({ ...userData, role: normalizedRole });
         axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+        try { await clearCache('profiles'); } catch {}
     }, []);
 
     useEffect(() => {

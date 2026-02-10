@@ -64,9 +64,10 @@ const Profile = () => {
 
     const fetchProfile = async () => {
         try {
+            const cacheKey = user?.cadetId ? `cadet:${user.cadetId}` : 'cadet';
             // Try cache first
             try {
-                const cached = await getSingleton('profiles', 'cadet');
+                const cached = await getSingleton('profiles', cacheKey);
                 if (cached) {
                     // Handle both new { data, timestamp } and old (direct data) formats
                     let data = cached;
@@ -92,7 +93,7 @@ const Profile = () => {
             const data = res.data;
             updateProfileState(data);
             
-            await cacheSingleton('profiles', 'cadet', { data, timestamp: Date.now() });
+            await cacheSingleton('profiles', cacheKey, { data, timestamp: Date.now() });
             setLoading(false);
         } catch (err) {
             console.error(err);
