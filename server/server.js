@@ -67,6 +67,26 @@ app.get('/api/health', (req, res) => {
     }
 });
 
+// Host-based Redirect (Old domain -> New domain)
+const REDIRECT_ENABLED = (process.env.REDIRECT_ENABLED || 'true').toLowerCase() === 'true';
+const REDIRECT_FROM_HOSTS = (process.env.REDIRECT_FROM_HOSTS || 'msu-snd-rgms.onrender.com')
+    .split(',')
+    .map(h => h.trim().toLowerCase())
+    .filter(Boolean);
+const REDIRECT_TARGET_HOST = process.env.REDIRECT_TARGET_HOST || 'msu-snd-rgms-jcsg.onrender.com';
+
+app.use((req, res, next) => {
+    if (!REDIRECT_ENABLED) return next();
+    if (req.path === '/health') return next();
+    const host = ((req.headers['x-forwarded-host'] || req.headers.host || '') + '').toLowerCase();
+    if (REDIRECT_FROM_HOSTS.includes(host)) {
+        const proto = (req.headers['x-forwarded-proto'] || 'https') + '';
+        const target = `${proto}://${REDIRECT_TARGET_HOST}${req.originalUrl}`;
+        return res.redirect(308, target);
+    }
+    next();
+});
+
 // DEBUG: Env & Path Info (Safe subset)
 app.get('/api/debug-info', (req, res) => {
     res.json({
