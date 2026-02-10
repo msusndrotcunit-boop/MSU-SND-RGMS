@@ -8,6 +8,16 @@ const Footer = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [modal, setModal] = useState(null); // 'about' | 'docs' | null
+  const toggleAdminMap = () => {
+    try {
+      if (user?.role !== 'admin') return;
+      const current = localStorage.getItem('rgms_hide_admin_map') === 'true';
+      const next = !current;
+      localStorage.setItem('rgms_hide_admin_map', next ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('rgms:hide_admin_map', { detail: { hide: next } }));
+      toast(next ? 'Admin map hidden' : 'Admin map shown');
+    } catch {}
+  };
 
   const handleSupport = () => {
     const role = user?.role;
@@ -36,7 +46,17 @@ const Footer = () => {
                <Shield className="w-6 h-6 text-gray-900" />
             </div>
             <div>
-              <h3 className="font-bold text-lg tracking-wide">MSU-SND RGMS</h3>
+              <h3 className="font-bold text-lg tracking-wide">
+                MSU-SND{' '}
+                <button 
+                  type="button"
+                  onClick={toggleAdminMap}
+                  className="underline decoration-dotted underline-offset-4 hover:text-yellow-300 transition-colors"
+                  title="Toggle Admin Map"
+                >
+                  RGMS
+                </button>
+              </h3>
               <p className="text-[10px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
             </div>
           </div>

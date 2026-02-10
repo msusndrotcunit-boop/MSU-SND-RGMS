@@ -26,6 +26,7 @@ const Dashboard = () => {
     const mapInstanceRef = useRef(null);
     const markersRef = useRef([]);
     const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const [hideAdminMap, setHideAdminMap] = useState(false);
 
     const loadGoogleMaps = (key) => {
         return new Promise((resolve, reject) => {
@@ -52,7 +53,7 @@ const Dashboard = () => {
 
     const updateMarkers = () => {
         if (!mapInstanceRef.current || !window.google || !window.google.maps) return;
-        markersRef.current.forEach(m => { try { m.setMap(null); } catch {} });
+        markersRef.current.forEach((marker) => { try { marker.setMap(null); } catch {} });
         markersRef.current = [];
         if (!locations || locations.length === 0) return;
         const bounds = new window.google.maps.LatLngBounds();
@@ -70,7 +71,7 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        if (user?.role !== 'admin' || !hasMapsKey) return;
+        if (user?.role !== 'admin' || !hasMapsKey || hideAdminMap) return;
         loadGoogleMaps(import.meta.env.VITE_GOOGLE_MAPS_API_KEY).then(() => {
             if (!mapInstanceRef.current && mapRef.current) {
                 mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
@@ -80,7 +81,7 @@ const Dashboard = () => {
             }
             updateMarkers();
         }).catch(() => {});
-    }, [user, hasMapsKey, locations]);
+    }, [user, hasMapsKey, locations, hideAdminMap]);
     const [stats, setStats] = useState({
         ongoing: 0,
         completed: 0,
@@ -91,6 +92,21 @@ const Dashboard = () => {
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locations, setLocations] = useState([]);
+
+    useEffect(() => {
+        try {
+            const v = localStorage.getItem('rgms_hide_admin_map') === 'true';
+            setHideAdminMap(v);
+        } catch {}
+        const onToggle = (e) => {
+            try {
+                const next = !!(e && e.detail && e.detail.hide);
+                setHideAdminMap(next);
+            } catch {}
+        };
+        window.addEventListener('rgms:hide_admin_map', onToggle);
+        return () => window.removeEventListener('rgms:hide_admin_map', onToggle);
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -284,7 +300,7 @@ const Dashboard = () => {
                 ))}
             </div>
 
-            {user?.role === 'admin' && locations.length > 0 && (
+            {user?.role === 'admin' && locations.length > 0 && !hideAdminMap && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
                         <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
