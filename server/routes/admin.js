@@ -1408,28 +1408,32 @@ router.get('/cadets', (req, res) => {
     db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
         if (err) return res.status(500).json({ message: err.message });
         const totalTrainingDays = countRow.total || 15; // Default to 15 if 0
-
-        const sql = `
+        const baseSelect = `
             SELECT c.id, c.rank, c.first_name, c.middle_name, c.last_name, c.suffix_name,
                    c.student_id, c.email, c.contact_number, c.address, 
                    c.course, c.year_level, c.school_year, 
                    c.battalion, c.company, c.platoon, 
-                   c.cadet_course, c.semester, c.corp_position, c.status, c.is_profile_completed,
+                   c.cadet_course, c.semester, c.corp_position, c.status, c.is_profile_completed, c.is_archived,
                    u.username,
                    g.attendance_present, g.merit_points, g.demerit_points, 
                    g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
             FROM cadets c
             LEFT JOIN users u ON u.cadet_id = c.id
             LEFT JOIN grades g ON c.id = g.cadet_id
-            WHERE c.is_archived IS NOT TRUE
         `;
-        db.all(sql, [], (err, rows) => {
-            if (err) return res.status(500).json({ message: err.message });
-            
+        const sqlActive = `${baseSelect} WHERE c.is_archived IS NOT TRUE ORDER BY c.last_name, c.first_name`;
+        const sqlAll = `${baseSelect} ORDER BY c.last_name, c.first_name`;
+
+        const processRows = (rows) => {
             // Calculate grades for each cadet
             const cadetsWithGrades = rows.map(cadet => {
                 const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
-                const attendanceScore = (cadet.attendance_present / safeTotalDays) * 30; // 30%
+                const present = typeof cadet.attendance_present === 'number' ? cadet.attendance_present : 0;
+                const prelim = typeof cadet.prelim_score === 'number' ? cadet.prelim_score : 0;
+                const midterm = typeof cadet.midterm_score === 'number' ? cadet.midterm_score : 0;
+                const final = typeof cadet.final_score === 'number' ? cadet.final_score : 0;
+
+                const attendanceScore = (present / safeTotalDays) * 30; // 30%
                 
                 // Aptitude: Base 100 + Merits - Demerits (Capped at 100, Floor 0)
                 let rawAptitude = 100 + (cadet.merit_points || 0) - (cadet.demerit_points || 0);
@@ -1438,11 +1442,10 @@ router.get('/cadets', (req, res) => {
                 const aptitudeScore = rawAptitude * 0.3;
 
                 // Subject: (Sum / 300) * 40%
-                const subjectScore = ((cadet.prelim_score + cadet.midterm_score + cadet.final_score) / 300) * 40; // 40%
+                const subjectScore = ((prelim + midterm + final) / 300) * 40; // 40%
 
                 const finalGrade = attendanceScore + aptitudeScore + subjectScore;
                 
-                // Use grade_status from join, not cadet.status (which is enrollment status)
                 const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, cadet.grade_status);
 
                 return {
@@ -1455,8 +1458,20 @@ router.get('/cadets', (req, res) => {
                     remarks
                 };
             });
-
             res.json(cadetsWithGrades);
+        };
+
+        db.all(sqlActive, [], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!rows || rows.length === 0) {
+                // Fallback: include archived cadets to avoid empty management list
+                db.all(sqlAll, [], (err2, rows2) => {
+                    if (err2) return res.status(500).json({ message: err2.message });
+                    processRows(rows2 || []);
+                });
+            } else {
+                processRows(rows);
+            }
         });
     });
 });
