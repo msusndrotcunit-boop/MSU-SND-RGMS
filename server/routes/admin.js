@@ -1300,26 +1300,6 @@ router.get('/analytics', (req, res) => {
                     }),
                     new Promise((resolve, reject) => {
                         const sql = `
-                            SELECT 
-                                CASE 
-                                    WHEN c.blood_type IS NULL OR TRIM(c.blood_type) = '' THEN 'Unknown'
-                                    ELSE UPPER(TRIM(c.blood_type))
-                                END AS blood_type,
-                                COUNT(*) AS count
-                            FROM cadets c
-                            WHERE (c.is_archived IS FALSE OR c.is_archived IS NULL)
-                            GROUP BY 
-                                CASE 
-                                    WHEN c.blood_type IS NULL OR TRIM(c.blood_type) = '' THEN 'Unknown'
-                                    ELSE UPPER(TRIM(c.blood_type))
-                                END
-                        `;
-                        db.all(sql, [], (err, rows) => {
-                            if (err) reject(err); else resolve({ type: 'blood_types', rows });
-                        });
-                    }),
-                    new Promise((resolve, reject) => {
-                        const sql = `
                             SELECT UPPER(TRIM(c.cadet_course)) AS cadet_course, COUNT(*) AS count
                             FROM cadets c
                             WHERE c.cadet_course IS NOT NULL AND c.cadet_course != ''
@@ -1362,8 +1342,6 @@ router.get('/analytics', (req, res) => {
                                 demographics.courseStats = result.rows;
                             } else if (result.type === 'gender_by_course') {
                                 demographics.genderByCourse = result.rows;
-                            } else if (result.type === 'blood_types') {
-                                demographics.bloodTypes = result.rows;
                             } else if (result.type === 'course_totals') {
                                 demographics.courseTotals = result.rows;
                             }

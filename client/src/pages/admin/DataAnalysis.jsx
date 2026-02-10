@@ -62,7 +62,6 @@ const DataAnalysis = () => {
         }
     });
     const [genderByCourse, setGenderByCourse] = useState([]);
-    const [bloodTypes, setBloodTypes] = useState([]);
     const [courseTotals, setCourseTotals] = useState([]);
 
     const normalizeStatus = (status) => {
@@ -105,7 +104,6 @@ const DataAnalysis = () => {
     const processData = (data) => {
         const rawStats = data.demographics?.courseStats || [];
         const genderRows = data.demographics?.genderByCourse || [];
-        const bloodRows = data.demographics?.bloodTypes || [];
         const courseRows = data.demographics?.courseTotals || [];
         
         const newStats = {
@@ -171,12 +169,6 @@ const DataAnalysis = () => {
         });
         setGenderByCourse(Object.values(map));
 
-        // Blood types
-        const bloodData = bloodRows.map(r => ({
-            name: r.blood_type || 'Unknown',
-            value: parseInt(r.count, 10) || 0
-        })).filter(d => d.value > 0);
-        setBloodTypes(bloodData);
 
         // Course totals
         const courseData = courseRows.map(r => ({
@@ -623,34 +615,6 @@ const DataAnalysis = () => {
                     </div>
                 </div>
 
-                {/* Blood Type Distribution */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Blood Type Distribution</h3>
-                    </div>
-                    <div className="p-4 h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={bloodTypes.length > 0 ? bloodTypes : [{ name: 'No Data', value: 1 }]}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={renderCustomizedLabel}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {(bloodTypes.length > 0 ? bloodTypes : [{ name: 'No Data', value: 1 }]).map((entry, index) => (
-                                        <Cell key={`blood-${index}`} fill={COLORS[entry.name] || ['#16a34a','#dc2626','#2563eb','#f59e0b','#9333ea','#0ea5e9','#f43f5e','#6b7280'][index % 8]} />
-                                    ))}
-                                </Pie>
-                                <Legend layout="vertical" verticalAlign="middle" align="right" />
-                                <Tooltip content={<CustomTooltip />} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
 
                 {/* Course Distribution */}
                 <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">

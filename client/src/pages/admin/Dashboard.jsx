@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { 
-    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin, Users
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+import { 
+    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, Calendar, Mail, Zap, ClipboardCheck, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import { getSingleton, cacheSingleton } from '../../utils/db';
-const WeatherAdvisoryLazy = React.lazy(() => import('../../components/WeatherAdvisory'));
-import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
+import WeatherAdvisory from '../../components/WeatherAdvisory';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -18,97 +18,7 @@ const STATUS_COLORS = {
     Drop: '#6b7280' // gray-500
 };
 
-const ChartSection = ({ data }) => (
-    <div className="h-80 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-                data={data}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                    cursor={{ fill: '#f3f4f6' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                <Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
-                <Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
-                <Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
-                <Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
-                <Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
-            </BarChart>
-        </ResponsiveContainer>
-    </div>
-);
-
 const Dashboard = () => {
-    const { user } = useAuth();
-    const mapRef = useRef(null);
-    const mapInstanceRef = useRef(null);
-    const markersRef = useRef([]);
-    const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    const [hideAdminMap, setHideAdminMap] = useState(true);
-    const [locations, setLocations] = useState([]);
-    const [staffRole, setStaffRole] = useState(null);
-    const [staffList, setStaffList] = useState([]);
-    const [staffAnalytics, setStaffAnalytics] = useState({ totalStaff: 0, staffByRank: [], attendanceStats: [] });
-
-    const loadGoogleMaps = (key) => {
-        return new Promise((resolve, reject) => {
-            if (window.google && window.google.maps) {
-                resolve();
-                return;
-            }
-            const existing = document.querySelector('script[data-google-maps]');
-            if (existing) {
-                existing.addEventListener('load', () => resolve());
-                existing.addEventListener('error', reject);
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
-            script.async = true;
-            script.defer = true;
-            script.setAttribute('data-google-maps', 'true');
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Google Maps'));
-            document.head.appendChild(script);
-        });
-    };
-
-    const updateMarkers = () => {
-        if (!mapInstanceRef.current || !window.google || !window.google.maps) return;
-        markersRef.current.forEach((marker) => { try { marker.setMap(null); } catch {} });
-        markersRef.current = [];
-        if (!locations || locations.length === 0) return;
-        const bounds = new window.google.maps.LatLngBounds();
-        locations.slice(0, 200).forEach(u => {
-            const pos = { lat: Number(u.last_latitude), lng: Number(u.last_longitude) };
-            const marker = new window.google.maps.Marker({
-                position: pos,
-                map: mapInstanceRef.current,
-                title: `${u.username || ''} • ${u.role || ''}`
-            });
-            markersRef.current.push(marker);
-            bounds.extend(pos);
-        });
-        try { mapInstanceRef.current.fitBounds(bounds); } catch {}
-    };
-
-    useEffect(() => {
-        if (user?.role !== 'admin' || !hasMapsKey || hideAdminMap) return;
-        loadGoogleMaps(import.meta.env.VITE_GOOGLE_MAPS_API_KEY).then(() => {
-            if (!mapInstanceRef.current && mapRef.current) {
-                mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-                    mapTypeId: 'roadmap',
-                    disableDefaultUI: true
-                });
-            }
-            updateMarkers();
-        }).catch(() => {});
-    }, [user, hasMapsKey, locations, hideAdminMap]);
     const [stats, setStats] = useState({
         ongoing: 0,
         completed: 0,
@@ -118,21 +28,7 @@ const Dashboard = () => {
     });
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        try {
-            const v = localStorage.getItem('rgms_hide_admin_map') === 'true';
-            setHideAdminMap(v);
-        } catch {}
-        const onToggle = (e) => {
-            try {
-                const next = !!(e && e.detail && e.detail.hide);
-                setHideAdminMap(next);
-            } catch {}
-        };
-        window.addEventListener('rgms:hide_admin_map', onToggle);
-        return () => window.removeEventListener('rgms:hide_admin_map', onToggle);
-    }, []);
+    const [locations, setLocations] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -164,55 +60,6 @@ const Dashboard = () => {
     }, []);
 
     useEffect(() => {
-        const fetchStaffRole = async () => {
-            if (user?.role !== 'training_staff') return;
-            try {
-                const res = await axios.get('/api/staff/me');
-                setStaffRole(res.data?.role || null);
-            } catch {}
-        };
-        fetchStaffRole();
-    }, [user]);
-
-    useEffect(() => {
-        if (user?.role !== 'training_staff') return;
-        if (
-            staffRole !== 'Commandant' &&
-            staffRole !== 'Assistant Commandant' &&
-            staffRole !== 'NSTP Director' &&
-            staffRole !== 'ROTC Coordinator' &&
-            staffRole !== 'Admin NCO'
-        ) {
-            return;
-        }
-        const fetchStaffData = async () => {
-            try {
-                const cachedList = await getSingleton('analytics', 'cg_staff_list_unit');
-                const cachedAnalytics = await getSingleton('analytics', 'cg_staff_analytics_unit');
-                if (cachedList && cachedList.data && (Date.now() - cachedList.timestamp < 5 * 60 * 1000)) {
-                    setStaffList(cachedList.data);
-                }
-                if (cachedAnalytics && cachedAnalytics.data && (Date.now() - cachedAnalytics.timestamp < 5 * 60 * 1000)) {
-                    setStaffAnalytics(cachedAnalytics.data);
-                }
-                const [listRes, analyticsRes] = await Promise.allSettled([
-                    axios.get('/api/staff/list'),
-                    axios.get('/api/staff/analytics/overview')
-                ]);
-                if (listRes.status === 'fulfilled' && Array.isArray(listRes.value.data)) {
-                    setStaffList(listRes.value.data);
-                    await cacheSingleton('analytics', 'cg_staff_list_unit', { data: listRes.value.data, timestamp: Date.now() });
-                }
-                if (analyticsRes.status === 'fulfilled' && analyticsRes.value && analyticsRes.value.data) {
-                    setStaffAnalytics(analyticsRes.value.data);
-                    await cacheSingleton('analytics', 'cg_staff_analytics_unit', { data: analyticsRes.value.data, timestamp: Date.now() });
-                }
-            } catch {}
-        };
-        fetchStaffData();
-    }, [user, staffRole]);
-
-    useEffect(() => {
         const fetchLocations = async () => {
             try {
                 const res = await axios.get('/api/admin/locations');
@@ -226,41 +73,27 @@ const Dashboard = () => {
         return () => clearInterval(id);
     }, []);
 
-    
-
     const processData = (data) => {
-        const rawStats = data.demographics?.courseStats || [];
+        const rawStats = (data && data.demographics && data.demographics.courseStats) || [];
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
-        const courses = ['COQC', 'MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42'];
-        const verifiedCourses = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
-
-        courses.forEach(c => {
-            byCourse[c] = { name: c, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
-        });
+        const allowedCourses = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
 
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
             const course = (item.cadet_course || 'Unknown').toUpperCase();
             const count = Number(item.count) || 0;
-            const includeInTotals = verifiedCourses.has(course);
 
-            if (includeInTotals && total[status] !== undefined) {
+            if (total[status] !== undefined && allowedCourses.has(course)) {
                 total[status] += count;
             }
 
-            const courseKey = course || 'Unknown';
-
-            if (!byCourse[courseKey] && courseKey !== 'Unknown') {
-                byCourse[courseKey] = { 
-                    name: courseKey, 
-                    Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 
-                };
+            if (!byCourse[course]) {
+                byCourse[course] = { name: course, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
             }
-
-            if (byCourse[courseKey] && byCourse[courseKey][status] !== undefined) {
-                byCourse[courseKey][status] += count;
-                byCourse[courseKey].total += count;
+            if (byCourse[course][status] !== undefined) {
+                byCourse[course][status] += count;
+                byCourse[course].total += count;
             }
         });
 
@@ -272,8 +105,7 @@ const Dashboard = () => {
             drop: total.Drop
         });
 
-        // Convert byCourse object to array for Recharts, filtering out empty unknown courses
-        const chartData = Object.values(byCourse);
+        const chartData = Object.values(byCourse).filter(d => allowedCourses.has(d.name));
         setCourseData(chartData);
     };
 
@@ -298,9 +130,7 @@ const Dashboard = () => {
                 </h2>
             </div>
 
-            <Suspense fallback={<div className="bg-white p-4 rounded-lg shadow animate-pulse h-32 flex items-center justify-center"><span className="text-gray-400">Loading Weather...</span></div>}>
-                <WeatherAdvisoryLazy />
-            </Suspense>
+            <WeatherAdvisory />
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -337,169 +167,33 @@ const Dashboard = () => {
             </div>
 
             {/* Chart Section */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-gray-800 dark:border-[var(--primary-color)]">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                        <BookOpen size={20} className="text-[var(--primary-color)] mr-2" />
-                        Cadet Status Distribution by Course (Verified Only)
-                    </h3>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
+                <div className="flex items-center mb-4">
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status by Course</h3>
                 </div>
-                <Suspense fallback={<div className="h-80 w-full flex items-center justify-center"><span className="text-gray-400">Loading Chart...</span></div>}>
-                    <ChartSection data={courseData} />
-                </Suspense>
+                <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={courseData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" />
+                            <YAxis allowDecimals={false} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="Ongoing" stackId="status" fill={STATUS_COLORS.Ongoing} />
+                            <Bar dataKey="Completed" stackId="status" fill={STATUS_COLORS.Completed} />
+                            <Bar dataKey="Incomplete" stackId="status" fill={STATUS_COLORS.Incomplete} />
+                            <Bar dataKey="Failed" stackId="status" fill={STATUS_COLORS.Failed} />
+                            <Bar dataKey="Drop" stackId="status" fill={STATUS_COLORS.Drop} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
 
-            
-
-            {/* Course Breakdown Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {courseData.map((course) => (
-                    <CourseCard key={course.name} data={course} />
-                ))}
-            </div>
-
-            {user?.role === 'training_staff' && (
-                <>
-                    {(staffRole === 'Commandant' ||
-                      staffRole === 'Assistant Commandant' ||
-                      staffRole === 'NSTP Director' ||
-                      staffRole === 'ROTC Coordinator' ||
-                      staffRole === 'Admin NCO') && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
-                                <div className="flex items-center mb-4">
-                                    <Users className="text-[var(--primary-color)] mr-2" size={20} />
-                                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Training Staff Overview</h3>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">Total Staff</div>
-                                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{staffAnalytics.totalStaff || 0}</div>
-                                    </div>
-                                    <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">Roles</div>
-                                        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{new Set(staffList.map(s => s.role)).size || 0}</div>
-                                    </div>
-                                </div>
-                                <div className="mt-4">
-                                    <ResponsiveContainer width="100%" height={220}>
-                                        <BarChart data={staffAnalytics.staffByRank || []} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="rank" />
-                                            <YAxis allowDecimals={false} />
-                                            <Tooltip />
-                                            <Legend />
-                                            <Bar dataKey="count" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)] md:col-span-2">
-                                <div className="flex items-center mb-4">
-                                    <ClipboardCheck className="text-[var(--primary-color)] mr-2" size={20} />
-                                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Staff Attendance Stats</h3>
-                                </div>
-                                <ResponsiveContainer width="100%" height={260}>
-                                    <BarChart data={(staffAnalytics.attendanceStats || []).map(a => ({ status: a.status, count: a.count }))} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="status" />
-                                        <YAxis allowDecimals={false} />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    )}
-
-                    {(staffRole === 'Commandant' ||
-                      staffRole === 'Assistant Commandant' ||
-                      staffRole === 'NSTP Director' ||
-                      staffRole === 'ROTC Coordinator' ||
-                      staffRole === 'Admin NCO') && (
-                        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                                    <Users size={20} className="text-[var(--primary-color)] mr-2" />
-                                    Training Staff List
-                                </h3>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Rank</th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Name</th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Role</th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Email</th>
-                                            <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Contact</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {(staffList || []).slice(0, 20).map((s) => (
-                                            <tr key={s.id}>
-                                                <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{s.rank || '-'}</td>
-                                                <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{`${s.last_name || ''}, ${s.first_name || ''}`}</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.role || '-'}</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.email || '-'}</td>
-                                                <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.contact_number || '-'}</td>
-                                            </tr>
-                                        ))}
-                                        {(!staffList || staffList.length === 0) && (
-                                            <tr>
-                                                <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No training staff found.</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {user?.role === 'admin' && locations.length > 0 && !hideAdminMap && (
+            {locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
                         <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
                         <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
-                    </div>
-                    <div className="mb-4">
-                        {hasMapsKey ? (
-                            <div ref={mapRef} className="w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden" />
-                        ) : (
-                            <div className="relative w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800">
-                                {(() => {
-                                    const lats = locations.map(u => u.last_latitude);
-                                    const lons = locations.map(u => u.last_longitude);
-                                    const minLat = Math.min(...lats);
-                                    const maxLat = Math.max(...lats);
-                                    const minLon = Math.min(...lons);
-                                    const maxLon = Math.max(...lons);
-                                    const latSpan = Math.max(0.0001, maxLat - minLat);
-                                    const lonSpan = Math.max(0.0001, maxLon - minLon);
-                                    return locations.slice(0, 50).map((u) => {
-                                        const xPos = ((u.last_longitude - minLon) / lonSpan) * 100;
-                                        const yPos = (1 - (u.last_latitude - minLat) / latSpan) * 100;
-                                        const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
-                                        return (
-                                            <a
-                                                key={`m-${u.id}-${u.last_location_at || ''}`}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="absolute"
-                                                style={{ left: `${isFinite(xPos) ? xPos : 0}%`, top: `${isFinite(yPos) ? yPos : 0}%` }}
-                                                title={`${u.username || ''} • ${new Date(u.last_location_at).toLocaleString()}`}
-                                            >
-                                                <span className="block w-3 h-3 rounded-full bg-red-600 border border-white shadow" />
-                                            </a>
-                                        );
-                                    });
-                                })()}
-                            </div>
-                        )}
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -588,49 +282,29 @@ const Dashboard = () => {
             </div>
             
             
+            
         </div>
     );
 };
 
+export default Dashboard;
+
 const StatusCard = ({ title, count, color, icon }) => (
-    <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center hover:shadow-lg transition-shadow">
-        {icon}
-        <div className={`text-4xl font-bold ${color} mb-1`}>{count}</div>
-        <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{title}</div>
-    </div>
-);
-
-const CourseCard = ({ data }) => (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="bg-gray-800 p-3 flex items-center">
-            <span className="text-yellow-500 mr-2">🎓</span>
-            <h3 className="text-white font-bold">{data.name}</h3>
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
+        <div className="flex flex-col items-center">
+            {icon}
+            <div className="text-xs text-gray-500 mt-1">{title}</div>
+            <div className={`text-2xl font-bold ${color}`}>{count || 0}</div>
         </div>
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-center">
-            <MiniStatus label="Ongoing" count={data.Ongoing} color="bg-cyan-100 text-cyan-800" />
-            <MiniStatus label="Completed" count={data.Completed} color="bg-green-100 text-green-800" />
-            <MiniStatus label="Incomplete" count={data.Incomplete} color="bg-amber-100 text-amber-800" />
-            <MiniStatus label="Failed" count={data.Failed} color="bg-red-100 text-red-800" />
-            <MiniStatus label="Drop" count={data.Drop} color="bg-gray-100 text-gray-800" />
-        </div>
-        <div className="px-4 pb-3 text-center">
-            <span className="text-xs font-bold text-gray-500">Total: {data.total}</span>
-        </div>
-    </div>
-);
-
-const MiniStatus = ({ label, count, color }) => (
-    <div className={`rounded p-2 flex flex-col items-center justify-center ${color}`}>
-        <span className="text-base md:text-lg font-bold">{count}</span>
-        <span className="text-[9px] md:text-[10px] uppercase tracking-wide">{label}</span>
     </div>
 );
 
 const ActionButton = ({ to, label, icon, className }) => (
-    <Link to={to} className={`flex items-center justify-center p-3 rounded text-white font-medium transition-colors hover-highlight ${className}`}>
+    <Link
+        to={to}
+        className={`flex items-center justify-center px-4 py-2 rounded ${className}`}
+    >
         <span className="mr-2">{icon}</span>
-        {label}
+        <span className="text-xs md:text-sm">{label}</span>
     </Link>
 );
-
-export default Dashboard;
