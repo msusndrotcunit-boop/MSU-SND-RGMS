@@ -40,7 +40,7 @@ export const addSignatories = (doc, startY, { preparedBy, preparedRole, certifie
   doc.setFontSize(10);
   const leftX = margin;
   const rightX = pageWidth - margin - 70;
-  doc.text('Prepared By:', leftX, y);
+  doc.text('Prepared by:', leftX, y);
   doc.text('CERTIFIED CORRECT:', rightX, y);
   y += 6;
   const prepName = preparedBy || 'Wilmer B Montejo';
@@ -65,8 +65,8 @@ export const addSignatories = (doc, startY, { preparedBy, preparedRole, certifie
   const rankTotalWidth = (rankText) => {
     const parts = splitRank(rankText);
     let total = 0;
-    const gap1 = 16;
-    const gap2 = 12;
+    const gap1 = 20;
+    const gap2 = 16;
     doc.setFont('helvetica', 'normal');
     if (parts[0]) total += doc.getTextWidth(parts[0]);
     if (parts[1]) total += gap1 + doc.getTextWidth(parts[1]);
@@ -86,8 +86,8 @@ export const addSignatories = (doc, startY, { preparedBy, preparedRole, certifie
     const parts = splitRank(rankText);
     if (parts.length === 0) return;
     let x = xStart;
-    const gap1 = 16;
-    const gap2 = 12;
+    const gap1 = 20;
+    const gap2 = 16;
     if (parts[0]) {
       doc.text(parts[0], x, yPos);
       x += doc.getTextWidth(parts[0]) + gap1;
