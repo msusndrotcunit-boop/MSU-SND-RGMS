@@ -12,6 +12,28 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("ErrorBoundary caught an error", error, errorInfo);
+    try {
+      const msg = String(error && error.message ? error.message : '').toLowerCase();
+      if (msg.includes("cannot access 'g' before initialization")) {
+        try { localStorage.clear(); } catch {}
+        try { sessionStorage.clear(); } catch {}
+        try {
+          if (window.caches && caches.keys) {
+            caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+          }
+        } catch {}
+        try {
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            navigator.serviceWorker.getRegistrations().then((regs) => Promise.all(regs.map((r) => r.unregister()))).catch(() => {});
+          }
+        } catch {}
+        setTimeout(() => {
+          const u = new URL(window.location.href);
+          u.searchParams.set('fresh', Date.now().toString());
+          window.location.href = u.toString();
+        }, 200);
+      }
+    } catch {}
   }
 
   render() {
