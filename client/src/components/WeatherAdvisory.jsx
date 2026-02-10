@@ -110,6 +110,7 @@ const WeatherAdvisory = () => {
                     } catch (_) {}
 
                     setIsUsingCurrentLocation(true);
+                    try { await axios.post('/api/auth/location', { latitude, longitude }); } catch (_) {}
                     const locName = await fetchLocationName(latitude, longitude);
                     setLocationName(locName);
                     fetchWeather(latitude, longitude, locName, true);

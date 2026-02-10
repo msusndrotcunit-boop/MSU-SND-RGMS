@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar, MapPin } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
@@ -33,7 +33,6 @@ const StaffLayout = () => {
     const [messages, setMessages] = useState([]);
     const [staffRole, setStaffRole] = useState(null);
     const [staffProfile, setStaffProfile] = useState(null);
-    const [hasAutoSharedLocation, setHasAutoSharedLocation] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     const fetchNotifications = async () => {
@@ -134,28 +133,6 @@ const StaffLayout = () => {
         staffRole === 'ROTC Coordinator' ||
         staffRole === 'Admin NCO';
 
-    const shareLocation = () => {
-        if (!navigator.geolocation) {
-            toast.error('Location is not supported on this device.');
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                try {
-                    await axios.post('/api/auth/location', {
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude
-                    });
-                    toast.success('Location shared successfully.');
-                } catch (e) {
-                    toast.error('Failed to share location.');
-                }
-            },
-            () => {
-                toast.error('Location permission denied.');
-            }
-        );
-    };
 
     const handlePermissionsAccept = () => {
         try {
@@ -191,11 +168,7 @@ const StaffLayout = () => {
         setShowPermissionModal(false);
     };
 
-    React.useEffect(() => {
-        if (!isPrivilegedStaff || hasAutoSharedLocation) return;
-        shareLocation();
-        setHasAutoSharedLocation(true);
-    }, [isPrivilegedStaff, hasAutoSharedLocation]);
+    
 
     React.useEffect(() => {
 
@@ -256,13 +229,6 @@ const StaffLayout = () => {
                                 : 'Training Staff'}
                         </span>
                         <div className="flex items-center space-x-3">
-                            <button
-                                onClick={shareLocation}
-                                className="text-[var(--primary-color)] bg-white/90 hover:bg-white text-xs border border-white px-2 py-1 rounded-full flex items-center space-x-1 hover-highlight"
-                            >
-                                <MapPin size={14} />
-                                <span>Share Location</span>
-                            </button>
                             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white/80 hover:text-white">
                                 <X size={24} />
                             </button>

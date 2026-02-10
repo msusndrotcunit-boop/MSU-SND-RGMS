@@ -8,6 +8,7 @@ import {
     BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import WeatherAdvisory from '../../components/WeatherAdvisory';
 
@@ -20,6 +21,7 @@ const STATUS_COLORS = {
 };
 
 const Dashboard = () => {
+    const { user } = useAuth();
     const [stats, setStats] = useState({
         ongoing: 0,
         completed: 0,
@@ -341,11 +343,43 @@ const Dashboard = () => {
                 ))}
             </div>
 
-            {locations.length > 0 && (
+            {user?.role === 'admin' && locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
                         <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
                         <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
+                    </div>
+                    <div className="mb-4">
+                        <div className="relative w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800">
+                            {(() => {
+                                const lats = locations.map(u => u.last_latitude);
+                                const lons = locations.map(u => u.last_longitude);
+                                const minLat = Math.min(...lats);
+                                const maxLat = Math.max(...lats);
+                                const minLon = Math.min(...lons);
+                                const maxLon = Math.max(...lons);
+                                const latSpan = Math.max(0.0001, maxLat - minLat);
+                                const lonSpan = Math.max(0.0001, maxLon - minLon);
+                                return locations.slice(0, 50).map((u) => {
+                                    const x = ((u.last_longitude - minLon) / lonSpan) * 100;
+                                    const y = (1 - (u.last_latitude - minLat) / latSpan) * 100;
+                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
+                                    return (
+                                        <a
+                                            key={`m-${u.id}-${u.last_location_at || ''}`}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="absolute"
+                                            style={{ left: `${x}%`, top: `${y}%` }}
+                                            title={`${u.username || ''} • ${new Date(u.last_location_at).toLocaleString()}`}
+                                        >
+                                            <span className="block w-3 h-3 rounded-full bg-red-600 border border-white shadow" />
+                                        </a>
+                                    );
+                                });
+                            })()}
+                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 text-sm">
