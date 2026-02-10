@@ -97,4 +97,22 @@ body {
   .hover-text-highlight:hover {
     color: var(--primary-color);
   }
+
+  button,
+  [role="button"] {
+    transition: all 150ms ease-in-out;
+  }
+  button:hover,
+  [role="button"]:hover {
+    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
+    transform: translateY(-1px) scale(1.02);
+    filter: saturate(1.05);
+  }
+
+  a {
+    transition: color 150ms ease-in-out;
+  }
+  a:hover {
+    color: var(--primary-color);
+  }
 }
