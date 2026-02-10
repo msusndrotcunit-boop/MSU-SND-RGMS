@@ -9,6 +9,7 @@ import { getSingleton, cacheSingleton } from '../../utils/db';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
 
 // Refined Color Scheme
 const COLORS = {
@@ -195,20 +196,9 @@ const DataAnalysis = () => {
     const generatePDF = async () => {
         const doc = new jsPDF();
         const date = new Date().toLocaleDateString();
-        let yPos = 20;
-
-        // Header
-        doc.setFontSize(18);
-        doc.text("ROTC GRADING MANAGEMENT SYSTEM", 14, yPos);
-        yPos += 8;
-        doc.setFontSize(14);
-        doc.text("Data Analysis Report", 14, yPos);
-        yPos += 6;
-        doc.setFontSize(10);
-        doc.text(`Generated on: ${date}`, 14, yPos);
-        yPos += 6;
-        doc.text("Mindanao State University-Sultan Naga Dimaporo", 14, yPos);
-        yPos += 10;
+        let yPos = 50;
+        addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+        addReportFooter(doc);
 
         // Capture Charts
         const chartIds = ['chart-basic', 'chart-advance', 'chart-combined'];
@@ -226,7 +216,9 @@ const DataAnalysis = () => {
                     // Check if new page needed
                     if (yPos + pdfHeight > doc.internal.pageSize.getHeight() - 20) {
                         doc.addPage();
-                        yPos = 20;
+                        addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                        addReportFooter(doc);
+                        yPos = 50;
                     }
 
                     doc.addImage(imgData, 'PNG', 14, yPos, pdfWidth, pdfHeight);
@@ -237,10 +229,11 @@ const DataAnalysis = () => {
             }
         }
 
-        // Check page break for tables
         if (yPos > doc.internal.pageSize.getHeight() - 60) {
             doc.addPage();
-            yPos = 20;
+            addReportHeader(doc, { title: 'Data Analysis Report', dateText: date });
+            addReportFooter(doc);
+            yPos = 50;
         }
 
         // Ongoing Summary Table
@@ -253,7 +246,12 @@ const DataAnalysis = () => {
                 ['Advance Corps', stats.ongoing.advance.total, `MS31: ${stats.ongoing.advance.MS31}, MS32: ${stats.ongoing.advance.MS32}, MS41: ${stats.ongoing.advance.MS41}, MS42: ${stats.ongoing.advance.MS42}`],
             ],
             theme: 'grid',
-            headStyles: { fillColor: [255, 193, 7] }, // Yellow/Gold header
+            headStyles: { fillColor: [255, 193, 7] },
+            margin: { top: 40, bottom: 20 },
+            didDrawPage: () => {
+                addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                addReportFooter(doc);
+            }
         });
 
         // Completed & Incomplete Summary
@@ -265,7 +263,20 @@ const DataAnalysis = () => {
                 ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total],
             ],
             theme: 'grid',
-            headStyles: { fillColor: [33, 33, 33] }, // Dark header
+            headStyles: { fillColor: [33, 33, 33] },
+            margin: { top: 40, bottom: 20 },
+            didDrawPage: () => {
+                addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                addReportFooter(doc);
+            }
+        });
+
+        const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
+        addSignatories(doc, finalY, {
+            preparedBy: 'Wilmer B Montejo',
+            preparedRole: 'SSg (Inf) PA • Admin NCO',
+            certifiedBy: 'INDIHRA D TAWANTAWAN',
+            certifiedRole: 'LTC (RES) PA • Commandant'
         });
 
         doc.save(`ROTC_Data_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);

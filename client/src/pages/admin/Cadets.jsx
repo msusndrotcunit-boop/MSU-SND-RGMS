@@ -4,6 +4,7 @@ import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Came
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
+import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { toast } from 'react-hot-toast';
 import { 
@@ -190,11 +191,6 @@ const Cadets = () => {
             const autoTable = (await import('jspdf-autotable')).default;
 
             const doc = new jsPDF();
-            
-            doc.setFontSize(18);
-            doc.text(`MSU-SND ROTC UNIT - ${exportOptions.title}`, 14, 22);
-            doc.setFontSize(11);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
             const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
             
@@ -219,10 +215,28 @@ const Cadets = () => {
             autoTable(doc, {
                 head: [tableColumn],
                 body: tableRows,
-                startY: 40,
+                startY: 50,
                 theme: 'grid',
                 styles: { fontSize: 8 },
-                headStyles: { fillColor: [22, 163, 74] } 
+                headStyles: { fillColor: [22, 163, 74] },
+                margin: { top: 40, bottom: 20 },
+                didDrawPage: () => {
+                    addReportHeader(doc, {
+                        title: `${exportOptions.title || 'Cadet List'}`,
+                        dateText: new Date().toLocaleDateString(),
+                        leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null,
+                        rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null
+                    });
+                    addReportFooter(doc);
+                }
+            });
+
+            const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 60;
+            addSignatories(doc, finalY, {
+                preparedBy: 'Wilmer B Montejo',
+                preparedRole: 'SSg (Inf) PA • Admin NCO',
+                certifiedBy: 'INDIHRA D TAWANTAWAN',
+                certifiedRole: 'LTC (RES) PA • Commandant'
             });
 
             doc.save('ROTC_Cadet_List.pdf');
