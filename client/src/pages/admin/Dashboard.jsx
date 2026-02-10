@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
     Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, 
-    BookOpen, Users, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
+    BookOpen, Calendar, Mail, Zap, ClipboardCheck, Facebook, Twitter, Linkedin, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -91,8 +91,6 @@ const Dashboard = () => {
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locations, setLocations] = useState([]);
-    const [staffList, setStaffList] = useState([]);
-    const [staffAnalytics, setStaffAnalytics] = useState({ totalStaff: 0, staffByRank: [], attendanceStats: [] });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -137,37 +135,7 @@ const Dashboard = () => {
         return () => clearInterval(id);
     }, []);
 
-    useEffect(() => {
-        const fetchStaff = async () => {
-            try {
-                // Try cache first
-                const cachedList = await getSingleton('analytics', 'staff_list_dashboard');
-                const cachedAnalytics = await getSingleton('analytics', 'staff_analytics_dashboard');
-                if (cachedList && cachedList.data && (Date.now() - cachedList.timestamp < 5 * 60 * 1000)) {
-                    setStaffList(cachedList.data);
-                }
-                if (cachedAnalytics && cachedAnalytics.data && (Date.now() - cachedAnalytics.timestamp < 5 * 60 * 1000)) {
-                    setStaffAnalytics(cachedAnalytics.data);
-                }
-                // Fetch fresh
-                const [listRes, analyticsRes] = await Promise.allSettled([
-                    axios.get('/api/staff/list').catch(() => axios.get('/api/staff').then(r => r)), // fallback for admin
-                    axios.get('/api/staff/analytics/overview')
-                ]);
-                if (listRes.status === 'fulfilled' && Array.isArray(listRes.value.data)) {
-                    setStaffList(listRes.value.data);
-                    await cacheSingleton('analytics', 'staff_list_dashboard', { data: listRes.value.data, timestamp: Date.now() });
-                }
-                if (analyticsRes.status === 'fulfilled' && analyticsRes.value && analyticsRes.value.data) {
-                    setStaffAnalytics(analyticsRes.value.data);
-                    await cacheSingleton('analytics', 'staff_analytics_dashboard', { data: analyticsRes.value.data, timestamp: Date.now() });
-                }
-            } catch (err) {
-                console.error('Staff fetch error:', err);
-            }
-        };
-        fetchStaff();
-    }, []);
+    
 
     const processData = (data) => {
         const rawStats = data.demographics?.courseStats || [];
@@ -307,93 +275,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Training Staff Analytics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
-                    <div className="flex items-center mb-4">
-                        <Users className="text-[var(--primary-color)] mr-2" size={20} />
-                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Training Staff Overview</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Total Staff</div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{staffAnalytics.totalStaff || 0}</div>
-                        </div>
-                        <div className="rounded bg-gray-50 dark:bg-gray-800 p-4 text-center">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Roles</div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{new Set(staffList.map(s => s.role)).size || 0}</div>
-                        </div>
-                    </div>
-                    <div className="mt-4">
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={staffAnalytics.staffByRank || []} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="rank" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)] md:col-span-2">
-                    <div className="flex items-center mb-4">
-                        <ClipboardCheck className="text-[var(--primary-color)] mr-2" size={20} />
-                        <h3 className="font-bold text-gray-800 dark:text-gray-100">Staff Attendance Stats</h3>
-                    </div>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={(staffAnalytics.attendanceStats || []).map(a => ({ status: a.status, count: a.count }))} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="status" />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* Training Staff List */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                        <Users size={20} className="text-[var(--primary-color)] mr-2" />
-                        Training Staff List
-                    </h3>
-                    <Link to="/admin/staff" className="text-[var(--primary-color)] hover:underline text-sm">Manage Staff</Link>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Rank</th>
-                                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Name</th>
-                                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Role</th>
-                                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Email</th>
-                                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Contact</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {(staffList || []).slice(0, 20).map((s) => (
-                                <tr key={s.id}>
-                                    <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{s.rank || '-'}</td>
-                                    <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{`${s.last_name || ''}, ${s.first_name || ''}`}</td>
-                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.role || '-'}</td>
-                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.email || '-'}</td>
-                                    <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{s.contact_number || '-'}</td>
-                                </tr>
-                            ))}
-                            {(!staffList || staffList.length === 0) && (
-                                <tr>
-                                    <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No training staff found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            
 
             {/* Course Breakdown Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
