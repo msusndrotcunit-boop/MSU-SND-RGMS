@@ -38,14 +38,72 @@ export const addSignatories = (doc, startY, { preparedBy, preparedRole, certifie
     y = 20;
   }
   doc.setFontSize(10);
-  doc.text('Prepared By:', margin, y);
-  doc.text('CERTIFIED CORRECT:', pageWidth - margin - 70, y);
+  const leftX = margin;
+  const rightX = pageWidth - margin - 70;
+  doc.text('Prepared By:', leftX, y);
+  doc.text('CERTIFIED CORRECT:', rightX, y);
   y += 6;
+  const prepName = preparedBy || 'Wilmer B Montejo';
+  const certName = certifiedBy || 'INDIHRA D TAWANTAWAN';
+  const prepRole = preparedRole || 'SSg (Inf) PA • Admin NCO';
+  const certRole = certifiedRole || 'LTC (RES) PA • Commandant';
+  const [prepRankText, prepPosText] = prepRole.split('•').map(s => (s || '').trim());
+  const [certRankText, certPosText] = certRole.split('•').map(s => (s || '').trim());
+
+  const splitRank = (rankText) => {
+    if (!rankText) return [];
+    const m = rankText.match(/^\s*(.*?)\s*\(\s*(.*?)\s*\)\s*(.*)\s*$/);
+    if (m) {
+      const left = m[1]?.trim();
+      const mid = m[2] ? `(${m[2].trim()})` : '';
+      const right = m[3]?.trim();
+      return [left, mid, right].filter(Boolean);
+    }
+    return [rankText.trim()];
+  };
+
+  const rankTotalWidth = (rankText) => {
+    const parts = splitRank(rankText);
+    let total = 0;
+    const gap1 = 16;
+    const gap2 = 12;
+    doc.setFont('helvetica', 'normal');
+    if (parts[0]) total += doc.getTextWidth(parts[0]);
+    if (parts[1]) total += gap1 + doc.getTextWidth(parts[1]);
+    if (parts[2]) total += gap2 + doc.getTextWidth(parts[2]);
+    return total;
+  };
+
+  // Align names to the end (last letter) of the rank line
+  const prepRankEndX = leftX + rankTotalWidth(prepRankText);
+  const certRankEndX = rightX + rankTotalWidth(certRankText);
   doc.setFont('helvetica', 'bold');
-  doc.text(preparedBy || 'Wilmer B Montejo', margin, y);
-  doc.text(certifiedBy || 'INDIHRA D TAWANTAWAN', pageWidth - margin - 70, y);
+  doc.text(prepName, prepRankEndX, y, { align: 'right' });
+  doc.text(certName, certRankEndX, y, { align: 'right' });
   doc.setFont('helvetica', 'normal');
+
+  const drawRankColumns = (xStart, yPos, rankText) => {
+    const parts = splitRank(rankText);
+    if (parts.length === 0) return;
+    let x = xStart;
+    const gap1 = 16;
+    const gap2 = 12;
+    if (parts[0]) {
+      doc.text(parts[0], x, yPos);
+      x += doc.getTextWidth(parts[0]) + gap1;
+    }
+    if (parts[1]) {
+      doc.text(parts[1], x, yPos);
+      x += doc.getTextWidth(parts[1]) + gap2;
+    }
+    if (parts[2]) {
+      doc.text(parts[2], x, yPos);
+    }
+  };
   y += 5;
-  doc.text(preparedRole || 'SSg (Inf) PA • Admin NCO', margin, y);
-  doc.text(certifiedRole || 'LTC (RES) PA • Commandant', pageWidth - margin - 70, y);
+  drawRankColumns(leftX, y, prepRankText);
+  drawRankColumns(rightX, y, certRankText);
+  y += 5;
+  if (prepPosText) doc.text(prepPosText, leftX, y);
+  if (certPosText) doc.text(certPosText, rightX, y);
 };

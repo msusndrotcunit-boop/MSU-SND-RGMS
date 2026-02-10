@@ -192,7 +192,7 @@ const Cadets = () => {
 
             const doc = new jsPDF();
 
-            const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone"];
+            const tableColumn = ["Rank", "Name", "Student ID", "Unit", "Email", "Phone", "Address"];
             
             const tableRows = [];
 
@@ -207,10 +207,31 @@ const Cadets = () => {
                     cadet.student_id,
                     `${cadet.company || '-'}/${cadet.platoon || '-'}`,
                     cadet.email || '-',
-                    cadet.contact_number || '-'
+                    cadet.contact_number || '-',
+                    cadet.address || '-'
                 ];
                 tableRows.push(cadetData);
             });
+
+            const toDataURL = async (src) => {
+                if (!src) return null;
+                if (src.startsWith('data:')) return src;
+                try {
+                    const res = await fetch(src);
+                    const blob = await res.blob();
+                    return await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch {
+                    return null;
+                }
+            };
+            const leftLogoEnv = import.meta.env.VITE_REPORT_LEFT_LOGO || null;
+            const rightLogoEnv = import.meta.env.VITE_REPORT_RIGHT_LOGO || null;
+            const leftLogoData = await toDataURL(leftLogoEnv);
+            const rightLogoData = await toDataURL(rightLogoEnv);
 
             autoTable(doc, {
                 head: [tableColumn],
@@ -224,8 +245,8 @@ const Cadets = () => {
                     addReportHeader(doc, {
                         title: `${exportOptions.title || 'Cadet List'}`,
                         dateText: new Date().toLocaleDateString(),
-                        leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null,
-                        rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null
+                        leftLogo: leftLogoData,
+                        rightLogo: rightLogoData
                     });
                     addReportFooter(doc);
                 }
