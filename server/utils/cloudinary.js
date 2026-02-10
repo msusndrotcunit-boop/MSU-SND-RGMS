@@ -5,20 +5,29 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Check if Cloudinary credentials are provided
-const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && 
-                               process.env.CLOUDINARY_API_KEY && 
-                               process.env.CLOUDINARY_API_SECRET;
+// Check if Cloudinary credentials are provided (support both discrete keys and CLOUDINARY_URL)
+const hasDiscreteKeys = process.env.CLOUDINARY_CLOUD_NAME && 
+                        process.env.CLOUDINARY_API_KEY && 
+                        process.env.CLOUDINARY_API_SECRET;
+const hasUrl = !!process.env.CLOUDINARY_URL;
+const isCloudinaryConfigured = hasDiscreteKeys || hasUrl;
 
 let storage;
 
 if (isCloudinaryConfigured) {
     // Configure Cloudinary
-    cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-    });
+    if (hasUrl) {
+        cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL });
+    } else {
+        cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET
+        });
+    }
+
+    const configuredName = cloudinary.config().cloud_name || '(hidden)';
+    console.log(`[Upload] Cloudinary configured for cloud: ${configuredName}`);
 
     // Configure Storage
     storage = new CloudinaryStorage({
@@ -34,7 +43,7 @@ if (isCloudinaryConfigured) {
         }
     });
 } else {
-    console.log('[Upload] Cloudinary not configured. Using local storage.');
+    console.log('[Upload] Cloudinary not configured. Using local storage. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET or CLOUDINARY_URL to enable Cloudinary.');
     
     // Local Storage Fallback
     const uploadDir = path.join(__dirname, '../uploads');
