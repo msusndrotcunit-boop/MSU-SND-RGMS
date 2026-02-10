@@ -13,4 +13,4 @@ services:
     name: rotc-grading-keepalive
     schedule: "* * * * *"
     env: docker
-    command: 'curl -s https://msu-snd-rgms.onrender.com/health || true'
+    command: 'curl -s https://msu-snd-rgms-jcsg.onrender.com/health || true'
