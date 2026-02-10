@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const Footer = () => {
   return (
@@ -35,14 +36,22 @@ const Footer = () => {
                 </Link>
             </li>
             <li>
-                <Link to="#" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
+                <button
+                    type="button"
+                    onClick={() => toast('Documentation is coming soon.')}
+                    className="hover:text-yellow-500 transition-colors flex items-center gap-2 group"
+                >
                     <span className="group-hover:translate-x-1 transition-transform">📄</span> Documentation
-                </Link>
+                </button>
             </li>
             <li>
-                <Link to="#" className="hover:text-yellow-500 transition-colors flex items-center gap-2 group">
+                <button
+                    type="button"
+                    onClick={() => toast('For support, please coordinate with your ROTC staff.')}
+                    className="hover:text-yellow-500 transition-colors flex items-center gap-2 group"
+                >
                     <span className="group-hover:translate-x-1 transition-transform">🎧</span> Support
-                </Link>
+                </button>
             </li>
           </ul>
         </div>
