@@ -52,7 +52,7 @@ const LoadingSpinner = () => (
 );
 
 function App() {
-  console.log(`App Version: ${import.meta.env.PACKAGE_VERSION} (OneDrive Fix & Activities UI)`);
+  console.log(`App Version: ${import.meta.env.PACKAGE_VERSION} (Deploy 2026-02-10 Cache Bust)`);
   return (
     <ErrorBoundary>
       <Router>
