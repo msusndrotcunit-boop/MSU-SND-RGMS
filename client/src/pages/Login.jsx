@@ -49,11 +49,13 @@ const Login = () => {
             
             login(user);
 
-            if (user.role === 'admin') {
+            const role = (user.role || '').toLowerCase();
+
+            if (role === 'admin') {
                 navigate('/admin/dashboard');
-            } else if (user.role === 'training_staff') {
+            } else if (role === 'training_staff') {
                 navigate('/staff/dashboard');
-            } else if (user.role === 'cadet') {
+            } else if (role === 'cadet') {
                 if (!user.isProfileCompleted) {
                     navigate('/cadet/profile');
                 } else {
