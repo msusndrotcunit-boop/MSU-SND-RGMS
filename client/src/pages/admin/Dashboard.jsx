@@ -50,6 +50,7 @@ const Dashboard = () => {
     const markersRef = useRef([]);
     const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     const [hideAdminMap, setHideAdminMap] = useState(true);
+    const [locations, setLocations] = useState([]);
 
     const loadGoogleMaps = (key) => {
         return new Promise((resolve, reject) => {
@@ -114,7 +115,6 @@ const Dashboard = () => {
     });
     const [courseData, setCourseData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [locations, setLocations] = useState([]);
 
     useEffect(() => {
         try {
