@@ -23,7 +23,7 @@ const SettingsScreen = () => {
   };
 
   const openWebApp = () => {
-    Linking.openURL('https://rotc-grading-system.onrender.com');
+    Linking.openURL('https://msu-snd-rgms-jcsg.onrender.com');
   };
 
   return (
