@@ -57,19 +57,20 @@ export const AuthProvider = ({ children }) => {
                 await axios.post('/api/auth/heartbeat');
             } catch (error) {
                 console.error('Heartbeat failed', error);
-                if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                    logout();
-                }
+                // Do not force logout on heartbeat errors to avoid redirect loops
             }
         };
 
         // Send initial heartbeat
-        sendHeartbeat();
+        const initialTimer = setTimeout(sendHeartbeat, 2000);
 
         // Set interval for every minute
         const intervalId = setInterval(sendHeartbeat, 60000);
 
-        return () => clearInterval(intervalId);
+        return () => {
+            clearTimeout(initialTimer);
+            clearInterval(intervalId);
+        };
     }, [user, logout]);
 
     const value = useMemo(() => ({ user, login, logout, loading }), [user, login, logout, loading]);
