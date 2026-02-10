@@ -165,7 +165,7 @@ const CadetDashboard = () => {
             {/* Grades Section */}
             <div className="space-y-6">
                 {(() => {
-                    const g = grades || {
+                    const gradeData = grades || {
                         attendanceScore: 0,
                         attendance_present: 0,
                         totalTrainingDays: 15,
@@ -190,8 +190,8 @@ const CadetDashboard = () => {
                                     Attendance History (30%)
                                 </h2>
                                 <div className="mt-2 md:mt-0 text-right">
-                                    <span className="text-2xl font-bold text-blue-900">{Number(g.attendanceScore).toFixed(2)} pts</span>
-                                    <span className="text-sm text-gray-500 ml-2">({g.attendance_present} / {g.totalTrainingDays} days)</span>
+                                    <span className="text-2xl font-bold text-blue-900">{Number(gradeData.attendanceScore).toFixed(2)} pts</span>
+                                    <span className="text-sm text-gray-500 ml-2">({gradeData.attendance_present} / {gradeData.totalTrainingDays} days)</span>
                                 </div>
                             </div>
                             
@@ -238,9 +238,9 @@ const CadetDashboard = () => {
                                     Merit & Demerit Records (30%)
                                 </h2>
                                 <div className="mt-2 md:mt-0 text-right">
-                                    <span className="text-2xl font-bold text-green-900">{Number(g.aptitudeScore).toFixed(2)} pts</span>
+                                    <span className="text-2xl font-bold text-green-900">{Number(gradeData.aptitudeScore).toFixed(2)} pts</span>
                                     <span className="text-sm text-gray-500 ml-2 block md:inline">
-                                        (Merits: {g.merit_points} | Demerits: {g.demerit_points})
+                                        (Merits: {gradeData.merit_points} | Demerits: {gradeData.demerit_points})
                                     </span>
                                 </div>
                             </div>
@@ -289,22 +289,22 @@ const CadetDashboard = () => {
                                     Subject Proficiency (40%)
                                 </h2>
                                 <div className="mt-2 md:mt-0">
-                                    <span className="text-2xl font-bold text-purple-900">{Number(g.subjectScore).toFixed(2)} pts</span>
+                                    <span className="text-2xl font-bold text-purple-900">{Number(gradeData.subjectScore).toFixed(2)} pts</span>
                                 </div>
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-gray-50 p-4 rounded text-center border">
                                     <div className="text-sm font-semibold text-gray-500 uppercase">Prelim</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{g.prelim_score}</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.prelim_score}</div>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded text-center border">
                                     <div className="text-sm font-semibold text-gray-500 uppercase">Midterm</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{g.midterm_score}</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.midterm_score}</div>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded text-center border">
                                     <div className="text-sm font-semibold text-gray-500 uppercase">Final</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{g.final_score}</div>
+                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.final_score}</div>
                                 </div>
                             </div>
                         </div>
@@ -315,17 +315,17 @@ const CadetDashboard = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="bg-gray-100 p-6 rounded text-center border">
                                     <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
-                                    <div className="text-5xl font-bold mt-3 text-gray-800">{Number(g.finalGrade).toFixed(2)}</div>
+                                    <div className="text-5xl font-bold mt-3 text-gray-800">{Number(gradeData.finalGrade).toFixed(2)}</div>
                                 </div>
                                 <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
-                                    g.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(g.transmutedGrade)
+                                    gradeData.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(gradeData.transmutedGrade)
                                     ? 'bg-red-600 text-white'
                                     : 'bg-green-600 text-white'
                                 }`}>
                                     <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
-                                    <div className="text-6xl font-extrabold mt-2">{g.transmutedGrade}</div>
+                                    <div className="text-6xl font-extrabold mt-2">{gradeData.transmutedGrade}</div>
                                     <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
-                                        {g.remarks}
+                                        {gradeData.remarks}
                                     </div>
                                 </div>
                             </div>
