@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -22,6 +22,65 @@ const STATUS_COLORS = {
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const markersRef = useRef([]);
+    const hasMapsKey = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+    const loadGoogleMaps = (key) => {
+        return new Promise((resolve, reject) => {
+            if (window.google && window.google.maps) {
+                resolve();
+                return;
+            }
+            const existing = document.querySelector('script[data-google-maps]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve());
+                existing.addEventListener('error', reject);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
+            script.async = true;
+            script.defer = true;
+            script.setAttribute('data-google-maps', 'true');
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Google Maps'));
+            document.head.appendChild(script);
+        });
+    };
+
+    const updateMarkers = () => {
+        if (!mapInstanceRef.current || !window.google || !window.google.maps) return;
+        markersRef.current.forEach(m => { try { m.setMap(null); } catch {} });
+        markersRef.current = [];
+        if (!locations || locations.length === 0) return;
+        const bounds = new window.google.maps.LatLngBounds();
+        locations.slice(0, 200).forEach(u => {
+            const pos = { lat: Number(u.last_latitude), lng: Number(u.last_longitude) };
+            const marker = new window.google.maps.Marker({
+                position: pos,
+                map: mapInstanceRef.current,
+                title: `${u.username || ''} • ${u.role || ''}`
+            });
+            markersRef.current.push(marker);
+            bounds.extend(pos);
+        });
+        try { mapInstanceRef.current.fitBounds(bounds); } catch {}
+    };
+
+    useEffect(() => {
+        if (user?.role !== 'admin' || !hasMapsKey) return;
+        loadGoogleMaps(import.meta.env.VITE_GOOGLE_MAPS_API_KEY).then(() => {
+            if (!mapInstanceRef.current && mapRef.current) {
+                mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+                    mapTypeId: 'roadmap',
+                    disableDefaultUI: true
+                });
+            }
+            updateMarkers();
+        }).catch(() => {});
+    }, [user, hasMapsKey, locations]);
     const [stats, setStats] = useState({
         ongoing: 0,
         completed: 0,
@@ -350,36 +409,40 @@ const Dashboard = () => {
                         <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
                     </div>
                     <div className="mb-4">
-                        <div className="relative w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800">
-                            {(() => {
-                                const lats = locations.map(u => u.last_latitude);
-                                const lons = locations.map(u => u.last_longitude);
-                                const minLat = Math.min(...lats);
-                                const maxLat = Math.max(...lats);
-                                const minLon = Math.min(...lons);
-                                const maxLon = Math.max(...lons);
-                                const latSpan = Math.max(0.0001, maxLat - minLat);
-                                const lonSpan = Math.max(0.0001, maxLon - minLon);
-                                return locations.slice(0, 50).map((u) => {
-                                    const x = ((u.last_longitude - minLon) / lonSpan) * 100;
-                                    const y = (1 - (u.last_latitude - minLat) / latSpan) * 100;
-                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
-                                    return (
-                                        <a
-                                            key={`m-${u.id}-${u.last_location_at || ''}`}
-                                            href={url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="absolute"
-                                            style={{ left: `${x}%`, top: `${y}%` }}
-                                            title={`${u.username || ''} • ${new Date(u.last_location_at).toLocaleString()}`}
-                                        >
-                                            <span className="block w-3 h-3 rounded-full bg-red-600 border border-white shadow" />
-                                        </a>
-                                    );
-                                });
-                            })()}
-                        </div>
+                        {hasMapsKey ? (
+                            <div ref={mapRef} className="w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden" />
+                        ) : (
+                            <div className="relative w-full h-56 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800">
+                                {(() => {
+                                    const lats = locations.map(u => u.last_latitude);
+                                    const lons = locations.map(u => u.last_longitude);
+                                    const minLat = Math.min(...lats);
+                                    const maxLat = Math.max(...lats);
+                                    const minLon = Math.min(...lons);
+                                    const maxLon = Math.max(...lons);
+                                    const latSpan = Math.max(0.0001, maxLat - minLat);
+                                    const lonSpan = Math.max(0.0001, maxLon - minLon);
+                                    return locations.slice(0, 50).map((u) => {
+                                        const x = ((u.last_longitude - minLon) / lonSpan) * 100;
+                                        const y = (1 - (u.last_latitude - minLat) / latSpan) * 100;
+                                        const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
+                                        return (
+                                            <a
+                                                key={`m-${u.id}-${u.last_location_at || ''}`}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="absolute"
+                                                style={{ left: `${x}%`, top: `${y}%` }}
+                                                title={`${u.username || ''} • ${new Date(u.last_location_at).toLocaleString()}`}
+                                            >
+                                                <span className="block w-3 h-3 rounded-full bg-red-600 border border-white shadow" />
+                                            </a>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        )}
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 text-sm">
