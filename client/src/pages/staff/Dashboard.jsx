@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
+import WeatherAdvisory from '../../components/WeatherAdvisory';
 
 const StaffDashboard = () => {
     const [attendanceLogs, setAttendanceLogs] = useState([]);
@@ -115,6 +116,7 @@ const StaffDashboard = () => {
 
     return (
         <div className="space-y-8">
+            <WeatherAdvisory />
             <h1 className="text-3xl font-bold text-gray-800">My Portal</h1>
 
             {/* Stats Overview */}

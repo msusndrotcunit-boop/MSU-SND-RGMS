@@ -80,23 +80,27 @@ const Dashboard = () => {
             [];
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
+        const allowed = new Set(['MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42']);
+        const normalizeCourse = (s) => {
+            const t = (s || '').toUpperCase().replace(/\s+/g, '').replace(/[-_.]/g, '');
+            return allowed.has(t) ? t : null;
+        };
 
         rawStats.forEach(item => {
             const status = normalizeStatus(item.status);
-            const course = ((item.course || item.cadet_course || 'Unknown') + '').toUpperCase();
+            const courseRaw = item.cadet_course || '';
+            const course = normalizeCourse(courseRaw);
             const count = Number(item.count) || 0;
 
             if (total[status] !== undefined) {
                 total[status] += count;
             }
 
+            if (!course) return;
             if (!byCourse[course]) {
-                byCourse[course] = { name: course, Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0, total: 0 };
+                byCourse[course] = { name: course, total: 0 };
             }
-            if (byCourse[course][status] !== undefined) {
-                byCourse[course][status] += count;
-                byCourse[course].total += count;
-            }
+            byCourse[course].total += count;
         });
 
         setStats({
@@ -173,7 +177,7 @@ const Dashboard = () => {
             {/* Chart Section */}
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                 <div className="flex items-center mb-4">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status by Academic Course</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Count by Course (MS1–MS42)</h3>
                 </div>
                 <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
@@ -183,11 +187,7 @@ const Dashboard = () => {
                             <YAxis allowDecimals={false} />
                             <Tooltip />
                             <Legend />
-                            <Bar dataKey="Ongoing" stackId="status" fill={STATUS_COLORS.Ongoing} />
-                            <Bar dataKey="Completed" stackId="status" fill={STATUS_COLORS.Completed} />
-                            <Bar dataKey="Incomplete" stackId="status" fill={STATUS_COLORS.Incomplete} />
-                            <Bar dataKey="Failed" stackId="status" fill={STATUS_COLORS.Failed} />
-                            <Bar dataKey="Drop" stackId="status" fill={STATUS_COLORS.Drop} />
+                            <Bar dataKey="total" fill="#2563eb" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
