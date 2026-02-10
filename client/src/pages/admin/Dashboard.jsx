@@ -8,34 +8,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 const WeatherAdvisoryLazy = React.lazy(() => import('../../components/WeatherAdvisory'));
-const ChartSection = React.lazy(async () => {
-    const mod = await import('recharts');
-    const Section = ({ data }) => (
-        <div className="h-80 w-full">
-            <mod.ResponsiveContainer width="100%" height="100%">
-                <mod.BarChart
-                    data={data}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                    <mod.CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <mod.XAxis dataKey="name" axisLine={false} tickLine={false} />
-                    <mod.YAxis axisLine={false} tickLine={false} />
-                    <mod.Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                        cursor={{ fill: '#f3f4f6' }}
-                    />
-                    <mod.Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
-                    <mod.Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
-                    <mod.Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
-                    <mod.Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
-                    <mod.Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
-                    <mod.Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
-                </mod.BarChart>
-            </mod.ResponsiveContainer>
-        </div>
-    );
-    return { default: Section };
-});
+import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -44,6 +17,31 @@ const STATUS_COLORS = {
     Failed: '#ef4444', // red-500
     Drop: '#6b7280' // gray-500
 };
+
+const ChartSection = ({ data }) => (
+    <div className="h-80 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+                data={data}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                    cursor={{ fill: '#f3f4f6' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+                <Bar dataKey="Ongoing" fill={STATUS_COLORS.Ongoing} radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Completed" fill={STATUS_COLORS.Completed} radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Incomplete" fill={STATUS_COLORS.Incomplete} radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Failed" fill={STATUS_COLORS.Failed} radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Drop" fill={STATUS_COLORS.Drop} radius={[4, 4, 0, 0]} barSize={40} />
+            </BarChart>
+        </ResponsiveContainer>
+    </div>
+);
 
 const Dashboard = () => {
     const { user } = useAuth();
