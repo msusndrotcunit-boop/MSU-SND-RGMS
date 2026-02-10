@@ -107,8 +107,8 @@ const Footer = () => {
         <div className="flex items-center gap-3 mb-4 md:mb-0">
            <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">C</div>
            <div>
-             <p className="font-bold text-white">2026 MSU-SND ROTC UNIT</p>
-             <p className="text-xs">All rights reserved.</p>
+             <p className="font-bold text-white">© {new Date().getFullYear()} MSU-SND ROTC Unit</p>
+             <p className="text-xs">Developed by JUNJIE L. BAHIAN • All rights reserved.</p>
            </div>
         </div>
         
@@ -149,6 +149,9 @@ const Footer = () => {
                     It integrates cadet positions for dynamic report signatories, supports real‑time grade sync,
                     and provides analytics for training staff performance. Built with React + Vite on the client
                     and Express.js on the server.
+                  </p>
+                  <p className="mt-2">
+                    Crafted with care by JUNJIE L. BAHIAN together with the MSU‑SND ROTC Unit team and contributors.
                   </p>
                 </>
               )}

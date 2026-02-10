@@ -76,8 +76,9 @@ const LandingPage = () => {
             </section>
 
             {/* Footer */}
-            <footer className="text-center py-8 text-green-200/40 text-sm border-t border-green-800/50">
-                <p>&copy; {new Date().getFullYear()} MSU-SND ROTC Unit. All rights reserved.</p>
+            <footer className="text-center py-8 text-green-200/60 text-sm border-t border-green-800/50">
+                <p>&copy; {new Date().getFullYear()} MSU-SND ROTC Unit • Developed by JUNJIE L. BAHIAN.</p>
+                <p className="text-green-200/40">All rights reserved.</p>
             </footer>
         </div>
     );

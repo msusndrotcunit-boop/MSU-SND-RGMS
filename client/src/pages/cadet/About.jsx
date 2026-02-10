@@ -74,7 +74,7 @@ const About = () => {
                 </div>
                 
                 <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400 border-t pt-6">
-                    &copy; {new Date().getFullYear()} MSU-SND ROTC Unit. All Rights Reserved.
+                    &copy; {new Date().getFullYear()} MSU-SND ROTC Unit • Developed by JUNJIE L. BAHIAN. All Rights Reserved.
                 </div>
             </div>
         </div>
