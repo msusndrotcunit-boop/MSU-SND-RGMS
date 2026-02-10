@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'ROTC Grading System',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    url: process.env.MOBILE_SERVER_URL || process.env.CAPACITOR_SERVER_URL
   },
   android: {
     allowMixedContent: true
