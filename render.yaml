@@ -9,6 +9,12 @@ services:
     envVars:
       - key: ENABLE_CADET_AUTO_SYNC
         value: "false"
+      - key: REDIRECT_ENABLED
+        value: "true"
+      - key: REDIRECT_FROM_HOSTS
+        value: "msu-snd-rgms.onrender.com"
+      - key: REDIRECT_TARGET_HOST
+        value: "msu-snd-rgms-jcsg.onrender.com"
   - type: cron
     name: rotc-grading-keepalive
     schedule: "* * * * *"
