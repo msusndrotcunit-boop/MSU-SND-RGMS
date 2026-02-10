@@ -579,6 +579,7 @@ async function initPgDb() {
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS is_profile_completed BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS has_seen_guide BOOLEAN DEFAULT FALSE`,
             `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
+            `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS corp_position TEXT`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`,
             `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE`,
