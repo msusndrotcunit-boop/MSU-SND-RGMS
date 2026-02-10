@@ -203,7 +203,7 @@ router.post('/login', (req, res) => {
     
     username = username.trim(); // TRIM USERNAME
 
-    db.get(`SELECT * FROM users WHERE username = ? OR email = ?`, [username, username], async (err, user) => {
+    db.get(`SELECT * FROM users WHERE (username = ? OR email = ?) AND (is_archived IS FALSE OR is_archived IS NULL)`, [username, username], async (err, user) => {
         if (err) {
             console.error('[Login Error] Database:', err);
             return res.status(500).json({ message: `Database Error: ${err.message}` });
@@ -306,7 +306,7 @@ router.post('/cadet-login', (req, res) => {
         WHERE (u.username = ? OR u.email = ?)
     `;
     
-    db.get(sql, [identifier, identifier], (err, user) => {
+    db.get(sql + ` AND (u.is_archived IS FALSE OR u.is_archived IS NULL)`, [identifier, identifier], (err, user) => {
         if (err) return res.status(500).json({ message: err.message });
         
         if (!user) {
@@ -360,7 +360,7 @@ router.post('/staff-login-no-pass', (req, res) => {
         WHERE (u.username = ? OR u.email = ?)
     `;
     
-    db.get(sql, [identifier, identifier], (err, user) => {
+    db.get(sql + ` AND (u.is_archived IS FALSE OR u.is_archived IS NULL)`, [identifier, identifier], (err, user) => {
         if (err) return res.status(500).json({ message: err.message });
         
         if (!user) {
