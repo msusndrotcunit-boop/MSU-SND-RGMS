@@ -188,11 +188,7 @@ const Profile = () => {
                 return;
             }
 
-            // Check Profile Pic
-            if (!preview && !profilePic) {
-                alert('Profile Picture is required.');
-                return;
-            }
+            // Profile picture optional
         }
 
         const formData = new FormData();
@@ -219,6 +215,7 @@ const Profile = () => {
             
             if (!isLocked) {
                 alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials.');
+                try { await cacheSingleton('profiles', user?.cadetId ? `cadet:${user.cadetId}` : 'cadet', null); } catch {}
                 logout();
                 navigate('/login');
             } else {

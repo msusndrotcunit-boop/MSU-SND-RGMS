@@ -33,18 +33,13 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Try cache first
                 const cached = await getSingleton('analytics', 'dashboard_v2');
                 if (cached && cached.timestamp && (Date.now() - cached.timestamp < 5 * 60 * 1000)) {
                     processData(cached.data);
                     setLoading(false);
                 }
-
-                // Fetch fresh data
                 const res = await axios.get('/api/admin/analytics');
                 processData(res.data);
-                
-                // Update cache
                 await cacheSingleton('analytics', 'dashboard_v2', { 
                     data: res.data, 
                     timestamp: Date.now() 
@@ -55,8 +50,32 @@ const Dashboard = () => {
                 setLoading(false);
             }
         };
-
         fetchData();
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        const types = new Set([
+                            'cadet_updated','cadet_created','cadet_deleted',
+                            'cadet_profile_updated','attendance_updated','grade_updated',
+                            'staff_attendance_updated'
+                        ]);
+                        if (types.has(data.type)) {
+                            fetchData();
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    try { es && es.close(); } catch {}
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
     }, []);
 
     useEffect(() => {

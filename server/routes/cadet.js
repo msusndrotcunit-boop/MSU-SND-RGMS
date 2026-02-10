@@ -358,6 +358,9 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                             message: 'Profile updated successfully', 
                             profilePic: returnPath 
                         });
+                        try {
+                            broadcastEvent({ type: 'cadet_profile_updated', cadetId });
+                        } catch {}
                     });
                 } else {
                     let returnPath = null;
@@ -377,6 +380,9 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                         message: 'Profile updated successfully', 
                         profilePic: returnPath 
                     });
+                    try {
+                        broadcastEvent({ type: 'cadet_profile_updated', cadetId });
+                    } catch {}
                 }
             });
         }

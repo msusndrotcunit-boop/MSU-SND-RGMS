@@ -111,8 +111,34 @@ const Cadets = () => {
     const companies = [...new Set(cadets.map(c => c.company).filter(Boolean))];
 
     useEffect(() => {
-        fetchCadets();
-        fetchSettings();
+        (async () => {
+            try {
+                await cacheSingleton('admin', 'cadets_list', null);
+            } catch {}
+            await fetchCadets(true);
+            fetchSettings();
+        })();
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        const types = new Set(['cadet_updated','cadet_created','cadet_deleted','cadet_profile_updated','attendance_updated','grade_updated']);
+                        if (types.has(data.type)) {
+                            fetchCadets(true);
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    try { es && es.close(); } catch {}
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
     }, []);
 
     const fetchSettings = async () => {

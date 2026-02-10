@@ -1439,6 +1439,9 @@ router.post('/cadets', async (req, res) => {
                                 db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [newCadetId], (err) => {
                                     if (err) console.error("Error initializing grades:", err);
                                     res.status(201).json({ message: 'Cadet created successfully', id: newCadetId });
+                                    try {
+                                        broadcastEvent({ type: 'cadet_created', cadetId: newCadetId });
+                                    } catch {}
                                 });
                             }
                         }
@@ -1613,6 +1616,9 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
             }
 
             res.json({ message: 'Cadet updated' });
+            try {
+                broadcastEvent({ type: 'cadet_updated', cadetId: Number(req.params.id) });
+            } catch {}
         }
     );
 });
@@ -1647,6 +1653,9 @@ router.post('/cadets/delete', async (req, res) => {
         const changes = await runQuery(`DELETE FROM cadets WHERE id IN (${placeholders})`, ids);
         
         res.json({ message: `Deleted ${changes} cadets and related records` });
+        try {
+            broadcastEvent({ type: 'cadet_deleted', cadetIds: ids });
+        } catch {}
     } catch (err) {
         console.error("Delete error:", err);
         res.status(500).json({ message: 'Failed to delete cadets: ' + err.message });
