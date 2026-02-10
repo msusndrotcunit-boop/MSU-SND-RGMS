@@ -68,7 +68,8 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
 
         results.database = {
             status: dbCheck && !dbCheck.error ? 'ok' : 'error',
-            latencyMs
+            latencyMs,
+            type: (db && db.pool) ? 'postgres' : 'sqlite'
         };
 
         results.metrics = {

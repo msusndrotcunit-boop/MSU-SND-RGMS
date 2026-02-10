@@ -11,11 +11,35 @@ const Settings = ({ role }) => {
     const [saving, setSaving] = useState(false);
     const [sendingCadetTemplate, setSendingCadetTemplate] = useState(null);
     const [sendingWeeklyReminder, setSendingWeeklyReminder] = useState(false);
+    const [systemStatus, setSystemStatus] = useState(null);
+    const [statusError, setStatusError] = useState(false);
 
     // Sync local state with context when context updates (initial load)
     useEffect(() => {
         setLocalSettings(settings);
     }, [settings]);
+
+    useEffect(() => {
+        let mounted = true;
+        const fetchStatus = async () => {
+            if (role !== 'admin') return;
+            try {
+                const res = await axios.get('/api/admin/system-status');
+                if (!mounted) return;
+                setSystemStatus(res.data || null);
+                setStatusError(false);
+            } catch {
+                if (!mounted) return;
+                setStatusError(true);
+            }
+        };
+        fetchStatus();
+        const id = setInterval(fetchStatus, 60000);
+        return () => {
+            mounted = false;
+            clearInterval(id);
+        };
+    }, [role]);
 
     const handleChange = (section, key, value) => {
         setLocalSettings(prev => ({
@@ -322,6 +346,61 @@ const Settings = ({ role }) => {
                                         <MailIcon size={16} />
                                         <span>{sendingWeeklyReminder ? 'Creating reminders...' : 'Send Friday Formation Reminder (In-App)'}</span>
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {role === 'admin' && (
+                    <section>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
+                            <Database size={20} />
+                            Database Status
+                        </h3>
+                        <div className="space-y-4 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Type</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            {systemStatus?.database?.type || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Status</span>
+                                        <span className={`text-sm font-semibold ${systemStatus?.database?.status === 'ok' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {systemStatus?.database?.status || (statusError ? 'error' : 'unknown')}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Latency (ms)</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            {systemStatus?.database?.latencyMs ?? '—'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Cadets</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.cadets ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Users</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.users ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Training Days</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.trainingDays ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Activities</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.activities ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Unread Notifications</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.unreadNotifications ?? '—'}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
