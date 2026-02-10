@@ -272,14 +272,14 @@ const StaffLayout = () => {
                     
                     {staffProfile && (
                         <div className="flex flex-col items-center mt-4">
-                            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/50 mb-2 bg-gray-200">
+                            <Link to="/staff/profile" className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/50 mb-2 bg-gray-200">
                                 <img 
                                     src={staffProfile.profile_pic || "https://via.placeholder.com/150?text=No+Image"} 
                                     alt="Profile" 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=No+Image'}}
                                 />
-                            </div>
+                            </Link>
                             <h3 className="text-white font-semibold text-center text-lg">
                                 {staffProfile.rank} {staffProfile.first_name} {staffProfile.last_name}
                             </h3>
@@ -415,19 +415,7 @@ const StaffLayout = () => {
                         <span>Ask Admin</span>
                     </Link>
 
-                    {/* Profile - Always Accessible */}
-                    <Link
-                        to="/staff/profile"
-                        onClick={() => setIsSidebarOpen(false)}
-                        className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
-                            location.pathname === '/staff/profile' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
-                        )}
-                    >
-                        <User size={20} />
-                        <span>My Profile</span>
-                        {!user?.isProfileCompleted && <div className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-                    </Link>
+                    
 
                     {/* My QR Code - Locked if profile incomplete */}
                     <Link

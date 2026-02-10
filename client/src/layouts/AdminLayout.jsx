@@ -260,7 +260,6 @@ const AdminLayout = () => {
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
         { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
-        { path: '/admin/profile', label: 'Profile', icon: User },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];
 
@@ -288,13 +287,15 @@ const AdminLayout = () => {
                         </button>
                     </div>
                     <div className="flex items-center mt-3">
-                        {adminProfile && adminProfile.profile_pic ? (
-                            <img src={adminProfile.profile_pic} alt="Profile" className="h-10 w-10 rounded-full border border-white/20 object-cover" />
-                        ) : (
-                            <div className="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
-                                {(adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase()}
-                            </div>
-                        )}
+                        <Link to="/admin/profile">
+                            {adminProfile && adminProfile.profile_pic ? (
+                                <img src={adminProfile.profile_pic} alt="Profile" className="h-10 w-10 rounded-full border border-white/20 object-cover" />
+                            ) : (
+                                <div className="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
+                                    {(adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase()}
+                                </div>
+                            )}
+                        </Link>
                         <div className="ml-3">
                             <div className="text-white font-semibold text-sm">{(adminProfile && adminProfile.username) || 'Admin'}</div>
                         </div>

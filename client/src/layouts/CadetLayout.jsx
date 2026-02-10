@@ -5,6 +5,7 @@ import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Setting
 import clsx from 'clsx';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
+import { cacheSingleton } from '../utils/db';
 import NotificationDropdown from '../components/NotificationDropdown';
 
 const CadetLayout = () => {
@@ -156,6 +157,14 @@ const CadetLayout = () => {
                             if (navigator.vibrate) navigator.vibrate(80);
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
+                        } else if (data.type === 'grade_updated') {
+                            toast.success('Grades updated');
+                            axios.get('/api/cadet/my-grades').then(async res => {
+                                await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
+                            }).catch(() => {});
+                            axios.get('/api/cadet/my-merit-logs').then(async res => {
+                                await cacheSingleton('dashboard', 'cadet_logs', { data: res.data, timestamp: Date.now() });
+                            }).catch(() => {});
                         }
                     } catch {}
                 };
@@ -283,7 +292,7 @@ const CadetLayout = () => {
                 
                 {/* User Info Section */}
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
-                    <div className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
+                    <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
                         {profile?.profile_pic ? (
                             <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
@@ -291,7 +300,7 @@ const CadetLayout = () => {
                                 <User size={40} />
                             </div>
                         )}
-                    </div>
+                    </Link>
                     <div className="font-semibold text-sm text-yellow-400">
                         {profile ? `${profile.rank} ${profile.last_name}` : (user?.username || 'Cadet')}
                     </div>
@@ -320,17 +329,6 @@ const CadetLayout = () => {
                     >
                         <LayoutDashboard size={20} />
                         <span>My Portal</span>
-                    </Link>
-                    <Link
-                        to="/cadet/profile"
-                        onClick={() => setIsSidebarOpen(false)}
-                        className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
-                            location.pathname === '/cadet/profile' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
-                        )}
-                    >
-                        <User size={20} />
-                        <span>My Profile</span>
                     </Link>
                     <Link
                         to="/cadet/ask-admin"
@@ -401,14 +399,6 @@ const CadetLayout = () => {
                             notifications={messages}
                             onMarkRead={handleMarkReadMsg}
                             onClear={handleClearMessages}
-                        />
-                        <NotificationDropdown 
-                            type="Notifications" 
-                            icon={Bell} 
-                            count={badgeNotif}
-                            notifications={notifications}
-                            onMarkRead={handleMarkReadNotif}
-                            onClear={handleClearNotifs}
                         />
                     </div>
                 </header>
