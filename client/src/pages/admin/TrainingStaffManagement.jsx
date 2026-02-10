@@ -26,6 +26,7 @@ const TrainingStaffManagement = () => {
     const [locationInfo, setLocationInfo] = useState(null);
     const [locationLoading, setLocationLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
+    const [preview, setPreview] = useState(null);
 
     useEffect(() => {
         fetchStaff();
@@ -130,6 +131,24 @@ const TrainingStaffManagement = () => {
             contact_number: staff.contact_number || '',
             role: staff.role || 'Instructor'
         });
+        // Prepare profile picture preview
+        if (staff.profile_pic) {
+            let src = staff.profile_pic;
+            if (src.startsWith('data:') || src.startsWith('http')) {
+                setPreview(src);
+            } else {
+                let normalizedPath = src.replace(/\\/g, '/');
+                const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                if (uploadsIndex !== -1) {
+                    normalizedPath = normalizedPath.substring(uploadsIndex);
+                } else if (!normalizedPath.startsWith('/')) {
+                    normalizedPath = '/' + normalizedPath;
+                }
+                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+            }
+        } else {
+            setPreview(null);
+        }
         setLocationInfo(null);
         setLocationLoading(true);
         axios.get('/api/admin/locations')
@@ -409,8 +428,24 @@ const TrainingStaffManagement = () => {
                         <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
                             <div className="md:col-span-1 space-y-6">
                                 <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg shadow-inner text-center">
-                                    <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mx-auto border-4 border-white dark:border-gray-600 shadow-lg flex items-center justify-center">
-                                        <User size={64} className="text-gray-400 dark:text-gray-200" />
+                                    <div className="relative inline-block">
+                                        <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mx-auto border-4 border-white dark:border-gray-600 shadow-lg">
+                                            {preview ? (
+                                                <img 
+                                                    src={preview} 
+                                                    alt="Profile" 
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-200">
+                                                    <User size={64} />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <h2 className="mt-4 text-xl font-bold text-gray-800 dark:text-white">
                                         {editForm.last_name || ''}, {editForm.first_name || ''}
