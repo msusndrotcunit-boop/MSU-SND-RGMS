@@ -131,6 +131,22 @@ const ArchivedCadets = () => {
     }
   };
 
+  const handlePermanentDelete = async () => {
+    if (selectedCadets.length === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedCadets.length} archived cadets? This action cannot be undone.`)) return;
+    try {
+      const res = await axios.post('/api/admin/cadets/delete-permanent', { ids: selectedCadets });
+      toast.success(`Deleted ${selectedCadets.length} cadets permanently`);
+      setSelectedCadets([]);
+      await cacheSingleton('admin', 'archived_cadets_list', null);
+      await fetchArchived();
+    } catch (err) {
+      console.error('Permanent delete failed', err);
+      const msg = err.response?.data?.message || 'Failed to delete permanently';
+      toast.error(msg);
+    }
+  };
+
   if (loading) return <div className="text-center p-10">Loading...</div>;
 
   return (
@@ -166,6 +182,15 @@ const ArchivedCadets = () => {
             >
               <KeyRound size={18} />
               <span>Reclaim ({selectedCadets.length})</span>
+            </button>
+          )}
+          {selectedCadets.length > 0 && (
+            <button
+              onClick={handlePermanentDelete}
+              className="flex-1 md:flex-none bg-red-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-800 animate-fade-in"
+            >
+              <Trash2 size={18} />
+              <span>Delete ({selectedCadets.length})</span>
             </button>
           )}
           <button

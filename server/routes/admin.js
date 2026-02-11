@@ -2226,6 +2226,34 @@ router.get('/cadets/archived', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Permanently delete archived cadets (hard delete)
+router.post('/cadets/delete-permanent', authenticateToken, isAdmin, async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'Invalid IDs' });
+    const placeholders = ids.map(() => '?').join(',');
+    const runQuery = (sql, params) => {
+        return new Promise((resolve, reject) => {
+            db.run(sql, params, function(err) {
+                if (err) reject(err);
+                else resolve(this ? this.changes : 0);
+            });
+        });
+    };
+    try {
+        await runQuery(`DELETE FROM grades WHERE cadet_id IN (${placeholders})`, ids);
+        await runQuery(`DELETE FROM merit_demerit_logs WHERE cadet_id IN (${placeholders})`, ids);
+        await runQuery(`DELETE FROM attendance_records WHERE cadet_id IN (${placeholders})`, ids);
+        await runQuery(`DELETE FROM excuse_letters WHERE cadet_id IN (${placeholders})`, ids);
+        const usersDeleted = await runQuery(`/* HARD_DELETE */ DELETE FROM users WHERE cadet_id IN (${placeholders})`, ids);
+        const cadetsDeleted = await runQuery(`/* HARD_DELETE */ DELETE FROM cadets WHERE id IN (${placeholders})`, ids);
+        res.json({ message: `Permanently deleted ${cadetsDeleted} cadets and ${usersDeleted} users`, ids });
+        try { broadcastEvent({ type: 'cadet_deleted', cadetIds: ids }); } catch {}
+    } catch (err) {
+        console.error("Permanent delete error:", err);
+        res.status(500).json({ message: 'Failed to permanently delete cadets: ' + err.message });
+    }
+});
+
 // Reclaim Credentials for archived cadets
 router.post('/cadets/reclaim-credentials', authenticateToken, isAdmin, async (req, res) => {
     const { cadetIds } = req.body;
