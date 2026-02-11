@@ -8,6 +8,8 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 // Simple SSE clients registry (shared via global)
 const SSE_CLIENTS = global.__sseClients || [];
@@ -552,43 +554,21 @@ const extractFromRaw = (line) => {
     const rawLine = line.trim();
     if (!rawLine) return row;
 
-    // --- NEW: Structured Parsing for PDF/Text imports matching user requirements ---
-    // Format: "Cadet Name  Username  Program/Course  Status"
-    // Anchor: Program/Course (Basic/MS1, Basic/MS2, Advance/MS31, etc.)
-    const programRegex = /\b(Basic\/MS1|Basic\/MS2|Advance\/MS31|Advance\/MS32|Advance\/MS41|Advance\/MS42)\b/i;
-    const match = rawLine.match(programRegex);
+    const strictPattern = /^\s*(\d{1,4})[.)]?\s+(.*?)\s+([A-Za-z0-9._-]{3,})\s+(Basic\/MS1|Basic\/MS2|Advance\/MS31|Advance\/MS32|Advance\/MS41|Advance\/MS42)\b(.*)$/i;
+    const strictMatch = rawLine.match(strictPattern);
+    if (strictMatch) {
+        const nameCandidate = strictMatch[2].trim();
+        const postProgram = strictMatch[5].trim();
 
-    if (match) {
-        const programIndex = match.index;
-        const programStr = match[0];
+        row['Name'] = nameCandidate;
 
-        // 1. Extract Status (After Program)
-        const postProgram = rawLine.substring(programIndex + programStr.length).trim();
         const lowerPost = postProgram.toLowerCase();
-        
         if (lowerPost.includes('present')) row['Status'] = 'present';
         else if (lowerPost.includes('absent')) row['Status'] = 'absent';
         else if (lowerPost.includes('excused')) row['Status'] = 'excused';
-        else row['Status'] = 'present'; // Default if status is missing/unclear in the suffix? Or let generic logic handle it?
-        // The user said: "If present... present. If absent... absent." implied explicit. 
-        // We'll set it here.
+        else if (lowerPost.includes('late')) row['Status'] = 'late';
+        else row['Status'] = 'present';
 
-        // 2. Extract Name (Before Program, removing Username)
-        // "Cadet Name Username" -> We need to strip the last word (Username)
-        const preProgram = rawLine.substring(0, programIndex).trim();
-        const lastSpaceIndex = preProgram.lastIndexOf(' ');
-        
-        if (lastSpaceIndex !== -1) {
-            // Assume the last token is the Username and everything before is the Name
-            row['Name'] = preProgram.substring(0, lastSpaceIndex).trim();
-        } else {
-            // Fallback: If no space, maybe just Name (no username?) or just Username?
-            // If the user guarantees the format, this shouldn't happen for valid rows.
-            row['Name'] = preProgram;
-        }
-
-        // 3. Extract Time In / Time Out (After Status columns)
-        // Match typical "7:53 AM" or "11:48 AM" formats
         const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
         if (timeMatches.length > 0) {
             row['Time In'] = timeMatches[0];
@@ -598,72 +578,45 @@ const extractFromRaw = (line) => {
         return row;
     }
 
-    // --- Fallback to Generic Heuristic Parsing ---
+    const programRegex = /\b(Basic\/MS1|Basic\/MS2|Advance\/MS31|Advance\/MS32|Advance\/MS41|Advance\/MS42)\b/i;
+    const match = rawLine.match(programRegex);
+    if (match) {
+        const programIndex = match.index;
+        const programStr = match[0];
 
-    // Status keywords
-    const lowerLine = rawLine.toLowerCase();
-    if (lowerLine.includes('present')) row['Status'] = 'present';
-    else if (lowerLine.includes('absent')) row['Status'] = 'absent';
-    else if (lowerLine.includes('late')) row['Status'] = 'late';
-    else if (lowerLine.includes('excused')) row['Status'] = 'excused';
-    else row['Status'] = 'unknown'; // Default status to prevent null
+        const leadingNum = rawLine.substring(0, programIndex).match(/^\s*\d{1,4}[.)]?\s+/);
+        if (!leadingNum) return {};
 
-    // Header/Noise Blacklist
-    const BLACKLIST = [
-        'list', 'page', 'date', 'department', 'university', 'college', 'rotc', 'attendance', 
-        'sheet', 'signature', 'remarks', 'status', 'id', 'no.', 'rank', 'name', 'unit', 
-        'platoon', 'company', 'battalion', 'msu', 'iit', 'philippines', 'school', 'year',
-        'semester', 'subject', 'course', 'instructor', 'prepared', 'approved', 'certified'
-    ];
+        const preProgram = rawLine.substring(0, programIndex).trim();
+        const parts = preProgram.split(/\s+/);
+        if (parts.length < 3) return {};
+        const usernameCandidate = parts[parts.length - 1];
+        if (!/^[A-Za-z0-9._-]{3,}$/.test(usernameCandidate)) return {};
 
-    // Check if line is a header
-    if (BLACKLIST.some(keyword => lowerLine.includes(keyword))) {
-        // If it contains a blacklist word, we treat it as noise UNLESS it looks like a valid name row (unlikely if it has 'page' or 'date')
-        // But be careful: 'Status' is in blacklist but we extracted status above. 
-        // We only blacklist if it DOESN'T look like a cadet row. 
-        // Actually, headers usually contain "Name", "Rank", "Status".
-        // If the line is JUST "Name Status Remarks", it should be ignored.
-        
-        // Strategy: If the cleaned name matches a blacklist word, ignore it.
+        const lastSpaceIndex = preProgram.lastIndexOf(' ');
+        if (lastSpaceIndex === -1) return {};
+        const nameCandidate = preProgram.substring(0, lastSpaceIndex).trim();
+        if (!nameCandidate || nameCandidate.length < 3) return {};
+        row['Name'] = nameCandidate;
+
+        const postProgram = rawLine.substring(programIndex + programStr.length).trim();
+        const lowerPost = postProgram.toLowerCase();
+        if (lowerPost.includes('present')) row['Status'] = 'present';
+        else if (lowerPost.includes('absent')) row['Status'] = 'absent';
+        else if (lowerPost.includes('excused')) row['Status'] = 'excused';
+        else if (lowerPost.includes('late')) row['Status'] = 'late';
+        else row['Status'] = 'present';
+
+        const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
+        if (timeMatches.length > 0) {
+            row['Time In'] = timeMatches[0];
+            if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
+        }
+
+        return row;
     }
 
-    // Name Extraction Strategy:
-    // User requested to prioritize Name and Status and ignore others (ID/Email).
-    // We strip out status keywords, numbers (IDs/Dates), emails, and special chars to isolate the name.
-    let cleanName = rawLine
-        .replace(/present|absent|late|excused/gi, '') // Remove status
-        .replace(/[0-9]/g, '') // Remove numbers (IDs, dates) - STRICTLY obeying "Others are ignored"
-        .replace(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/g, '') // Remove emails
-        .replace(/[^\w\s,.-]/g, '') // Remove special chars except , . -
-        .replace(/\s+/g, ' ') // Collapse multiple spaces
-        .trim();
-    
-    // Remove leading numbering/punctuation like "1.", "."
-    cleanName = cleanName.replace(/^[.,-\s]+/, ''); 
-
-    // Filter out blacklisted words from the *extracted name*
-    // e.g. if cleanName is "Date", ignore it.
-    const lowerName = cleanName.toLowerCase();
-    if (BLACKLIST.some(w => lowerName === w || lowerName === w + 's')) {
-        return {}; // Skip this row
-    }
-    // Also skip if the name contains header-like phrases
-    if (lowerName.includes('list of') || lowerName.includes('page of') || lowerName.includes('generated by')) {
-        return {};
-    }
-
-    if (cleanName.length > 2) {
-        row['Name'] = cleanName;
-    }
-
-    // Try to extract time fields even for generic lines
-    const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
-    if (timeMatches.length > 0) {
-        row['Time In'] = timeMatches[0];
-        if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
-    }
-
-    return row;
+    return {};
 };
 
 // --- Shared Import Logic ---
@@ -880,6 +833,9 @@ const processAttendanceData = async (data, dayId) => {
     }
 
     for (const row of data) {
+        if (!row || !row['Name']) {
+            continue;
+        }
         let status = (row['Status'] || row['status'] || '').toLowerCase();
         
         // If not found in specific column, search entire row values for keywords
@@ -1009,6 +965,46 @@ router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
             message: `Import complete. Success: ${result.successCount}, Skipped: ${result.skippedCount || 0}, Failed: ${result.failCount}`,
             errors: result.errors.slice(0, 10) 
         });
+
+    } catch (err) {
+// Import Attendance from local file path (PDF/DOCX/Images)
+router.post('/import-local', authenticateToken, isAdmin, async (req, res) => {
+    const { file_path, dayId } = req.body;
+    if (!file_path || !dayId) return res.status(400).json({ message: 'File path and Day ID are required' });
+    try {
+        const resolved = path.resolve(file_path);
+        const ext = path.extname(resolved).toLowerCase();
+        const buffer = fs.readFileSync(resolved);
+
+        let data = [];
+        if (ext === '.pdf') {
+            const rawRows = await parsePdf(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext === '.docx' || ext === '.doc') {
+            const rawRows = await parseDocx(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext.match(/\.(png|jpg|jpeg|bmp|webp|gif|tiff)$/i)) {
+            const rawRows = await parseImage(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
+            const workbook = xlsx.read(buffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            data = xlsx.utils.sheet_to_json(sheet);
+        } else {
+            return res.status(400).json({ message: 'Unsupported file format for local import' });
+        }
+
+        const result = await processAttendanceData(data, dayId);
+        res.json({
+            message: `Import complete. Success: ${result.successCount}, Skipped: ${result.skippedCount || 0}, Failed: ${result.failCount}`,
+            errors: result.errors.slice(0, 10)
+        });
+    } catch (error) {
+        console.error('Local import error:', error);
+        res.status(500).json({ message: 'Failed to read local file' });
+    }
+});
 
     } catch (err) {
         console.error("Import URL Error:", err);
