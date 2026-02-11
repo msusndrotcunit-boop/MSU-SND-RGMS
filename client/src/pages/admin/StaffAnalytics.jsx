@@ -18,6 +18,29 @@ const StaffAnalytics = () => {
         fetchAnalytics();
     }, []);
 
+    useEffect(() => {
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        if (data.type === 'staff_attendance_updated') {
+                            fetchAnalytics();
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    try { es && es.close(); } catch {}
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
+
     const fetchAnalytics = async () => {
         try {
             // Try cache first

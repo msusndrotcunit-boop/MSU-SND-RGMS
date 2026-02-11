@@ -186,6 +186,29 @@ const DataAnalysis = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        let es;
+        const connect = () => {
+            try {
+                es = new EventSource('/api/attendance/events');
+                es.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data || '{}');
+                        const types = new Set(['attendance_updated', 'grade_updated', 'staff_attendance_updated']);
+                        if (types.has(data.type)) {
+                            fetchData();
+                        }
+                    } catch {}
+                };
+                es.onerror = () => {
+                    try { es && es.close(); } catch {}
+                    setTimeout(connect, 3000);
+                };
+            } catch {}
+        };
+        connect();
+        return () => { try { es && es.close(); } catch {} };
+    }, []);
     const handleDownloadChart = async (elementId, title) => {
         const element = document.getElementById(elementId);
         if (!element) return;

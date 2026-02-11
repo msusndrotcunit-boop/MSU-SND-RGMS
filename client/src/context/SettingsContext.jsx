@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,19 +8,42 @@ export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
     const navigate = useNavigate();
-    const [settings, setSettings] = useState({
-        notifications: {
-            emailAlerts: true,
-            pushNotifications: true,
-            activityUpdates: true
-        },
-        display: {
-            darkMode: false,
-            compactMode: false
-        },
-        theme: {
-            primaryColor: 'default'
-        }
+    const [settings, setSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem('rgms_settings');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return {
+                    notifications: {
+                        emailAlerts: !!parsed?.notifications?.emailAlerts,
+                        pushNotifications: !!parsed?.notifications?.pushNotifications,
+                        activityUpdates: !!parsed?.notifications?.activityUpdates
+                    },
+                    display: {
+                        darkMode: !!parsed?.display?.darkMode,
+                        compactMode: !!parsed?.display?.compactMode
+                    },
+                    theme: {
+                        primaryColor: parsed?.theme?.primaryColor || 'default',
+                        customBg: parsed?.theme?.customBg
+                    }
+                };
+            }
+        } catch {}
+        return {
+            notifications: {
+                emailAlerts: true,
+                pushNotifications: true,
+                activityUpdates: true
+            },
+            display: {
+                darkMode: false,
+                compactMode: false
+            },
+            theme: {
+                primaryColor: 'default'
+            }
+        };
     });
     const [loading, setLoading] = useState(true);
 
@@ -37,7 +60,7 @@ export const SettingsProvider = ({ children }) => {
             });
 
             if (res.data) {
-                setSettings({
+                const newSettings = {
                     notifications: {
                         emailAlerts: !!res.data.email_alerts,
                         pushNotifications: !!res.data.push_notifications,
@@ -51,7 +74,11 @@ export const SettingsProvider = ({ children }) => {
                     primaryColor: res.data.primary_color || 'default',
                     customBg: res.data.custom_bg
                 }
-            });
+            };
+                setSettings(newSettings);
+                try {
+                    localStorage.setItem('rgms_settings', JSON.stringify(newSettings));
+                } catch {}
         }
     } catch (error) {
             console.error('Error fetching settings:', error);
@@ -64,8 +91,8 @@ export const SettingsProvider = ({ children }) => {
         fetchSettings();
     }, []);
 
-    // Apply settings side effects
-    useEffect(() => {
+    // Apply settings side effects (run before paint to avoid flicker)
+    useLayoutEffect(() => {
         // Dark Mode
         if (settings.display.darkMode) {
             document.documentElement.classList.add('dark');
@@ -121,6 +148,10 @@ export const SettingsProvider = ({ children }) => {
         document.documentElement.style.setProperty('--primary-color', palette.main);
         document.documentElement.style.setProperty('--primary-color-soft', palette.soft);
 
+        // Persist to local storage for instant application on next load
+        try {
+            localStorage.setItem('rgms_settings', JSON.stringify(settings));
+        } catch {}
     }, [settings]);
 
     const updateSettings = async (newSettings) => {
@@ -144,6 +175,9 @@ export const SettingsProvider = ({ children }) => {
             await axios.put('/api/auth/settings', payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            try {
+                localStorage.setItem('rgms_settings', JSON.stringify(newSettings));
+            } catch {}
             return { success: true };
         } catch (error) {
             console.error('Error saving settings:', error);

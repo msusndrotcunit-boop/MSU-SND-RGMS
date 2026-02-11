@@ -194,6 +194,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
                     broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
+                    broadcastEvent({ type: 'grade_updated', cadetId });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -217,6 +218,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
                     broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
+                    broadcastEvent({ type: 'grade_updated', cadetId });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -312,6 +314,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
                         broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
+                        broadcastEvent({ type: 'grade_updated', cadetId });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -342,6 +345,7 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                         if (err) return res.status(500).json({ message: err.message });
                         updateTotalAttendance(cadetId, res);
                         broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
+                        broadcastEvent({ type: 'grade_updated', cadetId });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -869,6 +873,7 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                         else {
                             updateTotalAttendance(cadetId, null); 
                             broadcastEvent({ type: 'attendance_import_updated', cadetId, dayId, status, time_in: newTimeIn, time_out: newTimeOut });
+                            broadcastEvent({ type: 'grade_updated', cadetId });
                             resolve('updated');
                         }
                     }
@@ -883,6 +888,7 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                         else {
                             updateTotalAttendance(cadetId, null); 
                             broadcastEvent({ type: 'attendance_import_created', cadetId, dayId, status, time_in: insertTimeIn, time_out: insertTimeOut });
+                            broadcastEvent({ type: 'grade_updated', cadetId });
                             resolve('inserted');
                         }
                     }

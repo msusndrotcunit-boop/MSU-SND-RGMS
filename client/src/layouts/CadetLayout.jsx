@@ -171,6 +171,13 @@ const CadetLayout = () => {
                             axios.get('/api/cadet/my-merit-logs').then(async res => {
                                 await cacheSingleton('dashboard', 'cadet_logs', { data: res.data, timestamp: Date.now() });
                             }).catch(() => {});
+                        } else if (data.type === 'attendance_updated') {
+                            const shouldPrefetch = !data.cadetId || (user && user.cadetId && data.cadetId === user.cadetId);
+                            if (shouldPrefetch) {
+                                axios.get('/api/attendance/my-history').then(async res => {
+                                    await cacheSingleton('attendance_by_day', 'my_history', { data: res.data, timestamp: Date.now() });
+                                }).catch(() => {});
+                            }
                         }
                     } catch {}
                 };

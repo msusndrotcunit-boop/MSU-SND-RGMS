@@ -6,6 +6,7 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { cacheSingleton } from '../utils/db';
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -180,6 +181,13 @@ const StaffLayout = () => {
                             if (navigator.vibrate) navigator.vibrate(80);
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
+                        } else if (data.type === 'staff_attendance_updated') {
+                            const shouldPrefetch = !data.staffId || (user && user.staffId && data.staffId === user.staffId);
+                            if (shouldPrefetch) {
+                                axios.get('/api/attendance/my-history/staff').then(async res => {
+                                    await cacheSingleton('attendance_by_day', 'my_staff_history', { data: res.data, timestamp: Date.now() });
+                                }).catch(() => {});
+                            }
                         }
                     } catch {}
                 };
