@@ -170,11 +170,15 @@ const DataAnalysis = () => {
         setGenderByCourse(Object.values(map));
 
 
-        // Course totals
-        const courseData = courseRows.map(r => ({
-            name: (r.cadet_course || 'Unknown').toUpperCase(),
-            value: parseInt(r.count, 10) || 0
-        })).filter(d => d.value > 0);
+        // Course totals (include courses even with zero counts)
+        const knownCourses = ['COQC', 'MS1', 'MS2', 'MS31', 'MS32', 'MS41', 'MS42'];
+        const counts = Object.fromEntries(knownCourses.map(k => [k, 0]));
+        courseRows.forEach(r => {
+            const name = (r.cadet_course || '').toUpperCase();
+            const value = parseInt(r.count, 10) || 0;
+            if (knownCourses.includes(name)) counts[name] = value;
+        });
+        const courseData = knownCourses.map(name => ({ name, value: counts[name] }));
         setCourseTotals(courseData);
     };
 

@@ -98,6 +98,7 @@ const Cadets = () => {
     
     // Bulk Selection State
     const [selectedCadets, setSelectedCadets] = useState([]);
+    const [archivedCadets, setArchivedCadets] = useState([]);
 
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportOptions, setExportOptions] = useState({
@@ -128,6 +129,7 @@ const Cadets = () => {
                         const types = new Set(['cadet_updated','cadet_created','cadet_deleted','cadet_profile_updated','attendance_updated','grade_updated']);
                         if (types.has(data.type)) {
                             fetchCadets(true);
+                            fetchArchivedCadets(true);
                         }
                     } catch {}
                 };
@@ -219,6 +221,15 @@ const Cadets = () => {
         } catch (err) {
             console.error("Network request failed", err);
             setLoading(false);
+        }
+    };
+
+    const fetchArchivedCadets = async () => {
+        try {
+            const res = await axios.get('/api/admin/cadets/archived');
+            setArchivedCadets(res.data || []);
+        } catch (err) {
+            console.error("Failed to load archived cadets", err);
         }
     };
 
@@ -490,15 +501,16 @@ const Cadets = () => {
         }
     };
 
-    const filteredCadets = cadets.filter(cadet => {
+    const sourceCadets = selectedCadetCourse === 'Archived' ? archivedCadets : cadets;
+    const filteredCadets = sourceCadets.filter(cadet => {
         // Filter by Cadet Course
         if (selectedCadetCourse === 'Unverified') {
             // Show only incomplete profiles (treating null/0/false as incomplete)
             if (cadet.is_profile_completed) return false;
         } else if (selectedCadetCourse !== 'All') {
-            if (cadet.cadet_course !== selectedCadetCourse) return false;
+            if (selectedCadetCourse !== 'Archived' && cadet.cadet_course !== selectedCadetCourse) return false;
             // Also enforce verification for specific course tabs
-            if (!cadet.is_profile_completed) return false;
+            if (selectedCadetCourse !== 'Archived' && !cadet.is_profile_completed) return false;
         }
 
         if (!searchTerm) return true;
@@ -546,9 +558,27 @@ const Cadets = () => {
             await cacheSingleton('admin', 'cadets_list', null);
             await clearCache('attendance_by_day'); // Sync attendance lists
             fetchCadets();
+            fetchArchivedCadets();
         } catch (err) {
             console.error(err);
             toast.error('Failed to delete cadets');
+        }
+    };
+
+    const handleBulkRestore = async () => {
+        if (selectedCadets.length === 0) return;
+        if (!window.confirm(`Restore ${selectedCadets.length} archived cadets? Their access may be re-enabled.`)) return;
+        try {
+            await axios.post('/api/admin/cadets/restore', { ids: selectedCadets });
+            toast.success('Cadets restored successfully');
+            setSelectedCadets([]);
+            await cacheSingleton('admin', 'cadets_list', null);
+            await clearCache('attendance_by_day');
+            fetchCadets(true);
+            fetchArchivedCadets();
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to restore cadets');
         }
     };
 
@@ -591,6 +621,15 @@ const Cadets = () => {
                         >
                             <Trash2 size={18} />
                             <span>Delete ({selectedCadets.length})</span>
+                        </button>
+                    )}
+                    {selectedCadets.length > 0 && selectedCadetCourse === 'Archived' && (
+                        <button
+                            onClick={handleBulkRestore}
+                            className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-700 animate-fade-in"
+                        >
+                            <ChevronLeft size={18} />
+                            <span>Restore ({selectedCadets.length})</span>
                         </button>
                     )}
                     <button 
@@ -652,6 +691,16 @@ const Cadets = () => {
                     }`}
                 >
                     Unverified
+                </button>
+                <button
+                    onClick={() => { setSelectedCadetCourse('Archived'); fetchArchivedCadets(); setSelectedCadets([]); }}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                        selectedCadetCourse === 'Archived'
+                            ? 'bg-gray-700 text-white shadow'
+                            : 'bg-white text-gray-600 border hover:bg-gray-50'
+                    }`}
+                >
+                    Archived
                 </button>
                 {CADET_COURSE_OPTIONS.map(course => (
                     <button
