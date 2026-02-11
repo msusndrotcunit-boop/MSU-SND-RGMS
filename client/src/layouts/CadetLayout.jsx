@@ -281,13 +281,29 @@ const CadetLayout = () => {
                 {/* User Info Section */}
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
-                        {profile?.profile_pic ? (
-                            <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                                <User size={40} />
-                            </div>
-                        )}
+                        {(() => {
+                            const src = profile?.profile_pic;
+                            if (src) {
+                                let finalSrc = src;
+                                if (!(src.startsWith('data:') || src.startsWith('http'))) {
+                                    let normalizedPath = src.replace(/\\/g, '/');
+                                    const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                                    if (uploadsIndex !== -1) {
+                                        normalizedPath = normalizedPath.substring(uploadsIndex);
+                                    } else if (!normalizedPath.startsWith('/')) {
+                                        normalizedPath = '/' + normalizedPath;
+                                    }
+                                    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                                    finalSrc = `${base}${normalizedPath}`;
+                                }
+                                return <img src={finalSrc} alt="Profile" className="w-full h-full object-cover" />;
+                            }
+                            return (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                                    <User size={40} />
+                                </div>
+                            );
+                        })()}
                     </Link>
                     <div className="font-semibold text-sm text-yellow-400">
                         {profile ? `${profile.rank} ${profile.last_name}` : (user?.username || 'Cadet')}
