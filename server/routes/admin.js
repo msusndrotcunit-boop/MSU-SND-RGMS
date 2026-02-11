@@ -1978,7 +1978,7 @@ router.delete('/users/:id', (req, res) => {
 // Get Current Admin Profile
 router.get('/profile', authenticateToken, isAdmin, (req, res) => {
     const sql = `
-        SELECT u.id, u.username, u.email, u.profile_pic, u.staff_id, s.gender
+        SELECT u.id, u.username, u.email, u.profile_pic, u.staff_id, COALESCE(u.gender, s.gender) AS gender
         FROM users u
         LEFT JOIN training_staff s ON s.id = u.staff_id
         WHERE u.id = ?
@@ -2023,11 +2023,17 @@ router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), 
             db.get(`SELECT staff_id FROM users WHERE id = ?`, [req.user.id], (err, row) => {
                 if (err) return resolve({ ok: false, error: err.message });
                 const staffId = row && row.staff_id;
-                if (!staffId) return resolve({ ok: false, error: 'No linked staff record to update gender' });
-                db.run(`UPDATE training_staff SET gender = ? WHERE id = ?`, [gender, staffId], function(updErr) {
-                    if (updErr) resolve({ ok: false, error: updErr.message });
-                    else resolve({ ok: true, gender });
-                });
+                if (staffId) {
+                    db.run(`UPDATE training_staff SET gender = ? WHERE id = ?`, [gender, staffId], function(updErr) {
+                        if (updErr) resolve({ ok: false, error: updErr.message });
+                        else resolve({ ok: true, gender });
+                    });
+                } else {
+                    db.run(`UPDATE users SET gender = ? WHERE id = ?`, [gender, req.user.id], function(updErr) {
+                        if (updErr) resolve({ ok: false, error: updErr.message });
+                        else resolve({ ok: true, gender });
+                    });
+                }
             });
         }));
     }

@@ -667,7 +667,6 @@ const getCadetByStudentId = (studentId) => {
             WHERE c.student_id = ? 
               AND u.is_approved = 1 
               AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
-              AND c.is_profile_completed IS TRUE
         `;
         db.get(sql, [studentId], (err, row) => {
             if (err) reject(err);
@@ -685,7 +684,6 @@ const getCadetByEmail = (email) => {
             WHERE c.email = ? 
               AND u.is_approved = 1 
               AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
-              AND c.is_profile_completed IS TRUE
         `;
         db.get(sql, [email], (err, row) => {
             if (err) reject(err);
@@ -704,7 +702,6 @@ const getCadetByName = (firstName, lastName) => {
               AND lower(c.last_name) = lower(?) 
               AND u.is_approved = 1 
               AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
-              AND c.is_profile_completed IS TRUE
         `;
         db.get(sql, [firstName, lastName], (err, row) => {
             if (err) reject(err);
@@ -858,7 +855,6 @@ const processAttendanceData = async (data, dayId) => {
                 JOIN users u ON u.cadet_id = c.id
                 WHERE u.is_approved = 1
                   AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
-                  AND c.is_profile_completed IS TRUE
             `;
             db.all(sql, [], (err, rows) => {
                 if (err) reject(err);
@@ -956,21 +952,50 @@ router.post('/import', authenticateToken, isAdmin, upload.single('file'), async 
 
     try {
         let data = [];
-        const filename = req.file.originalname.toLowerCase();
+        const filename = (req.file.originalname || '').toLowerCase();
+        let buffer = req.file.buffer;
+        
+        // Fallback: if storage is Cloudinary or disk, fetch/read the file into a Buffer
+        if (!buffer && req.file.path) {
+            const p = req.file.path + '';
+            if (p.startsWith('http')) {
+                const resp = await axios.get(p, { responseType: 'arraybuffer' });
+                buffer = Buffer.from(resp.data);
+            } else {
+                // Normalize local path (e.g., C:\...\uploads\file -> /uploads/file)
+                let localPath = p;
+                try {
+                    if (localPath.includes('uploads') && !localPath.startsWith('http')) {
+                        const parts = localPath.split(/[\\/]/);
+                        const idx = parts.indexOf('uploads');
+                        if (idx !== -1) {
+                            localPath = path.join(__dirname, '..', parts.slice(idx).join(path.sep));
+                        }
+                    }
+                    buffer = fs.readFileSync(localPath);
+                } catch (_) {
+                    buffer = undefined;
+                }
+            }
+        }
 
         if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
-            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+            if (!buffer) throw new Error('File buffer missing for spreadsheet import');
+            const workbook = xlsx.read(buffer, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
             data = xlsx.utils.sheet_to_json(sheet);
         } else if (filename.endsWith('.pdf')) {
-            const rawRows = await parsePdf(req.file.buffer);
+            if (!buffer) throw new Error('File buffer missing for PDF import');
+            const rawRows = await parsePdf(buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else if (filename.endsWith('.docx') || filename.endsWith('.doc')) {
-            const rawRows = await parseDocx(req.file.buffer);
+            if (!buffer) throw new Error('File buffer missing for DOC/DOCX import');
+            const rawRows = await parseDocx(buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else if (filename.match(/\.(png|jpg|jpeg|bmp|webp|gif|tiff)$/i)) { // Expanded image format support
-            const rawRows = await parseImage(req.file.buffer);
+            if (!buffer) throw new Error('File buffer missing for Image import');
+            const rawRows = await parseImage(buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else {
             return res.status(400).json({ message: 'Unsupported file format. Supported: Excel, PDF, Word, Images (PNG, JPG, WEBP, etc.)' });

@@ -352,14 +352,17 @@ async function initPgDb() {
             password TEXT NOT NULL,
             role TEXT CHECK(role IN ('admin', 'cadet', 'training_staff')) NOT NULL,
             cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
+            staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE,
             is_approved INTEGER DEFAULT 0,
             email TEXT,
             profile_pic TEXT,
+            gender TEXT,
             is_archived BOOLEAN DEFAULT FALSE,
             last_latitude DOUBLE PRECISION,
             last_longitude DOUBLE PRECISION,
             last_location_at TIMESTAMP
         )`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT`,
         `CREATE TABLE IF NOT EXISTS grades (
             id SERIAL PRIMARY KEY,
             cadet_id INTEGER UNIQUE NOT NULL REFERENCES cadets(id) ON DELETE CASCADE,
@@ -707,9 +710,11 @@ function initSqliteDb() {
             password TEXT NOT NULL,
             role TEXT CHECK(role IN ('admin', 'cadet', 'training_staff')) NOT NULL,
             cadet_id INTEGER,
+            staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE,
             is_approved INTEGER DEFAULT 0,
             email TEXT,
             profile_pic TEXT,
+            gender TEXT,
             is_archived INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             last_latitude REAL,
@@ -896,6 +901,7 @@ function initSqliteDb() {
         db.run(`ALTER TABLE users ADD COLUMN last_latitude REAL`, (err) => {});
         db.run(`ALTER TABLE users ADD COLUMN last_longitude REAL`, (err) => {});
         db.run(`ALTER TABLE users ADD COLUMN last_location_at TEXT`, (err) => {});
+        db.run(`ALTER TABLE users ADD COLUMN gender TEXT`, (err) => {});
         
         // Note: SQLite CHECK constraint update requires table recreation, skipping for now as it's complex.
         // Ensure new users table creation has correct check.
