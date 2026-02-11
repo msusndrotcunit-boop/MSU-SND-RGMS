@@ -1647,15 +1647,15 @@ router.post('/cadets/delete', async (req, res) => {
         // Delete related records first (manual cascade) to ensure cleanup
         // Note: Even if Foreign Keys are ON, explicit deletes are safer in mixed envs
         await runQuery(`DELETE FROM grades WHERE cadet_id IN (${placeholders})`, ids);
-        await runQuery(`DELETE FROM users WHERE cadet_id IN (${placeholders})`, ids);
         await runQuery(`DELETE FROM merit_demerit_logs WHERE cadet_id IN (${placeholders})`, ids);
         await runQuery(`DELETE FROM attendance_records WHERE cadet_id IN (${placeholders})`, ids);
         await runQuery(`DELETE FROM excuse_letters WHERE cadet_id IN (${placeholders})`, ids);
+        // Archive users linked to these cadets (soft delete)
+        const usersChanges = await runQuery(`UPDATE users SET is_archived = TRUE, is_approved = 0 WHERE cadet_id IN (${placeholders})`, ids);
+        // Finally archive cadets (soft delete)
+        const cadetChanges = await runQuery(`UPDATE cadets SET is_archived = TRUE WHERE id IN (${placeholders})`, ids);
         
-        // Finally delete cadets
-        const changes = await runQuery(`DELETE FROM cadets WHERE id IN (${placeholders})`, ids);
-        
-        res.json({ message: `Deleted ${changes} cadets and related records` });
+        res.json({ message: `Archived ${cadetChanges} cadets, ${usersChanges} users, and deleted related records` });
         try {
             broadcastEvent({ type: 'cadet_deleted', cadetIds: ids });
         } catch {}
