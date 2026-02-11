@@ -122,7 +122,12 @@ const Profile = () => {
                 } else if (!normalizedPath.startsWith('/')) {
                     normalizedPath = '/' + normalizedPath;
                 }
-                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+                const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+                const baseB = import.meta.env.VITE_API_URL || '';
+                const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
+                const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+                const final = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
+                setPreview(final);
             }
         }
     };

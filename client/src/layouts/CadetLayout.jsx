@@ -293,8 +293,11 @@ const CadetLayout = () => {
                                     } else if (!normalizedPath.startsWith('/')) {
                                         normalizedPath = '/' + normalizedPath;
                                     }
-                                    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-                                    finalSrc = `${base}${normalizedPath}`;
+                                    const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+                                    const baseB = import.meta.env.VITE_API_URL || '';
+                                    const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
+                                    const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+                                    finalSrc = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
                                 }
                                 return <img src={finalSrc} alt="Profile" className="w-full h-full object-cover" />;
                             }
