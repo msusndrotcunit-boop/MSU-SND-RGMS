@@ -317,7 +317,21 @@ const CadetLayout = () => {
                             } else if (user?.cadetId) {
                                 finalSrc = `/api/images/cadets/${user.cadetId}`;
                             }
-                            if (finalSrc) return <img src={finalSrc} alt="Profile" className="w-full h-full object-cover" />;
+                            if (finalSrc) return (
+                                <img
+                                    src={finalSrc}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        if (user?.cadetId && !String(e.target.src).includes(`/api/images/cadets/${user.cadetId}`)) {
+                                            e.target.src = `/api/images/cadets/${user.cadetId}`;
+                                            return;
+                                        }
+                                        e.target.src = '/assets/default-avatar.png';
+                                    }}
+                                />
+                            );
                             return (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
                                     <User size={40} />
