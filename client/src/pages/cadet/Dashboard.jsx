@@ -330,60 +330,56 @@ const CadetDashboard = () => {
                             
                         </div>
 
-                        {/* 4. Merit & Demerit Records */}
-                        <div className="bg-white rounded shadow p-6">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
-                                <h2 className="text-xl font-bold text-green-800 flex items-center">
-                                    <AlertCircle className="mr-2" size={20} />
-                                    Merit & Demerit Records (30%)
-                                </h2>
-                                <div className="mt-2 md:mt-0 text-right">
-                                    <span className="text-2xl font-bold text-green-900">{Number(gradeData.aptitudeScore).toFixed(2)} pts</span>
-                                    <span className="text-sm text-gray-500 ml-2 block md:inline">
-                                        (Merits: {gradeData.merit_points} | Demerits: {gradeData.demerit_points})
-                                    </span>
+                        {false && (
+                            <div className="bg-white rounded shadow p-6">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                    <h2 className="text-xl font-bold text-green-800 flex items-center">
+                                        <AlertCircle className="mr-2" size={20} />
+                                        Merit & Demerit Records (30%)
+                                    </h2>
+                                    <div className="mt-2 md:mt-0 text-right">
+                                        <span className="text-2xl font-bold text-green-900">{Number(gradeData.aptitudeScore).toFixed(2)} pts</span>
+                                        <span className="text-sm text-gray-500 ml-2 block md:inline">
+                                            (Merits: {gradeData.merit_points} | Demerits: {gradeData.demerit_points})
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
+                                            <tr className="border-b">
+                                                <th className="p-3 font-semibold text-gray-600">Date</th>
+                                                <th className="p-3 font-semibold text-gray-600">Type</th>
+                                                <th className="p-3 font-semibold text-gray-600">Points</th>
+                                                <th className="p-3 font-semibold text-gray-600">Reason</th>
+                                                <th className="p-3 font-semibold text-gray-600">Issued By</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Array.isArray(logs) && logs.length > 0 ? logs.map(log => (
+                                                    <tr key={log.id || `${log.type}-${log.points}-${log.date_recorded}`} className="border-b hover:bg-gray-50">
+                                                        <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                                                log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                            }`}>
+                                                                {log.type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 font-bold">{log.points}</td>
+                                                        <td className="p-3 text-sm text-gray-600">{log.reason || '-'}</td>
+                                                        <td className="p-3 text-sm text-gray-600">{log.issued_by_name || '-'}</td>
+                                                    </tr>
+                                            )) : (
+                                                    <tr>
+                                                        <td colSpan="5" className="p-4 text-center text-gray-500">No records found.</td>
+                                                    </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                            
-                            {/* Filters */}
-                            
-                            
-                            <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
-                                        <tr className="border-b">
-                                            <th className="p-3 font-semibold text-gray-600">Date</th>
-                                            <th className="p-3 font-semibold text-gray-600">Type</th>
-                                            <th className="p-3 font-semibold text-gray-600">Points</th>
-                                            <th className="p-3 font-semibold text-gray-600">Reason</th>
-                                            <th className="p-3 font-semibold text-gray-600">Issued By</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Array.isArray(logs) && logs.length > 0 ? logs.map(log => (
-                                                <tr key={log.id || `${log.type}-${log.points}-${log.date_recorded}`} className="border-b hover:bg-gray-50">
-                                                    <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
-                                                    <td className="p-3">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                                            log.type === 'merit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {log.type}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-3 font-bold">{log.points}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{log.reason || '-'}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{log.issued_by_name || '-'}</td>
-                                                </tr>
-                                        )) : (
-                                                <tr>
-                                                    <td colSpan="5" className="p-4 text-center text-gray-500">No records found.</td>
-                                                </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                        </div>
+                        )}
                     </>
                     );
                 })()}
@@ -391,41 +387,43 @@ const CadetDashboard = () => {
 
 
 
-            {/* Secure Documents / Excuse Letters */}
-            <div className="bg-white rounded shadow p-6">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
-                <ExcuseLetterSubmission />
-            </div>
-
-            {/* Quick Links */}
-            <div className="bg-white rounded shadow p-6">
-                <h2 className="text-xl font-bold mb-4 border-b pb-2">Quick Links</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button 
-                        onClick={() => navigate('/cadet/profile')}
-                        className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                    >
-                        <User className="mr-3 text-blue-600 group-hover:scale-110 transition-transform" size={24} />
-                        <span className="font-semibold text-gray-700">My Profile</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/cadet/about')}
-                        className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                    >
-                        <Info className="mr-3 text-green-600 group-hover:scale-110 transition-transform" size={24} />
-                        <span className="font-semibold text-gray-700">About System</span>
-                    </button>
-                    <a 
-                        href="https://www.facebook.com/share/14SweZHYBFR/" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                    >
-                        <Link className="mr-3 text-indigo-600 group-hover:scale-110 transition-transform" size={24} />
-                        <span className="font-semibold text-gray-700">Official Page</span>
-                    </a>
+            {false && (
+                <div className="bg-white rounded shadow p-6">
+                    <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
+                    <ExcuseLetterSubmission />
                 </div>
-            </div>
+            )}
+
+            {false && (
+                <div className="bg-white rounded shadow p-6">
+                    <h2 className="text-xl font-bold mb-4 border-b pb-2">Quick Links</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button 
+                            onClick={() => navigate('/cadet/profile')}
+                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
+                        >
+                            <User className="mr-3 text-blue-600 group-hover:scale-110 transition-transform" size={24} />
+                            <span className="font-semibold text-gray-700">My Profile</span>
+                        </button>
+                        <button 
+                            onClick={() => navigate('/cadet/about')}
+                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
+                        >
+                            <Info className="mr-3 text-green-600 group-hover:scale-110 transition-transform" size={24} />
+                            <span className="font-semibold text-gray-700">About System</span>
+                        </button>
+                        <a 
+                            href="https://www.facebook.com/share/14SweZHYBFR/" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
+                        >
+                            <Link className="mr-3 text-indigo-600 group-hover:scale-110 transition-transform" size={24} />
+                            <span className="font-semibold text-gray-700">Official Page</span>
+                        </a>
+                    </div>
+                </div>
+            )}
 
 
         </div>
