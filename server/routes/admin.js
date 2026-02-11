@@ -1744,11 +1744,28 @@ router.post('/cadets/delete', async (req, res) => {
 // --- Grading Management ---
 
 // Update Grades for a Cadet
-router.put('/grades/:cadetId', async (req, res) => {
+router.put('/grades/:cadetId', authenticateToken, isAdmin, async (req, res) => {
             let { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
     const cadetId = Number(req.params.cadetId);
 
     try {
+        const issuerUserId = req.user && req.user.id ? Number(req.user.id) : null;
+        const getIssuerName = () => new Promise((resolve) => {
+            if (!issuerUserId) return resolve(null);
+            db.get(`SELECT id, username, staff_id FROM users WHERE id = ?`, [issuerUserId], (uErr, uRow) => {
+                if (uErr || !uRow) return resolve(null);
+                if (uRow.staff_id) {
+                    db.get(`SELECT rank, first_name, last_name FROM training_staff WHERE id = ?`, [uRow.staff_id], (sErr, sRow) => {
+                        if (sErr || !sRow) return resolve(uRow.username || null);
+                        const n = [sRow.rank, sRow.last_name, sRow.first_name].filter(Boolean);
+                        resolve(n.length ? `${n[0] ? n[0] + ' ' : ''}${n[1] || ''}${n[2] ? ', ' + n[2] : ''}`.trim() : (uRow.username || null));
+                    });
+                } else {
+                    resolve(uRow.username || null);
+                }
+            });
+        });
+        const issuerName = await getIssuerName();
         const row = await new Promise((resolve, reject) => {
             db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
                 if (err) reject(err);
@@ -1841,14 +1858,22 @@ router.put('/grades/:cadetId', async (req, res) => {
             
             if (meritDiff !== 0) {
                 await new Promise(resolve => {
-                    db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'merit', ?, 'Manual Adjustment by Admin')`, 
-                        [cadetId, meritDiff], resolve);
+                    db.run(
+                        `INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) 
+                         VALUES (?, 'merit', ?, 'Manual Adjustment by Admin', ?, ?)`, 
+                        [cadetId, meritDiff, issuerUserId, issuerName], 
+                        (err) => { if (err) console.error('Merit log insert error:', err); resolve(); }
+                    );
                 });
             }
             if (demeritDiff !== 0) {
                 await new Promise(resolve => {
-                    db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin')`, 
-                        [cadetId, demeritDiff], resolve);
+                    db.run(
+                        `INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) 
+                         VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin', ?, ?)`, 
+                        [cadetId, demeritDiff, issuerUserId, issuerName], 
+                        (err) => { if (err) console.error('Demerit log insert error:', err); resolve(); }
+                    );
                 });
             }
 
