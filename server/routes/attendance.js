@@ -532,7 +532,7 @@ function updateTotalAttendance(cadetId, res) {
             return;
         }
         
-        const count = row.count;
+        const count = row.count || 0;
         console.log(`Updating attendance count for cadet ${cadetId}: ${count}`);
         
         // Update grades table
@@ -554,16 +554,6 @@ function updateTotalAttendance(cadetId, res) {
             } else {
                 console.log(`Updated grades for cadet ${cadetId} with attendance count ${count}`);
                 broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
-            }
-        });
-    });
-}error(`Error updating grades for cadet ${cadetId}:`, err);
-            
-            if (this.changes === 0) {
-                // Grade record might not exist, create it
-                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
-                    if (err) console.error(`Error creating grade record for cadet ${cadetId}:`, err);
-                });
             }
         });
     });
