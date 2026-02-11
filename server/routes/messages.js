@@ -153,15 +153,29 @@ router.post('/broadcast', async (req, res) => {
         return res.status(400).json({ message: 'Subject and message are required' });
     }
     try {
-        const recipients = await pAll(`SELECT id FROM users WHERE role IN ('cadet','training_staff')`);
+        const recipients = await pAll(`
+            SELECT id, role 
+            FROM users 
+            WHERE role IN ('cadet','training_staff')
+              AND (is_archived IS NULL OR is_archived = 0)
+              AND (
+                    (role = 'cadet' AND is_approved = 1)
+                    OR role = 'training_staff'
+                  )
+        `);
         let inserted = 0;
+        let failed = 0;
         for (const r of recipients) {
-            await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, 'admin', ?, ?)`, [r.id, subject, message]);
-            await pRun(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'admin_broadcast')`, [r.id, subject]);
-            inserted++;
+            try {
+                await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, 'admin', ?, ?)`, [r.id, subject, message]);
+                await pRun(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'admin_broadcast')`, [r.id, subject]);
+                inserted++;
+            } catch (e) {
+                failed++;
+            }
         }
         broadcastEvent({ type: 'admin_broadcast', count: inserted });
-        res.status(201).json({ message: `Broadcast sent to ${inserted} users`, count: inserted });
+        res.status(201).json({ message: `Broadcast sent to ${inserted} users${failed ? ` (${failed} failed)` : ''}`, count: inserted, failed });
     } catch (err) {
         console.error('Error broadcasting message:', err);
         res.status(500).json({ message: 'Error broadcasting message' });
