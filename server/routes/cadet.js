@@ -129,9 +129,53 @@ router.get('/my-merit-logs', async (req, res) => {
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
     const sql = `SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`;
-    db.all(sql, [cadetId], (err, rows) => {
+    db.all(sql, [cadetId], async (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json(rows || []);
+        const logs = Array.isArray(rows) ? rows : [];
+
+        // Ensure displayed totals stay in sync with Admin Grading
+        const gradeTotals = await new Promise(resolve => {
+            db.get(
+                `SELECT merit_points, demerit_points FROM grades WHERE cadet_id = ?`,
+                [cadetId],
+                (gErr, gRow) => resolve(gErr ? null : gRow)
+            );
+        });
+
+        if (gradeTotals) {
+            const ledgerMerit = logs.filter(l => l.type === 'merit').reduce((a, b) => a + Number(b.points || 0), 0);
+            const ledgerDemerit = logs.filter(l => l.type === 'demerit').reduce((a, b) => a + Number(b.points || 0), 0);
+            const meritDiff = Math.max(0, Number(gradeTotals.merit_points || 0) - ledgerMerit);
+            const demeritDiff = Math.max(0, Number(gradeTotals.demerit_points || 0) - ledgerDemerit);
+
+            const nowIso = new Date().toISOString();
+            if (meritDiff > 0) {
+                logs.unshift({
+                    id: null,
+                    cadet_id: cadetId,
+                    type: 'merit',
+                    points: meritDiff,
+                    reason: 'Admin Grade Total (not yet ledgered)',
+                    issued_by_user_id: null,
+                    issued_by_name: 'Admin',
+                    date_recorded: nowIso
+                });
+            }
+            if (demeritDiff > 0) {
+                logs.unshift({
+                    id: null,
+                    cadet_id: cadetId,
+                    type: 'demerit',
+                    points: demeritDiff,
+                    reason: 'Admin Grade Total (not yet ledgered)',
+                    issued_by_user_id: null,
+                    issued_by_name: 'Admin',
+                    date_recorded: nowIso
+                });
+            }
+        }
+
+        res.json(logs);
     });
 });
 

@@ -17,9 +17,24 @@ const CadetDashboard = () => {
     const fetchAttendance = async (filters = attendanceFilters) => {
         const params = {};
         params.order = filters.order || 'asc';
-        const res = await axios.get('/api/attendance/my-history', { params }).catch(() => ({ data: [] }));
-        const data = res.data;
-        const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || data.length } : data;
+        let shaped = { items: [], total: 0, page: 1, pageSize: 0 };
+        try {
+            const res = await axios.get('/api/attendance/my-history', { params });
+            const data = res.data;
+            shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || 15 } : (data || shaped);
+        } catch {
+            shaped = { items: [], total: 0, page: 1, pageSize: 0 };
+        }
+        if (!shaped.items || shaped.items.length === 0) {
+            try {
+                const daysRes = await axios.get('/api/attendance/days');
+                const days = Array.isArray(daysRes.data) ? daysRes.data : [];
+                const fallbackItems = days
+                    .map(d => ({ id: null, date: d.date, title: d.title, status: 'absent', remarks: null, time_in: null, time_out: null }))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                shaped = { items: fallbackItems, total: fallbackItems.length, page: 1, pageSize: fallbackItems.length };
+            } catch {}
+        }
         setAttendanceLogs(shaped);
         await cacheSingleton('dashboard', 'cadet_attendance', { data: shaped, timestamp: Date.now() });
     };
