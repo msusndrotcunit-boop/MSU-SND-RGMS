@@ -26,6 +26,7 @@ const imageRoutes = require('./routes/images');
 const webpush = require('web-push');
 const { processUrlImport } = require('./utils/importCadets');
 const dbSettingsKey = 'cadet_list_source_url';
+const { broadcastEvent } = require('./utils/sseHelper');
 
 console.log('[Startup] Initializing Server...');
 
@@ -388,6 +389,31 @@ function performPing() {
         });
 }
 
+// --- Sync Events Broadcaster (sub-second latency) ---
+function startSyncEventBroadcaster() {
+    const POLL_MS = 250;
+    setInterval(() => {
+        try {
+            db.all(`SELECT id, event_type, cadet_id, payload, created_at FROM sync_events WHERE processed = FALSE OR processed = 0 ORDER BY created_at ASC LIMIT 50`, [], (err, rows) => {
+                if (err || !rows || rows.length === 0) return;
+                for (const ev of rows) {
+                    try {
+                        const payload = typeof ev.payload === 'string' ? JSON.parse(ev.payload || '{}') : (ev.payload || {});
+                        broadcastEvent({ type: ev.event_type, cadetId: ev.cadet_id, payload, at: Date.now() });
+                    } catch (_) {}
+                    db.run(`UPDATE sync_events SET processed = TRUE, processed_at = CURRENT_TIMESTAMP WHERE id = ?`, [ev.id], () => {});
+                    // Legacy clients listening for 'grade_updated'
+                    if (['merit_added','merit_deleted','demerit_added','demerit_deleted','ledger_updated','grade_updated'].includes(ev.event_type)) {
+                        try { broadcastEvent({ type: 'grade_updated', cadetId: ev.cadet_id }); } catch (_) {}
+                    }
+                }
+            });
+        } catch (e) {
+            // ignore polling errors
+        }
+    }, POLL_MS);
+}
+
 // START SERVER
 async function startServer() {
     // Bind to 0.0.0.0 to ensure external access in container
@@ -398,6 +424,7 @@ async function startServer() {
         // Start self-ping service only in production or if explicitly enabled
         // We enable it by default here since the user requested to prevent sleep
         startKeepAlive();
+        startSyncEventBroadcaster();
     });
 
     // Initialize Database (Migrations & Tables)

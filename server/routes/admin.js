@@ -2196,47 +2196,50 @@ router.post('/merit-logs', (req, res) => {
     });
     
     getIssuerName().then((issuerName) => {
-        // 1. Insert Log with issuer info
-        db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) VALUES (?, ?, ?, ?, ?, ?)`, 
-            [cadetId, type, points, reason, issuerUserId, issuerName], 
-            function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            
-            // 2. Update Total in Grades
-            const column = type === 'merit' ? 'merit_points' : 'demerit_points';
-            
-            const updateGrades = () => {
-                db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (err) => {
-                    if (err) return res.status(500).json({ message: err.message });
-                    
-                    // 3. Send Email Notification
-                    db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
-                        if (!err && cadet && cadet.email) {
-                            const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
-                            const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nA new ${type} record has been added to your profile.\nPoints: ${points}\nReason: ${reason}\n\nPlease check your dashboard for details.\n\nRegards,\nROTC Admin`;
-                            const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>A new <strong>${type}</strong> record has been added to your profile.</p><ul><li><strong>Points:</strong> ${points}</li><li><strong>Reason:</strong> ${reason}</li></ul><p>Please check your dashboard for details.</p><p>Regards,<br>ROTC Admin</p>`;
-                            
-                            await sendEmail(cadet.email, subject, text, html);
-                        }
-                        broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
-                        res.json({ message: 'Log added and points updated' });
-                    });
-                });
-            };
-            
-            db.get(`SELECT id FROM grades WHERE cadet_id = ?`, [cadetId], (err, row) => {
-                if (!row) {
-                    // Create grade row first
-                    db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (err) => {
-                        if (err) return res.status(500).json({ message: 'Failed to init grades' });
-                        updateGrades();
-                    });
-                } else {
-                    updateGrades();
+        db.run('BEGIN', [], (beginErr) => {
+            if (beginErr) return res.status(500).json({ message: beginErr.message });
+            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) VALUES (?, ?, ?, ?, ?, ?)`, 
+                [cadetId, type, points, reason, issuerUserId, issuerName], 
+                function(err) {
+                if (err) {
+                    return db.run('ROLLBACK', [], () => res.status(500).json({ message: err.message }));
                 }
+                const column = type === 'merit' ? 'merit_points' : 'demerit_points';
+                const ensureGradeRow = () => {
+                    db.get(`SELECT id FROM grades WHERE cadet_id = ?`, [cadetId], (gErr, gRow) => {
+                        if (gErr) {
+                            return db.run('ROLLBACK', [], () => res.status(500).json({ message: gErr.message }));
+                        }
+                        if (!gRow) {
+                            db.run(`INSERT INTO grades (cadet_id) VALUES (?)`, [cadetId], (insErr) => {
+                                if (insErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: 'Failed to init grades' }));
+                                applyGradeUpdate();
+                            });
+                        } else {
+                            applyGradeUpdate();
+                        }
+                    });
+                };
+                const applyGradeUpdate = () => {
+                    db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (uErr) => {
+                        if (uErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
+                        db.run('COMMIT', [], () => {
+                            db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (cErr, cadet) => {
+                                if (!cErr && cadet && cadet.email) {
+                                    const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
+                                    const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nA new ${type} record has been added to your profile.\nPoints: ${points}\nReason: ${reason}\n\nPlease check your dashboard for details.\n\nRegards,\nROTC Admin`;
+                                    const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>A new <strong>${type}</strong> record has been added to your profile.</p><ul><li><strong>Points:</strong> ${points}</li><li><strong>Reason:</strong> ${reason}</li></ul><p>Please check your dashboard for details.</p><p>Regards,<br>ROTC Admin</p>`;
+                                    try { await sendEmail(cadet.email, subject, text, html); } catch (_) {}
+                                }
+                                broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+                                res.json({ message: 'Log added and points updated' });
+                            });
+                        });
+                    });
+                };
+                ensureGradeRow();
             });
-        }
-        );
+        });
     });
 });
 
@@ -2248,18 +2251,18 @@ router.delete('/merit-logs/:id', (req, res) => {
     db.get(`SELECT * FROM merit_demerit_logs WHERE id = ?`, [logId], (err, log) => {
         if (err) return res.status(500).json({ message: err.message });
         if (!log) return res.status(404).json({ message: 'Log not found' });
-
-        // 2. Delete the log
-        db.run(`DELETE FROM merit_demerit_logs WHERE id = ?`, [logId], (err) => {
-            if (err) return res.status(500).json({ message: err.message });
-
-            // 3. Reverse the points in grades table
-            const column = log.type === 'merit' ? 'merit_points' : 'demerit_points';
-            
-            db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (err) => {
-                if (err) console.error("Error updating grades after log deletion", err);
-                broadcastEvent({ type: 'grade_updated', cadetId: Number(log.cadet_id) });
-                res.json({ message: 'Log deleted and points reverted' });
+        db.run('BEGIN', [], (bErr) => {
+            if (bErr) return res.status(500).json({ message: bErr.message });
+            db.run(`DELETE FROM merit_demerit_logs WHERE id = ?`, [logId], (dErr) => {
+                if (dErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: dErr.message }));
+                const column = log.type === 'merit' ? 'merit_points' : 'demerit_points';
+                db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (uErr) => {
+                    if (uErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
+                    db.run('COMMIT', [], () => {
+                        broadcastEvent({ type: 'grade_updated', cadetId: Number(log.cadet_id) });
+                        res.json({ message: 'Log deleted and points reverted' });
+                    });
+                });
             });
         });
     });
@@ -2290,6 +2293,38 @@ router.put('/notifications/read-all', (req, res) => {
     db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'All marked as read' });
+    });
+});
+
+// --- Sync Metrics Dashboard ---
+router.get('/sync/metrics', (req, res) => {
+    const result = { backlog: 0, processed_last_5m: 0, avg_latency_ms: null, p95_latency_ms: null };
+    const nowMs = Date.now();
+    db.get(`SELECT COUNT(*) as total FROM sync_events WHERE processed = 0 OR processed = FALSE`, [], (bErr, bRow) => {
+        result.backlog = (!bErr && bRow && (bRow.total ?? bRow.count)) ? Number(bRow.total ?? bRow.count) : 0;
+        db.all(`SELECT created_at, processed_at FROM sync_events WHERE processed = 1 OR processed = TRUE ORDER BY processed_at DESC LIMIT 500`, [], (pErr, rows) => {
+            const latencies = [];
+            const recentWindowMs = 5 * 60 * 1000;
+            let processedLast5m = 0;
+            if (!pErr && Array.isArray(rows)) {
+                for (const r of rows) {
+                    const c = new Date(r.created_at).getTime();
+                    const p = new Date(r.processed_at || r.created_at).getTime();
+                    const ms = Math.max(0, p - c);
+                    latencies.push(ms);
+                    if ((nowMs - p) <= recentWindowMs) processedLast5m++;
+                }
+            }
+            result.processed_last_5m = processedLast5m;
+            if (latencies.length) {
+                const avg = latencies.reduce((a,b)=>a+b,0) / latencies.length;
+                result.avg_latency_ms = Math.round(avg);
+                const sorted = latencies.slice().sort((a,b)=>a-b);
+                const p95 = sorted[Math.floor(sorted.length * 0.95)] || sorted[sorted.length-1] || 0;
+                result.p95_latency_ms = Math.round(p95);
+            }
+            res.json(result);
+        });
     });
 });
 

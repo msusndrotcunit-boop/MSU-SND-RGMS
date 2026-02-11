@@ -515,6 +515,25 @@ async function initPgDb() {
             image_path TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`
+        ,
+        `CREATE TABLE IF NOT EXISTS audit_logs (
+            id SERIAL PRIMARY KEY,
+            table_name TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            record_id INTEGER,
+            user_id INTEGER,
+            payload JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS sync_events (
+            id SERIAL PRIMARY KEY,
+            event_type TEXT NOT NULL,
+            cadet_id INTEGER REFERENCES cadets(id) ON DELETE CASCADE,
+            payload JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed BOOLEAN DEFAULT FALSE,
+            processed_at TIMESTAMP
+        )`
     ];
 
     try {
@@ -619,6 +638,50 @@ async function initPgDb() {
             try { await db.pool.query(query); } catch (e) { 
                 console.warn(`Migration warning (simple):`, e.message);
             }
+        }
+
+        // Create audit trigger function and triggers for merit_demerit_logs (Postgres)
+        try {
+            await db.pool.query(`
+                CREATE OR REPLACE FUNCTION fn_merit_demerit_audit()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    IF (TG_OP = 'INSERT') THEN
+                        INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+                        VALUES ('merit_demerit_logs', 'INSERT', NEW.id, NEW.issued_by_user_id,
+                            json_build_object('cadet_id', NEW.cadet_id, 'type', NEW.type, 'points', NEW.points, 'reason', NEW.reason, 'issued_by_name', NEW.issued_by_name));
+                        INSERT INTO sync_events(event_type, cadet_id, payload)
+                        VALUES (CASE WHEN NEW.type='merit' THEN 'merit_added' ELSE 'demerit_added' END, NEW.cadet_id,
+                            json_build_object('log_id', NEW.id, 'points', NEW.points, 'reason', NEW.reason));
+                        RETURN NEW;
+                    ELSIF (TG_OP = 'UPDATE') THEN
+                        INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+                        VALUES ('merit_demerit_logs', 'UPDATE', NEW.id, NEW.issued_by_user_id,
+                            json_build_object('before', json_build_object('points', OLD.points, 'type', OLD.type, 'reason', OLD.reason),
+                                             'after',  json_build_object('points', NEW.points, 'type', NEW.type, 'reason', NEW.reason)));
+                        INSERT INTO sync_events(event_type, cadet_id, payload)
+                        VALUES ('ledger_updated', NEW.cadet_id, json_build_object('log_id', NEW.id));
+                        RETURN NEW;
+                    ELSE
+                        INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+                        VALUES ('merit_demerit_logs', 'DELETE', OLD.id, OLD.issued_by_user_id,
+                            json_build_object('cadet_id', OLD.cadet_id, 'type', OLD.type, 'points', OLD.points, 'reason', OLD.reason));
+                        INSERT INTO sync_events(event_type, cadet_id, payload)
+                        VALUES (CASE WHEN OLD.type='merit' THEN 'merit_deleted' ELSE 'demerit_deleted' END, OLD.cadet_id,
+                            json_build_object('log_id', OLD.id, 'points', OLD.points, 'reason', OLD.reason));
+                        RETURN OLD;
+                    END IF;
+                END;
+                $$ LANGUAGE plpgsql;
+            `);
+            await db.pool.query(`DROP TRIGGER IF EXISTS trg_merit_demerit_audit ON merit_demerit_logs`);
+            await db.pool.query(`
+                CREATE TRIGGER trg_merit_demerit_audit
+                AFTER INSERT OR UPDATE OR DELETE ON merit_demerit_logs
+                FOR EACH ROW EXECUTE FUNCTION fn_merit_demerit_audit();
+            `);
+        } catch (e) {
+            console.warn('Trigger setup warning (merit_demerit_logs):', e.message);
         }
 
         // Migration: Update role check constraint
@@ -944,6 +1007,65 @@ function initSqliteDb() {
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         )`);
+
+        // Audit Logs & Sync Events (SQLite)
+        db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_name TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            record_id INTEGER,
+            user_id INTEGER,
+            payload TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )`);
+        db.run(`CREATE TABLE IF NOT EXISTS sync_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            cadet_id INTEGER,
+            payload TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            processed INTEGER DEFAULT 0,
+            processed_at TEXT
+        )`);
+        // Triggers to capture I/U/D on merit_demerit_logs
+        db.run(`DROP TRIGGER IF EXISTS trg_merit_demerit_audit`);
+        db.run(`
+            CREATE TRIGGER IF NOT EXISTS trg_merit_demerit_audit
+            AFTER INSERT ON merit_demerit_logs
+            BEGIN
+              INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+              VALUES ('merit_demerit_logs','INSERT', NEW.id, NEW.issued_by_user_id,
+                json('{"cadet_id": ' || NEW.cadet_id || ', "type": "' || NEW.type || '", "points": ' || NEW.points || ', "reason": "' || COALESCE(NEW.reason, '') || '", "issued_by_name": "' || COALESCE(NEW.issued_by_name, '') || '"}'));
+              INSERT INTO sync_events(event_type, cadet_id, payload)
+              VALUES (CASE WHEN NEW.type='merit' THEN 'merit_added' ELSE 'demerit_added' END, NEW.cadet_id,
+                json('{"log_id": ' || NEW.id || ', "points": ' || NEW.points || ', "reason": "' || COALESCE(NEW.reason, '') || '"}'));
+            END
+        `);
+        db.run(`DROP TRIGGER IF EXISTS trg_merit_demerit_audit_upd`);
+        db.run(`
+            CREATE TRIGGER IF NOT EXISTS trg_merit_demerit_audit_upd
+            AFTER UPDATE ON merit_demerit_logs
+            BEGIN
+              INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+              VALUES ('merit_demerit_logs','UPDATE', NEW.id, NEW.issued_by_user_id,
+                json('{"before": {"type": "' || OLD.type || '", "points": ' || OLD.points || ', "reason": "' || COALESCE(OLD.reason, '') || '"}, "after": {"type": "' || NEW.type || '", "points": ' || NEW.points || ', "reason": "' || COALESCE(NEW.reason, '') || '"}}'));
+              INSERT INTO sync_events(event_type, cadet_id, payload)
+              VALUES ('ledger_updated', NEW.cadet_id, json('{"log_id": ' || NEW.id || '}'));
+            END
+        `);
+        db.run(`DROP TRIGGER IF EXISTS trg_merit_demerit_audit_del`);
+        db.run(`
+            CREATE TRIGGER IF NOT EXISTS trg_merit_demerit_audit_del
+            AFTER DELETE ON merit_demerit_logs
+            BEGIN
+              INSERT INTO audit_logs(table_name, operation, record_id, user_id, payload)
+              VALUES ('merit_demerit_logs','DELETE', OLD.id, OLD.issued_by_user_id,
+                json('{"cadet_id": ' || OLD.cadet_id || ', "type": "' || OLD.type || '", "points": ' || OLD.points || ', "reason": "' || COALESCE(OLD.reason, '') || '"}'));
+              INSERT INTO sync_events(event_type, cadet_id, payload)
+              VALUES (CASE WHEN OLD.type='merit' THEN 'merit_deleted' ELSE 'demerit_deleted' END, OLD.cadet_id,
+                json('{"log_id": ' || OLD.id || ', "points": ' || OLD.points || '}'));
+            END
+        `);
 
         seedAdmin();
     });
