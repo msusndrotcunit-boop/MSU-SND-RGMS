@@ -175,7 +175,7 @@ const CadetDashboard = () => {
                     const gradeData = grades || {
                         attendanceScore: 0,
                         attendance_present: 0,
-                        totalTrainingDays: 15,
+                        totalTrainingDays: 0,
                         aptitudeScore: 0,
                         merit_points: 0,
                         demerit_points: 0,

@@ -997,8 +997,7 @@ const Grading = () => {
                                         </div>
                                         <div className="bg-white p-4 rounded shadow-sm border text-center">
                                             <div className="text-gray-500 text-sm uppercase">Total Days</div>
-                                            <div className="text-3xl font-bold text-gray-800">15</div> 
-                                            {/* Note: Total days should ideally come from backend config */}
+                                            <div className="text-3xl font-bold text-gray-800">{selectedCadet.totalTrainingDays || 0}</div> 
                                         </div>
                                         <div className="bg-white p-4 rounded shadow-sm border text-center">
                                             <div className="text-gray-500 text-sm uppercase">Attendance Score</div>

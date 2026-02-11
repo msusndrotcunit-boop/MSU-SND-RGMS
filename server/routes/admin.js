@@ -1209,9 +1209,9 @@ router.get('/analytics', (req, res) => {
         // Get Total Training Days for Calculation
         db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
             if (err) return res.status(500).json({ message: err.message });
-            const totalTrainingDays = countRow.total || 15; // Default to 15 if 0 to avoid division by zero (or handle gracefully)
+            const totalTrainingDays = countRow.total || 0; 
 
-    // 2. Get Grade Stats (Optimize: Only fetch grade columns, exclude profile_pic/cadet info)
+    // 2. Get Grade Stats
             const gradesSql = `
                 SELECT g.attendance_present, g.merit_points, g.demerit_points, 
                        g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
@@ -1470,7 +1470,7 @@ router.get('/cadets', (req, res) => {
     // 1. Get Total Training Days first
     db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
         if (err) return res.status(500).json({ message: err.message });
-        const totalTrainingDays = countRow.total || 15; // Default to 15 if 0
+        const totalTrainingDays = countRow.total || 0;
         const baseSelect = `
             SELECT c.id, c.rank, c.first_name, c.middle_name, c.last_name, c.suffix_name,
                    c.student_id, c.email, c.contact_number, c.address, 
@@ -1513,6 +1513,7 @@ router.get('/cadets', (req, res) => {
 
                 return {
                     ...cadet,
+                    totalTrainingDays,
                     attendanceScore,
                     aptitudeScore,
                     subjectScore,

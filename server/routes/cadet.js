@@ -63,7 +63,7 @@ router.get('/my-grades', async (req, res) => {
     });
     try {
         const countRow = await pGet("SELECT COUNT(*) as total FROM training_days", []);
-        const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) || 15;
+        const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) || 0;
         const aRow = await pGet(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId]);
         const attendancePresent = aRow && aRow.present ? aRow.present : 0;
         const mRow = await pGet(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
@@ -109,7 +109,7 @@ router.get('/my-grades', async (req, res) => {
             remarks
         });
     } catch (e) {
-        const safeTotalDays = 15;
+        const safeTotalDays = 0;
         const base = {
             attendance_present: 0,
             merit_points: 0,
