@@ -10,6 +10,7 @@ const Tesseract = require('tesseract.js');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { cloudinary, isCloudinaryConfigured } = require('../utils/cloudinary');
 
 // Simple SSE clients registry (shared via global)
 const SSE_CLIENTS = global.__sseClients || [];
@@ -549,12 +550,15 @@ function updateTotalAttendance(cadetId, res) {
 const parsePdf = async (buffer) => {
     try {
         const data = await pdfParse(buffer);
-        // Split by new lines and try to structure
-        // Simple strategy: Return lines as objects with 'raw' text
-        // The matcher will try to extract info from 'raw'
-        return data.text.split('\n').map(line => ({ raw: line.trim() })).filter(l => l.raw);
+        const lines = (data.text || '').split('\n').map(line => ({ raw: line.trim() })).filter(l => l.raw);
+        if (lines.length < 5) {
+            const ocrLines = await ocrPdfViaCloudinary(buffer);
+            if (ocrLines.length > 0) return ocrLines;
+        }
+        return lines;
     } catch (err) {
-        console.error("PDF Parse Error:", err);
+        const ocrLines = await ocrPdfViaCloudinary(buffer);
+        if (ocrLines.length > 0) return ocrLines;
         return [];
     }
 };
@@ -581,6 +585,30 @@ const parseImage = async (buffer) => {
         return text.split('\n').map(line => ({ raw: line.trim() })).filter(l => l.raw);
     } catch (err) {
         console.error("Image OCR Error:", err);
+        return [];
+    }
+};
+
+const ocrPdfViaCloudinary = async (buffer, maxPages = 3) => {
+    if (!isCloudinaryConfigured) return [];
+    try {
+        const uploadRes = await cloudinary.uploader.upload(
+            `data:application/pdf;base64,${buffer.toString('base64')}`,
+            { folder: 'rotc-grading-system/imports', resource_type: 'auto', format: 'pdf' }
+        );
+        const baseUrl = uploadRes.secure_url || uploadRes.url;
+        const totalPages = Math.min((uploadRes.pages || maxPages), maxPages);
+        const rows = [];
+        for (let page = 1; page <= totalPages; page++) {
+            const transformed = baseUrl.replace('/upload/', `/upload/pg_${page}/f_png/w_1800,q_auto:best,dpr_auto/`);
+            const resp = await axios.get(transformed, { responseType: 'arraybuffer' });
+            const imgBuffer = Buffer.from(resp.data);
+            const pageRows = await parseImage(imgBuffer);
+            rows.push(...pageRows);
+        }
+        return rows;
+    } catch (e) {
+        console.error("OCR PDF via Cloudinary error:", e);
         return [];
     }
 };
@@ -650,6 +678,31 @@ const extractFromRaw = (line) => {
             if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
         }
 
+        return row;
+    }
+
+    const lower = rawLine.toLowerCase();
+    const statuses = ['present', 'absent', 'excused', 'late'];
+    const foundStatus = statuses.find(s => lower.includes(s));
+    if (foundStatus) {
+        row['Status'] = foundStatus;
+        const idx = lower.indexOf(foundStatus);
+        let left = rawLine.slice(0, idx);
+        left = left.replace(/^\s*\d{1,4}[.)]?\s+/, '').replace(/\s+[A-Za-z0-9._-]{3,}\s*$/, '').trim();
+        if (left.includes(',')) {
+            const parts = left.split(',');
+            const lastName = parts[0].trim();
+            const firstName = parts.slice(1).join(' ').trim();
+            if (lastName && firstName) row['Name'] = `${firstName} ${lastName}`;
+        } else {
+            const parts = left.split(/\s+/);
+            if (parts.length >= 2) row['Name'] = left;
+        }
+        const timeMatches = rawLine.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
+        if (timeMatches.length > 0) {
+            row['Time In'] = timeMatches[0];
+            if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
+        }
         return row;
     }
 
