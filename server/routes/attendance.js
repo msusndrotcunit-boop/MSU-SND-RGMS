@@ -670,7 +670,16 @@ const extractFromRaw = (line) => {
 
 const getCadetByStudentId = (studentId) => {
     return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM cadets WHERE student_id = ?', [studentId], (err, row) => {
+        const sql = `
+            SELECT c.id 
+            FROM cadets c 
+            JOIN users u ON u.cadet_id = c.id 
+            WHERE c.student_id = ? 
+              AND u.is_approved = 1 
+              AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
+              AND c.is_profile_completed IS TRUE
+        `;
+        db.get(sql, [studentId], (err, row) => {
             if (err) reject(err);
             else resolve(row);
         });
@@ -679,7 +688,16 @@ const getCadetByStudentId = (studentId) => {
 
 const getCadetByEmail = (email) => {
     return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM cadets WHERE email = ?', [email], (err, row) => {
+        const sql = `
+            SELECT c.id 
+            FROM cadets c 
+            JOIN users u ON u.cadet_id = c.id 
+            WHERE c.email = ? 
+              AND u.is_approved = 1 
+              AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
+              AND c.is_profile_completed IS TRUE
+        `;
+        db.get(sql, [email], (err, row) => {
             if (err) reject(err);
             else resolve(row);
         });
@@ -688,8 +706,17 @@ const getCadetByEmail = (email) => {
 
 const getCadetByName = (firstName, lastName) => {
     return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM cadets WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)', 
-            [firstName, lastName], (err, row) => {
+        const sql = `
+            SELECT c.id 
+            FROM cadets c 
+            JOIN users u ON u.cadet_id = c.id 
+            WHERE lower(c.first_name) = lower(?) 
+              AND lower(c.last_name) = lower(?) 
+              AND u.is_approved = 1 
+              AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
+              AND c.is_profile_completed IS TRUE
+        `;
+        db.get(sql, [firstName, lastName], (err, row) => {
             if (err) reject(err);
             else resolve(row);
         });
@@ -835,7 +862,15 @@ const processAttendanceData = async (data, dayId) => {
     let allCadets = [];
     try {
         allCadets = await new Promise((resolve, reject) => {
-            db.all('SELECT id, first_name, last_name FROM cadets', [], (err, rows) => {
+            const sql = `
+                SELECT c.id, c.first_name, c.last_name
+                FROM cadets c
+                JOIN users u ON u.cadet_id = c.id
+                WHERE u.is_approved = 1
+                  AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                  AND c.is_profile_completed IS TRUE
+            `;
+            db.all(sql, [], (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
             });
