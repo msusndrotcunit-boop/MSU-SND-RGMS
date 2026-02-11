@@ -46,15 +46,17 @@ const CadetLayout = () => {
     const fetchNotifications = async () => {
         try {
             const res = await axios.get('/api/cadet/notifications');
-            setNotifications(res.data || []);
-            setBadgeNotif(res.data?.length || 0);
+            const onlyBroadcasts = (res.data || []).filter(n => n && n.type === 'admin_broadcast');
+            setNotifications(onlyBroadcasts);
+            setBadgeNotif(onlyBroadcasts.length);
         } catch (err) { console.error(err); }
     };
 
     const fetchMessages = async () => {
         try {
             const res = await axios.get('/api/messages/my');
-            setMessages(res.data || []);
+            const onlyAdminMessages = (res.data || []).filter(m => m && m.sender_role === 'admin');
+            setMessages(onlyAdminMessages);
         } catch (err) { console.error(err); }
     };
 
@@ -155,7 +157,7 @@ const CadetLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'ask_admin_reply' || data.type === 'staff_chat' || data.type === 'cadet_notification' || data.type === 'admin_broadcast') {
+                        if (data.type === 'admin_broadcast') {
                             fetchNotifications();
                             fetchMessages();
                             if (navigator.vibrate) navigator.vibrate(80);
