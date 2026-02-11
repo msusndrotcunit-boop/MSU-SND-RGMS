@@ -30,6 +30,15 @@ const Dashboard = () => {
     const [courseCards, setCourseCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [locations, setLocations] = useState([]);
+    const [showLocations, setShowLocations] = useState(() => {
+        try {
+            const hide = typeof window !== 'undefined' ? (localStorage.getItem('rgms_hide_admin_map') === 'true') : true;
+            return !hide;
+        } catch {
+            return false;
+        }
+    });
+    const role = (typeof window !== 'undefined' ? (localStorage.getItem('role') || '').toLowerCase() : 'admin');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -66,6 +75,9 @@ const Dashboard = () => {
                         ]);
                         if (types.has(data.type)) {
                             fetchData();
+                            if (role === 'admin' && showLocations && data.type === 'location_update') {
+                                fetchLocations();
+                            }
                         }
                     } catch {}
                 };
@@ -79,19 +91,31 @@ const Dashboard = () => {
         return () => { try { es && es.close(); } catch {} };
     }, []);
 
+    const fetchLocations = React.useCallback(async () => {
+        try {
+            const res = await axios.get('/api/admin/locations');
+            setLocations(res.data || []);
+        } catch (err) {
+        }
+    }, []);
+
     useEffect(() => {
-        const fetchLocations = async () => {
+        const onToggle = (e) => {
             try {
-                const res = await axios.get('/api/admin/locations');
-                setLocations(res.data || []);
-            } catch (err) {
-                console.error('Location fetch error:', err);
-            }
+                const hide = e?.detail?.hide === true;
+                setShowLocations(!hide);
+            } catch {}
         };
+        window.addEventListener('rgms:hide_admin_map', onToggle);
+        return () => window.removeEventListener('rgms:hide_admin_map', onToggle);
+    }, []);
+
+    useEffect(() => {
+        if (role !== 'admin' || !showLocations) return;
         fetchLocations();
         const id = setInterval(fetchLocations, 60000);
         return () => clearInterval(id);
-    }, []);
+    }, [role, showLocations, fetchLocations]);
 
     const processData = (data) => {
         const rawStats =
@@ -242,7 +266,7 @@ const Dashboard = () => {
                     </div>
                 ))}
             </div>
-            {locations.length > 0 && (
+            {role === 'admin' && showLocations && locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
                         <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
@@ -341,6 +365,7 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
 
 const StatusCard = ({ title, count, color, icon }) => (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
