@@ -62,13 +62,13 @@ router.get('/my-grades', async (req, res) => {
         db.run(sql, params, (err) => resolve(!err));
     });
     try {
-        const countRow = await pGet("SELECT COUNT(*) as total FROM training_days", []);
+        const countRow = await pGet("SELECT COUNT(*)::int as total FROM training_days", []);
         const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) || 0;
-        const aRow = await pGet(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present','excused')`, [cadetId]);
+        const aRow = await pGet(`SELECT COUNT(*)::int as present FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present','excused')`, [cadetId]);
         const attendancePresent = aRow && aRow.present ? aRow.present : 0;
-        const mRow = await pGet(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
+        const mRow = await pGet(`SELECT COALESCE(SUM(points),0)::int as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
         const meritPoints = mRow && mRow.merit ? mRow.merit : 0;
-        const dRow = await pGet(`SELECT COALESCE(SUM(points),0) as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId]);
+        const dRow = await pGet(`SELECT COALESCE(SUM(points),0)::int as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId]);
         const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {

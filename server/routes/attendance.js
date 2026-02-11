@@ -525,35 +525,52 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
 
 // Helper to update total attendance count in grades table
 function updateTotalAttendance(cadetId, res) {
+    const cId = Number(cadetId);
+    if (isNaN(cId)) {
+        console.error(`Invalid cadetId for attendance update: ${cadetId}`);
+        return;
+    }
+
     // Count 'present' and 'excused' records
-    db.get(`SELECT COUNT(*) as count FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present', 'excused')`, [cadetId], (err, row) => {
+    // PostgreSQL count(*) returns a string (BigInt), so we parse it
+    db.get(`SELECT COUNT(*)::int as count FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present', 'excused')`, [cId], (err, row) => {
         if (err) {
-            console.error(`Error counting attendance for cadet ${cadetId}:`, err);
+            console.error(`Error counting attendance for cadet ${cId}:`, err);
             return;
         }
         
-        const count = row.count || 0;
-        console.log(`Updating attendance count for cadet ${cadetId}: ${count}`);
+        const count = row && row.count !== undefined ? Number(row.count) : 0;
+        console.log(`Updating attendance count for cadet ${cId}: ${count}`);
         
-        // Update grades table
-        db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], function(err) {
+        // Update grades table using ON CONFLICT for PostgreSQL or standard logic for SQLite
+        // Our adapter handles the query conversion
+        const updateSql = `
+            INSERT INTO grades (cadet_id, attendance_present) 
+            VALUES (?, ?) 
+            ON CONFLICT (cadet_id) 
+            DO UPDATE SET attendance_present = EXCLUDED.attendance_present
+        `;
+
+        db.run(updateSql, [cId, count], function(err) {
             if (err) {
-                console.error(`Error updating grades for cadet ${cadetId}:`, err);
-                return;
-            }
-            
-            if (this.changes === 0) {
-                // Grade record might not exist, create it
-                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
-                    if (err) console.error(`Error creating grade record for cadet ${cadetId}:`, err);
-                    else {
-                        console.log(`Created grade record for cadet ${cadetId} with attendance count ${count}`);
-                        broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+                // If ON CONFLICT fails (e.g. SQLite), fallback to manual check
+                db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cId], function(err2) {
+                    if (err2) {
+                        console.error(`Error updating grades for cadet ${cId}:`, err2);
+                        return;
+                    }
+                    if (this.changes === 0) {
+                        db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cId, count], (err3) => {
+                            if (err3) console.error(`Error creating grade record for cadet ${cId}:`, err3);
+                            else broadcastEvent({ type: 'grade_updated', cadetId: cId });
+                        });
+                    } else {
+                        broadcastEvent({ type: 'grade_updated', cadetId: cId });
                     }
                 });
             } else {
-                console.log(`Updated grades for cadet ${cadetId} with attendance count ${count}`);
-                broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+                console.log(`Successfully synced grades for cadet ${cId} with count ${count}`);
+                broadcastEvent({ type: 'grade_updated', cadetId: cId });
             }
         });
     });
