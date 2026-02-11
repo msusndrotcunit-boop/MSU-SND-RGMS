@@ -235,7 +235,7 @@ router.post('/login', (req, res) => {
 
             console.log('[Login Success] User:', username);
 
-            const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+            const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '7d' });
             
             // Notify Admin of Login if it's a cadet (or staff?)
             if (user.role === 'cadet' || user.role === 'training_staff') {
@@ -323,7 +323,7 @@ router.post('/cadet-login', (req, res) => {
             return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '7d' });
 
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err2) => { if(err2) console.error(err2); });
@@ -377,7 +377,7 @@ router.post('/staff-login-no-pass', (req, res) => {
             return res.status(403).json({ message: 'Your account is pending approval by the administrator.' });
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, role: user.role, cadetId: user.cadet_id, staffId: user.staff_id }, SECRET_KEY, { expiresIn: '7d' });
 
         const now = new Date().toISOString();
         db.run("UPDATE users SET last_seen = ? WHERE id = ?", [now, user.id], (err2) => { if(err2) console.error(err2); });

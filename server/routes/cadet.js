@@ -109,7 +109,7 @@ router.get('/my-grades', async (req, res) => {
             remarks
         });
     } catch (e) {
-        const safeTotalDays = 0;
+        const safeTotalDays = 1;
         const base = {
             attendance_present: 0,
             merit_points: 0,
