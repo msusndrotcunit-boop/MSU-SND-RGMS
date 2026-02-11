@@ -217,12 +217,20 @@ const CadetDashboard = () => {
                                                 <tr key={log.id} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                                                     <td className="p-3">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                                            log.status === 'present' ? 'bg-green-100 text-green-800' : 
-                                                            log.status === 'late' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {log.status}
-                                                        </span>
+                                                        {(() => {
+                                                            const s = (log.status || 'unmarked').toLowerCase();
+                                                            const cls = s === 'present' ? 'bg-green-100 text-green-800'
+                                                                : s === 'late' ? 'bg-yellow-100 text-yellow-800'
+                                                                : s === 'excused' ? 'bg-blue-100 text-blue-800'
+                                                                : s === 'absent' ? 'bg-red-100 text-red-800'
+                                                                : 'bg-gray-100 text-gray-700';
+                                                            const label = s.charAt(0).toUpperCase() + s.slice(1);
+                                                            return (
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${cls}`}>
+                                                                    {label}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="p-3 text-sm text-gray-600">{log.remarks || '-'}</td>
                                                 </tr>

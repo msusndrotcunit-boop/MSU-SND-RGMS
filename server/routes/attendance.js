@@ -1133,6 +1133,7 @@ router.get('/my-history', authenticateToken, (req, res) => {
 
     const sql = `
         SELECT 
+            ar.id,
             td.date,
             td.title,
             ar.status,
