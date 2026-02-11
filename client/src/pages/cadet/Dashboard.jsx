@@ -12,6 +12,20 @@ const CadetDashboard = () => {
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [esConnected, setEsConnected] = useState(false);
+    const refreshAll = async () => {
+        try {
+            const now = Date.now();
+            const g = await axios.get('/api/cadet/my-grades');
+            setGrades(g.data);
+            await cacheSingleton('dashboard', 'cadet_grades', { data: g.data, timestamp: now });
+            const l = await axios.get('/api/cadet/my-merit-logs');
+            setLogs(l.data);
+            await cacheSingleton('dashboard', 'cadet_logs', { data: l.data, timestamp: now });
+            const a = await axios.get('/api/attendance/my-history');
+            setAttendanceLogs(a.data);
+            await cacheSingleton('dashboard', 'cadet_attendance', { data: a.data, timestamp: now });
+        } catch {}
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -167,7 +181,20 @@ const CadetDashboard = () => {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-gray-800">My Portal</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-800">My Portal</h1>
+                <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded text-xs font-bold ${esConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                        {esConnected ? 'Live Sync On' : 'Offline'}
+                    </span>
+                    <button
+                        onClick={refreshAll}
+                        className="px-3 py-1 rounded bg-[var(--primary-color)] text-white text-sm hover:opacity-90"
+                    >
+                        Refresh
+                    </button>
+                </div>
+            </div>
 
             {/* Grades Section */}
             <div className="space-y-6">
@@ -189,7 +216,61 @@ const CadetDashboard = () => {
                     };
                     return (
                     <>
-                        {/* 1. Attendance Section */}
+                        {/* 1. Final Grades */}
+                        <div className="bg-white rounded shadow p-6">
+                            <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Assessment</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-gray-100 p-6 rounded text-center border">
+                                    <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
+                                    <div className="text-5xl font-bold mt-3 text-gray-800">{Number(gradeData.finalGrade).toFixed(2)}</div>
+                                </div>
+                                <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
+                                    gradeData.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(gradeData.transmutedGrade)
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-green-600 text-white'
+                                }`}>
+                                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
+                                    <div className="text-6xl font-extrabold mt-2">{gradeData.transmutedGrade}</div>
+                                    <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
+                                        {gradeData.remarks}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 2. Subject Proficiency */}
+                        <div className="bg-white rounded shadow p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
+                                <h2 className="text-xl font-bold text-purple-800 flex items-center">
+                                    <Info className="mr-2" size={20} />
+                                    Subject Proficiency (40%)
+                                </h2>
+                                <div className="mt-2 md:mt-0">
+                                    <span className="text-2xl font-bold text-purple-900">{Number(gradeData.subjectScore).toFixed(2)} pts</span>
+                                </div>
+                            </div>
+                            
+                            <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
+                                        <tr className="border-b">
+                                            <th className="p-3 font-semibold text-gray-600">Prelim</th>
+                                            <th className="p-3 font-semibold text-gray-600">Midterm</th>
+                                            <th className="p-3 font-semibold text-gray-600">Final</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="p-3 font-bold">{gradeData.prelim_score}</td>
+                                            <td className="p-3 font-bold">{gradeData.midterm_score}</td>
+                                            <td className="p-3 font-bold">{gradeData.final_score}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* 3. Attendance Section */}
                         <div className="bg-white rounded shadow p-6">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
                                 <h2 className="text-xl font-bold text-blue-800 flex items-center">
@@ -214,7 +295,7 @@ const CadetDashboard = () => {
                                     <tbody>
                                         {attendanceLogs.length > 0 ? (
                                             attendanceLogs.map(log => (
-                                                <tr key={log.id} className="border-b hover:bg-gray-50">
+                                                <tr key={log.id || `${log.date}-${log.title}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                                                     <td className="p-3">
                                                         {(() => {
@@ -245,7 +326,7 @@ const CadetDashboard = () => {
                             </div>
                         </div>
 
-                        {/* 2. Merit & Demerit Records */}
+                        {/* 4. Merit & Demerit Records */}
                         <div className="bg-white rounded shadow p-6">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
                                 <h2 className="text-xl font-bold text-green-800 flex items-center">
@@ -293,56 +374,6 @@ const CadetDashboard = () => {
                                         )}
                                     </tbody>
                                 </table>
-                            </div>
-                        </div>
-
-                        {/* 3. Subject Proficiency */}
-                        <div className="bg-white rounded shadow p-6">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
-                                <h2 className="text-xl font-bold text-purple-800 flex items-center">
-                                    <Info className="mr-2" size={20} />
-                                    Subject Proficiency (40%)
-                                </h2>
-                                <div className="mt-2 md:mt-0">
-                                    <span className="text-2xl font-bold text-purple-900">{Number(gradeData.subjectScore).toFixed(2)} pts</span>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-gray-50 p-4 rounded text-center border">
-                                    <div className="text-sm font-semibold text-gray-500 uppercase">Prelim</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.prelim_score}</div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded text-center border">
-                                    <div className="text-sm font-semibold text-gray-500 uppercase">Midterm</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.midterm_score}</div>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded text-center border">
-                                    <div className="text-sm font-semibold text-gray-500 uppercase">Final</div>
-                                    <div className="text-2xl font-bold text-gray-800 mt-1">{gradeData.final_score}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 4. Final Grades */}
-                        <div className="bg-white rounded shadow p-6">
-                            <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Assessment</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-gray-100 p-6 rounded text-center border">
-                                    <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
-                                    <div className="text-5xl font-bold mt-3 text-gray-800">{Number(gradeData.finalGrade).toFixed(2)}</div>
-                                </div>
-                                <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
-                                    gradeData.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(gradeData.transmutedGrade)
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-green-600 text-white'
-                                }`}>
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
-                                    <div className="text-6xl font-extrabold mt-2">{gradeData.transmutedGrade}</div>
-                                    <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
-                                        {gradeData.remarks}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </>
