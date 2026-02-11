@@ -332,7 +332,8 @@ const Cadets = () => {
                 } else if (!normalizedPath.startsWith('/')) {
                     normalizedPath = '/' + normalizedPath;
                 }
-                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
+                const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                setPreview(`${base}${normalizedPath}`);
             }
         } else {
             setPreview(null);
