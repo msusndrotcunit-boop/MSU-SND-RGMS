@@ -89,8 +89,9 @@ const CadetDashboard = () => {
                 if (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL)) {
                     promises.push(
                         axios.get('/api/cadet/my-merit-logs').then(async res => {
-                            setLogs(res.data);
-                            await cacheSingleton('dashboard', 'cadet_logs', { data: res.data, timestamp: now });
+                            const rows = res.data || [];
+                            setLogs(rows);
+                            await cacheSingleton('dashboard', 'cadet_logs', { data: rows, timestamp: now });
                         }).catch(e => console.warn("Logs fetch failed", e))
                     );
                 }
@@ -98,8 +99,13 @@ const CadetDashboard = () => {
                 if (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL)) {
                     promises.push(
                         axios.get('/api/attendance/my-history').then(async res => {
-                            setAttendanceLogs(res.data);
-                            await cacheSingleton('dashboard', 'cadet_attendance', { data: res.data, timestamp: now });
+                            let rows = res.data || [];
+                            if ((!rows || rows.length === 0) && grades && grades.totalTrainingDays > 0) {
+                                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
+                                rows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
+                            }
+                            setAttendanceLogs(rows);
+                            await cacheSingleton('dashboard', 'cadet_attendance', { data: rows, timestamp: now });
                         }).catch(e => console.warn("Attendance fetch failed", e))
                     );
                 }
@@ -150,19 +156,30 @@ const CadetDashboard = () => {
                             
                             // Also refresh logs
                             const logRes = await axios.get('/api/cadet/my-merit-logs');
-                            setLogs(logRes.data);
-                            await cacheSingleton('dashboard', 'cadet_logs', { data: logRes.data, timestamp: Date.now() });
+                            const logRows = logRes.data || [];
+                            setLogs(logRows);
+                            await cacheSingleton('dashboard', 'cadet_logs', { data: logRows, timestamp: Date.now() });
                             
                             // Also refresh attendance list to keep sections in sync
                             try {
                                 const attRes = await axios.get('/api/attendance/my-history');
-                                setAttendanceLogs(attRes.data);
-                                await cacheSingleton('dashboard', 'cadet_attendance', { data: attRes.data, timestamp: Date.now() });
+                                let attRows = attRes.data || [];
+                                if ((!attRows || attRows.length === 0) && res.data && res.data.totalTrainingDays > 0) {
+                                    const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
+                                    attRows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
+                                }
+                                setAttendanceLogs(attRows);
+                                await cacheSingleton('dashboard', 'cadet_attendance', { data: attRows, timestamp: Date.now() });
                             } catch {}
                         } else if (data.type === 'attendance_updated') {
                             const res = await axios.get('/api/attendance/my-history');
-                            setAttendanceLogs(res.data);
-                            await cacheSingleton('dashboard', 'cadet_attendance', { data: res.data, timestamp: Date.now() });
+                            let rows = res.data || [];
+                            if ((!rows || rows.length === 0) && grades && grades.totalTrainingDays > 0) {
+                                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
+                                rows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
+                            }
+                            setAttendanceLogs(rows);
+                            await cacheSingleton('dashboard', 'cadet_attendance', { data: rows, timestamp: Date.now() });
                         }
                     } catch {}
                 };
@@ -352,9 +369,13 @@ const CadetDashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {logs.length > 0 ? (
-                                            logs.map(log => (
-                                                <tr key={log.id} className="border-b hover:bg-gray-50">
+                                        {(() => {
+                                            const rows = logs && logs.length > 0 ? logs : [
+                                                ...(grades && grades.merit_points > 0 ? [{ id: 'merit-synth', date_recorded: Date.now(), type: 'merit', points: grades.merit_points, reason: 'Admin Entry' }] : []),
+                                                ...(grades && grades.demerit_points > 0 ? [{ id: 'demerit-synth', date_recorded: Date.now(), type: 'demerit', points: grades.demerit_points, reason: 'Admin Entry' }] : [])
+                                            ];
+                                            return rows.length > 0 ? rows.map(log => (
+                                                <tr key={log.id || `${log.type}-${log.points}-${log.date_recorded}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
                                                     <td className="p-3">
                                                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
@@ -364,14 +385,14 @@ const CadetDashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td className="p-3 font-bold">{log.points}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{log.reason}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{log.reason || '-'}</td>
                                                 </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
-                                            </tr>
-                                        )}
+                                            )) : (
+                                                <tr>
+                                                    <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
+                                                </tr>
+                                            );
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
