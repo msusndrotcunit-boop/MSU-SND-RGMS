@@ -27,18 +27,11 @@ const CadetDashboard = () => {
         setAttendanceLogs(shaped);
         await cacheSingleton('dashboard', 'cadet_attendance', { data: shaped, timestamp: Date.now() });
     };
-    const fetchLogs = async (filters = logFilters) => {
-        const params = {};
-        if (filters.type && filters.type !== 'all') params.type = filters.type;
-        if (filters.start) params.start = filters.start;
-        if (filters.end) params.end = filters.end;
-        params.page = filters.page || 1;
-        params.pageSize = filters.pageSize || 10;
-        const res = await axios.get('/api/cadet/my-merit-logs', { params }).catch(() => ({ data: [] }));
-        const data = res.data;
-        const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || 10 } : data;
-        setLogs(shaped);
-        await cacheSingleton('dashboard', 'cadet_logs', { data: shaped, timestamp: Date.now() });
+    const fetchLogs = async () => {
+        const res = await axios.get('/api/cadet/my-merit-logs').catch(() => ({ data: [] }));
+        const data = Array.isArray(res.data) ? res.data : [];
+        setLogs(data);
+        await cacheSingleton('dashboard', 'cadet_logs', { data, timestamp: Date.now() });
     };
     const refreshAll = async () => {
         try {
@@ -65,7 +58,7 @@ const CadetDashboard = () => {
 
                 const cachedLogs = await getSingleton('dashboard', 'cadet_logs');
                 if (cachedLogs) {
-                    const shaped = cachedLogs.data && cachedLogs.data.items ? cachedLogs.data : (Array.isArray(cachedLogs.data) ? { items: cachedLogs.data, total: cachedLogs.data.length, page: 1, pageSize: cachedLogs.data.length || 10 } : cachedLogs.data);
+                    const shaped = Array.isArray(cachedLogs.data) ? cachedLogs.data : [];
                     setLogs(shaped);
                     hasCachedData = true;
                 }
@@ -112,10 +105,10 @@ const CadetDashboard = () => {
                     })
                 );
 
-                const shouldFetchLogs = (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL) || (cachedLogs && (!cachedLogs.data || (Array.isArray(cachedLogs.data) ? cachedLogs.data.length === 0 : (cachedLogs.data.items || []).length === 0))));
+                const shouldFetchLogs = (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL) || (cachedLogs && (!cachedLogs.data || (Array.isArray(cachedLogs.data) ? cachedLogs.data.length === 0 : true))));
                 if (shouldFetchLogs) {
                     promises.push(
-                        fetchLogs({ ...logFilters, page: 1 }).catch(e => console.warn("Logs fetch failed", e))
+                        fetchLogs().catch(e => console.warn("Logs fetch failed", e))
                     );
                 }
 
@@ -171,9 +164,7 @@ const CadetDashboard = () => {
                             await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
                             
                             // Also refresh logs
-                            try {
-                                await fetchLogs(logFilters);
-                            } catch {}
+                            try { await fetchLogs(); } catch {}
                             
                             // Also refresh attendance list to keep sections in sync
                             try { await fetchAttendance(attendanceFilters); } catch {}
@@ -425,38 +416,7 @@ const CadetDashboard = () => {
                             </div>
                             
                             {/* Filters */}
-                            <div className="flex flex-col md:flex-row gap-3 mb-3">
-                                <select
-                                    value={logFilters.type}
-                                    onChange={(e) => { const v = e.target.value; const nf = { ...logFilters, type: v, page: 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                    className="border rounded px-3 py-2"
-                                >
-                                    <option value="all">All</option>
-                                    <option value="merit">Merit</option>
-                                    <option value="demerit">Demerit</option>
-                                </select>
-                                <input
-                                    type="date"
-                                    value={logFilters.start}
-                                    onChange={(e) => { const nf = { ...logFilters, start: e.target.value, page: 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                    className="border rounded px-3 py-2"
-                                />
-                                <input
-                                    type="date"
-                                    value={logFilters.end}
-                                    onChange={(e) => { const nf = { ...logFilters, end: e.target.value, page: 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                    className="border rounded px-3 py-2"
-                                />
-                                <select
-                                    value={logFilters.pageSize}
-                                    onChange={(e) => { const nf = { ...logFilters, pageSize: Number(e.target.value), page: 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                    className="border rounded px-3 py-2"
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                </select>
-                            </div>
+                            
                             
                             <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
                                 <table className="w-full text-left border-collapse">
@@ -470,9 +430,7 @@ const CadetDashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(() => {
-                                            const paged = logs && logs.items ? logs : { items: Array.isArray(logs) ? logs : [], total: logs?.total || 0, page: logs?.page || 1, pageSize: logs?.pageSize || 10 };
-                                            return paged.items.length > 0 ? paged.items.map(log => (
+                                        {Array.isArray(logs) && logs.length > 0 ? logs.map(log => (
                                                 <tr key={log.id || `${log.type}-${log.points}-${log.date_recorded}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
                                                     <td className="p-3">
@@ -484,45 +442,16 @@ const CadetDashboard = () => {
                                                     </td>
                                                     <td className="p-3 font-bold">{log.points}</td>
                                                     <td className="p-3 text-sm text-gray-600">{log.reason || '-'}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{log.issued_by_name || '-'}</td>
                                                 </tr>
-                                            )) : (
+                                        )) : (
                                                 <tr>
-                                                    <td colSpan="5" className="p-4 text-center text-gray-500">No records found.</td>
+                                                    <td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td>
                                                 </tr>
-                                            );
-                                        })()}
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
-                            {/* Pagination */}
-                            {(() => {
-                                const paged = logs && logs.items ? logs : { items: Array.isArray(logs) ? logs : [], total: logs?.total || 0, page: logs?.page || 1, pageSize: logs?.pageSize || 10 };
-                                const totalPages = Math.max(1, Math.ceil((paged.total || 0) / (paged.pageSize || 10)));
-                                return (
-                                    <div className="flex items-center justify-between mt-3">
-                                        <div className="text-sm text-gray-600">
-                                            Page {paged.page} of {totalPages} • {paged.total} records
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                className="px-3 py-1 border rounded disabled:opacity-50"
-                                                disabled={paged.page <= 1}
-                                                onClick={() => { const nf = { ...logFilters, page: paged.page - 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                            >
-                                                Prev
-                                            </button>
-                                            <button
-                                                className="px-3 py-1 border rounded disabled:opacity-50"
-                                                disabled={paged.page >= totalPages}
-                                                onClick={() => { const nf = { ...logFilters, page: paged.page + 1 }; setLogFilters(nf); fetchLogs(nf); }}
-                                            >
-                                                Next
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
+                            
                         </div>
                     </>
                     );
