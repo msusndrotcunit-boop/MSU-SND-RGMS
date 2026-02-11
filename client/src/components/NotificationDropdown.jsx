@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Bell, Mail, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear, onMarkRead }) => {
+const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear, onMarkRead, navigateToMessage, navigateToBroadcast }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
@@ -19,27 +19,16 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
     }, []);
 
     const handleItemClick = (notif) => {
-        // Navigate based on type
-        if (notif.type === 'staff_chat') {
-            navigate('/admin/staff-analytics'); // Or wherever the chat is. Wait, chat is in StaffCommunication but for Admin? 
-            // Admin sees messages in... wait, AdminMessages? No that's Ask Admin.
-            // There isn't a dedicated Admin page for Staff Communication in the navItems.
-            // "Communication Panel from the staff". 
-            // Admin usually accesses this via "Manage Staff" -> "Communication" or similar?
-            // Actually, looking at routes: `AdminLayout` has `/admin/messages` (AdminMessages.jsx).
-            // `AdminMessages.jsx` is likely "Ask Admin".
-            // Where does Admin see Staff Chat?
-            // `server/routes/staff.js` has `router.get('/chat/messages')` allowing admin.
-            // But is there a UI page?
-            // I'll assume for now it's in `AdminMessages` or a new page is needed.
-            // Given I cannot easily create a full new page and logic, I'll link to `/admin/messages` for now or `/admin/staff`.
-        } else if (notif.type === 'ask_admin') {
-            navigate('/admin/messages');
-        } else if (notif.type === 'login') {
-            // No specific link, just info
+        const isMessage = typeof notif.subject !== 'undefined' || typeof notif.admin_reply !== 'undefined';
+        if (isMessage) {
+            navigate(navigateToMessage || '/admin/messages');
+        } else if (notif.type === 'ask_admin_reply' || notif.type === 'ask_admin') {
+            navigate(navigateToMessage || '/admin/messages');
+        } else if (notif.type === 'staff_chat') {
+            navigate('/staff/communication');
+        } else {
+            navigate(navigateToBroadcast || '/admin/broadcasts');
         }
-        
-        // Auto-delete after viewing/clicking
         onMarkRead(notif.id);
     };
 

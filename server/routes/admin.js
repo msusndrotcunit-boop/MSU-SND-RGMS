@@ -1985,16 +1985,23 @@ router.get('/profile', authenticateToken, isAdmin, (req, res) => {
 
 // Update Admin Profile (Pic)
 router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
-    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
-    
-    if (profilePic) {
-        db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [profilePic, req.user.id], function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            res.json({ message: 'Profile updated', profilePic });
-        });
-    } else {
-        res.status(400).json({ message: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    let imageUrl = req.file.path;
+    if (!imageUrl && req.file.buffer && req.file.mimetype) {
+        imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
+    if (!imageUrl) return res.status(400).json({ message: 'Failed to process uploaded file' });
+    if (imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
+        const parts = imageUrl.split(/[\\/]/);
+        const uploadIndex = parts.indexOf('uploads');
+        if (uploadIndex !== -1) {
+            imageUrl = '/' + parts.slice(uploadIndex).join('/');
+        }
+    }
+    db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [imageUrl, req.user.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Profile updated', profilePic: imageUrl });
+    });
 });
 
 // --- Merit/Demerit Ledger ---

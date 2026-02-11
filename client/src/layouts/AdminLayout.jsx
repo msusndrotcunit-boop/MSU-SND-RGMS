@@ -56,7 +56,7 @@ const AdminLayout = () => {
 
     const handleMarkReadNotif = async (id) => {
         try {
-            await axios.delete(`/api/admin/notifications/${id}`);
+            await axios.delete(`/api/notifications/${id}`);
             setNotifications(prev => prev.filter(n => n.id !== id));
             setBadgeNotif(prev => Math.max(0, prev - 1));
         } catch (err) {
@@ -76,7 +76,7 @@ const AdminLayout = () => {
 
     const handleClearNotifs = async () => {
         try {
-            await axios.delete('/api/admin/notifications/delete-all');
+            await axios.delete('/api/admin/notifications');
             setNotifications([]);
             setBadgeNotif(0);
         } catch (err) {
@@ -285,7 +285,15 @@ const AdminLayout = () => {
                     <div className="flex items-center mt-3">
                         <Link to="/admin/profile">
                             {adminProfile && adminProfile.profile_pic ? (
-                                <img src={adminProfile.profile_pic} alt="Profile" className="h-10 w-10 rounded-full border border-white/20 object-cover" />
+                                <img 
+                                    src={adminProfile.profile_pic} 
+                                    alt="Profile" 
+                                    className="h-10 w-10 rounded-full border border-white/20 object-cover" 
+                                    onError={(e) => { 
+                                        e.target.onerror = null; 
+                                        e.target.src = '/assets/default-avatar.png'; 
+                                    }}
+                                />
                             ) : (
                                 <div className="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
                                     {(adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase()}
@@ -422,6 +430,7 @@ const AdminLayout = () => {
                             icon={Mail} 
                             count={badgeMsg}
                             notifications={messages}
+                            navigateToMessage="/admin/messages"
                             onMarkRead={handleMarkReadMsg}
                             onClear={handleClearMessages}
                         />
@@ -431,6 +440,7 @@ const AdminLayout = () => {
                             icon={Bell} 
                             count={badgeNotif}
                             notifications={notifications}
+                            navigateToBroadcast="/admin/broadcasts"
                             onMarkRead={handleMarkReadNotif}
                             onClear={handleClearNotifs}
                         />

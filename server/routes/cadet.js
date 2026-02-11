@@ -189,20 +189,25 @@ router.delete('/notifications/delete-all', (req, res) => {
 });
 
 router.get('/profile', (req, res) => {
-    const cadetId = req.user.cadetId;
-    if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
-
-    const sql = `
-        SELECT c.*, u.username 
-        FROM cadets c 
-        LEFT JOIN users u ON u.cadet_id = c.id 
-        WHERE c.id = ?
-    `;
-
-    db.get(sql, [cadetId], (err, row) => {
+    const tryFetch = (id) => {
+        const sql = `
+            SELECT c.*, u.username 
+            FROM cadets c 
+            LEFT JOIN users u ON u.cadet_id = c.id 
+            WHERE c.id = ?
+        `;
+        db.get(sql, [id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!row) return res.status(404).json({ message: 'Cadet not found' });
+            res.json(row);
+        });
+    };
+    let cadetId = req.user.cadetId;
+    if (cadetId) return tryFetch(cadetId);
+    db.get(`SELECT cadet_id FROM users WHERE id = ? AND role = 'cadet'`, [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        if (!row) return res.status(404).json({ message: 'Cadet not found' });
-        res.json(row);
+        if (!row || !row.cadet_id) return res.status(403).json({ message: 'Not a cadet account' });
+        tryFetch(row.cadet_id);
     });
 });
 

@@ -27,7 +27,7 @@ const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
-const AdminBroadcast = lazy(() => import('./pages/admin/AdminBroadcast'));
+const BroadcastMessages = lazy(() => import('./pages/BroadcastMessages'));
 
 // Cadet Pages
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
@@ -84,7 +84,7 @@ function App() {
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="messages" element={<AdminMessages />} />
-                <Route path="broadcast" element={<AdminBroadcast />} />
+                <Route path="broadcasts" element={<BroadcastMessages />} />
                 <Route path="settings" element={<Settings role="admin" />} />
                 <Route index element={<Navigate to="cadets" replace />} />
               </Route>
@@ -96,6 +96,7 @@ function App() {
                 <Route path="home" element={<CadetHome />} />
                 <Route path="dashboard" element={<CadetDashboard />} />
                 <Route path="profile" element={<CadetProfile />} />
+                <Route path="broadcasts" element={<BroadcastMessages />} />
                 <Route path="about" element={<CadetAbout />} />
                 <Route path="ask-admin" element={<AskAdmin />} />
                 <Route path="settings" element={<Settings role="cadet" />} />
@@ -114,6 +115,7 @@ function App() {
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="profile-completion" element={<StaffOnboarding />} />
                 <Route path="communication" element={<StaffCommunication />} />
+                <Route path="broadcasts" element={<BroadcastMessages />} />
                 <Route path="my-qr" element={<StaffMyQRCode />} />
                 <Route path="ask-admin" element={<AskAdmin />} />
                 <Route path="settings" element={<Settings role="staff" />} />

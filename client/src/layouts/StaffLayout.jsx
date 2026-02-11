@@ -39,7 +39,6 @@ const StaffLayout = () => {
         try {
             const res = await axios.get('/api/staff/notifications');
             setNotifications(res.data || []);
-            setBadgeNotif(res.data?.length || 0);
         } catch (err) { console.error(err); }
     };
 
@@ -47,7 +46,6 @@ const StaffLayout = () => {
         try {
             const res = await axios.get('/api/messages/my');
             setMessages(res.data || []);
-            setBadgeMsg(res.data?.length || 0);
         } catch (err) { console.error(err); }
     };
 
@@ -61,9 +59,10 @@ const StaffLayout = () => {
 
     const handleMarkReadMsg = async (id) => {
         try {
-            await axios.delete(`/api/messages/${id}`);
+            await axios.delete(`/api/messages/${id}`).catch(() => {});
+            await axios.delete(`/api/notifications/${id}`).catch(() => {});
             setMessages(prev => prev.filter(m => m.id !== id));
-            setBadgeMsg(prev => Math.max(0, prev - 1));
+            setNotifications(prev => prev.filter(n => n.id !== id));
         } catch (err) { console.error(err); }
     };
 
@@ -77,9 +76,10 @@ const StaffLayout = () => {
 
     const handleClearMessages = async () => {
         try {
-            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`)));
+            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`).catch(() => {})));
+            await axios.delete('/api/staff/notifications/delete-all').catch(() => {});
             setMessages([]);
-            setBadgeMsg(0);
+            setNotifications([]);
         } catch (err) { console.error(err); }
     };
 
@@ -89,6 +89,12 @@ const StaffLayout = () => {
             fetchMessages();
         }
     }, [user]);
+
+    // Unified badge count for Messages icon: direct messages + broadcast notifications
+    React.useEffect(() => {
+        const msgCount = (messages?.length || 0) + (notifications?.length || 0);
+        setBadgeMsg(msgCount);
+    }, [messages, notifications]);
 
     
 
@@ -435,17 +441,11 @@ const StaffLayout = () => {
                             type="Messages" 
                             icon={Mail} 
                             count={badgeMsg}
-                            notifications={messages}
+                            notifications={[...notifications, ...messages].sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))}
+                            navigateToMessage="/staff/ask-admin"
+                            navigateToBroadcast="/staff/broadcasts"
                             onMarkRead={handleMarkReadMsg}
                             onClear={handleClearMessages}
-                        />
-                        <NotificationDropdown 
-                            type="Notifications" 
-                            icon={Bell} 
-                            count={badgeNotif}
-                            notifications={notifications}
-                            onMarkRead={handleMarkReadNotif}
-                            onClear={handleClearNotifs}
                         />
                     </div>
                 </header>

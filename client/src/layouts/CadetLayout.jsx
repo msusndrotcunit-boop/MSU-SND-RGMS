@@ -54,10 +54,7 @@ const CadetLayout = () => {
     const fetchMessages = async () => {
         try {
             const res = await axios.get('/api/messages/my');
-            const data = res.data || [];
-            setMessages(data);
-            const repliedCount = data.filter((m) => m.admin_reply && String(m.admin_reply).trim() !== '').length;
-            setBadgeMsg(repliedCount);
+            setMessages(res.data || []);
         } catch (err) { console.error(err); }
     };
 
@@ -71,9 +68,10 @@ const CadetLayout = () => {
 
     const handleMarkReadMsg = async (id) => {
         try {
-            await axios.delete(`/api/messages/${id}`);
+            await axios.delete(`/api/messages/${id}`).catch(() => {});
+            await axios.delete(`/api/notifications/${id}`).catch(() => {});
             setMessages(prev => prev.filter(m => m.id !== id));
-            setBadgeMsg(prev => Math.max(0, prev - 1));
+            setNotifications(prev => prev.filter(n => n.id !== id));
         } catch (err) { console.error(err); }
     };
 
@@ -87,9 +85,10 @@ const CadetLayout = () => {
 
     const handleClearMessages = async () => {
         try {
-            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`)));
+            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`).catch(() => {})));
+            await axios.delete('/api/cadet/notifications/delete-all').catch(() => {});
             setMessages([]);
-            setBadgeMsg(0);
+            setNotifications([]);
         } catch (err) { console.error(err); }
     };
 
@@ -99,6 +98,12 @@ const CadetLayout = () => {
             fetchMessages();
         }
     }, [user]);
+
+    // Unified badge count on Messages icon: direct admin replies + broadcast announcements
+    React.useEffect(() => {
+        const count = (messages?.length || 0) + (notifications?.length || 0);
+        setBadgeMsg(count);
+    }, [messages, notifications]);
 
     const guideSteps = [
         {
@@ -403,7 +408,9 @@ const CadetLayout = () => {
                             type="Messages" 
                             icon={Mail} 
                             count={badgeMsg}
-                            notifications={messages}
+                            notifications={[...notifications, ...messages].sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))}
+                            navigateToMessage="/cadet/ask-admin"
+                            navigateToBroadcast="/cadet/broadcasts"
                             onMarkRead={handleMarkReadMsg}
                             onClear={handleClearMessages}
                         />
