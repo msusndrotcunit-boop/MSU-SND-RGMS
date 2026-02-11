@@ -120,20 +120,48 @@ router.get('/my-grades', async (req, res) => {
 // Get My Merit/Demerit Logs
 router.get('/my-merit-logs', async (req, res) => {
     let cadetId = req.user.cadetId;
-
-    // JWT Consistency fallback
     if (!cadetId && req.user.role === 'cadet') {
         const userRow = await new Promise(resolve => {
             db.get(`SELECT cadet_id FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row));
         });
         if (userRow && userRow.cadet_id) cadetId = userRow.cadet_id;
     }
-
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    db.all(`SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`, [cadetId], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
+    const { type, start, end, page, pageSize } = req.query || {};
+    const p = Math.max(1, Number(page) || 1);
+    const ps = Math.max(1, Math.min(100, Number(pageSize) || 10));
+
+    const whereClauses = ['cadet_id = ?'];
+    const params = [cadetId];
+
+    if (type && (type === 'merit' || type === 'demerit')) {
+        whereClauses.push('type = ?');
+        params.push(type);
+    }
+    if (start) {
+        whereClauses.push('date(date_recorded) >= ?');
+        params.push(start);
+    }
+    if (end) {
+        whereClauses.push('date(date_recorded) <= ?');
+        params.push(end);
+    }
+
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const countSql = `SELECT COUNT(*) as total FROM merit_demerit_logs ${whereSql}`;
+    const listSql = `SELECT * FROM merit_demerit_logs ${whereSql} ORDER BY date_recorded DESC LIMIT ? OFFSET ?`;
+
+    const offset = (p - 1) * ps;
+    const listParams = [...params, ps, offset];
+
+    db.get(countSql, params, (cErr, cRow) => {
+        if (cErr) return res.status(500).json({ message: cErr.message });
+        const total = (cRow && (cRow.total ?? cRow.count)) ? Number(cRow.total ?? cRow.count) : 0;
+        db.all(listSql, listParams, (lErr, rows) => {
+            if (lErr) return res.status(500).json({ message: lErr.message });
+            res.json({ items: rows || [], total, page: p, pageSize: ps });
+        });
     });
 });
 

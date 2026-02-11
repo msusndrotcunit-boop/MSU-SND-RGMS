@@ -2178,11 +2178,28 @@ router.get('/merit-logs/:cadetId', (req, res) => {
 // Add Log Entry (and update Total)
 router.post('/merit-logs', (req, res) => {
     const { cadetId, type, points, reason } = req.body;
+    const issuerUserId = req.user && req.user.id ? Number(req.user.id) : null;
+    const getIssuerName = () => new Promise((resolve) => {
+        if (!issuerUserId) return resolve(null);
+        db.get(`SELECT id, username, staff_id FROM users WHERE id = ?`, [issuerUserId], (uErr, uRow) => {
+            if (uErr || !uRow) return resolve(null);
+            if (uRow.staff_id) {
+                db.get(`SELECT rank, first_name, last_name FROM training_staff WHERE id = ?`, [uRow.staff_id], (sErr, sRow) => {
+                    if (sErr || !sRow) return resolve(uRow.username || null);
+                    const n = [sRow.rank, sRow.last_name, sRow.first_name].filter(Boolean);
+                    resolve(n.length ? `${n[0] ? n[0] + ' ' : ''}${n[1] || ''}${n[2] ? ', ' + n[2] : ''}`.trim() : (uRow.username || null));
+                });
+            } else {
+                resolve(uRow.username || null);
+            }
+        });
+    });
     
-    // 1. Insert Log
-    db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, ?, ?, ?)`, 
-        [cadetId, type, points, reason], 
-        function(err) {
+    getIssuerName().then((issuerName) => {
+        // 1. Insert Log with issuer info
+        db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) VALUES (?, ?, ?, ?, ?, ?)`, 
+            [cadetId, type, points, reason, issuerUserId, issuerName], 
+            function(err) {
             if (err) return res.status(500).json({ message: err.message });
             
             // 2. Update Total in Grades
@@ -2219,7 +2236,8 @@ router.post('/merit-logs', (req, res) => {
                 }
             });
         }
-    );
+        );
+    });
 });
 
 // Delete Merit/Demerit Log

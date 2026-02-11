@@ -391,6 +391,8 @@ async function initPgDb() {
             reason TEXT,
             date_recorded TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
+        `ALTER TABLE merit_demerit_logs ADD COLUMN IF NOT EXISTS issued_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`,
+        `ALTER TABLE merit_demerit_logs ADD COLUMN IF NOT EXISTS issued_by_name TEXT`,
         `CREATE TABLE IF NOT EXISTS training_days (
             id SERIAL PRIMARY KEY,
             date TEXT NOT NULL,
@@ -762,6 +764,8 @@ function initSqliteDb() {
             date_recorded TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (cadet_id) REFERENCES cadets(id) ON DELETE CASCADE
         )`);
+        db.run(`ALTER TABLE merit_demerit_logs ADD COLUMN issued_by_user_id INTEGER`, (err) => {});
+        db.run(`ALTER TABLE merit_demerit_logs ADD COLUMN issued_by_name TEXT`, (err) => {});
 
         // Training Days Table
         db.run(`CREATE TABLE IF NOT EXISTS training_days (
