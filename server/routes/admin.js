@@ -1275,6 +1275,7 @@ router.get('/analytics', (req, res) => {
                             WHERE c.is_profile_completed IS TRUE 
                               AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
                               AND (u.is_archived IS FALSE OR u.is_archived IS NULL)
+                              AND u.is_approved = 1
                               AND c.cadet_course IS NOT NULL AND c.cadet_course != ''
                             GROUP BY c.cadet_course, c.status
                         `;

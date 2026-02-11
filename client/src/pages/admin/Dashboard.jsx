@@ -119,8 +119,8 @@ const Dashboard = () => {
 
     const processData = (data) => {
         const rawStats =
-            (data && data.demographics && data.demographics.academicCourseStats) ||
             (data && data.demographics && data.demographics.courseStats) ||
+            (data && data.demographics && data.demographics.academicCourseStats) ||
             [];
         const total = { Ongoing: 0, Completed: 0, Incomplete: 0, Failed: 0, Drop: 0 };
         const byCourse = {};
