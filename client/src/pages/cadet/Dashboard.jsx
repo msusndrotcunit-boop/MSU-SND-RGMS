@@ -13,6 +13,20 @@ const CadetDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [esConnected, setEsConnected] = useState(false);
     const [logFilters, setLogFilters] = useState({ type: 'all', start: '', end: '', page: 1, pageSize: 10 });
+    const [attendanceFilters, setAttendanceFilters] = useState({ status: 'all', start: '', end: '', page: 1, pageSize: 15 });
+    const fetchAttendance = async (filters = attendanceFilters) => {
+        const params = {};
+        if (filters.status && filters.status !== 'all') params.status = filters.status;
+        if (filters.start) params.start = filters.start;
+        if (filters.end) params.end = filters.end;
+        params.page = filters.page || 1;
+        params.pageSize = filters.pageSize || 15;
+        const res = await axios.get('/api/attendance/my-history', { params }).catch(() => ({ data: [] }));
+        const data = res.data;
+        const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || 15 } : data;
+        setAttendanceLogs(shaped);
+        await cacheSingleton('dashboard', 'cadet_attendance', { data: shaped, timestamp: Date.now() });
+    };
     const fetchLogs = async (filters = logFilters) => {
         const params = {};
         if (filters.type && filters.type !== 'all') params.type = filters.type;
@@ -33,14 +47,7 @@ const CadetDashboard = () => {
             setGrades(g.data);
             await cacheSingleton('dashboard', 'cadet_grades', { data: g.data, timestamp: now });
             await fetchLogs({ ...logFilters, page: 1 });
-            const a = await axios.get('/api/attendance/my-history');
-            let aRows = a.data || [];
-            if (!aRows || aRows.length === 0) {
-                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
-                aRows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
-            }
-            setAttendanceLogs(aRows);
-            await cacheSingleton('dashboard', 'cadet_attendance', { data: aRows, timestamp: now });
+            await fetchAttendance({ ...attendanceFilters, page: 1 });
         } catch {}
     };
 
@@ -65,7 +72,8 @@ const CadetDashboard = () => {
 
                 const cachedAttendance = await getSingleton('dashboard', 'cadet_attendance');
                 if (cachedAttendance) {
-                    setAttendanceLogs(cachedAttendance.data);
+                    const shaped = cachedAttendance.data && cachedAttendance.data.items ? cachedAttendance.data : (Array.isArray(cachedAttendance.data) ? { items: cachedAttendance.data, total: cachedAttendance.data.length, page: 1, pageSize: cachedAttendance.data.length || 15 } : cachedAttendance.data);
+                    setAttendanceLogs(shaped);
                     hasCachedData = true;
                 }
 
@@ -111,18 +119,10 @@ const CadetDashboard = () => {
                     );
                 }
 
-                const shouldFetchAttendance = (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL) || (cachedAttendance && (!cachedAttendance.data || cachedAttendance.data.length === 0)));
+                const shouldFetchAttendance = (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL) || (cachedAttendance && (!cachedAttendance.data || (Array.isArray(cachedAttendance.data) ? cachedAttendance.data.length === 0 : (cachedAttendance.data.items || []).length === 0))));
                 if (shouldFetchAttendance) {
                     promises.push(
-                        axios.get('/api/attendance/my-history').then(async res => {
-                            let rows = res.data || [];
-                            if (!rows || rows.length === 0) {
-                                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
-                                rows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
-                            }
-                            setAttendanceLogs(rows);
-                            await cacheSingleton('dashboard', 'cadet_attendance', { data: rows, timestamp: now });
-                        }).catch(e => console.warn("Attendance fetch failed", e))
+                        fetchAttendance({ ...attendanceFilters, page: 1 }).catch(e => console.warn("Attendance fetch failed", e))
                     );
                 }
 
@@ -176,25 +176,9 @@ const CadetDashboard = () => {
                             } catch {}
                             
                             // Also refresh attendance list to keep sections in sync
-                            try {
-                                const attRes = await axios.get('/api/attendance/my-history');
-                                let attRows = attRes.data || [];
-                                if ((!attRows || attRows.length === 0) && res.data && res.data.totalTrainingDays > 0) {
-                                    const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
-                                    attRows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
-                                }
-                                setAttendanceLogs(attRows);
-                                await cacheSingleton('dashboard', 'cadet_attendance', { data: attRows, timestamp: Date.now() });
-                            } catch {}
+                            try { await fetchAttendance(attendanceFilters); } catch {}
                         } else if (data.type === 'attendance_updated') {
-                            const res = await axios.get('/api/attendance/my-history');
-                            let rows = res.data || [];
-                            if ((!rows || rows.length === 0) && grades && grades.totalTrainingDays > 0) {
-                                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
-                                rows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
-                            }
-                            setAttendanceLogs(rows);
-                            await cacheSingleton('dashboard', 'cadet_attendance', { data: rows, timestamp: Date.now() });
+                            try { await fetchAttendance(attendanceFilters); } catch {}
                         }
                     } catch {}
                 };
@@ -320,15 +304,20 @@ const CadetDashboard = () => {
                                     <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
                                         <tr className="border-b">
                                             <th className="p-3 font-semibold text-gray-600">Date</th>
+                                            <th className="p-3 font-semibold text-gray-600">Time In</th>
+                                            <th className="p-3 font-semibold text-gray-600">Time Out</th>
                                             <th className="p-3 font-semibold text-gray-600">Status</th>
                                             <th className="p-3 font-semibold text-gray-600">Remarks</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {attendanceLogs.length > 0 ? (
-                                            attendanceLogs.map(log => (
+                                        {(() => {
+                                            const paged = attendanceLogs && attendanceLogs.items ? attendanceLogs : { items: Array.isArray(attendanceLogs) ? attendanceLogs : [], total: attendanceLogs?.total || 0, page: attendanceLogs?.page || 1, pageSize: attendanceLogs?.pageSize || 15 };
+                                            return paged.items.length > 0 ? paged.items.map(log => (
                                                 <tr key={log.id || `${log.date}-${log.title}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                                                    <td className="p-3 text-sm">{log.time_in || '-'}</td>
+                                                    <td className="p-3 text-sm">{log.time_out || '-'}</td>
                                                     <td className="p-3">
                                                         {(() => {
                                                             const s = (log.status || 'unmarked').toLowerCase();
@@ -347,15 +336,77 @@ const CadetDashboard = () => {
                                                     </td>
                                                     <td className="p-3 text-sm text-gray-600">{log.remarks || '-'}</td>
                                                 </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="3" className="p-4 text-center text-gray-500">No attendance records found.</td>
-                                            </tr>
-                                        )}
+                                            )) : (
+                                                <tr>
+                                                    <td colSpan="5" className="p-4 text-center text-gray-500">No attendance records found.</td>
+                                                </tr>
+                                            );
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
+                            
+                            <div className="flex flex-col md:flex-row gap-3 mb-3 mt-3">
+                                <select
+                                    value={attendanceFilters.status}
+                                    onChange={(e) => { const nf = { ...attendanceFilters, status: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                    className="border rounded px-3 py-2"
+                                >
+                                    <option value="all">All</option>
+                                    <option value="present">Present</option>
+                                    <option value="late">Late</option>
+                                    <option value="excused">Excused</option>
+                                    <option value="absent">Absent</option>
+                                </select>
+                                <input
+                                    type="date"
+                                    value={attendanceFilters.start}
+                                    onChange={(e) => { const nf = { ...attendanceFilters, start: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                    className="border rounded px-3 py-2"
+                                />
+                                <input
+                                    type="date"
+                                    value={attendanceFilters.end}
+                                    onChange={(e) => { const nf = { ...attendanceFilters, end: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                    className="border rounded px-3 py-2"
+                                />
+                                <select
+                                    value={attendanceFilters.pageSize}
+                                    onChange={(e) => { const nf = { ...attendanceFilters, pageSize: Number(e.target.value), page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                    className="border rounded px-3 py-2"
+                                >
+                                    <option value={15}>15</option>
+                                    <option value={30}>30</option>
+                                    <option value={50}>50</option>
+                                </select>
+                            </div>
+                            {(() => {
+                                const paged = attendanceLogs && attendanceLogs.items ? attendanceLogs : { items: Array.isArray(attendanceLogs) ? attendanceLogs : [], total: attendanceLogs?.total || 0, page: attendanceLogs?.page || 1, pageSize: attendanceLogs?.pageSize || 15 };
+                                const totalPages = Math.max(1, Math.ceil((paged.total || 0) / (paged.pageSize || 15)));
+                                return (
+                                    <div className="flex items-center justify-between mt-1">
+                                        <div className="text-sm text-gray-600">
+                                            Page {paged.page} of {totalPages} • {paged.total} records
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="px-3 py-1 border rounded disabled:opacity-50"
+                                                disabled={paged.page <= 1}
+                                                onClick={() => { const nf = { ...attendanceFilters, page: paged.page - 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                            >
+                                                Prev
+                                            </button>
+                                            <button
+                                                className="px-3 py-1 border rounded disabled:opacity-50"
+                                                disabled={paged.page >= totalPages}
+                                                onClick={() => { const nf = { ...attendanceFilters, page: paged.page + 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* 4. Merit & Demerit Records */}

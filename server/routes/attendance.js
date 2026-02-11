@@ -1106,8 +1106,6 @@ router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
 // Get my attendance history
 router.get('/my-history', authenticateToken, async (req, res) => {
     let cadetId = req.user.cadetId;
-
-    // JWT Consistency fallback: If cadetId is missing in JWT, try to fetch it from DB using user.id
     if (!cadetId && req.user.role === 'cadet') {
         const userRow = await new Promise(resolve => {
             db.get(`SELECT cadet_id FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row));
@@ -1116,24 +1114,83 @@ router.get('/my-history', authenticateToken, async (req, res) => {
             cadetId = userRow.cadet_id;
         }
     }
-
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet' });
 
-    const sql = `
-        SELECT 
-            ar.id,
-            td.date,
-            td.title,
-            ar.status,
-            ar.remarks
-        FROM training_days td
-        LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
-        ORDER BY td.date DESC
-    `;
+    const { status, start, end, page, pageSize } = req.query || {};
+    const p = Math.max(1, Number(page) || 1);
+    const ps = Math.max(1, Math.min(100, Number(pageSize) || 1000));
 
-    db.all(sql, [cadetId], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
+    const whereDays = [];
+    const whereParams = [];
+    if (start) { whereDays.push('date(td.date) >= ?'); whereParams.push(start); }
+    if (end) { whereDays.push('date(td.date) <= ?'); whereParams.push(end); }
+    const whereDaysSql = whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : '';
+
+    let listSql = '';
+    let listParams = [];
+    let countSql = '';
+    let countParams = [];
+
+    if (status && ['present','late','excused','absent'].includes(String(status).toLowerCase())) {
+        listSql = `
+            SELECT 
+                ar.id,
+                td.date,
+                td.title,
+                ar.status,
+                ar.remarks,
+                ar.time_in,
+                ar.time_out
+            FROM attendance_records ar
+            JOIN training_days td ON ar.training_day_id = td.id
+            ${whereDaysSql}
+            AND ar.cadet_id = ?
+            AND lower(ar.status) = lower(?)
+            ORDER BY td.date DESC
+            LIMIT ? OFFSET ?
+        `;
+        listParams = [...whereParams, cadetId, status, ps, (p - 1) * ps];
+        countSql = `
+            SELECT COUNT(*) as total
+            FROM attendance_records ar
+            JOIN training_days td ON ar.training_day_id = td.id
+            ${whereDaysSql}
+            AND ar.cadet_id = ?
+            AND lower(ar.status) = lower(?)
+        `;
+        countParams = [...whereParams, cadetId, status];
+    } else {
+        listSql = `
+            SELECT 
+                ar.id,
+                td.date,
+                td.title,
+                ar.status,
+                ar.remarks,
+                ar.time_in,
+                ar.time_out
+            FROM training_days td
+            ${whereDaysSql}
+            LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
+            ORDER BY td.date DESC
+            LIMIT ? OFFSET ?
+        `;
+        listParams = [...whereParams, cadetId, ps, (p - 1) * ps];
+        countSql = `
+            SELECT COUNT(*) as total
+            FROM training_days td
+            ${whereDaysSql}
+        `;
+        countParams = [...whereParams];
+    }
+
+    db.get(countSql, countParams, (cErr, cRow) => {
+        if (cErr) return res.status(500).json({ message: cErr.message });
+        const total = (cRow && (cRow.total ?? cRow.count)) ? Number(cRow.total ?? cRow.count) : 0;
+        db.all(listSql, listParams, (lErr, rows) => {
+            if (lErr) return res.status(500).json({ message: lErr.message });
+            res.json({ items: rows || [], total, page: p, pageSize: ps });
+        });
     });
 });
 
@@ -1204,7 +1261,9 @@ router.get('/my-history/staff', authenticateToken, (req, res) => {
             td.date,
             td.title,
             sar.status,
-            sar.remarks
+            sar.remarks,
+            sar.time_in,
+            sar.time_out
         FROM training_days td
         LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
         ORDER BY td.date DESC
