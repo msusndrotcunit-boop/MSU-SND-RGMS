@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Search, ChevronLeft, Trash2, RefreshCw } from 'lucide-react';
+import { Search, ChevronLeft, Trash2, RefreshCw, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cacheSingleton, clearCache } from '../../utils/db';
 
@@ -116,6 +116,21 @@ const ArchivedCadets = () => {
     }
   };
 
+  const handleReclaim = async () => {
+    if (selectedCadets.length === 0) return;
+    if (!window.confirm(`Reclaim credentials for ${selectedCadets.length} archived cadets? Their usernames will be renamed and emails cleared.`)) return;
+    try {
+      const res = await axios.post('/api/admin/cadets/reclaim-credentials', { cadetIds: selectedCadets });
+      const updated = (res.data?.results || []).filter(r => r.updated > 0).length;
+      toast.success(`Reclaimed ${updated} accounts`);
+      setSelectedCadets([]);
+      await fetchArchived();
+    } catch (err) {
+      console.error('Reclaim failed', err);
+      toast.error('Failed to reclaim credentials');
+    }
+  };
+
   if (loading) return <div className="text-center p-10">Loading...</div>;
 
   return (
@@ -142,6 +157,15 @@ const ArchivedCadets = () => {
             >
               <ChevronLeft size={18} />
               <span>Restore ({selectedCadets.length})</span>
+            </button>
+          )}
+          {selectedCadets.length > 0 && (
+            <button
+              onClick={handleReclaim}
+              className="flex-1 md:flex-none bg-amber-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-amber-700 animate-fade-in"
+            >
+              <KeyRound size={18} />
+              <span>Reclaim ({selectedCadets.length})</span>
             </button>
           )}
           <button

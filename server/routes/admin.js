@@ -2226,6 +2226,42 @@ router.get('/cadets/archived', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Reclaim Credentials for archived cadets
+router.post('/cadets/reclaim-credentials', authenticateToken, isAdmin, async (req, res) => {
+    const { cadetIds } = req.body;
+    if (!cadetIds || !Array.isArray(cadetIds) || cadetIds.length === 0) {
+        return res.status(400).json({ message: 'Invalid cadet IDs' });
+    }
+    const getUserByCadet = (cadetId) => new Promise((resolve) => {
+        db.get(`SELECT id, username, email, is_archived FROM users WHERE cadet_id = ?`, [cadetId], (err, row) => resolve(err ? null : row));
+    });
+    const updateUser = (id, fields) => new Promise((resolve, reject) => {
+        const set = Object.keys(fields).map(k => `${k} = ?`).join(', ');
+        const params = Object.values(fields).concat([id]);
+        db.run(`UPDATE users SET ${set} WHERE id = ?`, params, function(err) {
+            if (err) reject(err);
+            else resolve(this ? this.changes : 0);
+        });
+    });
+    const results = [];
+    for (const cadetId of cadetIds) {
+        const user = await getUserByCadet(cadetId);
+        if (!user || !(user.is_archived === true || user.is_archived === 1)) {
+            results.push({ cadetId, updated: 0, reason: 'no_archived_user' });
+            continue;
+        }
+        const newUsername = `${user.username || 'user'}__archived_${user.id}`;
+        const fields = { username: newUsername, email: null, is_approved: 0 };
+        try {
+            const changes = await updateUser(user.id, fields);
+            results.push({ cadetId, updated: changes, userId: user.id, freed: ['username', 'email'] });
+        } catch (e) {
+            results.push({ cadetId, updated: 0, error: e.message });
+        }
+    }
+    res.json({ message: 'reclaimed', results });
+});
+
 // 5. Archive Staff
 router.post('/staff/archive', authenticateToken, isAdmin, (req, res) => {
     const { ids } = req.body;
