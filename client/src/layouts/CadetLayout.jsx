@@ -308,11 +308,19 @@ const CadetLayout = () => {
                                     } else if (!normalizedPath.startsWith('/')) {
                                         normalizedPath = '/' + normalizedPath;
                                     }
+                                    
+                                    // Use absolute URL from window.location if not starting with http
                                     const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
                                     const baseB = import.meta.env.VITE_API_URL || '';
                                     const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
                                     const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
-                                    finalSrc = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
+                                    
+                                    if (selectedBase) {
+                                        finalSrc = `${selectedBase.replace(/\/+$/,'')}${normalizedPath}`;
+                                    } else {
+                                        // Fallback to absolute path relative to current domain
+                                        finalSrc = normalizedPath;
+                                    }
                                 }
                             } else if (user?.cadetId) {
                                 finalSrc = `/api/images/cadets/${user.cadetId}`;

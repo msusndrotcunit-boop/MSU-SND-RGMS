@@ -193,8 +193,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
-                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
-                    broadcastEvent({ type: 'grade_updated', cadetId });
+                    broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                    broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -217,8 +217,8 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
-                    broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
-                    broadcastEvent({ type: 'grade_updated', cadetId });
+                    broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                    broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -533,10 +533,31 @@ function updateTotalAttendance(cadetId, res) {
         }
         
         const count = row.count;
+        console.log(`Updating attendance count for cadet ${cadetId}: ${count}`);
         
         // Update grades table
         db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], function(err) {
-            if (err) console.error(`Error updating grades for cadet ${cadetId}:`, err);
+            if (err) {
+                console.error(`Error updating grades for cadet ${cadetId}:`, err);
+                return;
+            }
+            
+            if (this.changes === 0) {
+                // Grade record might not exist, create it
+                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
+                    if (err) console.error(`Error creating grade record for cadet ${cadetId}:`, err);
+                    else {
+                        console.log(`Created grade record for cadet ${cadetId} with attendance count ${count}`);
+                        broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+                    }
+                });
+            } else {
+                console.log(`Updated grades for cadet ${cadetId} with attendance count ${count}`);
+                broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+            }
+        });
+    });
+}error(`Error updating grades for cadet ${cadetId}:`, err);
             
             if (this.changes === 0) {
                 // Grade record might not exist, create it
@@ -872,8 +893,8 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                         if (err) reject(err);
                         else {
                             updateTotalAttendance(cadetId, null); 
-                            broadcastEvent({ type: 'attendance_import_updated', cadetId, dayId, status, time_in: newTimeIn, time_out: newTimeOut });
-                            broadcastEvent({ type: 'grade_updated', cadetId });
+                            broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                            broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
                             resolve('updated');
                         }
                     }
@@ -887,8 +908,8 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                         if (err) reject(err);
                         else {
                             updateTotalAttendance(cadetId, null); 
-                            broadcastEvent({ type: 'attendance_import_created', cadetId, dayId, status, time_in: insertTimeIn, time_out: insertTimeOut });
-                            broadcastEvent({ type: 'grade_updated', cadetId });
+                            broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                            broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
                             resolve('inserted');
                         }
                     }

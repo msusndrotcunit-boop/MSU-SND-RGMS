@@ -1569,6 +1569,15 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
             profilePic = req.file.path;
         } else if (req.file.filename) {
             profilePic = `/uploads/${req.file.filename}`;
+        } else if (req.file.path) {
+            // Local path normalization for absolute paths
+            let localPath = req.file.path.replace(/\\/g, '/');
+            const uploadsIdx = localPath.indexOf('/uploads/');
+            if (uploadsIdx !== -1) {
+                profilePic = localPath.substring(uploadsIdx);
+            } else {
+                profilePic = `/uploads/${path.basename(localPath)}`;
+            }
         } else if (req.file.buffer) {
             try {
                 profilePic = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
@@ -1601,12 +1610,13 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         'status = ?'
     ];
 
+    // Build params dynamically to ensure exact match with setFields
     const params = [
-        rank, firstName, middleName, lastName, suffixName, 
-        studentId, email, contactNumber, address, 
-        course, yearLevel, schoolYear, 
-        battalion, company, platoon, 
-        cadetCourse, semester, req.body.corpPosition || '', req.body.gender || '', status
+        rank || '', firstName || '', middleName || '', lastName || '', suffixName || '', 
+        studentId || '', email || '', contactNumber || '', address || '', 
+        course || '', yearLevel || '', schoolYear || '', 
+        battalion || '', company || '', platoon || '', 
+        cadetCourse || '', semester || '', req.body.corpPosition || '', req.body.gender || '', status || ''
     ];
 
     if (profilePic) {
@@ -1614,12 +1624,34 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         params.push(profilePic);
     }
 
+    console.log("DEBUG - Update Cadet Fields:", setFields);
+    console.log("DEBUG - Update Cadet Params:", params);
+
+    // Validate params length against setFields length
+    if (params.length !== setFields.length) {
+        console.error("SQL Parameter Mismatch:", {
+            setFieldsCount: setFields.length,
+            paramsCount: params.length,
+            setFields,
+            params
+        });
+        return res.status(500).json({ 
+            message: `Server Error: Parameter mismatch (${setFields.length} fields vs ${params.length} values). Please contact administrator.` 
+        });
+    }
+
     params.push(req.params.id);
 
     const sql = `UPDATE cadets SET ${setFields.join(', ')} WHERE id = ?`;
 
+    console.log("Executing Cadet Update SQL:", sql);
+    console.log("With Params:", params);
+
     db.run(sql, params, (err) => {
-            if (err) return res.status(500).json({ message: err.message });
+            if (err) {
+                console.error("Database Update Error:", err);
+                return res.status(500).json({ message: err.message });
+            }
             
             // Sync with Users table (Email/Username) with duplicate pre-check
             if (email || username) {
