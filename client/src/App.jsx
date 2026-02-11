@@ -17,6 +17,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminCadets = lazy(() => import('./pages/admin/Cadets'));
+const AdminArchivedCadets = lazy(() => import('./pages/admin/ArchivedCadets'));
 const AdminGrading = lazy(() => import('./pages/admin/Grading'));
 const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
 const AdminActivities = lazy(() => import('./pages/admin/Activities'));
@@ -72,6 +73,7 @@ function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="cadets" element={<AdminCadets />} />
+                <Route path="archived-cadets" element={<AdminArchivedCadets />} />
                 <Route path="staff" element={<AdminStaff />} />
                 <Route path="grading" element={<AdminGrading />} />
                 <Route path="attendance" element={<AdminAttendance />} />
