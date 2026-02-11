@@ -217,27 +217,28 @@ const CadetDashboard = () => {
                     };
                     return (
                     <>
-                        {/* 1. Final Grades */}
-                        <div className="bg-white rounded shadow p-6">
-                            <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Assessment</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-gray-100 p-6 rounded text-center border">
-                                    <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
-                                    <div className="text-5xl font-bold mt-3 text-gray-800">{Number(gradeData.finalGrade).toFixed(2)}</div>
-                                </div>
-                                <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
-                                    gradeData.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(gradeData.transmutedGrade)
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-green-600 text-white'
-                                }`}>
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
-                                    <div className="text-6xl font-extrabold mt-2">{gradeData.transmutedGrade}</div>
-                                    <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
-                                        {gradeData.remarks}
+                        {false && (
+                            <div className="bg-white rounded shadow p-6">
+                                <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Assessment</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-gray-100 p-6 rounded text-center border">
+                                        <h3 className="text-sm text-gray-800 font-semibold uppercase tracking-wider">Final Grade (Numerical)</h3>
+                                        <div className="text-5xl font-bold mt-3 text-gray-800">{Number(gradeData.finalGrade).toFixed(2)}</div>
+                                    </div>
+                                    <div className={`p-6 rounded text-center shadow-md transform transition-transform ${
+                                        gradeData.transmutedGrade === '5.00' || ['DO', 'INC', 'T'].includes(gradeData.transmutedGrade)
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-green-600 text-white'
+                                    }`}>
+                                        <h3 className="text-sm font-semibold uppercase tracking-wider opacity-90">Transmuted Grade</h3>
+                                        <div className="text-6xl font-extrabold mt-2">{gradeData.transmutedGrade}</div>
+                                        <div className="text-xl font-medium mt-2 uppercase tracking-wide border-t border-white/30 pt-2 inline-block px-4">
+                                            {gradeData.remarks}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* 2. Subject Proficiency */}
                         <div className="bg-white rounded shadow p-6">
@@ -330,7 +331,7 @@ const CadetDashboard = () => {
                             
                         </div>
 
-                        {false && (
+                        {
                             <div className="bg-white rounded shadow p-6">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b pb-2">
                                     <h2 className="text-xl font-bold text-green-800 flex items-center">
@@ -379,7 +380,7 @@ const CadetDashboard = () => {
                                     </table>
                                 </div>
                             </div>
-                        )}
+                        }
                     </>
                     );
                 })()}
