@@ -22,8 +22,13 @@ const CadetDashboard = () => {
             setLogs(l.data);
             await cacheSingleton('dashboard', 'cadet_logs', { data: l.data, timestamp: now });
             const a = await axios.get('/api/attendance/my-history');
-            setAttendanceLogs(a.data);
-            await cacheSingleton('dashboard', 'cadet_attendance', { data: a.data, timestamp: now });
+            let aRows = a.data || [];
+            if (!aRows || aRows.length === 0) {
+                const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
+                aRows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
+            }
+            setAttendanceLogs(aRows);
+            await cacheSingleton('dashboard', 'cadet_attendance', { data: aRows, timestamp: now });
         } catch {}
     };
 
@@ -86,7 +91,8 @@ const CadetDashboard = () => {
                     })
                 );
 
-                if (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL)) {
+                const shouldFetchLogs = (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL) || (cachedLogs && (!cachedLogs.data || cachedLogs.data.length === 0)));
+                if (shouldFetchLogs) {
                     promises.push(
                         axios.get('/api/cadet/my-merit-logs').then(async res => {
                             const rows = res.data || [];
@@ -96,11 +102,12 @@ const CadetDashboard = () => {
                     );
                 }
 
-                if (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL)) {
+                const shouldFetchAttendance = (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL) || (cachedAttendance && (!cachedAttendance.data || cachedAttendance.data.length === 0)));
+                if (shouldFetchAttendance) {
                     promises.push(
                         axios.get('/api/attendance/my-history').then(async res => {
                             let rows = res.data || [];
-                            if ((!rows || rows.length === 0) && grades && grades.totalTrainingDays > 0) {
+                            if (!rows || rows.length === 0) {
                                 const days = await axios.get('/api/attendance/days').then(r => r.data).catch(() => []);
                                 rows = Array.isArray(days) ? days.map(d => ({ date: d.date, title: d.title, status: null, remarks: null })) : [];
                             }
