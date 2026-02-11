@@ -377,10 +377,7 @@ const CadetDashboard = () => {
                                     </thead>
                                     <tbody>
                                         {(() => {
-                                            const rows = logs && logs.length > 0 ? logs : [
-                                                ...(grades && grades.merit_points > 0 ? [{ id: 'merit-synth', date_recorded: Date.now(), type: 'merit', points: grades.merit_points, reason: 'Admin Entry' }] : []),
-                                                ...(grades && grades.demerit_points > 0 ? [{ id: 'demerit-synth', date_recorded: Date.now(), type: 'demerit', points: grades.demerit_points, reason: 'Admin Entry' }] : [])
-                                            ];
+                                            const rows = Array.isArray(logs) ? logs : [];
                                             return rows.length > 0 ? rows.map(log => (
                                                 <tr key={log.id || `${log.type}-${log.points}-${log.date_recorded}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date_recorded).toLocaleDateString()}</td>
