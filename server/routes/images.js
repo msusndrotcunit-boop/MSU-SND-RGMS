@@ -8,27 +8,37 @@ const serveBase64Image = (res, imageSource) => {
         return res.status(404).send('Image not found');
     }
 
+    // Normalize potential Windows/backslash paths and relative uploads
+    let src = String(imageSource);
+    src = src.replace(/\\/g, '/');
+    if (!src.startsWith('http') && !src.startsWith('data:')) {
+        if (src.includes('uploads') && !src.startsWith('/uploads/')) {
+            const parts = src.split('uploads');
+            src = '/uploads/' + parts.pop().replace(/^\/+/, '');
+        }
+    }
+
     // If it's a Cloudinary URL (or any URL), redirect to it
-    if (imageSource.startsWith('http')) {
-        return res.redirect(imageSource);
+    if (src.startsWith('http')) {
+        return res.redirect(src);
     }
     
     // If it's a local path (from disk storage), redirect to static handler
-    if (imageSource.startsWith('/uploads/')) {
+    if (src.startsWith('/uploads/')) {
         // Ensure we use absolute URL if possible to avoid relative path issues on client
         const protocol = res.req.protocol || 'https';
         const host = res.req.get('host');
         if (host) {
-            return res.redirect(`${protocol}://${host}${imageSource}`);
+            return res.redirect(`${protocol}://${host}${src}`);
         }
-        return res.redirect(imageSource);
+        return res.redirect(src);
     }
 
-    if (!imageSource.startsWith('data:image')) {
+    if (!src.startsWith('data:image')) {
         return res.status(404).send('Image not found or invalid format');
     }
 
-    const matches = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const matches = src.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
         return res.status(500).send('Invalid image data');
     }

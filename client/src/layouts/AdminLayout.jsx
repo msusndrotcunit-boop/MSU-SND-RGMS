@@ -312,7 +312,11 @@ const AdminLayout = () => {
                                     className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                     onError={(e) => { 
                                         e.target.onerror = null; 
-                                        e.target.src = '/assets/default-avatar.png'; 
+                                        e.target.style.display = 'none';
+                                        const parent = e.target.parentElement;
+                                        if (parent) {
+                                            parent.innerHTML = '<div class="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">A</div>';
+                                        }
                                     }}
                                 />
                             ) : (
