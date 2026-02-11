@@ -1647,8 +1647,10 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
                             usernameConflict ? 'username' : null,
                             emailConflict ? 'email' : null
                         ].filter(Boolean);
-                        return res.status(409).json({
-                            message: `The following fields are already taken by another user: ${conflictFields.join(', ')}`,
+                        try { broadcastEvent({ type: 'cadet_updated', cadetId }); } catch {}
+                        return res.json({
+                            message: `Cadet updated. ${conflictFields.join(', ')} unchanged due to conflict.`,
+                            partial: true,
                             conflicts: {
                                 username: usernameConflict ? { userId: rows.uRow.id, cadetId: rows.uRow.cadet_id, is_archived: !!rows.uRow.is_archived } : null,
                                 email: emailConflict ? { userId: rows.eRow.id, cadetId: rows.eRow.cadet_id, is_archived: !!rows.eRow.is_archived } : null
