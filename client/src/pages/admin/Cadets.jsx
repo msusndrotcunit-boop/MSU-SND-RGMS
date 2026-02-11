@@ -17,7 +17,8 @@ import {
     SEMESTER_OPTIONS, 
     COURSE_OPTIONS,
     CADET_COURSE_OPTIONS,
-    STATUS_OPTIONS
+    STATUS_OPTIONS,
+    GENDER_OPTIONS
 } from '../../constants/options';
 
 const Cadets = () => {
@@ -366,6 +367,7 @@ const Cadets = () => {
             username: cadet.username || '',
             contactNumber: cadet.contact_number || '',
             address: cadet.address || '',
+            gender: cadet.gender || '',
             course: cadet.course || '',
             yearLevel: cadet.year_level || '',
             schoolYear: cadet.school_year || '',
@@ -1243,6 +1245,21 @@ const Cadets = () => {
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID</label>
                                                 <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
+                                                <select
+                                                    disabled={isViewMode}
+                                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60"
+                                                    value={editForm.gender || ''}
+                                                    onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
+                                                >
+                                                    <option value="">Select Gender</option>
+                                                    {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
                                             </div>
                                         </div>
 

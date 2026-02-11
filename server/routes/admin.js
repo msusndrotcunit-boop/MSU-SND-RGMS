@@ -1584,6 +1584,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
         'cadet_course = ?',
         'semester = ?',
         'corp_position = ?',
+        'gender = ?',
         'status = ?'
     ];
 
@@ -1592,7 +1593,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
         studentId, email, contactNumber, address, 
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
-        cadetCourse, semester, req.body.corpPosition || '', status
+        cadetCourse, semester, req.body.corpPosition || '', req.body.gender || '', status
     ];
 
     if (profilePic) {

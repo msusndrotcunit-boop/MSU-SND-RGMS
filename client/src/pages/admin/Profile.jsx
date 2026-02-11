@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Camera, User, Mail, Shield, Info } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
-import { GENDER_OPTIONS } from '../../constants/options';
 
 const AdminProfile = () => {
     const { user } = useAuth();
@@ -84,16 +83,7 @@ const AdminProfile = () => {
         }
     };
     
-    const handleSaveGender = async () => {
-        try {
-            await axios.put('/api/admin/profile', { gender: profile?.gender || '' });
-            alert('Gender updated!');
-            fetchProfile();
-        } catch (error) {
-            console.error('Error updating gender:', error);
-            alert(error.response?.data?.message || 'Failed to update gender.');
-        }
-    };
+    
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading profile...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
@@ -181,27 +171,7 @@ const AdminProfile = () => {
                                 </div>
                             </div>
                             
-                            <div>
-                                <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 block">Gender</label>
-                                <select
-                                    className="w-full border border-gray-200 bg-white p-3 rounded focus:ring-2 focus:ring-blue-500"
-                                    value={profile?.gender || ''}
-                                    onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-                                >
-                                    <option value="">Select Gender</option>
-                                    {GENDER_OPTIONS.map(opt => (
-                                        <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                </select>
-                                <div className="mt-3">
-                                    <button
-                                        onClick={handleSaveGender}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                                    >
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>
