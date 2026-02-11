@@ -606,13 +606,13 @@ const Attendance = () => {
             {/* Smart Scanner Modal */}
             {isScannerOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-hidden relative">
                         <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
                             <X size={24} />
                         </button>
 
                         {/* Camera Section */}
-                        <div className="w-full md:w-1/2 bg-black flex flex-col relative">
+                        <div className="w-full md:w-1/2 bg-black flex flex-col relative h-[60vh] md:h-auto md:flex-1">
                             <div className="flex-1 relative overflow-hidden flex items-center justify-center">
                                 <video 
                                     ref={videoRef} 
@@ -662,7 +662,7 @@ const Attendance = () => {
                         </div>
 
                         {/* Results Section */}
-                        <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 flex flex-col">
+                        <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 flex flex-col h-[40vh] md:h-auto md:flex-1">
                             <div className="p-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
                                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Scan Results</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -813,10 +813,11 @@ const Attendance = () => {
                                                     const formData = new FormData();
                                                     formData.append('file', file);
                                                     formData.append('dayId', selectedDay.id);
-                                                    await axios.post('/api/attendance/import', formData, {
+                                                    const res = await axios.post('/api/attendance/import', formData, {
                                                         headers: { 'Content-Type': 'multipart/form-data' }
                                                     });
-                                                    toast.success('Import complete. Attendance updated');
+                                                    const msg = res.data?.message || 'Import complete';
+                                                    toast.success(msg);
                                                     selectDay(selectedDay, true);
                                                 } catch (err) {
                                                     console.error(err);

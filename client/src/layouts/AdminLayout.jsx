@@ -276,7 +276,7 @@ const AdminLayout = () => {
                             className="text-xl font-bold hover:underline"
                             title="Open ROTC Admin Broadcast"
                         >
-                            ROTC Admin Word
+                            ROTC Admin
                         </button>
                         <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                             <X size={24} />

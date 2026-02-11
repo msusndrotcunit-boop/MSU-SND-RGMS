@@ -202,6 +202,10 @@ const StaffAttendanceScanner = () => {
                     )}
                 </div>
             </div>
+            <style>{`
+              #staff-qr-reader { min-height: 320px; }
+              @media (min-width: 640px) { #staff-qr-reader { min-height: 380px; } }
+            `}</style>
         </div>
     );
 };
