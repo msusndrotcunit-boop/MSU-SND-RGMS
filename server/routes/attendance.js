@@ -1125,7 +1125,6 @@ router.get('/my-history', authenticateToken, async (req, res) => {
     const whereParams = [];
     if (start) { whereDays.push('date(td.date) >= ?'); whereParams.push(start); }
     if (end) { whereDays.push('date(td.date) <= ?'); whereParams.push(end); }
-    const whereDaysSql = whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : '';
 
     let listSql = '';
     let listParams = [];
@@ -1171,25 +1170,31 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 ar.time_in,
                 ar.time_out
             FROM training_days td
-            ${whereDaysSql}
             LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
+            ${whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : ''}
             ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
-        listParams = [...whereParams, cadetId, ps, (p - 1) * ps];
+        listParams = [cadetId, ...whereParams, ps, (p - 1) * ps];
         countSql = `
             SELECT COUNT(*) as total
             FROM training_days td
-            ${whereDaysSql}
+            ${whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : ''}
         `;
         countParams = [...whereParams];
     }
 
     db.get(countSql, countParams, (cErr, cRow) => {
-        if (cErr) return res.status(500).json({ message: cErr.message });
+        if (cErr) {
+            console.error('[attendance/my-history] Count query error:', cErr.message, { countSql, countParams });
+            return res.status(500).json({ message: cErr.message });
+        }
         const total = (cRow && (cRow.total ?? cRow.count)) ? Number(cRow.total ?? cRow.count) : 0;
         db.all(listSql, listParams, (lErr, rows) => {
-            if (lErr) return res.status(500).json({ message: lErr.message });
+            if (lErr) {
+                console.error('[attendance/my-history] List query error:', lErr.message, { listSql, listParams });
+                return res.status(500).json({ message: lErr.message });
+            }
             res.json({ items: rows || [], total, page: p, pageSize: ps });
         });
     });

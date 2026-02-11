@@ -2200,6 +2200,72 @@ router.get('/merit-logs/:cadetId', (req, res) => {
     });
 });
 
+// Reconcile (Backfill) Ledger from Grades
+router.post('/ledger/backfill', authenticateToken, isAdmin, async (req, res) => {
+    const { cadetId } = req.body || {};
+    const issuerUserId = req.user && req.user.id ? Number(req.user.id) : null;
+    const getIssuerName = () => new Promise((resolve) => {
+        if (!issuerUserId) return resolve(null);
+        db.get(`SELECT id, username, staff_id FROM users WHERE id = ?`, [issuerUserId], (uErr, uRow) => {
+            if (uErr || !uRow) return resolve(null);
+            if (uRow.staff_id) {
+                db.get(`SELECT rank, first_name, last_name FROM training_staff WHERE id = ?`, [uRow.staff_id], (sErr, sRow) => {
+                    if (sErr || !sRow) return resolve(uRow.username || null);
+                    const n = [sRow.rank, sRow.last_name, sRow.first_name].filter(Boolean);
+                    resolve(n.length ? `${n[0] ? n[0] + ' ' : ''}${n[1] || ''}${n[2] ? ', ' + n[2] : ''}`.trim() : (uRow.username || null));
+                });
+            } else {
+                resolve(uRow.username || null);
+            }
+        });
+    });
+    const issuerName = await getIssuerName();
+    const targetCadets = await new Promise((resolve) => {
+        if (cadetId) {
+            db.all(`SELECT cadet_id, merit_points, demerit_points FROM grades WHERE cadet_id = ?`, [cadetId], (gErr, rows) => resolve(gErr ? [] : rows || []));
+        } else {
+            db.all(`SELECT cadet_id, merit_points, demerit_points FROM grades`, [], (gErr, rows) => resolve(gErr ? [] : rows || []));
+        }
+    });
+    const summary = [];
+    for (const g of targetCadets) {
+        const sums = await new Promise((resolve) => {
+            db.all(`SELECT type, COALESCE(SUM(points),0) as pts FROM merit_demerit_logs WHERE cadet_id = ? GROUP BY type`, [g.cadet_id], (lErr, rows) => {
+                const map = { merit: 0, demerit: 0 };
+                if (!lErr && Array.isArray(rows)) rows.forEach(r => { map[r.type] = Number(r.pts || 0); });
+                resolve(map);
+            });
+        });
+        const meritDiff = Math.max(0, Number(g.merit_points || 0) - Number(sums.merit || 0));
+        const demeritDiff = Math.max(0, Number(g.demerit_points || 0) - Number(sums.demerit || 0));
+        const applied = { cadetId: g.cadet_id, meritBackfilled: 0, demeritBackfilled: 0 };
+        if (meritDiff > 0) {
+            await new Promise((resolve) => {
+                db.run(
+                    `INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) 
+                     VALUES (?, 'merit', ?, 'Backfill from Grades', ?, ?)`,
+                    [g.cadet_id, meritDiff, issuerUserId, issuerName],
+                    (err) => { if (err) console.error('Backfill merit error:', err.message); else applied.meritBackfilled = meritDiff; resolve(); }
+                );
+            });
+        }
+        if (demeritDiff > 0) {
+            await new Promise((resolve) => {
+                db.run(
+                    `INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) 
+                     VALUES (?, 'demerit', ?, 'Backfill from Grades', ?, ?)`,
+                    [g.cadet_id, demeritDiff, issuerUserId, issuerName],
+                    (err) => { if (err) console.error('Backfill demerit error:', err.message); else applied.demeritBackfilled = demeritDiff; resolve(); }
+                );
+            });
+        }
+        if (applied.meritBackfilled || applied.demeritBackfilled) {
+            try { broadcastEvent({ type: 'grade_updated', cadetId: g.cadet_id }); } catch (_) {}
+        }
+        summary.push(applied);
+    }
+    res.json({ message: 'Backfill complete', summary });
+});
 // Add Log Entry (and update Total)
 router.post('/merit-logs', (req, res) => {
     const { cadetId, type, points, reason } = req.body;
