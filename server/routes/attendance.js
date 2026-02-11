@@ -190,7 +190,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
             // Update
             db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
                 [status, remarks, time_in, time_out, row.id], 
-                (err) => {
+                function(err) {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
@@ -214,7 +214,7 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
             // Insert
             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
                 [dayId, cadetId, status, remarks, time_in, time_out], 
-                (err) => {
+                function(err) {
                     if (err) return res.status(500).json({ message: err.message });
                     updateTotalAttendance(cadetId, res);
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });

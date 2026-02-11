@@ -1,5 +1,5 @@
 const express = require('express');
-const { upload } = require('../utils/cloudinary');
+const { upload, isCloudinaryConfigured } = require('../utils/cloudinary');
 const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const path = require('path');
 const fs = require('fs');
@@ -9,7 +9,20 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
-// const { upload } = require('../utils/cloudinary'); // Removed in favor of local memory storage
+
+// Helper for broadcasting events (copied from attendance.js logic)
+const SSE_CLIENTS = global.__sseClients || [];
+global.__sseClients = SSE_CLIENTS;
+function broadcastEvent(event) {
+    try {
+        const payload = `data: ${JSON.stringify(event)}\n\n`;
+        SSE_CLIENTS.forEach((res) => {
+            try { res.write(payload); } catch (e) { /* ignore */ }
+        });
+    } catch (e) {
+        console.error('SSE broadcast error', e);
+    }
+}
 
 const router = express.Router();
 
@@ -1587,6 +1600,11 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         }
     }
 
+    // DEBUG: Cloudinary Configuration Check
+    if (req.file && !profilePic) {
+        console.warn("[Admin] File uploaded but profilePic path could not be determined. Cloudinary configured:", isCloudinaryConfigured);
+    }
+
     const setFields = [
         'rank = ?',
         'first_name = ?',
@@ -1647,7 +1665,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
     console.log("Executing Cadet Update SQL:", sql);
     console.log("With Params:", params);
 
-    db.run(sql, params, (err) => {
+    db.run(sql, params, function(err) {
             if (err) {
                 console.error("Database Update Error:", err);
                 return res.status(500).json({ message: err.message });

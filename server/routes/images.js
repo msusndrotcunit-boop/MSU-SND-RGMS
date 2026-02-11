@@ -15,6 +15,12 @@ const serveBase64Image = (res, imageSource) => {
     
     // If it's a local path (from disk storage), redirect to static handler
     if (imageSource.startsWith('/uploads/')) {
+        // Ensure we use absolute URL if possible to avoid relative path issues on client
+        const protocol = res.req.protocol || 'https';
+        const host = res.req.get('host');
+        if (host) {
+            return res.redirect(`${protocol}://${host}${imageSource}`);
+        }
         return res.redirect(imageSource);
     }
 
