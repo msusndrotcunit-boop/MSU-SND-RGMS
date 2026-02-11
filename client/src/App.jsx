@@ -27,6 +27,7 @@ const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
+const AdminBroadcast = lazy(() => import('./pages/admin/AdminBroadcast'));
 
 // Cadet Pages
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
@@ -83,6 +84,7 @@ function App() {
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="messages" element={<AdminMessages />} />
+                <Route path="broadcast" element={<AdminBroadcast />} />
                 <Route path="settings" element={<Settings role="admin" />} />
                 <Route index element={<Navigate to="cadets" replace />} />
               </Route>

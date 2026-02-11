@@ -271,7 +271,13 @@ const AdminLayout = () => {
             )}>
                 <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center">
-                        <span className="text-xl font-bold">ROTC Admin</span>
+                        <button
+                            onClick={() => navigate('/admin/broadcast')}
+                            className="text-xl font-bold hover:underline"
+                            title="Open ROTC Admin Broadcast"
+                        >
+                            ROTC Admin Word
+                        </button>
                         <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                             <X size={24} />
                         </button>

@@ -80,6 +80,7 @@ router.get('/', async (req, res) => {
             JOIN users u ON m.user_id = u.id
             LEFT JOIN cadets c ON u.cadet_id = c.id
             LEFT JOIN training_staff ts ON u.email = ts.email 
+            WHERE m.sender_role != 'admin'
             ORDER BY m.created_at DESC
         `;
         // Note: Joining staff on email is a fallback if staff_id is not in users table.
@@ -139,6 +140,31 @@ router.delete('/:id', async (req, res) => {
     } catch (err) {
         console.error('Error deleting message:', err);
         res.status(500).json({ message: 'Error deleting message' });
+    }
+});
+
+// Broadcast message to all cadets and staff (Admin only)
+router.post('/broadcast', async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { subject, message } = req.body;
+    if (!subject || !message) {
+        return res.status(400).json({ message: 'Subject and message are required' });
+    }
+    try {
+        const recipients = await pAll(`SELECT id FROM users WHERE role IN ('cadet','training_staff')`);
+        let inserted = 0;
+        for (const r of recipients) {
+            await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, 'admin', ?, ?)`, [r.id, subject, message]);
+            await pRun(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'admin_broadcast')`, [r.id, subject]);
+            inserted++;
+        }
+        broadcastEvent({ type: 'admin_broadcast', count: inserted });
+        res.status(201).json({ message: `Broadcast sent to ${inserted} users`, count: inserted });
+    } catch (err) {
+        console.error('Error broadcasting message:', err);
+        res.status(500).json({ message: 'Error broadcasting message' });
     }
 });
 
