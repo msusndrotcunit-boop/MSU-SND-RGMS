@@ -253,6 +253,21 @@ const AdminLayout = () => {
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];
 
+    const getAvatarSrc = () => {
+        if (!adminProfile || !adminProfile.profile_pic) return null;
+        const src = adminProfile.profile_pic;
+        if (src.startsWith('data:') || src.startsWith('http')) return src;
+        let normalizedPath = src.replace(/\\/g, '/');
+        const uploadsIndex = normalizedPath.indexOf('/uploads/');
+        if (uploadsIndex !== -1) {
+            normalizedPath = normalizedPath.substring(uploadsIndex);
+        } else if (!normalizedPath.startsWith('/')) {
+            normalizedPath = '/' + normalizedPath;
+        }
+        const base = import.meta.env.VITE_API_URL || '';
+        return `${base}${normalizedPath}`;
+    };
+
     return (
         <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
             <Toaster position="top-right" reverseOrder={false} />
@@ -286,7 +301,7 @@ const AdminLayout = () => {
                         <Link to="/admin/profile">
                             {adminProfile && adminProfile.profile_pic ? (
                                 <img 
-                                    src={adminProfile.profile_pic} 
+                                    src={getAvatarSrc()} 
                                     alt="Profile" 
                                     className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                     onError={(e) => { 

@@ -233,12 +233,44 @@ const StaffLayout = () => {
                     {staffProfile && (
                         <div className="flex flex-col items-center mt-4">
                             <Link to="/staff/profile" className="w-24 h-24 rounded-full overflow-hidden border-2 border-white/50 mb-2 bg-gray-200">
-                                <img 
-                                    src={staffProfile.profile_pic || "https://via.placeholder.com/150?text=No+Image"} 
-                                    alt="Profile" 
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=No+Image'}}
-                                />
+                                {(() => {
+                                    const raw = staffProfile?.profile_pic;
+                                    let finalSrc = null;
+                                    if (raw) {
+                                        finalSrc = raw;
+                                        if (!(raw.startsWith('data:') || raw.startsWith('http'))) {
+                                            let normalizedPath = raw.replace(/\\/g, '/');
+                                            const uploadsIndex = normalizedPath.indexOf('/uploads/');
+                                            if (uploadsIndex !== -1) {
+                                                normalizedPath = normalizedPath.substring(uploadsIndex);
+                                            } else if (!normalizedPath.startsWith('/')) {
+                                                normalizedPath = '/' + normalizedPath;
+                                            }
+                                            const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+                                            const baseB = import.meta.env.VITE_API_URL || '';
+                                            const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
+                                            const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+                                            finalSrc = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
+                                        }
+                                    } else if (user?.staffId) {
+                                        finalSrc = `/api/images/staff/${user.staffId}`;
+                                    }
+                                    if (finalSrc) return (
+                                        <img 
+                                            src={finalSrc} 
+                                            alt="Profile" 
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=No+Image'}}
+                                        />
+                                    );
+                                    return (
+                                        <img 
+                                            src={"https://via.placeholder.com/150?text=No+Image"} 
+                                            alt="Profile" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    );
+                                })()}
                             </Link>
                             <h3 className="text-white font-semibold text-center text-lg">
                                 {staffProfile.rank} {staffProfile.first_name} {staffProfile.last_name}
