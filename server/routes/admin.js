@@ -1550,7 +1550,20 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
         username
     } = req.body;
 
-    const profilePic = req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null;
+    let profilePic = null;
+    if (req.file) {
+        if (req.file.path && (req.file.path.startsWith('http') || req.file.path.startsWith('https'))) {
+            profilePic = req.file.path;
+        } else if (req.file.filename) {
+            profilePic = `/uploads/${req.file.filename}`;
+        } else if (req.file.buffer) {
+            try {
+                profilePic = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            } catch (_) {
+                profilePic = null;
+            }
+        }
+    }
 
     const setFields = [
         'rank = ?',
