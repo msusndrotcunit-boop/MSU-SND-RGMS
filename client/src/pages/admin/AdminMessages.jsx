@@ -13,9 +13,7 @@ const AdminMessages = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replying, setReplying] = useState(false);
-    const [broadcastSubject, setBroadcastSubject] = useState('');
-    const [broadcastBody, setBroadcastBody] = useState('');
-    const [broadcasting, setBroadcasting] = useState(false);
+    // broadcast removed
 
     useEffect(() => {
         fetchMessages();
@@ -55,25 +53,7 @@ const AdminMessages = () => {
         }
     };
 
-    const handleBroadcast = async () => {
-        if (!broadcastSubject.trim() || !broadcastBody.trim()) return;
-        if (!window.confirm('Send this message to ALL cadets and staff?')) return;
-        try {
-            setBroadcasting(true);
-            const res = await axios.post('/api/messages/broadcast', {
-                subject: broadcastSubject.trim(),
-                message: broadcastBody.trim()
-            });
-            toast.success(res.data?.message || 'Broadcast sent');
-            setBroadcastSubject('');
-            setBroadcastBody('');
-        } catch (err) {
-            console.error('Broadcast error:', err);
-            toast.error(err.response?.data?.message || 'Failed to send broadcast');
-        } finally {
-            setBroadcasting(false);
-        }
-    };
+    // broadcast removed
 
     const filteredMessages = messages.filter(msg => {
         const matchesFilter = filter === 'all' || msg.status === filter;
@@ -96,35 +76,8 @@ const AdminMessages = () => {
                 <div className="p-4 border-b">
                     <h1 className="text-xl font-bold flex items-center gap-2 mb-4">
                         <MessageSquare className="text-blue-600" />
-                        ROTC Admin Word
+                        Admin Messages
                     </h1>
-                    <div className="p-3 mb-3 border rounded bg-blue-50">
-                        <div className="text-sm font-semibold mb-2">Broadcast to All Cadets and Staff</div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-                            <input
-                                type="text"
-                                placeholder="Subject"
-                                value={broadcastSubject}
-                                onChange={(e) => setBroadcastSubject(e.target.value)}
-                                className="md:col-span-1 w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <textarea
-                                placeholder="Message body..."
-                                value={broadcastBody}
-                                onChange={(e) => setBroadcastBody(e.target.value)}
-                                className="md:col-span-2 w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
-                            />
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={handleBroadcast}
-                                disabled={broadcasting || !broadcastSubject.trim() || !broadcastBody.trim()}
-                                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
-                            >
-                                {broadcasting ? 'Sending...' : 'Send Broadcast'}
-                            </button>
-                        </div>
-                    </div>
                     
                     <div className="flex gap-2 mb-2">
                         <div className="relative flex-1">

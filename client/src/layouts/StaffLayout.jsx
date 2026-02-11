@@ -168,7 +168,7 @@ const StaffLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'ask_admin_reply' || data.type === 'staff_chat' || data.type === 'cadet_notification' || data.type === 'admin_broadcast') {
+                        if (data.type === 'ask_admin_reply' || data.type === 'staff_chat' || data.type === 'cadet_notification') {
                             fetchNotifications();
                             fetchMessages();
                             if (navigator.vibrate) navigator.vibrate(80);
