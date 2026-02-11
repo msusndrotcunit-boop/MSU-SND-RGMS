@@ -1289,8 +1289,12 @@ router.get('/analytics', (req, res) => {
                                 c.status,
                                 COUNT(*) AS count
                             FROM cadets c
+                            LEFT JOIN users u ON u.cadet_id = c.id
                             WHERE c.course IS NOT NULL AND c.course != ''
                               AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+                              AND (u.is_archived IS FALSE OR u.is_archived IS NULL)
+                              AND c.is_profile_completed IS TRUE
+                              AND u.is_approved = 1
                             GROUP BY UPPER(TRIM(c.course)), c.status
                         `;
                         db.all(sql, [], (err, rows) => {
