@@ -13,7 +13,7 @@ const CadetDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [esConnected, setEsConnected] = useState(false);
     const [logFilters, setLogFilters] = useState({ type: 'all', start: '', end: '', page: 1, pageSize: 10 });
-    const [attendanceFilters, setAttendanceFilters] = useState({ status: 'all', start: '', end: '', page: 1, pageSize: 15 });
+    const [attendanceFilters, setAttendanceFilters] = useState({ status: 'all', start: '', end: '', page: 1, pageSize: 15, order: 'asc' });
     const fetchAttendance = async (filters = attendanceFilters) => {
         const params = {};
         if (filters.status && filters.status !== 'all') params.status = filters.status;
@@ -21,6 +21,7 @@ const CadetDashboard = () => {
         if (filters.end) params.end = filters.end;
         params.page = filters.page || 1;
         params.pageSize = filters.pageSize || 15;
+        params.order = filters.order || 'asc';
         const res = await axios.get('/api/attendance/my-history', { params }).catch(() => ({ data: [] }));
         const data = res.data;
         const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || 15 } : data;
@@ -295,6 +296,7 @@ const CadetDashboard = () => {
                                     <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
                                         <tr className="border-b">
                                             <th className="p-3 font-semibold text-gray-600">Date</th>
+                                            <th className="p-3 font-semibold text-gray-600">Title</th>
                                             <th className="p-3 font-semibold text-gray-600">Time In</th>
                                             <th className="p-3 font-semibold text-gray-600">Time Out</th>
                                             <th className="p-3 font-semibold text-gray-600">Status</th>
@@ -307,6 +309,7 @@ const CadetDashboard = () => {
                                             return paged.items.length > 0 ? paged.items.map(log => (
                                                 <tr key={log.id || `${log.date}-${log.title}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                                                    <td className="p-3 text-sm">{log.title || '-'}</td>
                                                     <td className="p-3 text-sm">{log.time_in || '-'}</td>
                                                     <td className="p-3 text-sm">{log.time_out || '-'}</td>
                                                     <td className="p-3">
@@ -329,7 +332,7 @@ const CadetDashboard = () => {
                                                 </tr>
                                             )) : (
                                                 <tr>
-                                                    <td colSpan="5" className="p-4 text-center text-gray-500">No attendance records found.</td>
+                                                    <td colSpan="6" className="p-4 text-center text-gray-500">No attendance records found.</td>
                                                 </tr>
                                             );
                                         })()}

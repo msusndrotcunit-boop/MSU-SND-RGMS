@@ -1116,9 +1116,10 @@ router.get('/my-history', authenticateToken, async (req, res) => {
     }
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet' });
 
-    const { status, start, end, page, pageSize } = req.query || {};
+    const { status, start, end, page, pageSize, order } = req.query || {};
     const p = Math.max(1, Number(page) || 1);
     const ps = Math.max(1, Math.min(100, Number(pageSize) || 1000));
+    const ord = (String(order).toLowerCase() === 'asc') ? 'ASC' : 'DESC';
 
     const whereDays = [];
     const whereParams = [];
@@ -1146,7 +1147,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
             ${whereDaysSql}
             AND ar.cadet_id = ?
             AND lower(ar.status) = lower(?)
-            ORDER BY td.date DESC
+            ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
         listParams = [...whereParams, cadetId, status, ps, (p - 1) * ps];
@@ -1172,7 +1173,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
             FROM training_days td
             ${whereDaysSql}
             LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
-            ORDER BY td.date DESC
+            ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
         listParams = [...whereParams, cadetId, ps, (p - 1) * ps];
