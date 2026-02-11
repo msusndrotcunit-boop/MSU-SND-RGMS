@@ -4,26 +4,11 @@ const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
+const { broadcastEvent } = require('../utils/sseHelper');
 const path = require('path');
 const webpush = require('web-push');
-
-// Multer (local disk storage) removed in favor of Cloudinary
-
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
-
-// SSE broadcast helper
-function broadcastEvent(event) {
-    try {
-        const clients = global.__sseClients || [];
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        clients.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
 
 router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const cachedStats = cache.get("staff_analytics");

@@ -4,25 +4,13 @@ const { upload } = require('../utils/cloudinary');
 const path = require('path');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { broadcastEvent } = require('../utils/sseHelper');
 
 const router = express.Router();
 
 // Multer Config Removed (Handled in utils/cloudinary)
 
 router.use(authenticateToken);
-
-// SSE broadcast helper
-function broadcastEvent(event) {
-    try {
-        const clients = global.__sseClients || [];
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        clients.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
 
 // Portal Access Telemetry
 router.post('/access', (req, res) => {
@@ -53,7 +41,18 @@ const calculateTransmutedGrade = (finalGrade, status) => {
 };
 
 router.get('/my-grades', async (req, res) => {
-    const cadetId = req.user.cadetId;
+    let cadetId = req.user.cadetId;
+    
+    // JWT Consistency fallback: If cadetId is missing in JWT, try to fetch it from DB using user.id
+    if (!cadetId && req.user.role === 'cadet') {
+        const userRow = await new Promise(resolve => {
+            db.get(`SELECT cadet_id FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row));
+        });
+        if (userRow && userRow.cadet_id) {
+            cadetId = userRow.cadet_id;
+        }
+    }
+
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
     const pGet = (sql, params = []) => new Promise(resolve => {
         db.get(sql, params, (err, row) => resolve(err ? undefined : row));
@@ -62,14 +61,14 @@ router.get('/my-grades', async (req, res) => {
         db.run(sql, params, (err) => resolve(!err));
     });
     try {
-        const countRow = await pGet("SELECT COUNT(*)::int as total FROM training_days", []);
-        const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) || 0;
-        const aRow = await pGet(`SELECT COUNT(*)::int as present FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present','excused')`, [cadetId]);
-        const attendancePresent = aRow && aRow.present ? aRow.present : 0;
-        const mRow = await pGet(`SELECT COALESCE(SUM(points),0)::int as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
-        const meritPoints = mRow && mRow.merit ? mRow.merit : 0;
-        const dRow = await pGet(`SELECT COALESCE(SUM(points),0)::int as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId]);
-        const demeritPoints = dRow && dRow.demerit ? dRow.demerit : 0;
+        const countRow = await pGet("SELECT COUNT(*) as total FROM training_days", []);
+        const totalTrainingDays = (countRow && (countRow.total ?? countRow.count)) ? Number(countRow.total ?? countRow.count) : 0;
+        const aRow = await pGet(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present','excused')`, [cadetId]);
+        const attendancePresent = aRow && (aRow.present ?? aRow.count) ? Number(aRow.present ?? aRow.count) : 0;
+        const mRow = await pGet(`SELECT COALESCE(SUM(points),0) as merit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'merit'`, [cadetId]);
+        const meritPoints = mRow && (mRow.merit ?? mRow.count) ? Number(mRow.merit ?? mRow.count) : 0;
+        const dRow = await pGet(`SELECT COALESCE(SUM(points),0) as demerit FROM merit_demerit_logs WHERE cadet_id = ? AND type = 'demerit'`, [cadetId]);
+        const demeritPoints = dRow && (dRow.demerit ?? dRow.count) ? Number(dRow.demerit ?? dRow.count) : 0;
         const gradeRow = await pGet(`SELECT * FROM grades WHERE cadet_id = ?`, [cadetId]);
         const base = {
             // Prioritize Admin's manual entry (gradeRow) over raw logs (calculated)
@@ -138,8 +137,17 @@ router.get('/my-grades', async (req, res) => {
 });
 
 // Get My Merit/Demerit Logs
-router.get('/my-merit-logs', (req, res) => {
-    const cadetId = req.user.cadetId;
+router.get('/my-merit-logs', async (req, res) => {
+    let cadetId = req.user.cadetId;
+
+    // JWT Consistency fallback
+    if (!cadetId && req.user.role === 'cadet') {
+        const userRow = await new Promise(resolve => {
+            db.get(`SELECT cadet_id FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row));
+        });
+        if (userRow && userRow.cadet_id) cadetId = userRow.cadet_id;
+    }
+
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
     db.all(`SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`, [cadetId], (err, rows) => {

@@ -1,23 +1,12 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
+const { broadcastEvent } = require('../utils/sseHelper');
 
 const router = express.Router();
 
 router.use(authenticateToken);
 
-// SSE broadcast helper
-function broadcastEvent(event) {
-    try {
-        const clients = global.__sseClients || [];
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        clients.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
 // Helper for DB operations
 const pRun = (sql, params = []) => new Promise((resolve, reject) => {
     db.run(sql, params, function(err) {

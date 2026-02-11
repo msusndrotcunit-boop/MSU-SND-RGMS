@@ -9,20 +9,8 @@ const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
-
-// Helper for broadcasting events (copied from attendance.js logic)
-const SSE_CLIENTS = global.__sseClients || [];
-global.__sseClients = SSE_CLIENTS;
-function broadcastEvent(event) {
-    try {
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        SSE_CLIENTS.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
+const { broadcastEvent } = require('../utils/sseHelper');
+const { updateTotalAttendance } = require('../utils/gradesHelper');
 
 const router = express.Router();
 
@@ -112,19 +100,6 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         });
     });
 });
-
-// SSE broadcast helper using global registry created in attendance routes
-function broadcastEvent(event) {
-    try {
-        const clients = global.__sseClients || [];
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        clients.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
 
 // --- Import Helpers ---
 
@@ -1792,124 +1767,164 @@ router.post('/cadets/delete', async (req, res) => {
 // --- Grading Management ---
 
 // Update Grades for a Cadet
-router.put('/grades/:cadetId', (req, res) => {
+router.put('/grades/:cadetId', async (req, res) => {
     const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
-    const cadetId = req.params.cadetId;
+    const cadetId = Number(req.params.cadetId);
 
-    // Check if row exists, if not create it
-    db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
-        
-        const ensureAttendanceRecord = () => new Promise((resolve) => {
-            if (attendancePresent === undefined || attendancePresent === null) return resolve();
-            db.get(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId], (aErr, aRow) => {
-                if (aErr) return resolve();
-                const currentPresent = aRow && aRow.present ? aRow.present : 0;
-                if ((attendancePresent || 0) > currentPresent) {
-                    db.get(`SELECT id FROM training_days ORDER BY date DESC LIMIT 1`, [], (dErr, dRow) => {
-                        if (dErr || !dRow || !dRow.id) return resolve();
-                        const dayId = dRow.id;
-                        db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [dayId, cadetId], (rErr, rRow) => {
-                            if (rErr) return resolve();
-                            if (rRow && rRow.id) {
-                                db.run(`UPDATE attendance_records SET status = 'present', remarks = 'Manual update via Grading' WHERE id = ?`, [rRow.id], (uErr) => {
-                                    try { broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status: 'present' }); } catch {}
-                                    resolve();
-                                });
-                            } else {
-                                db.run(`INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, 'present', 'Manual update via Grading', ?, ?)`, [dayId, cadetId, new Date().toLocaleTimeString(), null], (iErr) => {
-                                    try { broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status: 'present' }); } catch {}
-                                    resolve();
-                                });
-                            }
-                        });
-                    });
-                } else {
-                    resolve();
-                }
+    try {
+        const row = await new Promise((resolve, reject) => {
+            db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
             });
         });
 
-        const runUpdate = (currentMerit, currentDemerit) => {
-            db.run(`UPDATE grades SET 
-                    attendance_present = ?,
-                    merit_points = ?, 
-                    demerit_points = ?, 
-                    prelim_score = ?, 
-                    midterm_score = ?, 
-                    final_score = ?,
-                    status = ?
-                    WHERE cadet_id = ?`,
-                [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
-                function(err) {
-                    if (err) return res.status(500).json({ message: err.message });
-                    
-                    // Sync Logs: Create manual adjustment logs if points changed
-                    const meritDiff = (meritPoints || 0) - (currentMerit || 0);
-                    const demeritDiff = (demeritPoints || 0) - (currentDemerit || 0);
-                    
-                    const logPromises = [];
-                    if (meritDiff !== 0) {
-                        logPromises.push(new Promise(resolve => {
-                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'merit', ?, 'Manual Adjustment by Admin')`, 
-                                [cadetId, meritDiff], resolve);
-                        }));
-                    }
-                    if (demeritDiff !== 0) {
-                        logPromises.push(new Promise(resolve => {
-                            db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin')`, 
-                                [cadetId, demeritDiff], resolve);
-                        }));
-                    }
-                    
-                    Promise.all(logPromises).then(() => {
-                        db.get(`SELECT id, email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (err, cadet) => {
-                            if (!err && cadet && cadet.email) {
-                                const subject = 'ROTC Grading System - Grades Updated';
-                                const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
-                                const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
-                                
-                                await sendEmail(cadet.email, subject, text, html);
+        const ensureAttendanceRecord = async () => {
+            if (attendancePresent === undefined || attendancePresent === null) return;
+            const currentPresent = await new Promise((resolve) => {
+                db.get(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND lower(status) = 'present'`, [cadetId], (aErr, aRow) => {
+                    if (aErr) return resolve(0);
+                    resolve(aRow && aRow.present ? aRow.present : 0);
+                });
+            });
 
-                                db.get(`SELECT id FROM users WHERE cadet_id = ? AND role = 'cadet'`, [cadetId], (uErr, userRow) => {
-                                    if (!uErr && userRow && userRow.id) {
-                                        const notifMessage = 'Your grades have been updated. Please check your portal.';
-                                        db.run(
-                                            `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`,
-                                            [userRow.id, notifMessage, 'grade'],
-                                            (nErr) => {
-                                                if (nErr) console.error('Error creating grade notification:', nErr);
-                                            }
-                                        );
-                                    }
-                                    ensureAttendanceRecord().then(() => {
-                                        broadcastEvent({ type: 'grade_updated', cadetId });
-                                        res.json({ message: 'Grades updated' });
-                                    });
-                                });
-                            } else {
-                                ensureAttendanceRecord().then(() => {
-                                    broadcastEvent({ type: 'grade_updated', cadetId });
-                                    res.json({ message: 'Grades updated' });
-                                });
-                            }
+            if ((attendancePresent || 0) > currentPresent) {
+                const dayRow = await new Promise((resolve) => {
+                    db.get(`SELECT id FROM training_days ORDER BY date DESC LIMIT 1`, [], (dErr, dRow) => {
+                        if (dErr) return resolve(null);
+                        resolve(dRow);
+                    });
+                });
+
+                if (!dayRow || !dayRow.id) return;
+                const dayId = dayRow.id;
+
+                const rRow = await new Promise((resolve) => {
+                    db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [dayId, cadetId], (rErr, rRow) => {
+                        if (rErr) return resolve(null);
+                        resolve(rRow);
+                    });
+                });
+
+                if (rRow && rRow.id) {
+                    await new Promise((resolve) => {
+                        db.run(`UPDATE attendance_records SET status = 'present', remarks = 'Manual update via Grading' WHERE id = ?`, [rRow.id], () => {
+                            broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status: 'present' });
+                            resolve();
+                        });
+                    });
+                } else {
+                    await new Promise((resolve) => {
+                        db.run(`INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, 'present', 'Manual update via Grading', ?, ?)`, 
+                            [dayId, cadetId, new Date().toLocaleTimeString(), null], () => {
+                            broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status: 'present' });
+                            resolve();
                         });
                     });
                 }
-            );
+            }
+        };
+
+        const runUpdate = async (currentMerit, currentDemerit) => {
+            await new Promise((resolve, reject) => {
+                db.run(`UPDATE grades SET 
+                        attendance_present = ?,
+                        merit_points = ?, 
+                        demerit_points = ?, 
+                        prelim_score = ?, 
+                        midterm_score = ?, 
+                        final_score = ?,
+                        status = ?
+                        WHERE cadet_id = ?`,
+                    [attendancePresent, meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status || 'active', cadetId],
+                    function(err) {
+                        if (err) reject(err);
+                        else resolve();
+                    }
+                );
+            });
+
+            // Sync Logs: Create manual adjustment logs if points changed
+            const meritDiff = (meritPoints || 0) - (currentMerit || 0);
+            const demeritDiff = (demeritPoints || 0) - (currentDemerit || 0);
+            
+            if (meritDiff !== 0) {
+                await new Promise(resolve => {
+                    db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'merit', ?, 'Manual Adjustment by Admin')`, 
+                        [cadetId, meritDiff], resolve);
+                });
+            }
+            if (demeritDiff !== 0) {
+                await new Promise(resolve => {
+                    db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason) VALUES (?, 'demerit', ?, 'Manual Adjustment by Admin')`, 
+                        [cadetId, demeritDiff], resolve);
+                });
+            }
+
+            const cadet = await new Promise((resolve) => {
+                db.get(`SELECT id, email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], (err, row) => {
+                    if (err) resolve(null);
+                    else resolve(row);
+                });
+            });
+
+            if (cadet && cadet.email) {
+                const subject = 'ROTC Grading System - Grades Updated';
+                const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
+                const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
+                
+                try {
+                    await sendEmail(cadet.email, subject, text, html);
+                } catch (e) {
+                    console.error('Error sending grade update email:', e);
+                }
+
+                const userRow = await new Promise((resolve) => {
+                    db.get(`SELECT id FROM users WHERE cadet_id = ? AND role = 'cadet'`, [cadetId], (uErr, row) => {
+                        if (uErr) resolve(null);
+                        else resolve(row);
+                    });
+                });
+
+                if (userRow && userRow.id) {
+                    const notifMessage = 'Your grades have been updated. Please check your portal.';
+                    await new Promise(resolve => {
+                        db.run(
+                            `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`,
+                            [userRow.id, notifMessage, 'grade'],
+                            (nErr) => {
+                                if (nErr) console.error('Error creating grade notification:', nErr);
+                                resolve();
+                            }
+                        );
+                    });
+                }
+            }
+            
+            await ensureAttendanceRecord();
+            // Use updateTotalAttendance helper to ensure consistency
+            await updateTotalAttendance(cadetId);
+            broadcastEvent({ type: 'grade_updated', cadetId });
+            res.json({ message: 'Grades updated' });
         };
 
         if (!row) {
             // Initialize with defaults if missing
-            db.run(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) 
-                    VALUES (?, 0, 0, 0, 0, 0, 0, 'active')`, [cadetId], (err) => {
-                if (err) return res.status(500).json({ message: err.message });
-                runUpdate(0, 0);
+            await new Promise((resolve, reject) => {
+                db.run(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) 
+                        VALUES (?, 0, 0, 0, 0, 0, 0, 'active')`, [cadetId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
+            await runUpdate(0, 0);
         } else {
-            runUpdate(row.merit_points, row.demerit_points);
+            await runUpdate(row.merit_points, row.demerit_points);
         }
-    });
+    } catch (err) {
+        console.error('Grade update error:', err);
+        res.status(500).json({ message: err.message });
+    }
 });
 
 // --- Notifications (Admin scope) ---
@@ -2195,7 +2210,7 @@ router.post('/merit-logs', (req, res) => {
                             
                             await sendEmail(cadet.email, subject, text, html);
                         }
-                        broadcastEvent({ type: 'grade_updated', cadetId });
+                        broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
                         res.json({ message: 'Log added and points updated' });
                     });
                 });
@@ -2234,7 +2249,7 @@ router.delete('/merit-logs/:id', (req, res) => {
             
             db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (err) => {
                 if (err) console.error("Error updating grades after log deletion", err);
-                broadcastEvent({ type: 'grade_updated', cadetId: log.cadet_id });
+                broadcastEvent({ type: 'grade_updated', cadetId: Number(log.cadet_id) });
                 res.json({ message: 'Log deleted and points reverted' });
             });
         });

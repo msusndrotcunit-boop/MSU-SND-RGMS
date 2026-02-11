@@ -12,36 +12,12 @@ const fs = require('fs');
 const path = require('path');
 const { cloudinary, isCloudinaryConfigured } = require('../utils/cloudinary');
 
+const { broadcastEvent, SSE_CLIENTS } = require('../utils/sseHelper');
+const { updateTotalAttendance } = require('../utils/gradesHelper');
+
 // Simple SSE clients registry (shared via global)
-const SSE_CLIENTS = global.__sseClients || [];
-global.__sseClients = SSE_CLIENTS;
+// Removed local definition as it's now in sseHelper.js
 
-function broadcastEvent(event) {
-    try {
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        SSE_CLIENTS.forEach((res) => {
-            try { res.write(payload); } catch (e) { /* ignore */ }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
-}
-
-// Server-Sent Events endpoint
-router.get('/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders?.();
-
-    res.write('retry: 5000\n\n');
-    SSE_CLIENTS.push(res);
-
-    req.on('close', () => {
-        const idx = SSE_CLIENTS.indexOf(res);
-        if (idx !== -1) SSE_CLIENTS.splice(idx, 1);
-    });
-});
 // Multer config for file upload (Memory storage for immediate parsing)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -190,11 +166,11 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
             // Update
             db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
                 [status, remarks, time_in, time_out, row.id], 
-                function(err) {
+                async function(err) {
                     if (err) return res.status(500).json({ message: err.message });
-                    updateTotalAttendance(cadetId, res);
+                    
+                    await updateTotalAttendance(cadetId);
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
-                    broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -214,11 +190,11 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
             // Insert
             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
                 [dayId, cadetId, status, remarks, time_in, time_out], 
-                function(err) {
+                async function(err) {
                     if (err) return res.status(500).json({ message: err.message });
-                    updateTotalAttendance(cadetId, res);
+                    
+                    await updateTotalAttendance(cadetId);
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
-                    broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
 
                     // Notify Cadet
                     db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -310,11 +286,11 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                 // Update
                 db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ? WHERE id = ?', 
                     [status, remarks, time_in, row.id], 
-                    (err) => {
+                    async (err) => {
                         if (err) return res.status(500).json({ message: err.message });
-                        updateTotalAttendance(cadetId, res);
+                        
+                        await updateTotalAttendance(cadetId);
                         broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
-                        broadcastEvent({ type: 'grade_updated', cadetId });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -341,11 +317,11 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
                 // Insert
                 db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
                     [dayId, cadetId, status, remarks, time_in, time_out], 
-                    (err) => {
+                    async (err) => {
                         if (err) return res.status(500).json({ message: err.message });
-                        updateTotalAttendance(cadetId, res);
+                        
+                        await updateTotalAttendance(cadetId);
                         broadcastEvent({ type: 'attendance_updated', cadetId, dayId, status });
-                        broadcastEvent({ type: 'grade_updated', cadetId });
 
                         // Notify Cadet
                         db.get('SELECT id FROM users WHERE cadet_id = ?', [cadetId], (uErr, uRow) => {
@@ -522,59 +498,6 @@ router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
         res.status(500).json({ message: 'Server Error processing scan' });
     }
 });
-
-// Helper to update total attendance count in grades table
-function updateTotalAttendance(cadetId, res) {
-    const cId = Number(cadetId);
-    if (isNaN(cId)) {
-        console.error(`Invalid cadetId for attendance update: ${cadetId}`);
-        return;
-    }
-
-    // Count 'present' and 'excused' records
-    // PostgreSQL count(*) returns a string (BigInt), so we parse it
-    db.get(`SELECT COUNT(*)::int as count FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present', 'excused')`, [cId], (err, row) => {
-        if (err) {
-            console.error(`Error counting attendance for cadet ${cId}:`, err);
-            return;
-        }
-        
-        const count = row && row.count !== undefined ? Number(row.count) : 0;
-        console.log(`Updating attendance count for cadet ${cId}: ${count}`);
-        
-        // Update grades table using ON CONFLICT for PostgreSQL or standard logic for SQLite
-        // Our adapter handles the query conversion
-        const updateSql = `
-            INSERT INTO grades (cadet_id, attendance_present) 
-            VALUES (?, ?) 
-            ON CONFLICT (cadet_id) 
-            DO UPDATE SET attendance_present = EXCLUDED.attendance_present
-        `;
-
-        db.run(updateSql, [cId, count], function(err) {
-            if (err) {
-                // If ON CONFLICT fails (e.g. SQLite), fallback to manual check
-                db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cId], function(err2) {
-                    if (err2) {
-                        console.error(`Error updating grades for cadet ${cId}:`, err2);
-                        return;
-                    }
-                    if (this.changes === 0) {
-                        db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cId, count], (err3) => {
-                            if (err3) console.error(`Error creating grade record for cadet ${cId}:`, err3);
-                            else broadcastEvent({ type: 'grade_updated', cadetId: cId });
-                        });
-                    } else {
-                        broadcastEvent({ type: 'grade_updated', cadetId: cId });
-                    }
-                });
-            } else {
-                console.log(`Successfully synced grades for cadet ${cId} with count ${count}`);
-                broadcastEvent({ type: 'grade_updated', cadetId: cId });
-            }
-        });
-    });
-}
 
 // --- Import Helpers ---
 
@@ -896,13 +819,16 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                 const newTimeOut = (typeof time_out === 'string' && time_out.trim() && time_out.trim() !== '-') ? time_out.trim() : row.existing_time_out || null;
                 db.run('UPDATE attendance_records SET status = ?, remarks = ?, time_in = ?, time_out = ? WHERE id = ?', 
                     [status, remarks, newTimeIn, newTimeOut, row.id], 
-                    (err) => {
+                    async (err) => {
                         if (err) reject(err);
                         else {
-                            updateTotalAttendance(cadetId, null); 
-                            broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
-                            broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
-                            resolve('updated');
+                            try {
+                                await updateTotalAttendance(cadetId); 
+                                broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                                resolve('updated');
+                            } catch (e) {
+                                reject(e);
+                            }
                         }
                     }
                 );
@@ -911,13 +837,16 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
                 const insertTimeOut = (typeof time_out === 'string' && time_out.trim() && time_out.trim() !== '-') ? time_out.trim() : null;
                 db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, ?, ?, ?, ?)', 
                     [dayId, cadetId, status, remarks, insertTimeIn, insertTimeOut], 
-                    (err) => {
+                    async (err) => {
                         if (err) reject(err);
                         else {
-                            updateTotalAttendance(cadetId, null); 
-                            broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
-                            broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
-                            resolve('inserted');
+                            try {
+                                await updateTotalAttendance(cadetId); 
+                                broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
+                                resolve('inserted');
+                            } catch (e) {
+                                reject(e);
+                            }
                         }
                     }
                 );
@@ -1155,8 +1084,19 @@ router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
 // --- Cadet View ---
 
 // Get my attendance history
-router.get('/my-history', authenticateToken, (req, res) => {
-    const cadetId = req.user.cadetId;
+router.get('/my-history', authenticateToken, async (req, res) => {
+    let cadetId = req.user.cadetId;
+
+    // JWT Consistency fallback: If cadetId is missing in JWT, try to fetch it from DB using user.id
+    if (!cadetId && req.user.role === 'cadet') {
+        const userRow = await new Promise(resolve => {
+            db.get(`SELECT cadet_id FROM users WHERE id = ?`, [req.user.id], (err, row) => resolve(row));
+        });
+        if (userRow && userRow.cadet_id) {
+            cadetId = userRow.cadet_id;
+        }
+    }
+
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet' });
 
     const sql = `

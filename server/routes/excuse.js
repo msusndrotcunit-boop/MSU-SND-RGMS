@@ -3,6 +3,8 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
+const { updateTotalAttendance } = require('../utils/gradesHelper');
+const { broadcastEvent } = require('../utils/sseHelper');
 const path = require('path');
 const fs = require('fs');
 
@@ -85,7 +87,7 @@ router.put('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
         
         if (status === 'approved') {
             // Find the letter details
-            db.get(`SELECT cadet_id, date_absent FROM excuse_letters WHERE id = ?`, [id], (err, letter) => {
+            db.get(`SELECT cadet_id, date_absent FROM excuse_letters WHERE id = ?`, [id], async (err, letter) => {
                 if (err || !letter) return;
 
                 // Find the training day
@@ -97,13 +99,38 @@ router.put('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
 
                     // Check if attendance record exists
                     db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [day.id, letter.cadet_id], (err, record) => {
+                        if (err) {
+                            console.error('Error checking attendance_records:', err);
+                            return;
+                        }
+
                         if (record) {
-                             db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', [newStatus, remarks, record.id], () => {
-                                 updateTotalAttendance(letter.cadet_id);
+                             db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', [newStatus, remarks, record.id], async (err) => {
+                                 if (err) {
+                                     console.error('Error updating attendance_records:', err);
+                                     return;
+                                 }
+                                 try {
+                                     await updateTotalAttendance(letter.cadet_id);
+                                     // broadcastEvent is handled inside updateTotalAttendance for grade updates
+                                     // but we still want an attendance-specific update event for the UI
+                                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(letter.cadet_id) });
+                                 } catch (e) {
+                                     console.error('Error in updateTotalAttendance:', e);
+                                 }
                              });
                         } else {
-                             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', [day.id, letter.cadet_id, newStatus, remarks], () => {
-                                 updateTotalAttendance(letter.cadet_id);
+                             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', [day.id, letter.cadet_id, newStatus, remarks], async (err) => {
+                                 if (err) {
+                                     console.error('Error inserting into attendance_records:', err);
+                                     return;
+                                 }
+                                 try {
+                                     await updateTotalAttendance(letter.cadet_id);
+                                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(letter.cadet_id) });
+                                 } catch (e) {
+                                     console.error('Error in updateTotalAttendance:', e);
+                                 }
                              });
                         }
                     });
@@ -129,30 +156,5 @@ router.delete('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) =>
         res.json({ message: 'Excuse letter deleted successfully' });
     });
 });
-
-// Helper to update total attendance count in grades table (Duplicated from attendance.js)
-function updateTotalAttendance(cadetId) {
-    // Count 'present' and 'excused' records
-    db.get(`SELECT COUNT(*) as count FROM attendance_records WHERE cadet_id = ? AND lower(status) IN ('present', 'excused')`, [cadetId], (err, row) => {
-        if (err) {
-            console.error(`Error counting attendance for cadet ${cadetId}:`, err);
-            return;
-        }
-        
-        const count = row.count;
-        
-        // Update grades table
-        db.run('UPDATE grades SET attendance_present = ? WHERE cadet_id = ?', [count, cadetId], function(err) {
-            if (err) console.error(`Error updating grades for cadet ${cadetId}:`, err);
-            
-            if (this.changes === 0) {
-                // Grade record might not exist, create it
-                db.run('INSERT INTO grades (cadet_id, attendance_present) VALUES (?, ?)', [cadetId, count], (err) => {
-                    if (err) console.error(`Error creating grade record for cadet ${cadetId}:`, err);
-                });
-            }
-        });
-    });
-}
 
 module.exports = router;
