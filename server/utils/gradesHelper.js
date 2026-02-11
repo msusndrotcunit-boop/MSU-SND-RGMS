@@ -7,14 +7,10 @@ function calculateTransmutedGrade(finalGrade, status) {
     }
     let transmutedGrade = 5.00;
     let remarks = 'Failed';
-    if (finalGrade >= 98) { transmutedGrade = 1.00; remarks = 'Passed'; }
-    else if (finalGrade >= 95) { transmutedGrade = 1.25; remarks = 'Passed'; }
-    else if (finalGrade >= 92) { transmutedGrade = 1.50; remarks = 'Passed'; }
-    else if (finalGrade >= 89) { transmutedGrade = 1.75; remarks = 'Passed'; }
-    else if (finalGrade >= 86) { transmutedGrade = 2.00; remarks = 'Passed'; }
-    else if (finalGrade >= 83) { transmutedGrade = 2.25; remarks = 'Passed'; }
+    if (finalGrade >= 95) { transmutedGrade = 1.00; remarks = 'Passed'; }
+    else if (finalGrade >= 90) { transmutedGrade = 1.50; remarks = 'Passed'; }
+    else if (finalGrade >= 85) { transmutedGrade = 2.00; remarks = 'Passed'; }
     else if (finalGrade >= 80) { transmutedGrade = 2.50; remarks = 'Passed'; }
-    else if (finalGrade >= 77) { transmutedGrade = 2.75; remarks = 'Passed'; }
     else if (finalGrade >= 75) { transmutedGrade = 3.00; remarks = 'Passed'; }
     return { transmutedGrade: typeof transmutedGrade === 'number' ? transmutedGrade.toFixed(2) : transmutedGrade, remarks };
 }

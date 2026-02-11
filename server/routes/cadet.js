@@ -78,6 +78,10 @@ router.get('/my-grades', async (req, res) => {
         const subjectScore = ((base.prelim_score + base.midterm_score + base.final_score) / 300) * 40;
         const finalGrade = attendanceScore + aptitudeScore + subjectScore;
         const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, base.status);
+        let finalRemarks = remarks;
+        if (attendanceScore < 24 || subjectScore < 28) {
+            finalRemarks = 'Failed';
+        }
         res.json({
             ...base,
             totalTrainingDays: safeTotalDays,
@@ -86,7 +90,7 @@ router.get('/my-grades', async (req, res) => {
             subjectScore,
             finalGrade,
             transmutedGrade,
-            remarks
+            remarks: finalRemarks
         });
     } catch (e) {
         const safeTotalDays = 0;
@@ -104,6 +108,10 @@ router.get('/my-grades', async (req, res) => {
         const subjectScore = 0;
         const finalGrade = attendanceScore + aptitudeScore + subjectScore;
         const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, base.status);
+        let finalRemarks = remarks;
+        if (attendanceScore < 24 || subjectScore < 28) {
+            finalRemarks = 'Failed';
+        }
         res.json({
             ...base,
             totalTrainingDays: safeTotalDays,
@@ -112,7 +120,7 @@ router.get('/my-grades', async (req, res) => {
             subjectScore,
             finalGrade,
             transmutedGrade,
-            remarks
+            remarks: finalRemarks
         });
     }
 });

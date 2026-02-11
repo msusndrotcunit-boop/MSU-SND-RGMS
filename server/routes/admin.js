@@ -1205,13 +1205,14 @@ router.get('/analytics', (req, res) => {
                     const finalGrade = attendanceScore + aptitudeScore + subjectScore;
                     
                     const { remarks } = calculateTransmutedGrade(finalGrade, gradeData.grade_status);
+                    const passFail = (attendanceScore < 24 || subjectScore < 28) ? 'Failed' : remarks;
 
-                    if (remarks === 'Passed') analyticsData.grades.passed++;
-                    else if (remarks === 'Failed') analyticsData.grades.failed++;
+                    if (passFail === 'Passed') analyticsData.grades.passed++;
+                    else if (passFail === 'Failed') analyticsData.grades.failed++;
                     
                     if (['INC', 'DO', 'T'].includes(gradeData.grade_status)) {
                         analyticsData.grades.incomplete++;
-                        if (remarks === 'Failed') analyticsData.grades.failed--; // Adjust if it was counted as failed above
+                        if (passFail === 'Failed') analyticsData.grades.failed--; // Adjust if it was counted as failed above
                     }
                 });
 
@@ -1475,6 +1476,7 @@ router.get('/cadets', (req, res) => {
                 const finalGrade = attendanceScore + aptitudeScore + subjectScore;
                 
                 const { transmutedGrade, remarks } = calculateTransmutedGrade(finalGrade, cadet.grade_status);
+                const passFail = (attendanceScore < 24 || subjectScore < 28) ? 'Failed' : remarks;
 
                 return {
                     ...cadet,
@@ -1484,7 +1486,7 @@ router.get('/cadets', (req, res) => {
                     subjectScore,
                     finalGrade,
                     transmutedGrade,
-                    remarks
+                    remarks: passFail
                 };
             });
             res.json(cadetsWithGrades);
