@@ -118,7 +118,6 @@ const Profile = () => {
                 setPreview(data.profile_pic);
             } else {
                 let normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                // Remove absolute path prefix if present (look for /uploads/)
                 const uploadsIndex = normalizedPath.indexOf('/uploads/');
                 if (uploadsIndex !== -1) {
                     normalizedPath = normalizedPath.substring(uploadsIndex);
@@ -132,6 +131,8 @@ const Profile = () => {
                 const final = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
                 setPreview(final);
             }
+        } else if (user?.cadetId) {
+            setPreview(`/api/images/cadets/${user.cadetId}`);
         }
     };
 
@@ -333,7 +334,11 @@ const Profile = () => {
                                         className="w-full h-full object-cover" 
                                         onError={(e) => {
                                             e.target.onerror = null; 
-                                            e.target.src = '/assets/default-avatar.png'; // Fallback
+                                            if (user?.cadetId && !String(e.target.src).includes(`/api/images/cadets/${user.cadetId}`)) {
+                                                e.target.src = `/api/images/cadets/${user.cadetId}`;
+                                                return;
+                                            }
+                                            e.target.src = '/assets/default-avatar.png';
                                             // If even fallback fails, hide it or show placeholder
                                             if (e.target.src.includes('default-avatar')) {
                                                  e.target.style.display = 'none';

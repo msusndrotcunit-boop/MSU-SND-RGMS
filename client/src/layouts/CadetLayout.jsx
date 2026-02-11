@@ -289,11 +289,12 @@ const CadetLayout = () => {
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
                         {(() => {
-                            const src = profile?.profile_pic;
-                            if (src) {
-                                let finalSrc = src;
-                                if (!(src.startsWith('data:') || src.startsWith('http'))) {
-                                    let normalizedPath = src.replace(/\\/g, '/');
+                            const raw = profile?.profile_pic;
+                            let finalSrc = null;
+                            if (raw) {
+                                finalSrc = raw;
+                                if (!(raw.startsWith('data:') || raw.startsWith('http'))) {
+                                    let normalizedPath = raw.replace(/\\/g, '/');
                                     const uploadsIndex = normalizedPath.indexOf('/uploads/');
                                     if (uploadsIndex !== -1) {
                                         normalizedPath = normalizedPath.substring(uploadsIndex);
@@ -306,8 +307,10 @@ const CadetLayout = () => {
                                     const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
                                     finalSrc = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
                                 }
-                                return <img src={finalSrc} alt="Profile" className="w-full h-full object-cover" />;
+                            } else if (user?.cadetId) {
+                                finalSrc = `/api/images/cadets/${user.cadetId}`;
                             }
+                            if (finalSrc) return <img src={finalSrc} alt="Profile" className="w-full h-full object-cover" />;
                             return (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
                                     <User size={40} />
