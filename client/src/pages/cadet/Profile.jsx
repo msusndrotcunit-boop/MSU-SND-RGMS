@@ -15,7 +15,8 @@ import {
     SEMESTER_OPTIONS, 
     COURSE_OPTIONS,
     CADET_COURSE_OPTIONS,
-    STATUS_OPTIONS
+    STATUS_OPTIONS,
+    GENDER_OPTIONS
 } from '../../constants/options';
 
 const Profile = () => {
@@ -31,6 +32,7 @@ const Profile = () => {
         email: '',
         contactNumber: '',
         address: '',
+        gender: '',
         course: '',
         yearLevel: '',
         schoolYear: '',
@@ -100,6 +102,7 @@ const Profile = () => {
             email: data.email,
             contactNumber: data.contact_number || '',
             address: data.address || '',
+            gender: data.gender || '',
             course: data.course || '',
             yearLevel: data.year_level || '',
             schoolYear: data.school_year || '',
@@ -190,7 +193,7 @@ const Profile = () => {
         // Validation for First Time Completion
         if (!isLocked) {
             // Check if all required fields are filled
-            const requiredFields = ['username', 'firstName', 'lastName', 'email', 'contactNumber', 'address', 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon', 'cadetCourse', 'semester'];
+            const requiredFields = ['username', 'firstName', 'lastName', 'email', 'contactNumber', 'address', 'gender', 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon', 'cadetCourse', 'semester'];
             const missingFields = requiredFields.filter(field => !profile[field]);
             
             if (missingFields.length > 0) {
@@ -436,6 +439,24 @@ const Profile = () => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number <span className="text-red-500">*</span></label>
                                 <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} disabled={isLocked} required />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender <span className="text-red-500">*</span></label>
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    value={profile.gender}
+                                    onChange={e => setProfile({ ...profile, gender: e.target.value })}
+                                    disabled={isLocked}
+                                    required
+                                >
+                                    <option value="">Select Gender</option>
+                                    {GENDER_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

@@ -93,7 +93,9 @@ export const PLATOON_OPTIONS = [
     "Medics", 
     "Military Police", 
     "Band", 
-    "Office Personnel"
+    "Office Personnel",
+    "Small Unit Tactics",
+    "Excess Officer"
 ];
 
 export const SEMESTER_OPTIONS = [
@@ -132,4 +134,9 @@ export const CADET_COURSE_OPTIONS = [
     "MS32",
     "MS41",
     "MS42"
+];
+
+export const GENDER_OPTIONS = [
+    "Male",
+    "Female"
 ];

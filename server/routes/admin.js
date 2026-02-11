@@ -1977,30 +1977,78 @@ router.delete('/users/:id', (req, res) => {
 //
 // Get Current Admin Profile
 router.get('/profile', authenticateToken, isAdmin, (req, res) => {
-    db.get(`SELECT id, username, email, profile_pic FROM users WHERE id = ?`, [req.user.id], (err, row) => {
+    const sql = `
+        SELECT u.id, u.username, u.email, u.profile_pic, u.staff_id, s.gender
+        FROM users u
+        LEFT JOIN training_staff s ON s.id = u.staff_id
+        WHERE u.id = ?
+    `;
+    db.get(sql, [req.user.id], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json(row);
     });
 });
 
-// Update Admin Profile (Pic)
+// Update Admin Profile (Photo and/or Gender)
 router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    let imageUrl = req.file.path;
-    if (!imageUrl && req.file.buffer && req.file.mimetype) {
-        imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    }
-    if (!imageUrl) return res.status(400).json({ message: 'Failed to process uploaded file' });
-    if (imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
-        const parts = imageUrl.split(/[\\/]/);
-        const uploadIndex = parts.indexOf('uploads');
-        if (uploadIndex !== -1) {
-            imageUrl = '/' + parts.slice(uploadIndex).join('/');
+    const { gender } = req.body || {};
+    const doUpdates = [];
+    let imageUrl = null;
+    
+    if (req.file) {
+        imageUrl = req.file.path;
+        if (!imageUrl && req.file.buffer && req.file.mimetype) {
+            imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        }
+        if (imageUrl && imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
+            const parts = imageUrl.split(/[\\/]/);
+            const uploadIndex = parts.indexOf('uploads');
+            if (uploadIndex !== -1) {
+                imageUrl = '/' + parts.slice(uploadIndex).join('/');
+            }
+        }
+        if (imageUrl) {
+            doUpdates.push(new Promise((resolve) => {
+                db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [imageUrl, req.user.id], function(err) {
+                    if (err) resolve({ ok: false, error: err.message });
+                    else resolve({ ok: true, profilePic: imageUrl });
+                });
+            }));
         }
     }
-    db.run(`UPDATE users SET profile_pic = ? WHERE id = ?`, [imageUrl, req.user.id], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json({ message: 'Profile updated', profilePic: imageUrl });
+    
+    // Update gender if provided and linked to a staff record
+    if (gender) {
+        doUpdates.push(new Promise((resolve) => {
+            db.get(`SELECT staff_id FROM users WHERE id = ?`, [req.user.id], (err, row) => {
+                if (err) return resolve({ ok: false, error: err.message });
+                const staffId = row && row.staff_id;
+                if (!staffId) return resolve({ ok: false, error: 'No linked staff record to update gender' });
+                db.run(`UPDATE training_staff SET gender = ? WHERE id = ?`, [gender, staffId], function(updErr) {
+                    if (updErr) resolve({ ok: false, error: updErr.message });
+                    else resolve({ ok: true, gender });
+                });
+            });
+        }));
+    }
+    
+    if (doUpdates.length === 0) {
+        return res.status(400).json({ message: 'No changes submitted' });
+    }
+    
+    Promise.all(doUpdates).then((results) => {
+        const resp = { message: 'Profile updated' };
+        const picRes = results.find(r => r.profilePic);
+        const genderRes = results.find(r => r.gender);
+        if (picRes && picRes.profilePic) resp.profilePic = picRes.profilePic;
+        if (genderRes && genderRes.gender) resp.gender = genderRes.gender;
+        const errRes = results.find(r => r.ok === false);
+        if (errRes && !resp.profilePic && !resp.gender) {
+            return res.status(500).json({ message: errRes.error || 'Update failed' });
+        }
+        res.json(resp);
+    }).catch((e) => {
+        res.status(500).json({ message: e.message || 'Update failed' });
     });
 });
 

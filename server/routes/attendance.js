@@ -371,6 +371,43 @@ router.post('/scan', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+router.post('/import-local', authenticateToken, isAdmin, async (req, res) => {
+    const { file_path, dayId } = req.body;
+    if (!file_path || !dayId) return res.status(400).json({ message: 'File path and Day ID are required' });
+    try {
+        const resolved = path.resolve(file_path);
+        const ext = path.extname(resolved).toLowerCase();
+        const buffer = fs.readFileSync(resolved);
+
+        let data = [];
+        if (ext === '.pdf') {
+            const rawRows = await parsePdf(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext === '.docx' || ext === '.doc') {
+            const rawRows = await parseDocx(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext.match(/\.(png|jpg|jpeg|bmp|webp|gif|tiff)$/i)) {
+            const rawRows = await parseImage(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
+            const workbook = xlsx.read(buffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            data = xlsx.utils.sheet_to_json(sheet);
+        } else {
+            return res.status(400).json({ message: 'Unsupported file format for local import' });
+        }
+
+        const result = await processAttendanceData(data, dayId);
+        res.json({
+            message: `Import complete. Success: ${result.successCount}, Skipped: ${result.skippedCount || 0}, Failed: ${result.failCount}`,
+            errors: result.errors.slice(0, 10)
+        });
+    } catch (error) {
+        console.error('Local import error:', error);
+        res.status(500).json({ message: 'Failed to read local file' });
+    }
+});
 // Staff Attendance Scan Endpoint
 router.post('/staff/scan', authenticateToken, isAdmin, (req, res) => {
     const { dayId, qrData, status: providedStatus, time_in: providedTimeIn, time_out: providedTimeOut } = req.body;
@@ -965,52 +1002,12 @@ router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
             message: `Import complete. Success: ${result.successCount}, Skipped: ${result.skippedCount || 0}, Failed: ${result.failCount}`,
             errors: result.errors.slice(0, 10) 
         });
-
-    } catch (err) {
-// Import Attendance from local file path (PDF/DOCX/Images)
-router.post('/import-local', authenticateToken, isAdmin, async (req, res) => {
-    const { file_path, dayId } = req.body;
-    if (!file_path || !dayId) return res.status(400).json({ message: 'File path and Day ID are required' });
-    try {
-        const resolved = path.resolve(file_path);
-        const ext = path.extname(resolved).toLowerCase();
-        const buffer = fs.readFileSync(resolved);
-
-        let data = [];
-        if (ext === '.pdf') {
-            const rawRows = await parsePdf(buffer);
-            data = rawRows.map(r => extractFromRaw(r.raw));
-        } else if (ext === '.docx' || ext === '.doc') {
-            const rawRows = await parseDocx(buffer);
-            data = rawRows.map(r => extractFromRaw(r.raw));
-        } else if (ext.match(/\.(png|jpg|jpeg|bmp|webp|gif|tiff)$/i)) {
-            const rawRows = await parseImage(buffer);
-            data = rawRows.map(r => extractFromRaw(r.raw));
-        } else if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
-        } else {
-            return res.status(400).json({ message: 'Unsupported file format for local import' });
-        }
-
-        const result = await processAttendanceData(data, dayId);
-        res.json({
-            message: `Import complete. Success: ${result.successCount}, Skipped: ${result.skippedCount || 0}, Failed: ${result.failCount}`,
-            errors: result.errors.slice(0, 10)
-        });
-    } catch (error) {
-        console.error('Local import error:', error);
-        res.status(500).json({ message: 'Failed to read local file' });
-    }
-});
-
     } catch (err) {
         console.error("Import URL Error:", err);
         res.status(500).json({ message: 'Failed to process URL: ' + err.message });
     }
 });
+
 
 // --- Cadet View ---
 

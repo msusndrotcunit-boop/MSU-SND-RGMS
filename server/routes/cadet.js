@@ -242,6 +242,7 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             course, yearLevel, schoolYear,
             battalion, company, platoon,
             cadetCourse, semester,
+            gender,
             is_profile_completed // Frontend sends this as 'true'
         } = req.body;
         const isComplete = (is_profile_completed === 'true' || is_profile_completed === true || is_profile_completed === 1 || is_profile_completed === '1');
@@ -254,7 +255,7 @@ router.put('/profile', uploadProfilePic, (req, res) => {
         if (isComplete) {
             const requiredFields = [
                 'username', 'firstName', 'lastName', 'email', 'contactNumber', 'address',
-                'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon',
+                'gender', 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon',
                 'cadetCourse', 'semester'
             ];
             
@@ -299,14 +300,14 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 email=?, contact_number=?, address=?,
                 course=?, year_level=?, school_year=?,
                 battalion=?, company=?, platoon=?,
-                cadet_course=?, semester=?, corp_position=?`;
+                cadet_course=?, semester=?, gender=?, corp_position=?`;
             
             const params = [
                 safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
                 safeParam(email), safeParam(contactNumber), safeParam(address),
                 safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
                 safeParam(battalion), safeParam(company), safeParam(platoon),
-                safeParam(cadetCourse), safeParam(semester), safeParam(req.body.corpPosition)
+                safeParam(cadetCourse), safeParam(semester), safeParam(gender), safeParam(req.body.corpPosition)
             ];
 
             if (req.file) {
