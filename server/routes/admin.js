@@ -1735,6 +1735,36 @@ router.put('/grades/:cadetId', (req, res) => {
     db.get("SELECT id, merit_points, demerit_points FROM grades WHERE cadet_id = ?", [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         
+        const ensureAttendanceRecord = () => new Promise((resolve) => {
+            if (attendancePresent === undefined || attendancePresent === null) return resolve();
+            db.get(`SELECT COUNT(*) as present FROM attendance_records WHERE cadet_id = ? AND status = 'present'`, [cadetId], (aErr, aRow) => {
+                if (aErr) return resolve();
+                const currentPresent = aRow && aRow.present ? aRow.present : 0;
+                if ((attendancePresent || 0) > currentPresent) {
+                    db.get(`SELECT id FROM training_days ORDER BY date DESC LIMIT 1`, [], (dErr, dRow) => {
+                        if (dErr || !dRow || !dRow.id) return resolve();
+                        const dayId = dRow.id;
+                        db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [dayId, cadetId], (rErr, rRow) => {
+                            if (rErr) return resolve();
+                            if (rRow && rRow.id) {
+                                db.run(`UPDATE attendance_records SET status = 'present', remarks = 'Manual update via Grading' WHERE id = ?`, [rRow.id], (uErr) => {
+                                    try { broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status: 'present' }); } catch {}
+                                    resolve();
+                                });
+                            } else {
+                                db.run(`INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks, time_in, time_out) VALUES (?, ?, 'present', 'Manual update via Grading', ?, ?)`, [dayId, cadetId, new Date().toLocaleTimeString(), null], (iErr) => {
+                                    try { broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status: 'present' }); } catch {}
+                                    resolve();
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        });
+
         const runUpdate = (currentMerit, currentDemerit) => {
             db.run(`UPDATE grades SET 
                     attendance_present = ?,
@@ -1787,12 +1817,16 @@ router.put('/grades/:cadetId', (req, res) => {
                                             }
                                         );
                                     }
+                                    ensureAttendanceRecord().then(() => {
+                                        broadcastEvent({ type: 'grade_updated', cadetId });
+                                        res.json({ message: 'Grades updated' });
+                                    });
+                                });
+                            } else {
+                                ensureAttendanceRecord().then(() => {
                                     broadcastEvent({ type: 'grade_updated', cadetId });
                                     res.json({ message: 'Grades updated' });
                                 });
-                            } else {
-                                broadcastEvent({ type: 'grade_updated', cadetId });
-                                res.json({ message: 'Grades updated' });
                             }
                         });
                     });

@@ -138,6 +138,13 @@ const CadetDashboard = () => {
                             const logRes = await axios.get('/api/cadet/my-merit-logs');
                             setLogs(logRes.data);
                             await cacheSingleton('dashboard', 'cadet_logs', { data: logRes.data, timestamp: Date.now() });
+                            
+                            // Also refresh attendance list to keep sections in sync
+                            try {
+                                const attRes = await axios.get('/api/attendance/my-history');
+                                setAttendanceLogs(attRes.data);
+                                await cacheSingleton('dashboard', 'cadet_attendance', { data: attRes.data, timestamp: Date.now() });
+                            } catch {}
                         } else if (data.type === 'attendance_updated') {
                             const res = await axios.get('/api/attendance/my-history');
                             setAttendanceLogs(res.data);
