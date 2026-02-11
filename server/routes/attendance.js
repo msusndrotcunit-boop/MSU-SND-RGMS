@@ -1125,6 +1125,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
     const whereParams = [];
     if (start) { whereDays.push('date(td.date) >= ?'); whereParams.push(start); }
     if (end) { whereDays.push('date(td.date) <= ?'); whereParams.push(end); }
+    const whereDaysSql = whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : '';
 
     let listSql = '';
     let listParams = [];
