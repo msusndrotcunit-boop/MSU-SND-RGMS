@@ -13,18 +13,13 @@ const CadetDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [esConnected, setEsConnected] = useState(false);
     const [logFilters, setLogFilters] = useState({ type: 'all', start: '', end: '', page: 1, pageSize: 10 });
-    const [attendanceFilters, setAttendanceFilters] = useState({ status: 'all', start: '', end: '', page: 1, pageSize: 15, order: 'asc' });
+    const [attendanceFilters, setAttendanceFilters] = useState({ order: 'asc' });
     const fetchAttendance = async (filters = attendanceFilters) => {
         const params = {};
-        if (filters.status && filters.status !== 'all') params.status = filters.status;
-        if (filters.start) params.start = filters.start;
-        if (filters.end) params.end = filters.end;
-        params.page = filters.page || 1;
-        params.pageSize = filters.pageSize || 15;
         params.order = filters.order || 'asc';
         const res = await axios.get('/api/attendance/my-history', { params }).catch(() => ({ data: [] }));
         const data = res.data;
-        const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || 15 } : data;
+        const shaped = Array.isArray(data) ? { items: data, total: data.length, page: 1, pageSize: data.length || data.length } : data;
         setAttendanceLogs(shaped);
         await cacheSingleton('dashboard', 'cadet_attendance', { data: shaped, timestamp: Date.now() });
     };
@@ -115,9 +110,7 @@ const CadetDashboard = () => {
 
                 const shouldFetchAttendance = (!cachedAttendance || (now - cachedAttendance.timestamp > CACHE_TTL) || (cachedAttendance && (!cachedAttendance.data || (Array.isArray(cachedAttendance.data) ? cachedAttendance.data.length === 0 : (cachedAttendance.data.items || []).length === 0))));
                 if (shouldFetchAttendance) {
-                    promises.push(
-                        fetchAttendance({ ...attendanceFilters, page: 1 }).catch(e => console.warn("Attendance fetch failed", e))
-                    );
+                    promises.push(fetchAttendance(attendanceFilters).catch(e => console.warn("Attendance fetch failed", e)));
                 }
 
                 await Promise.allSettled(promises);
@@ -296,22 +289,15 @@ const CadetDashboard = () => {
                                     <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
                                         <tr className="border-b">
                                             <th className="p-3 font-semibold text-gray-600">Date</th>
-                                            <th className="p-3 font-semibold text-gray-600">Title</th>
-                                            <th className="p-3 font-semibold text-gray-600">Time In</th>
-                                            <th className="p-3 font-semibold text-gray-600">Time Out</th>
                                             <th className="p-3 font-semibold text-gray-600">Status</th>
-                                            <th className="p-3 font-semibold text-gray-600">Remarks</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {(() => {
-                                            const paged = attendanceLogs && attendanceLogs.items ? attendanceLogs : { items: Array.isArray(attendanceLogs) ? attendanceLogs : [], total: attendanceLogs?.total || 0, page: attendanceLogs?.page || 1, pageSize: attendanceLogs?.pageSize || 15 };
+                                            const paged = attendanceLogs && attendanceLogs.items ? attendanceLogs : { items: Array.isArray(attendanceLogs) ? attendanceLogs : [], total: attendanceLogs?.total || 0, page: 1, pageSize: attendanceLogs?.pageSize || (attendanceLogs?.total || 0) };
                                             return paged.items.length > 0 ? paged.items.map(log => (
                                                 <tr key={log.id || `${log.date}-${log.title}`} className="border-b hover:bg-gray-50">
                                                     <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                                                    <td className="p-3 text-sm">{log.title || '-'}</td>
-                                                    <td className="p-3 text-sm">{log.time_in || '-'}</td>
-                                                    <td className="p-3 text-sm">{log.time_out || '-'}</td>
                                                     <td className="p-3">
                                                         {(() => {
                                                             const s = (log.status || 'unmarked').toLowerCase();
@@ -328,7 +314,6 @@ const CadetDashboard = () => {
                                                             );
                                                         })()}
                                                     </td>
-                                                    <td className="p-3 text-sm text-gray-600">{log.remarks || '-'}</td>
                                                 </tr>
                                             )) : (
                                                 <tr>
@@ -340,67 +325,6 @@ const CadetDashboard = () => {
                                 </table>
                             </div>
                             
-                            <div className="flex flex-col md:flex-row gap-3 mb-3 mt-3">
-                                <select
-                                    value={attendanceFilters.status}
-                                    onChange={(e) => { const nf = { ...attendanceFilters, status: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                    className="border rounded px-3 py-2"
-                                >
-                                    <option value="all">All</option>
-                                    <option value="present">Present</option>
-                                    <option value="late">Late</option>
-                                    <option value="excused">Excused</option>
-                                    <option value="absent">Absent</option>
-                                </select>
-                                <input
-                                    type="date"
-                                    value={attendanceFilters.start}
-                                    onChange={(e) => { const nf = { ...attendanceFilters, start: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                    className="border rounded px-3 py-2"
-                                />
-                                <input
-                                    type="date"
-                                    value={attendanceFilters.end}
-                                    onChange={(e) => { const nf = { ...attendanceFilters, end: e.target.value, page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                    className="border rounded px-3 py-2"
-                                />
-                                <select
-                                    value={attendanceFilters.pageSize}
-                                    onChange={(e) => { const nf = { ...attendanceFilters, pageSize: Number(e.target.value), page: 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                    className="border rounded px-3 py-2"
-                                >
-                                    <option value={15}>15</option>
-                                    <option value={30}>30</option>
-                                    <option value={50}>50</option>
-                                </select>
-                            </div>
-                            {(() => {
-                                const paged = attendanceLogs && attendanceLogs.items ? attendanceLogs : { items: Array.isArray(attendanceLogs) ? attendanceLogs : [], total: attendanceLogs?.total || 0, page: attendanceLogs?.page || 1, pageSize: attendanceLogs?.pageSize || 15 };
-                                const totalPages = Math.max(1, Math.ceil((paged.total || 0) / (paged.pageSize || 15)));
-                                return (
-                                    <div className="flex items-center justify-between mt-1">
-                                        <div className="text-sm text-gray-600">
-                                            Page {paged.page} of {totalPages} • {paged.total} records
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                className="px-3 py-1 border rounded disabled:opacity-50"
-                                                disabled={paged.page <= 1}
-                                                onClick={() => { const nf = { ...attendanceFilters, page: paged.page - 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                            >
-                                                Prev
-                                            </button>
-                                            <button
-                                                className="px-3 py-1 border rounded disabled:opacity-50"
-                                                disabled={paged.page >= totalPages}
-                                                onClick={() => { const nf = { ...attendanceFilters, page: paged.page + 1 }; setAttendanceFilters(nf); fetchAttendance(nf); }}
-                                            >
-                                                Next
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
                         </div>
 
                         {/* 4. Merit & Demerit Records */}
