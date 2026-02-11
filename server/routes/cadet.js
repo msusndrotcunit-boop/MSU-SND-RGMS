@@ -259,16 +259,30 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             }
 
             // Check for duplicate username/email BEFORE updating
-            const checkSql = `SELECT id, cadet_id FROM users WHERE (username = ? OR email = ?)`;
-            db.all(checkSql, [username, email], (checkErr, rows) => {
-                if (checkErr) return res.status(500).json({ message: checkErr.message });
-                
-                const conflict = rows.find(r => r.cadet_id != cadetId);
-                if (conflict) {
-                    return res.status(400).json({ message: 'Username or Email is already taken by another user.' });
-                }
-
-                proceedWithUpdate();
+            const checkUsernameSql = `SELECT id, cadet_id, is_archived FROM users WHERE username = ? LIMIT 1`;
+            const checkEmailSql = `SELECT id, cadet_id, is_archived FROM users WHERE email = ? LIMIT 1`;
+            db.get(checkUsernameSql, [username], (uErr, uRow) => {
+                if (uErr) return res.status(500).json({ message: uErr.message });
+                db.get(checkEmailSql, [email], (eErr, eRow) => {
+                    if (eErr) return res.status(500).json({ message: eErr.message });
+                    
+                    const usernameConflict = uRow && uRow.cadet_id != cadetId;
+                    const emailConflict = eRow && eRow.cadet_id != cadetId;
+                    if (usernameConflict || emailConflict) {
+                        const conflictFields = [
+                            usernameConflict ? 'username' : null,
+                            emailConflict ? 'email' : null
+                        ].filter(Boolean);
+                        return res.status(409).json({
+                            message: `The following fields are already taken by another user: ${conflictFields.join(', ')}`,
+                            conflicts: {
+                                username: usernameConflict ? { userId: uRow.id, cadetId: uRow.cadet_id, is_archived: !!uRow.is_archived } : null,
+                                email: emailConflict ? { userId: eRow.id, cadetId: eRow.cadet_id, is_archived: !!eRow.is_archived } : null
+                            }
+                        });
+                    }
+                    proceedWithUpdate();
+                });
             });
         } else {
             proceedWithUpdate();

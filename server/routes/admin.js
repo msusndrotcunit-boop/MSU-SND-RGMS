@@ -1589,39 +1589,79 @@ router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'
     db.run(sql, params, (err) => {
             if (err) return res.status(500).json({ message: err.message });
             
-            // Sync with Users table (Email/Username)
-            // Update email and username if provided
+            // Sync with Users table (Email/Username) with duplicate pre-check
             if (email || username) {
-                let updateFields = [];
-                let updateParams = [];
+                const cadetId = Number(req.params.id);
+                const checkUsernameSql = `SELECT id, cadet_id, is_archived FROM users WHERE username = ? LIMIT 1`;
+                const checkEmailSql = `SELECT id, cadet_id, is_archived FROM users WHERE email = ? LIMIT 1`;
+                
+                const checkConflicts = (cb) => {
+                    if (username) {
+                        db.get(checkUsernameSql, [username], (uErr, uRow) => {
+                            if (uErr) return cb(uErr);
+                            if (email) {
+                                db.get(checkEmailSql, [email], (eErr, eRow) => {
+                                    if (eErr) return cb(eErr);
+                                    cb(null, { uRow, eRow });
+                                });
+                            } else {
+                                cb(null, { uRow, eRow: null });
+                            }
+                        });
+                    } else if (email) {
+                        db.get(checkEmailSql, [email], (eErr, eRow) => {
+                            if (eErr) return cb(eErr);
+                            cb(null, { uRow: null, eRow });
+                        });
+                    } else {
+                        cb(null, { uRow: null, eRow: null });
+                    }
+                };
 
-                if (email) {
-                    updateFields.push("email = ?");
-                    updateParams.push(email);
-                }
-                if (username) {
-                    updateFields.push("username = ?");
-                    updateParams.push(username);
-                }
+                checkConflicts((cErr, rows) => {
+                    if (cErr) return res.status(500).json({ message: cErr.message });
+                    const usernameConflict = rows.uRow && rows.uRow.cadet_id != cadetId;
+                    const emailConflict = rows.eRow && rows.eRow.cadet_id != cadetId;
+                    if (usernameConflict || emailConflict) {
+                        const conflictFields = [
+                            usernameConflict ? 'username' : null,
+                            emailConflict ? 'email' : null
+                        ].filter(Boolean);
+                        return res.status(409).json({
+                            message: `The following fields are already taken by another user: ${conflictFields.join(', ')}`,
+                            conflicts: {
+                                username: usernameConflict ? { userId: rows.uRow.id, cadetId: rows.uRow.cadet_id, is_archived: !!rows.uRow.is_archived } : null,
+                                email: emailConflict ? { userId: rows.eRow.id, cadetId: rows.eRow.cadet_id, is_archived: !!rows.eRow.is_archived } : null
+                            }
+                        });
+                    }
 
-                if (updateFields.length > 0) {
-                    updateParams.push(req.params.id);
-                    const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE cadet_id = ?`;
-                    
-                    db.run(userSql, updateParams, (uErr) => {
-                        if (uErr) {
-                            console.error("Error syncing user credentials:", uErr);
-                            // If username is taken, this might fail silently or we should warn?
-                            // For now we log it. In a real app we might want to return a warning.
-                        }
-                    });
-                }
+                    let updateFields = [];
+                    let updateParams = [];
+                    if (email) { updateFields.push("email = ?"); updateParams.push(email); }
+                    if (username) { updateFields.push("username = ?"); updateParams.push(username); }
+                    if (updateFields.length > 0) {
+                        updateParams.push(cadetId);
+                        const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE cadet_id = ?`;
+                        db.run(userSql, updateParams, (uErr) => {
+                            if (uErr) {
+                                console.error("Error syncing user credentials:", uErr);
+                                return res.status(500).json({ message: 'Failed to update user credentials: ' + uErr.message });
+                            }
+                            res.json({ message: 'Cadet updated' });
+                            try { broadcastEvent({ type: 'cadet_updated', cadetId }); } catch {}
+                        });
+                    } else {
+                        res.json({ message: 'Cadet updated' });
+                        try { broadcastEvent({ type: 'cadet_updated', cadetId }); } catch {}
+                    }
+                });
+            } else {
+                res.json({ message: 'Cadet updated' });
+                try {
+                    broadcastEvent({ type: 'cadet_updated', cadetId: Number(req.params.id) });
+                } catch {}
             }
-
-            res.json({ message: 'Cadet updated' });
-            try {
-                broadcastEvent({ type: 'cadet_updated', cadetId: Number(req.params.id) });
-            } catch {}
         }
     );
 });
