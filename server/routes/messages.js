@@ -163,16 +163,36 @@ router.post('/broadcast', async (req, res) => {
                     OR role = 'training_staff'
                   )
         `);
+        if (!recipients || recipients.length === 0) {
+            return res.status(200).json({ message: 'No eligible recipients found', count: 0, failed: 0 });
+        }
+
         let inserted = 0;
         let failed = 0;
-        for (const r of recipients) {
-            try {
-                await pRun(`INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, 'admin', ?, ?)`, [r.id, subject, message]);
-                await pRun(`INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'admin_broadcast')`, [r.id, subject]);
-                inserted++;
-            } catch (e) {
-                failed++;
+
+        // Use a transaction for efficiency; continue on per-user errors
+        await pRun('BEGIN TRANSACTION');
+        try {
+            for (const r of recipients) {
+                try {
+                    await pRun(
+                        `INSERT INTO admin_messages (user_id, sender_role, subject, message) VALUES (?, 'admin', ?, ?)`,
+                        [r.id, String(subject).trim(), String(message).trim()]
+                    );
+                    await pRun(
+                        `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, 'admin_broadcast')`,
+                        [r.id, String(subject).trim()]
+                    );
+                    inserted++;
+                } catch (e) {
+                    failed++;
+                }
             }
+            await pRun('COMMIT');
+        } catch (txErr) {
+            await pRun('ROLLBACK');
+            console.error('Broadcast transaction error:', txErr);
+            return res.status(500).json({ message: 'Failed during broadcast transaction', count: inserted, failed });
         }
         broadcastEvent({ type: 'admin_broadcast', count: inserted });
         res.status(201).json({ message: `Broadcast sent to ${inserted} users${failed ? ` (${failed} failed)` : ''}`, count: inserted, failed });
