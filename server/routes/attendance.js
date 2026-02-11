@@ -1166,7 +1166,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 ar.id,
                 td.date,
                 td.title,
-                ar.status,
+                COALESCE(ar.status, 'absent') AS status,
                 ar.remarks,
                 ar.time_in,
                 ar.time_out

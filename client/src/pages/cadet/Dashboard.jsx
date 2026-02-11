@@ -281,6 +281,9 @@ const CadetDashboard = () => {
                                 <div className="mt-2 md:mt-0 text-right">
                                     <span className="text-2xl font-bold text-blue-900">{Number(gradeData.attendanceScore).toFixed(2)} pts</span>
                                     <span className="text-sm text-gray-500 ml-2">({gradeData.attendance_present} / {gradeData.totalTrainingDays} days)</span>
+                                    <span className="text-xs text-gray-500 ml-2 block md:inline">
+                                        Present: {gradeData.attendance_present} • Absent: {Math.max(0, (gradeData.totalTrainingDays || 0) - (gradeData.attendance_present || 0))}
+                                    </span>
                                 </div>
                             </div>
                             
