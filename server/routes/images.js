@@ -13,13 +13,9 @@ const serveBase64Image = (res, imageSource) => {
         return res.redirect(imageSource);
     }
     
-    // If it's a local path (from old disk storage), try to redirect (or serve static if needed, but we are moving away from this)
+    // If it's a local path (from disk storage), redirect to static handler
     if (imageSource.startsWith('/uploads/')) {
-        // Assuming we serve uploads statically, but ideally we should migrate these.
-        // For now, let's just return 404 if file doesn't exist or let the static middleware handle it.
-        // Since we don't have static middleware for /uploads in this file, we might fail.
-        // But since we are moving to Cloudinary, new uploads will be URLs.
-        return res.status(404).send('Legacy local file not supported in cloud mode');
+        return res.redirect(imageSource);
     }
 
     if (!imageSource.startsWith('data:image')) {

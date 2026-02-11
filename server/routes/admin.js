@@ -1540,8 +1540,20 @@ router.get('/cadets', (req, res) => {
     });
 });
 
+// Graceful upload wrapper to return JSON errors instead of generic 500
+const uploadCadetProfilePic = (req, res, next) => {
+    upload.single('profilePic')(req, res, (err) => {
+        if (err) {
+            console.error("Cadet Profile Pic Upload Error:", err);
+            const msg = err.message || 'Unknown upload error';
+            return res.status(400).json({ message: `Image upload failed: ${msg}` });
+        }
+        next();
+    });
+};
+
 // Update Cadet Personal Info
-router.put('/cadets/:id', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
+router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (req, res) => {
     const { 
         rank, firstName, middleName, lastName, suffixName, 
         studentId, email, contactNumber, address, 
