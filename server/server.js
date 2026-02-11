@@ -141,7 +141,16 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(compression());
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    maxAge: '7d',
+    setHeaders: (res, filePath) => {
+        if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        } else {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+    }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

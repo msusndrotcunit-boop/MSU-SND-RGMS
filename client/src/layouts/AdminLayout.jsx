@@ -255,17 +255,23 @@ const AdminLayout = () => {
 
     const getAvatarSrc = () => {
         if (!adminProfile || !adminProfile.profile_pic) return null;
-        const src = adminProfile.profile_pic;
-        if (src.startsWith('data:') || src.startsWith('http')) return src;
-        let normalizedPath = src.replace(/\\/g, '/');
+        const raw = adminProfile.profile_pic;
+        if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
+        
+        let normalizedPath = raw.replace(/\\/g, '/');
         const uploadsIndex = normalizedPath.indexOf('/uploads/');
         if (uploadsIndex !== -1) {
             normalizedPath = normalizedPath.substring(uploadsIndex);
         } else if (!normalizedPath.startsWith('/')) {
             normalizedPath = '/' + normalizedPath;
         }
-        const base = import.meta.env.VITE_API_URL || '';
-        return `${base}${normalizedPath}`;
+        
+        const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+        const baseB = import.meta.env.VITE_API_URL || '';
+        const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
+        const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+        
+        return selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
     };
 
     return (

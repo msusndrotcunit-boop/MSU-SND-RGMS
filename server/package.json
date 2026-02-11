@@ -1,6 +1,6 @@
 {
   "name": "rotc-server",
-  "version": "2.4.8",
+  "version": "2.4.9",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

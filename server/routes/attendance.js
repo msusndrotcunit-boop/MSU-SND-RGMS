@@ -18,6 +18,26 @@ const { updateTotalAttendance } = require('../utils/gradesHelper');
 // Simple SSE clients registry (shared via global)
 // Removed local definition as it's now in sseHelper.js
 
+router.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders && res.flushHeaders();
+    SSE_CLIENTS.push(res);
+    res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
+    const heartbeat = setInterval(() => {
+        if (!res.writableEnded) {
+            res.write(`data: ${JSON.stringify({ type: 'heartbeat', t: Date.now() })}\n\n`);
+        }
+    }, 30000);
+    req.on('close', () => {
+        clearInterval(heartbeat);
+        const idx = SSE_CLIENTS.indexOf(res);
+        if (idx !== -1) SSE_CLIENTS.splice(idx, 1);
+        res.end();
+    });
+});
+
 // Multer config for file upload (Memory storage for immediate parsing)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });

@@ -5,6 +5,7 @@ const path = require('path');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { broadcastEvent } = require('../utils/sseHelper');
+const { calculateTransmutedGrade } = require('../utils/gradesHelper');
 
 const router = express.Router();
 
@@ -18,27 +19,7 @@ router.post('/access', (req, res) => {
     db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Cadet portal accessed', 'portal_access']);
     res.json({ message: 'access recorded' });
 });
-// Helper: Transmuted Grade Logic (Consistent with admin.js)
-const calculateTransmutedGrade = (finalGrade, status) => {
-    if (status && ['DO', 'INC', 'T'].includes(status)) {
-        return { transmutedGrade: status, remarks: 'Failed' };
-    }
-
-    let transmutedGrade = 5.00;
-    let remarks = 'Failed';
-
-    if (finalGrade >= 98) { transmutedGrade = 1.00; remarks = 'Passed'; }
-    else if (finalGrade >= 95) { transmutedGrade = 1.25; remarks = 'Passed'; }
-    else if (finalGrade >= 92) { transmutedGrade = 1.50; remarks = 'Passed'; }
-    else if (finalGrade >= 89) { transmutedGrade = 1.75; remarks = 'Passed'; }
-    else if (finalGrade >= 86) { transmutedGrade = 2.00; remarks = 'Passed'; }
-    else if (finalGrade >= 83) { transmutedGrade = 2.25; remarks = 'Passed'; }
-    else if (finalGrade >= 80) { transmutedGrade = 2.50; remarks = 'Passed'; }
-    else if (finalGrade >= 77) { transmutedGrade = 2.75; remarks = 'Passed'; }
-    else if (finalGrade >= 75) { transmutedGrade = 3.00; remarks = 'Passed'; }
-    
-    return { transmutedGrade: typeof transmutedGrade === 'number' ? transmutedGrade.toFixed(2) : transmutedGrade, remarks };
-};
+ 
 
 router.get('/my-grades', async (req, res) => {
     let cadetId = req.user.cadetId;
@@ -88,8 +69,8 @@ router.get('/my-grades', async (req, res) => {
             // Only insert if missing
             await pRun(`INSERT INTO grades (cadet_id, attendance_present, merit_points, demerit_points, prelim_score, midterm_score, final_score, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [cadetId, attendancePresent, meritPoints, demeritPoints, 0, 0, 0, 'active']);
         }
-        const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
-        const attendanceScore = (base.attendance_present / safeTotalDays) * 30;
+        const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 0;
+        const attendanceScore = safeTotalDays > 0 ? (base.attendance_present / safeTotalDays) * 30 : 0;
         let rawAptitude = 100 + (base.merit_points || 0) - (base.demerit_points || 0);
         if (rawAptitude > 100) rawAptitude = 100;
         if (rawAptitude < 0) rawAptitude = 0;
@@ -108,7 +89,7 @@ router.get('/my-grades', async (req, res) => {
             remarks
         });
     } catch (e) {
-        const safeTotalDays = 1;
+        const safeTotalDays = 0;
         const base = {
             attendance_present: 0,
             merit_points: 0,

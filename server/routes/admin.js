@@ -10,7 +10,7 @@ const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
 const { broadcastEvent } = require('../utils/sseHelper');
-const { updateTotalAttendance } = require('../utils/gradesHelper');
+const { updateTotalAttendance, calculateTransmutedGrade } = require('../utils/gradesHelper');
 
 const router = express.Router();
 
@@ -1143,29 +1143,7 @@ router.put('/system-settings', (req, res) => {
         .catch((error) => res.status(500).json({ message: error.message }));
 });
 
-// Helper: Transmuted Grade Logic
-const calculateTransmutedGrade = (finalGrade, status) => {
-    // Priority to status
-    if (status && ['DO', 'INC', 'T'].includes(status)) {
-        return { transmutedGrade: status, remarks: 'Failed' };
-    }
-
-    let transmutedGrade = 5.00;
-    let remarks = 'Failed';
-
-    // 98-100 = 1.00
-    if (finalGrade >= 98) { transmutedGrade = 1.00; remarks = 'Passed'; }
-    else if (finalGrade >= 95) { transmutedGrade = 1.25; remarks = 'Passed'; }
-    else if (finalGrade >= 92) { transmutedGrade = 1.50; remarks = 'Passed'; }
-    else if (finalGrade >= 89) { transmutedGrade = 1.75; remarks = 'Passed'; }
-    else if (finalGrade >= 86) { transmutedGrade = 2.00; remarks = 'Passed'; }
-    else if (finalGrade >= 83) { transmutedGrade = 2.25; remarks = 'Passed'; }
-    else if (finalGrade >= 80) { transmutedGrade = 2.50; remarks = 'Passed'; }
-    else if (finalGrade >= 77) { transmutedGrade = 2.75; remarks = 'Passed'; }
-    else if (finalGrade >= 75) { transmutedGrade = 3.00; remarks = 'Passed'; }
-    
-    return { transmutedGrade: typeof transmutedGrade === 'number' ? transmutedGrade.toFixed(2) : transmutedGrade, remarks };
-};
+ 
 
 // --- Analytics ---
 
@@ -1212,8 +1190,7 @@ router.get('/analytics', (req, res) => {
                 if (err) return res.status(500).json({ message: err.message });
 
                 gradeRows.forEach(gradeData => {
-                    const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
-                    const attendanceScore = (gradeData.attendance_present / safeTotalDays) * 30;
+                    const attendanceScore = totalTrainingDays > 0 ? (gradeData.attendance_present / totalTrainingDays) * 30 : 0;
                     
                     // Aptitude: Base 100 + Merits - Demerits (Capped at 100)
                     let rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
@@ -1478,13 +1455,13 @@ router.get('/cadets', (req, res) => {
         const processRows = (rows) => {
             // Calculate grades for each cadet
             const cadetsWithGrades = rows.map(cadet => {
-                const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 1;
+                const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 0;
                 const present = typeof cadet.attendance_present === 'number' ? cadet.attendance_present : 0;
                 const prelim = typeof cadet.prelim_score === 'number' ? cadet.prelim_score : 0;
                 const midterm = typeof cadet.midterm_score === 'number' ? cadet.midterm_score : 0;
                 const final = typeof cadet.final_score === 'number' ? cadet.final_score : 0;
 
-                const attendanceScore = (present / safeTotalDays) * 30; // 30%
+                const attendanceScore = safeTotalDays > 0 ? (present / safeTotalDays) * 30 : 0;
                 
                 // Aptitude: Base 100 + Merits - Demerits (Capped at 100, Floor 0)
                 let rawAptitude = 100 + (cadet.merit_points || 0) - (cadet.demerit_points || 0);
@@ -1768,7 +1745,7 @@ router.post('/cadets/delete', async (req, res) => {
 
 // Update Grades for a Cadet
 router.put('/grades/:cadetId', async (req, res) => {
-    const { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
+            let { meritPoints, demeritPoints, prelimScore, midtermScore, finalScore, status, attendancePresent } = req.body;
     const cadetId = Number(req.params.cadetId);
 
     try {
@@ -1825,6 +1802,20 @@ router.put('/grades/:cadetId', async (req, res) => {
             }
         };
 
+        const clampScore = (v) => {
+            const n = Number(v);
+            if (!Number.isFinite(n)) return null;
+            if (n < 0) return 0;
+            if (n > 100) return 100;
+            return n;
+        };
+        prelimScore = clampScore(prelimScore);
+        midtermScore = clampScore(midtermScore);
+        finalScore = clampScore(finalScore);
+        if (prelimScore === null || midtermScore === null || finalScore === null) {
+            return res.status(400).json({ message: 'Invalid score values' });
+        }
+
         const runUpdate = async (currentMerit, currentDemerit) => {
             await new Promise((resolve, reject) => {
                 db.run(`UPDATE grades SET 
@@ -1867,38 +1858,38 @@ router.put('/grades/:cadetId', async (req, res) => {
                     else resolve(row);
                 });
             });
-
+            
+            let emailSent = false;
             if (cadet && cadet.email) {
                 const subject = 'ROTC Grading System - Grades Updated';
                 const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nYour grades have been updated by the admin.\n\nPlease log in to the portal to view your latest standing.\n\nRegards,\nROTC Admin`;
                 const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>Your grades have been updated by the admin.</p><p>Please log in to the portal to view your latest standing.</p><p>Regards,<br>ROTC Admin</p>`;
-                
                 try {
-                    await sendEmail(cadet.email, subject, text, html);
+                    emailSent = await sendEmail(cadet.email, subject, text, html);
                 } catch (e) {
                     console.error('Error sending grade update email:', e);
                 }
-
-                const userRow = await new Promise((resolve) => {
-                    db.get(`SELECT id FROM users WHERE cadet_id = ? AND role = 'cadet'`, [cadetId], (uErr, row) => {
-                        if (uErr) resolve(null);
-                        else resolve(row);
-                    });
+            }
+ 
+            const userRow = await new Promise((resolve) => {
+                db.get(`SELECT id FROM users WHERE cadet_id = ? AND role = 'cadet'`, [cadetId], (uErr, row) => {
+                    if (uErr) resolve(null);
+                    else resolve(row);
                 });
-
-                if (userRow && userRow.id) {
-                    const notifMessage = 'Your grades have been updated. Please check your portal.';
-                    await new Promise(resolve => {
-                        db.run(
-                            `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`,
-                            [userRow.id, notifMessage, 'grade'],
-                            (nErr) => {
-                                if (nErr) console.error('Error creating grade notification:', nErr);
-                                resolve();
-                            }
-                        );
-                    });
-                }
+            });
+ 
+            if (userRow && userRow.id) {
+                const notifMessage = 'Your grades have been updated. Please check your portal.';
+                await new Promise(resolve => {
+                    db.run(
+                        `INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)`,
+                        [userRow.id, notifMessage, 'grade'],
+                        (nErr) => {
+                            if (nErr) console.error('Error creating grade notification:', nErr);
+                            resolve();
+                        }
+                    );
+                });
             }
             
             await ensureAttendanceRecord();
