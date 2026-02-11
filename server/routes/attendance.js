@@ -778,7 +778,7 @@ const findCadet = async (row, allCadets = []) => {
     // 4. Try Exact Name (Fallback)
     let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
     let firstName = row['First Name'] || row['first_name'];
-    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'];
+    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'] || row['Name of Cadet'] || row['Full Name'];
 
     if (!lastName && !firstName && fullName) {
         if (fullName.includes(',')) {
@@ -870,10 +870,31 @@ const processAttendanceData = async (data, dayId) => {
     }
 
     for (const row of data) {
-        if (!row || !row['Name']) {
-            continue;
-        }
+        if (!row) continue;
+        const hasName =
+            row['Name'] ||
+            row['Student Name'] ||
+            row['Student'] ||
+            row['name'] ||
+            row['StudentName'] ||
+            row['Student_Name'] ||
+            row['Name of Cadet'] ||
+            row['Full Name'] ||
+            (row['First Name'] && row['Last Name']) ||
+            (row['first_name'] && row['last_name']);
+        const hasId =
+            row['Student ID'] ||
+            row['ID'] ||
+            row['Student Number'] ||
+            row['student_id'];
+        if (!hasName && !hasId) continue;
         let status = (row['Status'] || row['status'] || '').toLowerCase();
+        if (status) {
+            if (['p', 'pres', 'pr', 'present'].includes(status)) status = 'present';
+            else if (['a', 'abs', 'ab', 'absent'].includes(status)) status = 'absent';
+            else if (['l', 'late'].includes(status)) status = 'late';
+            else if (['e', 'exc', 'excused'].includes(status)) status = 'excused';
+        }
         
         // If not found in specific column, search entire row values for keywords
         if (!status) {
@@ -896,8 +917,18 @@ const processAttendanceData = async (data, dayId) => {
             const cadet = await findCadet(row, allCadets);
             
             if (cadet) {
-                const time_in = row['Time In'] || row['time_in'] || row['TimeIn'];
-                const time_out = row['Time Out'] || row['time_out'] || row['TimeOut'];
+                const time_in =
+                    row['Time In'] ||
+                    row['time_in'] ||
+                    row['TimeIn'] ||
+                    row['IN'] ||
+                    row['in'];
+                const time_out =
+                    row['Time Out'] ||
+                    row['time_out'] ||
+                    row['TimeOut'] ||
+                    row['OUT'] ||
+                    row['out'];
                 await upsertAttendance(dayId, cadet.id, status, remarks, time_in, time_out);
                 successCount++;
             } else {
