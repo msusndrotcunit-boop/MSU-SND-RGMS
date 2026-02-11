@@ -70,22 +70,9 @@ const Profile = () => {
             try {
                 const cached = await getSingleton('profiles', cacheKey);
                 if (cached) {
-                    // Handle both new { data, timestamp } and old (direct data) formats
-                    let data = cached;
-                    let timestamp = 0;
-                    
-                    if (cached.data && cached.timestamp) {
-                        data = cached.data;
-                        timestamp = cached.timestamp;
-                    }
-
+                    let data = cached.data && cached.timestamp ? cached.data : cached;
                     updateProfileState(data);
                     setLoading(false);
-                    
-                    // If cache is less than 5 minutes old, don't fetch fresh
-                    if (timestamp && (Date.now() - timestamp < 5 * 60 * 1000)) {
-                        return;
-                    }
                 }
             } catch {}
             
@@ -240,7 +227,12 @@ const Profile = () => {
             } else {
                 alert('Profile updated successfully!');
                 if (res.data.profilePic) {
-                    setPreview(`${import.meta.env.VITE_API_URL || ''}${res.data.profilePic}`);
+                    const pic = res.data.profilePic;
+                    if (typeof pic === 'string' && (pic.startsWith('http') || pic.startsWith('data:'))) {
+                        setPreview(pic);
+                    } else {
+                        setPreview(`${import.meta.env.VITE_API_URL || ''}${pic}`);
+                    }
                 }
             }
         } catch (err) {
