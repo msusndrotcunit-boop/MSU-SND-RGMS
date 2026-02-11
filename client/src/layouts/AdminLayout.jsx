@@ -151,10 +151,10 @@ const AdminLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply' || data.type === 'ask_admin' || data.type === 'staff_chat' || data.type === 'cadet_notification') {
+                        if (data.type === 'portal_access' || data.type === 'ask_admin_reply' || data.type === 'ask_admin' || data.type === 'staff_chat' || data.type === 'cadet_notification' || data.type === 'admin_broadcast') {
                             fetchNotifications();
                             fetchMessages();
-                            if (data.type === 'ask_admin' || data.type === 'staff_chat') {
+                            if (data.type === 'ask_admin' || data.type === 'staff_chat' || data.type === 'admin_broadcast') {
                                 setBadgeMsg(b => b + 1);
                             } else {
                                 setBadgeNotif(b => b + 1);
@@ -249,7 +249,7 @@ const AdminLayout = () => {
             ]
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
-        { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
+        { path: '/admin/messages', label: 'ROTC Admin Word', icon: MessageSquare },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];
 
