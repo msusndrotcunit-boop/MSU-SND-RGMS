@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
 import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
+import { getProfilePicUrl } from '../../utils/image';
 import { toast } from 'react-hot-toast';
 import { 
     RANK_OPTIONS, 
@@ -339,25 +340,9 @@ const Cadets = () => {
         setIsViewMode(false);
         setCurrentCadet(cadet);
         
-        // Handle Profile Pic Preview
-        if (cadet.profile_pic) {
-            if (cadet.profile_pic.startsWith('data:') || cadet.profile_pic.startsWith('http')) {
-                setPreview(cadet.profile_pic);
-            } else {
-                let normalizedPath = cadet.profile_pic.replace(/\\/g, '/');
-                // Remove absolute path prefix if present (look for /uploads/)
-                const uploadsIndex = normalizedPath.indexOf('/uploads/');
-                if (uploadsIndex !== -1) {
-                    normalizedPath = normalizedPath.substring(uploadsIndex);
-                } else if (!normalizedPath.startsWith('/')) {
-                    normalizedPath = '/' + normalizedPath;
-                }
-                const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-                setPreview(`${base}${normalizedPath}`);
-            }
-        } else {
-            setPreview(null);
-        }
+        // Handle Profile Pic Preview using centralized utility
+        const profilePicUrl = getProfilePicUrl(cadet.profile_pic, cadet.id, 'cadets');
+        setPreview(profilePicUrl);
         setProfilePic(null);
 
         setLocationInfo(null);

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin, ChevronLeft, Sun, Moon, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
+import { getProfilePicUrl } from '../../utils/image';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
 
 const TrainingStaffManagement = () => {
@@ -131,24 +132,10 @@ const TrainingStaffManagement = () => {
             contact_number: staff.contact_number || '',
             role: staff.role || 'Instructor'
         });
-        // Prepare profile picture preview
-        if (staff.profile_pic) {
-            let src = staff.profile_pic;
-            if (src.startsWith('data:') || src.startsWith('http')) {
-                setPreview(src);
-            } else {
-                let normalizedPath = src.replace(/\\/g, '/');
-                const uploadsIndex = normalizedPath.indexOf('/uploads/');
-                if (uploadsIndex !== -1) {
-                    normalizedPath = normalizedPath.substring(uploadsIndex);
-                } else if (!normalizedPath.startsWith('/')) {
-                    normalizedPath = '/' + normalizedPath;
-                }
-                setPreview(`${import.meta.env.VITE_API_URL || ''}${normalizedPath}`);
-            }
-        } else {
-            setPreview(null);
-        }
+        // Prepare profile picture preview using centralized utility
+        const profilePicUrl = getProfilePicUrl(staff.profile_pic, staff.id, 'staff');
+        setPreview(profilePicUrl);
+        
         setLocationInfo(null);
         setLocationLoading(true);
         axios.get('/api/admin/locations')
