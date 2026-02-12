@@ -2169,14 +2169,24 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
     const { id } = req.params;
     const { title, description, date, type, existingImages } = req.body;
     
+    console.log('[PUT /activities/:id] Update request received', { 
+        id, 
+        title, 
+        type, 
+        date,
+        existingImagesLength: existingImages ? existingImages.length : 0,
+        newFilesCount: req.files ? req.files.length : 0
+    });
+    
     // Parse existing images (images that weren't deleted)
     let images = [];
     try {
         if (existingImages) {
             images = JSON.parse(existingImages);
+            console.log('[PUT /activities/:id] Parsed existing images:', images.length);
         }
     } catch (e) {
-        console.error('Error parsing existing images:', e);
+        console.error('[PUT /activities/:id] Error parsing existing images:', e);
     }
     
     // Add newly uploaded images
@@ -2198,10 +2208,23 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
 
     const activityType = type || 'activity';
     
+    console.log('[PUT /activities/:id] Validation check', { 
+        activityType, 
+        totalImages: images.length 
+    });
+    
     // Server-side validation for image count
     if (activityType === 'activity' && images.length < 3) {
+        console.log('[PUT /activities/:id] Validation failed: Activity needs 3+ images');
         return res.status(400).json({ message: 'Activities require at least 3 photos.' });
     }
+    
+    if (activityType === 'announcement' && images.length < 1) {
+        console.log('[PUT /activities/:id] Validation failed: Announcement needs 1+ image');
+        return res.status(400).json({ message: 'Announcements require at least 1 photo.' });
+    }
+    
+    console.log('[PUT /activities/:id] Validation passed, updating database...');
 
     const imagesJson = JSON.stringify(images);
     const primaryImage = images[0] || null;
@@ -2210,14 +2233,20 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
         `UPDATE activities SET title = ?, description = ?, date = ?, image_path = ?, images = ?, type = ? WHERE id = ?`,
         [title, description, date, primaryImage, imagesJson, activityType, id],
         function(err) {
-            if (err) return res.status(500).json({ message: err.message });
+            if (err) {
+                console.error('[PUT /activities/:id] Database error:', err);
+                return res.status(500).json({ message: err.message });
+            }
+            
+            console.log('[PUT /activities/:id] Update successful, rows affected:', this.changes);
             
             // Create notification for the updated activity
             const notifMsg = `${activityType === 'announcement' ? 'Announcement' : 'Activity'} Updated: ${title}`;
             db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
                 [notifMsg], 
                 (nErr) => {
-                    if (nErr) console.error("Error creating update notification:", nErr);
+                    if (nErr) console.error("[PUT /activities/:id] Error creating update notification:", nErr);
+                    console.log('[PUT /activities/:id] Response sent successfully');
                     res.json({ message: 'Activity updated successfully' });
                 }
             );

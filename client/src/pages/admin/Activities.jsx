@@ -165,12 +165,26 @@ const Activities = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        console.log('[Activities] Submit started', { editMode, editingId, activeTab });
+        
         // Combine existing and new images for validation
         const totalImages = existingImages.length + form.images.length;
+        
+        console.log('[Activities] Image counts', { 
+            existing: existingImages.length, 
+            new: form.images.length, 
+            total: totalImages 
+        });
         
         // Validation
         if (activeTab === 'activity' && totalImages < 3) {
             alert('Please upload at least 3 photos for an activity.');
+            return;
+        }
+        
+        // Validation for announcements
+        if (activeTab === 'announcement' && totalImages < 1) {
+            alert('Please upload at least 1 photo for an announcement.');
             return;
         }
 
@@ -182,6 +196,7 @@ const Activities = () => {
         if (activeTab === 'announcement') {
             const desc = `WHAT: ${announcement.what}\nWHEN: ${announcement.when}\nWHERE: ${announcement.where}\nWHO: ${announcement.who}\nHOW: ${announcement.how}\n\nNOTE: ${announcement.note}\nREMINDERS: ${announcement.reminders}`;
             formData.append('description', desc);
+            console.log('[Activities] Announcement description:', desc);
         } else {
             formData.append('description', form.description);
         }
@@ -189,27 +204,36 @@ const Activities = () => {
         // For edit mode, send existing images
         if (editMode) {
             formData.append('existingImages', JSON.stringify(existingImages));
+            console.log('[Activities] Existing images:', existingImages);
         }
 
         // Append new images
         form.images.forEach((img) => {
             formData.append('images', img);
         });
+        
+        console.log('[Activities] FormData prepared, sending request...');
 
         try {
             if (editMode) {
-                await axios.put(`/api/admin/activities/${editingId}`, formData, {
+                console.log('[Activities] Updating activity:', editingId);
+                const response = await axios.put(`/api/admin/activities/${editingId}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
+                console.log('[Activities] Update response:', response.data);
             } else {
-                await axios.post('/api/admin/activities', formData, {
+                console.log('[Activities] Creating new activity');
+                const response = await axios.post('/api/admin/activities', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
+                console.log('[Activities] Create response:', response.data);
             }
             fetchActivities(true);
             setIsModalOpen(false);
             resetForms();
         } catch (err) {
+            console.error('[Activities] Error:', err);
+            console.error('[Activities] Error response:', err.response?.data);
             alert(`Error ${editMode ? 'updating' : 'uploading'} activity: ` + (err.response?.data?.message || err.message));
         }
     };
