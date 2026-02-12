@@ -54,7 +54,19 @@ router.get('/search', authenticateToken, isAdmin, async (req, res) => {
     });
 });
 
+// Cache for system status (30 seconds)
+let systemStatusCache = null;
+let systemStatusCacheTime = 0;
+const SYSTEM_STATUS_CACHE_TTL = 30000; // 30 seconds
+
 router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
+    const now = Date.now();
+    
+    // Return cached response if still valid
+    if (systemStatusCache && (now - systemStatusCacheTime) < SYSTEM_STATUS_CACHE_TTL) {
+        return res.json(systemStatusCache);
+    }
+    
     const start = Date.now();
     const results = {};
 
@@ -65,13 +77,17 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         });
     });
 
-    Promise.all([
-        pGet('SELECT 1 as ok'),
-        pGet('SELECT COUNT(*) as total FROM cadets'),
-        pGet('SELECT COUNT(*) as total FROM users'),
-        pGet('SELECT COUNT(*) as total FROM training_days'),
-        pGet('SELECT COUNT(*) as total FROM activities'),
-        pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE')
+    // Optimized: Run all queries in parallel with timeout
+    Promise.race([
+        Promise.all([
+            pGet('SELECT 1 as ok'),
+            pGet('SELECT COUNT(*) as total FROM cadets WHERE is_archived IS FALSE OR is_archived IS NULL'),
+            pGet('SELECT COUNT(*) as total FROM users WHERE is_archived IS FALSE OR is_archived IS NULL'),
+            pGet('SELECT COUNT(*) as total FROM training_days'),
+            pGet('SELECT COUNT(*) as total FROM activities'),
+            pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE')
+        ]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)) // 5 second timeout
     ]).then(([dbCheck, cadets, users, trainingDays, activities, unreadNotifications]) => {
         const latencyMs = Date.now() - start;
 
@@ -99,9 +115,13 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
             results.app.status = 'degraded';
         }
 
+        // Cache the response
+        systemStatusCache = results;
+        systemStatusCacheTime = Date.now();
+
         res.json(results);
     }).catch((err) => {
-        res.status(500).json({
+        const errorResponse = {
             app: {
                 status: 'error',
                 uptimeSeconds: Math.floor(process.uptime()),
@@ -111,7 +131,8 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
                 status: 'error',
                 error: err.message
             }
-        });
+        };
+        res.status(500).json(errorResponse);
     });
 });
 
