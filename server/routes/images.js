@@ -91,9 +91,15 @@ router.get('/cadets/:id', (req, res) => {
             return serveBase64Image(res, row.profile_pic);
         }
 
-        // Fallback to 'users' table if stored there (some versions might)
-        // Or return 404/Default
-        res.status(404).send('Image not found');
+        // Return a default SVG placeholder instead of 404
+        const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+        
+        res.writeHead(200, {
+            'Content-Type': 'image/svg+xml',
+            'Content-Length': Buffer.byteLength(defaultSvg),
+            'Cache-Control': 'public, max-age=3600'
+        });
+        res.end(defaultSvg);
     });
 });
 
