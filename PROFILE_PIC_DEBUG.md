@@ -1,114 +1,117 @@
 # Profile Picture Loading - Debug Guide
 
-## Changes Made (Updated)
+## Latest Changes (February 12, 2026)
 
-Fixed the profile picture loading issue in **TWO** files:
+### Issue 1: Attendance History Display Bug - FIXED ✅
 
-### 1. `client/src/utils/image.js` - Main Fix
-- Added extensive console logging to track URL construction
-- Simplified URL building logic with clear case handling
-- Fixed fallback endpoint to use current origin when baseURL is not set
-- Better Cloudinary URL optimization
+**Problem**: Cadet dashboard showed mostly "ABSENT" entries even though the user had 13 presents and 2 absents.
 
-### 2. `client/src/pages/cadet/Profile.jsx` - Added Logging
-- Added console logs to track which path is being used
-- Now uses the fixed `getProfilePicUrl` utility function
+**Root Cause**: The attendance history query was using a LEFT JOIN that defaulted all training days without a specific attendance record to "absent", even when the cadet was actually present.
 
-## How to Test
+**Fix Applied**: Changed the query logic in `server/routes/attendance.js` to only show actual attendance records instead of defaulting all unmatched training days to absent.
 
-1. **Rebuild the client** (important - changes won't apply without rebuild):
-   ```bash
-   cd client
-   npm run build
+**What Changed**:
+- Modified the `/api/attendance/my-history` endpoint
+- Now uses INNER JOIN instead of LEFT JOIN when no status filter is applied
+- Only displays actual attendance records from the database
+- Removed the `COALESCE(ar.status, 'absent')` logic that was causing false absents
+
+**Result**: The attendance history will now correctly show only the actual attendance records (13 presents, 2 absents) instead of showing all training days as absent.
+
+---
+
+### Issue 2: Profile Picture Loading - Enhanced Logging 🔍
+
+**Problem**: Profile picture not loading after upload and login.
+
+**Enhanced Logging**: Added comprehensive console logging to track exactly what's happening with profile picture URLs.
+
+**What Changed**:
+1. **`client/src/utils/image.js`**:
+   - Added detailed console logs at every step of URL construction
+   - Logs show: input values, path type detection, normalization steps, base URL selection, and final URL
+   - Better error tracking to identify where the URL construction fails
+
+2. **Console Output You'll See**:
+   ```
+   [getProfilePicUrl] Input: { rawPath: '...', id: ..., type: 'cadets' }
+   [getProfilePicUrl] Local path detected, normalizing...
+   [getProfilePicUrl] Normalized path: /uploads/...
+   [getProfilePicUrl] Available bases: { baseA: '', baseB: '', baseC: 'https://...' }
+   [getProfilePicUrl] Constructed URL: https://...
+   [getProfilePicUrl] Final URL: https://...
    ```
 
-2. **Restart the server**:
-   ```bash
-   cd server
-   npm start
-   ```
+---
 
-3. **Open browser console** (F12) and navigate to the cadet profile page
+## How to Test the Fixes
 
-4. **Check console logs** - You should see:
-   ```
-   [getProfilePicUrl] Input: { rawPath: '...', cadetId: ... }
-   [getProfilePicUrl] ... (processing steps)
-   [Profile] Setting preview from profile_pic: https://...
-   ```
+### Testing Attendance History Fix:
 
-## What to Look For in Console
+1. **Wait for Render deployment** (automatic, takes 2-3 minutes after push)
+2. **Hard refresh** your browser (Ctrl+F5) to clear cache
+3. **Login as cadet** (CDT Bahian, Junjie - ID 292)
+4. **Check the dashboard** - Attendance History section should now show:
+   - 13 Present entries
+   - 2 Absent entries
+   - Total: 15 records (not 30+ with mostly absents)
 
-The console will now show:
-1. What data is being passed to `getProfilePicUrl`
-2. Which case is being handled (Complete URL, Base64, Local path, or Fallback)
-3. The final constructed URL
-4. Any errors when the image fails to load
+### Testing Profile Picture Issue:
 
-## Common Issues & Solutions
+1. **Open browser console** (F12) before logging in
+2. **Login as cadet**
+3. **Navigate to Profile page**
+4. **Check console logs** - You should see detailed logging showing:
+   - What profile_pic value is stored in database
+   - How the URL is being constructed
+   - What base URL is being used
+   - The final URL that's being loaded
 
-### Issue 1: Console shows "No path or cadetId provided"
-**Cause**: Database has no profile_pic and cadetId is missing
-**Solution**: Check if user is properly authenticated and cadetId exists
+5. **Share the console output** with me so we can identify:
+   - Is the profile_pic path stored correctly in the database?
+   - Is the URL being constructed properly?
+   - Is there a CORS or 404 error when loading the image?
 
-### Issue 2: Console shows correct URL but image still fails
-**Cause**: Server endpoint `/api/images/cadets/{id}` is returning 404
-**Solution**: 
-- Check if the cadet exists in the database
-- Verify the image endpoint is working: `curl https://your-domain.com/api/images/cadets/YOUR_CADET_ID`
+---
 
-### Issue 3: URL is constructed with wrong base
-**Cause**: axios.defaults.baseURL or VITE_API_URL not set correctly
-**Solution**: 
-- For production: The code will use `window.location.origin` as fallback
-- For development: Set `VITE_API_URL=http://localhost:5000` in `client/.env`
+## Expected Results
 
-### Issue 4: CORS errors
-**Symptom**: Browser blocks image loading from different origin
-**Solution**: Check `server/server.js` has proper CORS configuration
+### Attendance History:
+- ✅ Shows only actual attendance records
+- ✅ Correct count: 13 presents, 2 absents
+- ✅ No false "absent" entries for days without records
 
-## Testing on Production (Render)
+### Profile Picture:
+- 🔍 Detailed console logs will help us identify the exact issue
+- 🔍 We'll see if it's a storage issue, URL construction issue, or server endpoint issue
 
-Since you're using the deployed version at `msu-snd-rgms-jcsg.onrender.com`:
+---
 
-1. The changes need to be:
-   - Committed to git
-   - Pushed to the repository
-   - Deployed to Render (automatic if connected to git)
+## Next Steps for Profile Picture
 
-2. Or test locally first:
-   ```bash
-   # In client folder
-   npm run dev
-   
-   # In server folder (separate terminal)
-   npm start
-   
-   # Then visit http://localhost:5173 (or whatever port Vite uses)
-   ```
+Once you share the console output, we can:
 
-## Next Steps
+1. **If URL is wrong**: Fix the URL construction logic
+2. **If URL is correct but image fails**: Check server endpoint or file storage
+3. **If path is not stored**: Fix the upload/save logic
+4. **If it's a Cloudinary issue**: Check Cloudinary configuration
 
-1. **Clear browser cache** (Ctrl+Shift+Delete) or hard refresh (Ctrl+F5)
-2. Open browser console (F12)
-3. Navigate to cadet profile
-4. **Share the console output** - this will tell us exactly what's happening
+---
 
-## Expected Console Output
+## Deployment Status
 
-You should see something like:
-```
-[getProfilePicUrl] Input: { rawPath: '/uploads/1234567890.jpg', cadetId: 5 }
-[getProfilePicUrl] Local path detected
-[getProfilePicUrl] Constructed URL: https://msu-snd-rgms-jcsg.onrender.com/uploads/1234567890.jpg
-[Profile] Setting preview from profile_pic: https://msu-snd-rgms-jcsg.onrender.com/uploads/1234567890.jpg
-```
+✅ Changes committed and pushed to GitHub
+✅ Render will automatically deploy (check https://dashboard.render.com)
+⏳ Wait 2-3 minutes for deployment to complete
+🔄 Hard refresh browser (Ctrl+F5) after deployment
 
-Or if no profile pic exists:
-```
-[getProfilePicUrl] Input: { rawPath: null, cadetId: 5 }
-[getProfilePicUrl] Using fallback endpoint for cadetId: 5
-[getProfilePicUrl] Fallback URL: https://msu-snd-rgms-jcsg.onrender.com/api/images/cadets/5
-[Profile] Setting preview from fallback: https://msu-snd-rgms-jcsg.onrender.com/api/images/cadets/5
-```
+---
+
+## Previous Changes (Still Active)
+
+All previous fixes remain in place:
+- Enhanced `client/src/utils/image.js` with URL construction logic
+- Fixed `server/routes/images.js` to return default SVG placeholder
+- Fixed `server/routes/cadet.js` boolean comparison for PostgreSQL
+- Fixed `server/routes/admin.js` profile unlock functionality
 
