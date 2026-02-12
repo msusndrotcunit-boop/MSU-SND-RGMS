@@ -2602,30 +2602,49 @@ router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
                     });
                 };
                 const applyGradeUpdate = () => {
-                    // Update both current points and lifetime merit points (if merit type)
-                    let updateSql = `UPDATE grades SET ${column} = ${column} + ?`;
-                    const updateParams = [points];
-                    
-                    if (type === 'merit') {
-                        updateSql += `, lifetime_merit_points = COALESCE(lifetime_merit_points, 0) + ?`;
-                        updateParams.push(points);
-                    }
-                    
-                    updateSql += ` WHERE cadet_id = ?`;
-                    updateParams.push(cadetId);
-                    
-                    db.run(updateSql, updateParams, (uErr) => {
-                        if (uErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
-                        db.run('COMMIT', [], () => {
-                            db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (cErr, cadet) => {
-                                if (!cErr && cadet && cadet.email) {
-                                    const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
-                                    const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nA new ${type} record has been added to your profile.\nPoints: ${points}\nReason: ${reason}\n\nPlease check your dashboard for details.\n\nRegards,\nROTC Admin`;
-                                    const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>A new <strong>${type}</strong> record has been added to your profile.</p><ul><li><strong>Points:</strong> ${points}</li><li><strong>Reason:</strong> ${reason}</li></ul><p>Please check your dashboard for details.</p><p>Regards,<br>ROTC Admin</p>`;
-                                    try { await sendEmail(cadet.email, subject, text, html); } catch (_) {}
-                                }
-                                broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
-                                res.json({ message: 'Log added and points updated' });
+                    // Check if lifetime_merit_points column exists first
+                    db.all(`PRAGMA table_info(grades)`, [], (pragmaErr, columns) => {
+                        if (pragmaErr) {
+                            console.error('[POST /merit-logs] Error checking table schema:', pragmaErr);
+                            return db.run('ROLLBACK', [], () => res.status(500).json({ message: pragmaErr.message }));
+                        }
+                        
+                        const hasLifetimeColumn = columns.some(col => col.name === 'lifetime_merit_points');
+                        console.log('[POST /merit-logs] Has lifetime_merit_points column:', hasLifetimeColumn);
+                        
+                        // Update both current points and lifetime merit points (if merit type and column exists)
+                        let updateSql = `UPDATE grades SET ${column} = ${column} + ?`;
+                        const updateParams = [points];
+                        
+                        if (type === 'merit' && hasLifetimeColumn) {
+                            updateSql += `, lifetime_merit_points = COALESCE(lifetime_merit_points, 0) + ?`;
+                            updateParams.push(points);
+                        }
+                        
+                        updateSql += ` WHERE cadet_id = ?`;
+                        updateParams.push(cadetId);
+                        
+                        console.log('[POST /merit-logs] Update SQL:', updateSql, updateParams);
+                        
+                        db.run(updateSql, updateParams, (uErr) => {
+                            if (uErr) {
+                                console.error('[POST /merit-logs] UPDATE grades error:', uErr);
+                                return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
+                            }
+                            console.log('[POST /merit-logs] Grades updated successfully');
+                            db.run('COMMIT', [], () => {
+                                console.log('[POST /merit-logs] Transaction committed');
+                                db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (cErr, cadet) => {
+                                    if (!cErr && cadet && cadet.email) {
+                                        const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
+                                        const text = `Dear ${cadet.first_name} ${cadet.last_name},\n\nA new ${type} record has been added to your profile.\nPoints: ${points}\nReason: ${reason}\n\nPlease check your dashboard for details.\n\nRegards,\nROTC Admin`;
+                                        const html = `<p>Dear <strong>${cadet.first_name} ${cadet.last_name}</strong>,</p><p>A new <strong>${type}</strong> record has been added to your profile.</p><ul><li><strong>Points:</strong> ${points}</li><li><strong>Reason:</strong> ${reason}</li></ul><p>Please check your dashboard for details.</p><p>Regards,<br>ROTC Admin</p>`;
+                                        try { await sendEmail(cadet.email, subject, text, html); } catch (_) {}
+                                    }
+                                    broadcastEvent({ type: 'grade_updated', cadetId: Number(cadetId) });
+                                    console.log('[POST /merit-logs] Response sent successfully');
+                                    res.json({ message: 'Log added and points updated' });
+                                });
                             });
                         });
                     });
