@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Camera, User, Mail, Shield, Info } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
+import { getProfilePicUrl } from '../../utils/image';
 
 const AdminProfile = () => {
     const { user } = useAuth();
@@ -14,21 +15,6 @@ const AdminProfile = () => {
     const [showUploadConsent, setShowUploadConsent] = useState(false);
     const fileInputRef = React.useRef(null);
 
-    const getProfileImageSrc = () => {
-        if (!profile?.profile_pic) return null;
-        if (profile.profile_pic.startsWith('data:') || profile.profile_pic.startsWith('http')) {
-            return profile.profile_pic;
-        }
-        let normalizedPath = profile.profile_pic.replace(/\\/g, '/');
-        const uploadsIndex = normalizedPath.indexOf('/uploads/');
-        if (uploadsIndex !== -1) {
-            normalizedPath = normalizedPath.substring(uploadsIndex);
-        } else if (!normalizedPath.startsWith('/')) {
-            normalizedPath = '/' + normalizedPath;
-        }
-        return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
-    };
-
     useEffect(() => {
         fetchProfile();
     }, []);
@@ -39,10 +25,16 @@ const AdminProfile = () => {
         try {
             try {
                 const cached = await getSingleton('profiles', 'admin');
-                if (cached) setProfile(cached);
+                if (cached) {
+                    setProfile(cached);
+                    const profilePicUrl = getProfilePicUrl(cached.profile_pic, user?.id, 'admin');
+                    setPreview(profilePicUrl);
+                }
             } catch {}
             const response = await axios.get('/api/admin/profile');
             setProfile(response.data);
+            const profilePicUrl = getProfilePicUrl(response.data.profile_pic, user?.id, 'admin');
+            setPreview(profilePicUrl);
             await cacheSingleton('profiles', 'admin', response.data);
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -76,7 +68,6 @@ const AdminProfile = () => {
             alert('Profile picture updated!');
             fetchProfile();
             setFile(null);
-            setPreview(null);
         } catch (error) {
             console.error('Error updating profile:', error);
             alert('Failed to update profile.');
@@ -98,17 +89,14 @@ const AdminProfile = () => {
                 <div className="md:col-span-1">
                     <div className="bg-white rounded shadow p-6 flex flex-col items-center h-full">
                         <div className="relative w-40 h-40 mb-6">
-                            {preview || profile.profile_pic ? (
-                                <img 
-                                    src={preview || getProfileImageSrc()} 
-                                    alt="Profile" 
-                                    className="w-full h-full object-cover rounded-full border-4 border-gray-200 shadow-sm"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-gray-400">
-                                    <User size={80} />
-                                </div>
-                            )}
+                            <img 
+                                src={preview} 
+                                alt="Profile" 
+                                className="w-full h-full object-cover rounded-full border-4 border-gray-200 shadow-sm"
+                                onError={(e) => {
+                                    e.target.src = '/api/admin/profile/image';
+                                }}
+                            />
                             
                             <label 
                                 className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md transition-colors"

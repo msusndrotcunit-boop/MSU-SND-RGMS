@@ -1159,28 +1159,30 @@ router.get('/my-history', authenticateToken, async (req, res) => {
         `;
         countParams = [cadetId, status, ...whereParams];
     } else {
-        const whereClause = ['ar.cadet_id = ? OR ar.cadet_id IS NULL', ...whereDays].join(' AND ');
+        // Fixed: Only show records where the cadet actually has an attendance record
+        // Don't default to 'absent' for all training days
+        const whereClause = ['ar.cadet_id = ?', ...whereDays].join(' AND ');
         listSql = `
             SELECT 
                 ar.id,
                 td.date,
                 td.title,
-                COALESCE(ar.status, 'absent') AS status,
+                ar.status,
                 ar.remarks,
                 ar.time_in,
                 ar.time_out
-            FROM training_days td
-            LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
-            ${whereClause ? `WHERE ${whereClause}` : ''}
+            FROM attendance_records ar
+            JOIN training_days td ON ar.training_day_id = td.id
+            WHERE ${whereClause}
             ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
         listParams = [cadetId, ...whereParams, ps, (p - 1) * ps];
         countSql = `
             SELECT COUNT(*) as total
-            FROM training_days td
-            LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
-            ${whereClause ? `WHERE ${whereClause}` : ''}
+            FROM attendance_records ar
+            JOIN training_days td ON ar.training_day_id = td.id
+            WHERE ${whereClause}
         `;
         countParams = [cadetId, ...whereParams];
     }

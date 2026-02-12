@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import { getProfilePicUrl } from '../../utils/image';
 
 // Dropdown Options
 const UNIT_OPTIONS = ["MSU-SND ROTC UNIT"];
@@ -82,6 +83,7 @@ const StaffProfile = () => {
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({});
+    const [preview, setPreview] = useState(null);
     
     // For file upload
     const fileInputRef = useRef(null);
@@ -107,6 +109,8 @@ const StaffProfile = () => {
                 
                 setProfile(data);
                 setFormData(data);
+                const profilePicUrl = getProfilePicUrl(data.profile_pic, data.id, 'staff');
+                setPreview(profilePicUrl);
                 setLoading(false);
 
                 // If cache is fresh (< 5 mins), skip fetch
@@ -118,6 +122,8 @@ const StaffProfile = () => {
             const res = await axios.get('/api/staff/me');
             setProfile(res.data);
             setFormData(res.data);
+            const profilePicUrl = getProfilePicUrl(res.data.profile_pic, res.data.id, 'staff');
+            setPreview(profilePicUrl);
             setLoading(false);
             
             // Update cache with timestamp
@@ -259,6 +265,8 @@ const StaffProfile = () => {
             const updatedProfile = { ...profile, profile_pic: res.data.filePath };
             setProfile(updatedProfile);
             setFormData(prev => ({ ...prev, profile_pic: res.data.filePath }));
+            const profilePicUrl = getProfilePicUrl(res.data.filePath, profile.id, 'staff');
+            setPreview(profilePicUrl);
             
             // Update cache
             await cacheSingleton('profiles', 'staff', {
@@ -275,21 +283,6 @@ const StaffProfile = () => {
     if (loading) return <div className="p-8 text-center">Loading profile...</div>;
     if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
     if (!profile) return <div className="p-8 text-center">No profile found.</div>;
-
-    const getProfileImage = () => {
-        if (!profile.profile_pic) return null;
-        if (profile.profile_pic.startsWith('data:') || profile.profile_pic.startsWith('http')) {
-            return profile.profile_pic;
-        }
-        let normalizedPath = profile.profile_pic.replace(/\\/g, '/');
-        const uploadsIndex = normalizedPath.indexOf('/uploads/');
-        if (uploadsIndex !== -1) {
-            normalizedPath = normalizedPath.substring(uploadsIndex);
-        } else if (!normalizedPath.startsWith('/')) {
-            normalizedPath = '/' + normalizedPath;
-        }
-        return `${import.meta.env.VITE_API_URL || ''}${normalizedPath}`;
-    };
 
     const commonProps = {
         isEditing,
@@ -335,21 +328,14 @@ const StaffProfile = () => {
                     <div className="flex flex-col md:flex-row items-center gap-8">
                         <div className="relative group">
                             <div className="w-40 h-40 rounded-full bg-white/10 border-4 border-white overflow-hidden flex items-center justify-center shadow-xl relative">
-                                {getProfileImage() ? (
-                                    <img 
-                                        src={getProfileImage()} 
-                                        alt="Profile" 
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            console.error("Image load error:", e);
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-center p-2">
-                                        <User size={48} className="text-green-200 mb-1" />
-                                        <span className="text-[10px] leading-tight text-white font-medium opacity-80">Click here to upload</span>
-                                    </div>
-                                )}
+                                <img 
+                                    src={preview} 
+                                    alt="Profile" 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.src = `/api/images/staff/profile/${profile.id}`;
+                                    }}
+                                />
                                 
                                 {/* Camera Overlay */}
                                 <div 

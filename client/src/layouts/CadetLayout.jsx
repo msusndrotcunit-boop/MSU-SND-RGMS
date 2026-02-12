@@ -279,19 +279,11 @@ const CadetLayout = () => {
         return (
             <img
                 key={profilePicSrc}
-                src={profilePicSrc || '/api/images/cadets/placeholder'}
+                src={profilePicSrc}
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.style.display = 'none';
-                    if (e.target.parentElement) {
-                        e.target.parentElement.innerHTML = `
-                            <div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </div>
-                        `;
-                    }
+                    e.target.src = `/api/images/cadet/profile/${user?.cadetId}`;
                 }}
             />
         );

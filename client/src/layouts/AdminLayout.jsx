@@ -296,12 +296,7 @@ const AdminLayout = () => {
                                 alt="Profile" 
                                 className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                 onError={(e) => { 
-                                    e.target.onerror = null; 
-                                    const parent = e.target.parentElement;
-                                    if (parent) {
-                                        const initial = (adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase();
-                                        parent.innerHTML = `<div class="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">${initial}</div>`;
-                                    }
+                                    e.target.src = '/api/admin/profile/image';
                                 }}
                             />
                         </Link>

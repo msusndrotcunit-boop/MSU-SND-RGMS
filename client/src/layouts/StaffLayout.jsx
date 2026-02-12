@@ -247,8 +247,7 @@ const StaffLayout = () => {
                                     alt="Profile" 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                                        e.target.src = `/api/images/staff/profile/${user?.staffId}`;
                                     }}
                                 />
                             </Link>
