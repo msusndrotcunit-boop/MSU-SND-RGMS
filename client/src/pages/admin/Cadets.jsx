@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin, ChevronLeft } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin, ChevronLeft, Unlock } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
@@ -595,6 +595,34 @@ const Cadets = () => {
         }
     };
 
+    const handleBulkUnlock = async () => {
+        if (selectedCadets.length === 0) return;
+        if (!window.confirm(`Unlock profile for ${selectedCadets.length} cadets? This will allow them to edit their profile again.`)) return;
+        try {
+            await axios.post('/api/admin/cadets/unlock', { ids: selectedCadets });
+            toast.success('Profiles unlocked successfully');
+            setSelectedCadets([]);
+            await cacheSingleton('admin', 'cadets_list', null);
+            fetchCadets(true);
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to unlock profiles');
+        }
+    };
+
+    const handleSingleUnlock = async (id) => {
+        if (!window.confirm('Unlock this profile? The cadet will be able to edit their details again.')) return;
+        try {
+            await axios.post('/api/admin/cadets/unlock', { ids: [id] });
+            toast.success('Profile unlocked successfully');
+            await cacheSingleton('admin', 'cadets_list', null);
+            fetchCadets(true);
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to unlock profile');
+        }
+    };
+
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
     return (
@@ -625,6 +653,15 @@ const Cadets = () => {
                         >
                             <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
                             <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+                        </button>
+                    )}
+                    {selectedCadets.length > 0 && (
+                        <button
+                            onClick={handleBulkUnlock}
+                            className="flex-1 md:flex-none bg-yellow-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-yellow-700 animate-fade-in"
+                        >
+                            <Unlock size={18} />
+                            <span>Unlock ({selectedCadets.length})</span>
                         </button>
                     )}
                     {selectedCadets.length > 0 && (
@@ -790,6 +827,15 @@ const Cadets = () => {
                                         )}
                                     </td>
                                     <td className="p-4 text-right space-x-2">
+                                        {cadet.is_profile_completed ? (
+                                            <button 
+                                                onClick={() => handleSingleUnlock(cadet.id)}
+                                                className="text-yellow-600 hover:bg-yellow-50 p-2 rounded"
+                                                title="Unlock Profile"
+                                            >
+                                                <Unlock size={18} />
+                                            </button>
+                                        ) : null}
                                         <button 
                                             onClick={() => openViewModal(cadet)}
                                             className="text-blue-600 hover:bg-blue-50 p-2 rounded"

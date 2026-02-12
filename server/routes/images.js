@@ -1,5 +1,7 @@
 const express = require('express');
 const db = require('../database');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 
 // Helper to serve Base64 image
@@ -18,20 +20,28 @@ const serveBase64Image = (res, imageSource) => {
         }
     }
 
+    console.log(`[serveBase64Image] Processing: ${src.substring(0, 50)}${src.length > 50 ? '...' : ''}`);
+
     // If it's a Cloudinary URL (or any URL), redirect to it
     if (src.startsWith('http')) {
         return res.redirect(src);
     }
     
-    // If it's a local path (from disk storage), redirect to static handler
+    // If it's a local path (from disk storage)
     if (src.startsWith('/uploads/')) {
-        // Ensure we use absolute URL if possible to avoid relative path issues on client
-        const protocol = res.req.protocol || 'https';
-        const host = res.req.get('host');
-        if (host) {
-            return res.redirect(`${protocol}://${host}${src}`);
+        // Check if file exists on disk
+        const fullPath = path.join(__dirname, '..', src);
+        if (fs.existsSync(fullPath)) {
+            const protocol = res.req.protocol || 'https';
+            const host = res.req.get('host');
+            if (host) {
+                return res.redirect(`${protocol}://${host}${src}`);
+            }
+            return res.redirect(src);
+        } else {
+            console.log(`[serveBase64Image] Local file not found: ${fullPath}`);
+            return res.status(404).send('Local image file missing on server');
         }
-        return res.redirect(src);
     }
 
     if (!src.startsWith('data:image')) {

@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useMemo } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, User, LogOut, Menu, X, Info, Home as HomeIcon, Settings, ChevronRight, QrCode, FileText, CheckCircle, ArrowRight, MessageSquare, Bell, Mail } from 'lucide-react';
@@ -270,6 +270,51 @@ const CadetLayout = () => {
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+    // Memoize the profile picture URL to avoid recalculation
+    const profilePicSrc = useMemo(() => {
+        return getProfilePicUrl(profile?.profile_pic, user?.cadetId);
+    }, [profile?.profile_pic, user?.cadetId]);
+
+    const renderProfileImage = () => {
+        if (!profilePicSrc) {
+            return (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                    <User size={40} />
+                </div>
+            );
+        }
+
+        return (
+            <img
+                key={profilePicSrc}
+                src={profilePicSrc}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                    e.target.onerror = null;
+                    const fallback = getProfilePicFallback(user?.cadetId);
+                    
+                    // If we're not already using the fallback, try it
+                    if (fallback && e.target.src !== fallback) {
+                        console.log('[CadetLayout] Image load failed, trying fallback:', fallback);
+                        e.target.src = fallback;
+                    } else {
+                        // Fallback also failed or not available, show placeholder
+                        console.log('[CadetLayout] Both primary and fallback images failed');
+                        e.target.style.display = 'none';
+                        if (e.target.parentElement) {
+                            e.target.parentElement.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
+                            `;
+                        }
+                    }
+                }}
+            />
+        );
+    };
+
     return (
         <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
@@ -296,37 +341,7 @@ const CadetLayout = () => {
                 {/* User Info Section */}
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
-                        {(() => {
-                            const finalSrc = getProfilePicUrl(profile?.profile_pic, user?.cadetId);
-
-                            if (finalSrc) return (
-                                <img
-                                    key={finalSrc}
-                                    src={finalSrc}
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        e.target.onerror = null;
-                                        const fallback = getProfilePicFallback(user?.cadetId);
-                                        const absoluteFallback = window.location.origin + fallback;
-                                        
-                                        if (user?.cadetId && e.target.src !== absoluteFallback && !e.target.src.endsWith(fallback)) {
-                                            e.target.src = fallback;
-                                        } else {
-                                            e.target.style.display = 'none';
-                                            if (e.target.parentElement) {
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
-                                            }
-                                        }
-                                    }}
-                                />
-                            );
-                            return (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-                                    <User size={40} />
-                                </div>
-                            );
-                        })()}
+                        {renderProfileImage()}
                     </Link>
                     <div className="font-semibold text-sm text-yellow-400">
                         {profile ? `${profile.rank} ${profile.last_name}` : (user?.username || 'Cadet')}

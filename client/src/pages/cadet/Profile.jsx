@@ -115,13 +115,9 @@ const Profile = () => {
             status: data.status || 'Ongoing'
         });
         
-        // Handle profile picture URL
-        if (data.profile_pic) {
-            const final = getProfilePicUrl(data.profile_pic, user?.cadetId);
-            setPreview(final);
-        } else if (user?.cadetId) {
-            setPreview(`/api/images/cadets/${user.cadetId}`);
-        }
+        // Use the centralized image utility for consistent URL construction
+        const profilePicUrl = getProfilePicUrl(data.profile_pic, user?.cadetId);
+        setPreview(profilePicUrl);
     };
 
     const toggleDarkMode = () => {
@@ -328,23 +324,23 @@ const Profile = () => {
                                         alt="Profile" 
                                         className="w-full h-full object-cover" 
                                         onError={(e) => {
-                                            console.error('Profile picture failed to load:', e.target.src);
-                                            e.target.onerror = null; 
+                                            e.target.onerror = null;
+                                            const fallback = getProfilePicFallback(user?.cadetId);
                                             
-                                            // Try fallback endpoint if not already using it
-                                            if (user?.cadetId && !String(e.target.src).includes(`/api/images/cadets/${user.cadetId}`)) {
-                                                const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
-                                                const fallbackUrl = baseURL 
-                                                    ? `${baseURL.replace(/\/+$/, '')}/api/images/cadets/${user.cadetId}`
-                                                    : `/api/images/cadets/${user.cadetId}`;
-                                                console.log('Trying fallback URL:', fallbackUrl);
-                                                e.target.src = fallbackUrl;
-                                                return;
+                                            if (fallback && e.target.src !== fallback) {
+                                                console.log('[Profile] Image failed, trying fallback:', fallback);
+                                                e.target.src = fallback;
+                                            } else {
+                                                console.log('[Profile] Primary and fallback images failed');
+                                                e.target.style.display = 'none';
+                                                if (e.target.parentElement) {
+                                                    e.target.parentElement.innerHTML = `
+                                                        <div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                        </div>
+                                                    `;
+                                                }
                                             }
-                                            
-                                            // Hide broken img and show placeholder
-                                            e.target.style.display = 'none';
-                                            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
                                         }}
                                     />
                                 ) : (

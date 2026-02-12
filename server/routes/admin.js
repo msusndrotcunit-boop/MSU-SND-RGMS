@@ -1791,6 +1791,26 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
     );
 });
 
+// Unlock Profile (Bulk)
+router.post('/cadets/unlock', authenticateToken, isAdmin, async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ message: 'Invalid IDs' });
+
+    const placeholders = ids.map(() => '?').join(',');
+    const sql = `UPDATE cadets SET is_profile_completed = 0 WHERE id IN (${placeholders})`;
+
+    db.run(sql, ids, function(err) {
+        if (err) {
+            console.error('Unlock error:', err);
+            return res.status(500).json({ message: 'Failed to unlock profiles: ' + err.message });
+        }
+        res.json({ message: `Successfully unlocked ${this.changes} profiles` });
+        try {
+            broadcastEvent({ type: 'cadet_unlocked', cadetIds: ids });
+        } catch {}
+    });
+});
+
 // Delete Cadet (Bulk)
 router.post('/cadets/delete', async (req, res) => {
     const { ids } = req.body; // Expecting array of IDs
