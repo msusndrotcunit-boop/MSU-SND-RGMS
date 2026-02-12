@@ -1196,7 +1196,36 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 console.error('[attendance/my-history] List query error:', lErr.message, { listSql, listParams });
                 return res.status(500).json({ message: lErr.message });
             }
-            res.json({ items: rows || [], total, page: p, pageSize: ps });
+            const items = Array.isArray(rows) ? rows : [];
+            if (!items || items.length === 0) {
+                const fallbackSql = `
+                    SELECT 
+                        td.date,
+                        td.title
+                    FROM training_days td
+                    ${whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : ''}
+                    ORDER BY td.date ${ord}
+                    LIMIT ? OFFSET ?
+                `;
+                const fallbackParams = [...whereParams, ps, (p - 1) * ps];
+                return db.all(fallbackSql, fallbackParams, (fErr, fRows) => {
+                    if (fErr) {
+                        console.error('[attendance/my-history] Fallback days query error:', fErr.message, { fallbackSql, fallbackParams });
+                        return res.status(500).json({ message: fErr.message });
+                    }
+                    const shaped = (fRows || []).map(d => ({
+                        id: null,
+                        date: d.date,
+                        title: d.title,
+                        status: 'absent',
+                        remarks: null,
+                        time_in: null,
+                        time_out: null
+                    }));
+                    return res.json({ items: shaped, total, page: p, pageSize: ps });
+                });
+            }
+            res.json({ items, total, page: p, pageSize: ps });
         });
     });
 });
