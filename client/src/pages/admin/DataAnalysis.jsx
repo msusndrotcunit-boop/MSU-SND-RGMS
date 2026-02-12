@@ -620,7 +620,7 @@ const DataAnalysis = () => {
             </div>
 
             {/* Additional Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 gap-6 mb-6">
                 {/* Gender by Course */}
                 <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
                     <div className="bg-gray-900 px-4 py-3">
@@ -637,26 +637,6 @@ const DataAnalysis = () => {
                                 <Bar dataKey="Male" stackId="g" fill="#3b82f6" />
                                 <Bar dataKey="Female" stackId="g" fill="#ef4444" />
                                 <Bar dataKey="Unknown" stackId="g" fill="#6b7280" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-
-                {/* Course Distribution */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Course Distribution</h3>
-                    </div>
-                    <div className="p-4 h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={courseTotals}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="value" fill="#16a34a" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
