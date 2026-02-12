@@ -5,6 +5,7 @@ import { Save, User, Moon, Sun, Camera, Image as ImageIcon, Lock, AlertTriangle 
 import imageCompression from 'browser-image-compression';
 import { useAuth } from '../../context/AuthContext';
 import { cacheSingleton, getSingleton } from '../../utils/db';
+import { getProfilePicUrl } from '../../utils/image';
 import { 
     RANK_OPTIONS, 
     YEAR_LEVEL_OPTIONS, 
@@ -116,60 +117,10 @@ const Profile = () => {
         
         // Handle profile picture URL
         if (data.profile_pic) {
-            const pic = data.profile_pic;
-            
-            // Case 1: Already a complete URL (Cloudinary or external)
-            if (pic.startsWith('http://') || pic.startsWith('https://')) {
-                // Ensure Cloudinary URLs use HTTPS and apply auto-optimizations
-                let optimizedUrl = pic.replace('http://', 'https://');
-                if (optimizedUrl.includes('cloudinary.com') && optimizedUrl.includes('/upload/')) {
-                    if (!optimizedUrl.includes('q_auto')) {
-                        optimizedUrl = optimizedUrl.replace('/upload/', '/upload/q_auto,f_auto/');
-                    }
-                }
-                setPreview(optimizedUrl);
-                return;
-            }
-            
-            // Case 2: Base64 data URL
-            if (pic.startsWith('data:')) {
-                setPreview(pic);
-                return;
-            }
-            
-            // Case 3: Local file path - construct full URL
-            let normalizedPath = pic.replace(/\\/g, '/');
-            
-            // Extract /uploads/ path if it exists
-            const uploadsIndex = normalizedPath.indexOf('/uploads/');
-            if (uploadsIndex !== -1) {
-                normalizedPath = normalizedPath.substring(uploadsIndex);
-            } else if (normalizedPath.includes('uploads/')) {
-                // Handle case where path is like "uploads/123.jpg"
-                normalizedPath = '/' + normalizedPath;
-            } else if (!normalizedPath.startsWith('/')) {
-                normalizedPath = '/' + normalizedPath;
-            }
-            
-            // Get base URL
-            const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
-            
-            if (baseURL) {
-                setPreview(`${baseURL.replace(/\/+$/, '')}${normalizedPath}`);
-            } else {
-                // Fallback to relative path
-                setPreview(normalizedPath);
-            }
-        } else {
-            // No profile pic - use fallback endpoint
-            if (user?.cadetId) {
-                const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
-                if (baseURL) {
-                    setPreview(`${baseURL.replace(/\/+$/, '')}/api/images/cadets/${user.cadetId}`);
-                } else {
-                    setPreview(`/api/images/cadets/${user.cadetId}`);
-                }
-            }
+            const final = getProfilePicUrl(data.profile_pic, user?.cadetId);
+            setPreview(final);
+        } else if (user?.cadetId) {
+            setPreview(`/api/images/cadets/${user.cadetId}`);
         }
     };
 

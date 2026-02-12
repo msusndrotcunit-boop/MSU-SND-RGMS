@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
+import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
 
 const CadetLayout = () => {
@@ -296,46 +297,7 @@ const CadetLayout = () => {
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
                     <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
                         {(() => {
-                            const raw = profile?.profile_pic;
-                            let finalSrc = null;
-                            if (raw) {
-                                finalSrc = raw;
-                                if (!(raw.startsWith('data:') || raw.startsWith('http'))) {
-                                    let normalizedPath = raw.replace(/\\/g, '/');
-                                    const uploadsIndex = normalizedPath.indexOf('/uploads/');
-                                    if (uploadsIndex !== -1) {
-                                        normalizedPath = normalizedPath.substring(uploadsIndex);
-                                    } else if (!normalizedPath.startsWith('/')) {
-                                        normalizedPath = '/' + normalizedPath;
-                                    }
-                                    
-                                    const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
-                                    const baseB = import.meta.env.VITE_API_URL || '';
-                                    const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
-                                    const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
-                                    
-                                    if (selectedBase) {
-                                        finalSrc = `${selectedBase.replace(/\/+$/,'')}${normalizedPath}`;
-                                    } else {
-                                        finalSrc = normalizedPath;
-                                    }
-                                }
-                            } else if (user?.cadetId) {
-                                finalSrc = `/api/images/cadets/${user.cadetId}`;
-                            }
-
-                            // Ensure Cloudinary URLs use HTTPS and apply auto-optimizations
-                            if (finalSrc && finalSrc.includes('cloudinary.com')) {
-                                finalSrc = finalSrc.replace('http://', 'https://');
-                                if (!finalSrc.includes('/upload/')) {
-                                    // Handle edge case where /upload/ might be missing or different
-                                } else {
-                                    // Add auto quality and format if not present
-                                    if (!finalSrc.includes('q_auto')) {
-                                        finalSrc = finalSrc.replace('/upload/', '/upload/q_auto,f_auto/');
-                                    }
-                                }
-                            }
+                            const finalSrc = getProfilePicUrl(profile?.profile_pic, user?.cadetId);
 
                             if (finalSrc) return (
                                 <img
@@ -345,8 +307,10 @@ const CadetLayout = () => {
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                         e.target.onerror = null;
-                                        const fallback = `/api/images/cadets/${user?.cadetId}`;
-                                        if (user?.cadetId && e.target.src !== window.location.origin + fallback && !e.target.src.endsWith(fallback)) {
+                                        const fallback = getProfilePicFallback(user?.cadetId);
+                                        const absoluteFallback = window.location.origin + fallback;
+                                        
+                                        if (user?.cadetId && e.target.src !== absoluteFallback && !e.target.src.endsWith(fallback)) {
                                             e.target.src = fallback;
                                         } else {
                                             e.target.style.display = 'none';
