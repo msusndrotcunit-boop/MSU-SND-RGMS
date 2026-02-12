@@ -1,5 +1,5 @@
 const express = require('express');
-const { upload } = require('../utils/cloudinary');
+const { upload, isCloudinaryConfigured } = require('../utils/cloudinary');
 // const multer = require('multer'); // Removed local multer
 const path = require('path');
 const db = require('../database');
@@ -343,18 +343,16 @@ router.put('/profile', uploadProfilePic, (req, res) => {
 
             if (req.file) {
                 sql += `, profile_pic=?`;
-                let imageUrl = req.file.path; 
-                
-                // Normalize local path if needed (e.g. C:\Users\...\uploads\file.jpg -> /uploads/file.jpg)
-                // But avoid modifying Cloudinary URLs which might contain 'uploads' in their path
-                if (imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
-                    const parts = imageUrl.split(/[\\/]/);
-                    const uploadIndex = parts.indexOf('uploads');
-                    if (uploadIndex !== -1) {
-                        imageUrl = '/' + parts.slice(uploadIndex).join('/');
+                let imageUrl = req.file.secure_url || req.file.url || req.file.path || '';
+                if (!isCloudinaryConfigured) {
+                    if (imageUrl && imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
+                        const parts = imageUrl.split(/[\\/]/);
+                        const uploadIndex = parts.indexOf('uploads');
+                        if (uploadIndex !== -1) {
+                            imageUrl = '/' + parts.slice(uploadIndex).join('/');
+                        }
                     }
                 }
-                
                 params.push(imageUrl);
             }
     
@@ -394,9 +392,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                         
                         let returnPath = null;
                         if (req.file) {
-                             returnPath = req.file.path;
-                             // Apply same normalization for response
-                             if (returnPath.includes('uploads')) {
+                             returnPath = req.file.secure_url || req.file.url || req.file.path;
+                             if (!isCloudinaryConfigured && returnPath && returnPath.includes('uploads')) {
                                  const parts = returnPath.split(/[\\/]/);
                                  const uploadIndex = parts.indexOf('uploads');
                                  if (uploadIndex !== -1) {
@@ -416,9 +413,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 } else {
                     let returnPath = null;
                     if (req.file) {
-                         returnPath = req.file.path;
-                         // Apply same normalization for response
-                         if (returnPath.includes('uploads')) {
+                         returnPath = req.file.secure_url || req.file.url || req.file.path;
+                         if (!isCloudinaryConfigured && returnPath && returnPath.includes('uploads')) {
                              const parts = returnPath.split(/[\\/]/);
                              const uploadIndex = parts.indexOf('uploads');
                              if (uploadIndex !== -1) {
