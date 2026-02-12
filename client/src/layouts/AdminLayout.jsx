@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
     const { logout } = useAuth();
@@ -254,24 +255,9 @@ const AdminLayout = () => {
     ];
 
     const getAvatarSrc = () => {
-        if (!adminProfile || !adminProfile.profile_pic) return null;
-        const raw = adminProfile.profile_pic;
-        if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
-        
-        let normalizedPath = raw.replace(/\\/g, '/');
-        const uploadsIndex = normalizedPath.indexOf('/uploads/');
-        if (uploadsIndex !== -1) {
-            normalizedPath = normalizedPath.substring(uploadsIndex);
-        } else if (!normalizedPath.startsWith('/')) {
-            normalizedPath = '/' + normalizedPath;
-        }
-        
-        const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
-        const baseB = import.meta.env.VITE_API_URL || '';
-        const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
-        const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
-        
-        return selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
+        if (!adminProfile) return null;
+        // The admin profile might have a profile_pic or just use the username
+        return getProfilePicUrl(adminProfile.profile_pic, 'admin', 'admin');
     };
 
     return (
@@ -305,25 +291,19 @@ const AdminLayout = () => {
                     </div>
                     <div className="flex items-center mt-3">
                         <Link to="/admin/profile">
-                            {adminProfile && adminProfile.profile_pic ? (
-                                <img 
-                                    src={getAvatarSrc()} 
-                                    alt="Profile" 
-                                    className="h-10 w-10 rounded-full border border-white/20 object-cover" 
-                                    onError={(e) => { 
-                                        e.target.onerror = null; 
-                                        e.target.style.display = 'none';
-                                        const parent = e.target.parentElement;
-                                        if (parent) {
-                                            parent.innerHTML = '<div class="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">A</div>';
-                                        }
-                                    }}
-                                />
-                            ) : (
-                                <div className="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
-                                    {(adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase()}
-                                </div>
-                            )}
+                            <img 
+                                src={getAvatarSrc()} 
+                                alt="Profile" 
+                                className="h-10 w-10 rounded-full border border-white/20 object-cover" 
+                                onError={(e) => { 
+                                    e.target.onerror = null; 
+                                    const parent = e.target.parentElement;
+                                    if (parent) {
+                                        const initial = (adminProfile && adminProfile.username ? adminProfile.username.charAt(0) : 'A').toUpperCase();
+                                        parent.innerHTML = `<div class="h-10 w-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">${initial}</div>`;
+                                    }
+                                }}
+                            />
                         </Link>
                         <div className="ml-3">
                             <div className="text-white font-semibold text-sm">{(adminProfile && adminProfile.username) || 'Admin'}</div>

@@ -121,9 +121,16 @@ router.get('/cadets/:id', (req, res) => {
 // Get Staff Profile Picture
 router.get('/staff/:id', (req, res) => {
     db.get('SELECT profile_pic FROM training_staff WHERE id = ?', [req.params.id], (err, row) => {
-        if (err) return res.status(500).send(err.message);
-        if (!row || !row.profile_pic) return res.status(404).send('Image not found');
-        serveBase64Image(res, row.profile_pic);
+        if (err) {
+            console.error('[images] DB error for staff:', err);
+            return sendDefaultPlaceholder(res);
+        }
+        
+        if (row && row.profile_pic) {
+            return serveBase64Image(res, row.profile_pic, true);
+        }
+
+        sendDefaultPlaceholder(res);
     });
 });
 

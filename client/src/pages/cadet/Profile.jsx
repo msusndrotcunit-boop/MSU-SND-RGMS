@@ -93,6 +93,10 @@ const Profile = () => {
     };
 
     const updateProfileState = (data) => {
+        console.log('[Profile] Received data:', data);
+        console.log('[Profile] profile_pic value:', data.profile_pic);
+        console.log('[Profile] cadetId:', user?.cadetId);
+        
         setProfile({
             username: data.username || '',
             rank: data.rank || '',
@@ -117,6 +121,7 @@ const Profile = () => {
         
         // Use the centralized image utility for consistent URL construction
         const profilePicUrl = getProfilePicUrl(data.profile_pic, user?.cadetId);
+        console.log('[Profile] Constructed URL:', profilePicUrl);
         setPreview(profilePicUrl);
     };
 

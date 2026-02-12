@@ -2230,6 +2230,76 @@ router.get('/profile', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
+// Helper to serve default placeholder (internal to admin routes for profile image)
+const sendDefaultPlaceholder = (res) => {
+    const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    
+    if (!res.headersSent) {
+        res.writeHead(200, {
+            'Content-Type': 'image/svg+xml',
+            'Content-Length': Buffer.byteLength(defaultSvg),
+            'Cache-Control': 'public, max-age=3600'
+        });
+        res.end(defaultSvg);
+    }
+};
+
+// Get Current Admin Profile Picture
+router.get('/profile/image', authenticateToken, isAdmin, (req, res) => {
+    db.get('SELECT profile_pic FROM users WHERE id = ?', [req.user.id], (err, row) => {
+        if (err) {
+            console.error('[admin] DB error for admin profile image:', err);
+            return sendDefaultPlaceholder(res);
+        }
+        
+        if (row && row.profile_pic) {
+            const imageSource = row.profile_pic;
+            
+            // Re-using logic similar to images.js for consistent serving
+            let src = String(imageSource);
+            src = src.replace(/\\/g, '/');
+            
+            // Handle URLs
+            if (src.startsWith('http')) {
+                return res.redirect(src);
+            }
+            
+            // Handle Local Files
+            if (src.startsWith('/uploads/')) {
+                const fullPath = path.join(__dirname, '..', src);
+                if (fs.existsSync(fullPath)) {
+                    const protocol = req.protocol || 'https';
+                    const host = req.get('host');
+                    if (host) {
+                        return res.redirect(`${protocol}://${host}${src}`);
+                    }
+                    return res.redirect(src);
+                } else {
+                    return sendDefaultPlaceholder(res);
+                }
+            }
+
+            // Handle Base64
+            if (src.startsWith('data:image')) {
+                const matches = src.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                if (matches && matches.length === 3) {
+                    const type = matches[1];
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    res.writeHead(200, {
+                        'Content-Type': type,
+                        'Content-Length': buffer.length,
+                        'Cache-Control': 'public, max-age=86400'
+                    });
+                    return res.end(buffer);
+                }
+            }
+        }
+
+        // Fallback to placeholder
+        sendDefaultPlaceholder(res);
+    });
+});
+
 // Update Admin Profile (Photo and/or Gender)
 router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), (req, res) => {
     const { gender } = req.body || {};

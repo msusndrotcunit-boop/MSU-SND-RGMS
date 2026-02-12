@@ -7,10 +7,11 @@ import axios from 'axios';
 /**
  * Constructs a full URL for a profile picture.
  * @param {string} rawPath - The path stored in the database (Cloudinary URL, local path, or base64)
- * @param {string|number} cadetId - The ID of the cadet for the API fallback
+ * @param {string|number} id - The ID of the cadet or staff for the API fallback
+ * @param {string} type - The type of entity ('cadets', 'staff', or 'admin')
  * @returns {string|null} - The optimized URL or null if no path/ID provided
  */
-export const getProfilePicUrl = (rawPath, cadetId) => {
+export const getProfilePicUrl = (rawPath, id, type = 'cadets') => {
     let finalSrc = null;
 
     if (rawPath) {
@@ -41,9 +42,9 @@ export const getProfilePicUrl = (rawPath, cadetId) => {
              selectedBase = String(selectedBase).replace(/\/+$/, '');
              finalSrc = selectedBase ? `${selectedBase}${normalizedPath}` : normalizedPath;
          }
-     } else if (cadetId) {
+     } else if (id) {
          // 2. Fallback to API endpoint if no rawPath
-         finalSrc = getProfilePicFallback(cadetId);
+         finalSrc = getProfilePicFallback(id, type);
      }
 
      // 3. Apply Cloudinary optimizations
@@ -59,9 +60,9 @@ export const getProfilePicUrl = (rawPath, cadetId) => {
 
      // 4. Debugging - Expose to window for console checking
      if (typeof window !== 'undefined' && !window._imgDebug) {
-         window._imgDebug = (path, id) => console.log('Image Debug:', { 
-             input: { path, id }, 
-             output: getProfilePicUrl(path, id),
+         window._imgDebug = (path, id, t) => console.log('Image Debug:', { 
+             input: { path, id, type: t }, 
+             output: getProfilePicUrl(path, id, t),
              axiosBase: axios.defaults.baseURL,
              viteBase: import.meta.env.VITE_API_URL,
              origin: window.location.origin
@@ -72,12 +73,13 @@ export const getProfilePicUrl = (rawPath, cadetId) => {
 };
 
 /**
- * Constructs the API fallback URL for a cadet's profile picture.
- * @param {string|number} cadetId - The cadet ID
+ * Constructs the API fallback URL for a profile picture.
+ * @param {string|number} id - The entity ID
+ * @param {string} type - The type of entity ('cadets', 'staff', or 'admin')
  * @returns {string} - The fallback URL with cache buster
  */
-export const getProfilePicFallback = (cadetId) => {
-    if (!cadetId) return '';
+export const getProfilePicFallback = (id, type = 'cadets') => {
+    if (!id) return '';
     
     const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
     const baseB = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
@@ -88,7 +90,16 @@ export const getProfilePicFallback = (cadetId) => {
     
     // Add cache buster to avoid stale 404s or old images
     const t = new Date().getTime();
-    const path = `/api/images/cadets/${cadetId}?t=${t}`;
     
-    return selectedBase ? `${selectedBase}${path}` : path;
+    // Determine the correct API path based on type
+    let apiPath = '';
+    if (type === 'admin') {
+        apiPath = `/api/admin/profile/image?t=${t}`;
+    } else if (type === 'staff') {
+        apiPath = `/api/images/staff/${id}?t=${t}`;
+    } else {
+        apiPath = `/api/images/cadets/${id}?t=${t}`;
+    }
+    
+    return selectedBase ? `${selectedBase}${apiPath}` : apiPath;
 };

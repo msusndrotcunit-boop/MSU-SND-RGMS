@@ -266,7 +266,11 @@ router.put('/profile', uploadProfilePic, (req, res) => {
     // 1. Check if profile is already locked
     db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [cadetId], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
-        if (row && row.is_profile_completed) {
+        
+        // Handle both PostgreSQL (true/false) and SQLite (1/0) boolean values
+        const isLocked = row && (row.is_profile_completed === true || row.is_profile_completed === 1 || row.is_profile_completed === '1');
+        
+        if (isLocked) {
             return res.status(403).json({ message: 'Profile is locked and cannot be edited. Contact your administrator.' });
         }
 
@@ -379,6 +383,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             db.run(sql, params, (err) => {
                 if (err) {
                     console.error("DB Update Error (Cadet Profile):", err);
+                    console.error("SQL:", sql);
+                    console.error("Params:", params);
                     return res.status(500).json({ message: "Database Error: " + err.message });
                 }
 
