@@ -264,6 +264,8 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
     try {
+        console.log('[Profile Update] Starting update for cadet:', cadetId);
+        
         // 1. Check if profile is already locked
         const row = await new Promise((resolve, reject) => {
             db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [cadetId], (err, row) => {
@@ -272,10 +274,13 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             });
         });
         
+        console.log('[Profile Update] Profile lock status:', row);
+        
         // Handle both PostgreSQL (true/false) and SQLite (1/0) boolean values
         const isLocked = row && (row.is_profile_completed === true || row.is_profile_completed === 1 || row.is_profile_completed === '1');
         
         if (isLocked) {
+            console.log('[Profile Update] Profile is locked, rejecting update');
             return res.status(403).json({ message: 'Profile is locked and cannot be edited. Contact your administrator.' });
         }
 
@@ -291,6 +296,8 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
         const isComplete = (is_profile_completed === 'true' || is_profile_completed === true || is_profile_completed === 1 || is_profile_completed === '1');
         const safeParam = (val) => val === undefined ? null : val;
 
+        console.log('[Profile Update] Is completing profile:', isComplete);
+
         // 2. Mandatory Field Validation (Only if completing profile)
         if (isComplete) {
             const requiredFields = [
@@ -301,6 +308,7 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             
             const missing = requiredFields.filter(field => !req.body[field]);
             if (missing.length > 0) {
+                console.log('[Profile Update] Missing fields:', missing);
                 return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
             }
 
@@ -327,6 +335,7 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
                     usernameConflict ? 'username' : null,
                     emailConflict ? 'email' : null
                 ].filter(Boolean);
+                console.log('[Profile Update] Conflict detected:', conflictFields);
                 return res.status(409).json({
                     message: `The following fields are already taken: ${conflictFields.join(', ')}`
                 });
@@ -380,13 +389,16 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
         sql += ` WHERE id=?`;
         params.push(cadetId);
 
+        console.log('[Profile Update] Executing SQL update...');
+
         // 4. Execute UPDATE
         await new Promise((resolve, reject) => {
             db.run(sql, params, (err) => {
                 if (err) {
-                    console.error("DB Update Error (Cadet Profile):", err);
+                    console.error("[Profile Update] DB Update Error:", err);
                     reject(err);
                 } else {
+                    console.log('[Profile Update] SQL update successful');
                     resolve();
                 }
             });
@@ -394,14 +406,16 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
 
         // 5. Update Users Table
         if (username && email) {
+            console.log('[Profile Update] Updating users table...');
             await new Promise((resolve, reject) => {
                 db.run(`UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`, 
                     [username, email, 1, cadetId], 
                     (err) => {
                         if (err) {
-                            console.error("Error updating user credentials:", err);
+                            console.error("[Profile Update] Error updating user credentials:", err);
                             reject(err);
                         } else {
+                            console.log('[Profile Update] Users table updated');
                             resolve();
                         }
                     }
@@ -414,14 +428,18 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
         db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
             [notifMsg, 'profile_update'], 
             (err) => {
-                if (err) console.error("Error creating notification:", err);
+                if (err) console.error("[Profile Update] Error creating notification:", err);
             }
         );
 
         // 7. Broadcast event
         try {
             broadcastEvent({ type: 'cadet_profile_updated', cadetId });
-        } catch {}
+        } catch (e) {
+            console.error('[Profile Update] Broadcast error:', e);
+        }
+
+        console.log('[Profile Update] Update complete, sending response');
 
         // 8. Return success with the image path
         res.json({ 
@@ -431,7 +449,7 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
         });
         
     } catch (err) {
-        console.error("Profile Update Error:", err);
+        console.error("[Profile Update] Error:", err);
         res.status(500).json({ message: "Error updating profile: " + err.message });
     }
 });
