@@ -130,8 +130,10 @@ router.get('/my-merit-logs', async (req, res) => {
 
     const sql = `SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`;
     db.all(sql, [cadetId], async (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        const logs = Array.isArray(rows) ? rows : [];
+        if (err) {
+            console.error('[cadet/my-merit-logs] Query error, falling back to grade totals only:', err.message, { sql, cadetId });
+        }
+        const logs = (!err && Array.isArray(rows)) ? rows : [];
 
         // Ensure displayed totals stay in sync with Admin Grading
         const gradeTotals = await new Promise(resolve => {

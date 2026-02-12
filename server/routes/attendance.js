@@ -1188,15 +1188,13 @@ router.get('/my-history', authenticateToken, async (req, res) => {
     db.get(countSql, countParams, (cErr, cRow) => {
         if (cErr) {
             console.error('[attendance/my-history] Count query error:', cErr.message, { countSql, countParams });
-            return res.status(500).json({ message: cErr.message });
         }
         const total = (cRow && (cRow.total ?? cRow.count)) ? Number(cRow.total ?? cRow.count) : 0;
         db.all(listSql, listParams, (lErr, rows) => {
             if (lErr) {
-                console.error('[attendance/my-history] List query error:', lErr.message, { listSql, listParams });
-                return res.status(500).json({ message: lErr.message });
+                console.error('[attendance/my-history] List query error, falling back to training_days only:', lErr.message, { listSql, listParams });
             }
-            const items = Array.isArray(rows) ? rows : [];
+            const items = (!lErr && Array.isArray(rows)) ? rows : [];
             if (!items || items.length === 0) {
                 const fallbackSql = `
                     SELECT 
@@ -1210,8 +1208,8 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 const fallbackParams = [...whereParams, ps, (p - 1) * ps];
                 return db.all(fallbackSql, fallbackParams, (fErr, fRows) => {
                     if (fErr) {
-                        console.error('[attendance/my-history] Fallback days query error:', fErr.message, { fallbackSql, fallbackParams });
-                        return res.status(500).json({ message: fErr.message });
+                        console.error('[attendance/my-history] Fallback days query error, returning empty list:', fErr.message, { fallbackSql, fallbackParams });
+                        return res.json({ items: [], total, page: p, pageSize: ps });
                     }
                     const shaped = (fRows || []).map(d => ({
                         id: null,
