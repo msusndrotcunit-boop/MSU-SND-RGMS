@@ -247,7 +247,7 @@ const StaffLayout = () => {
                                     alt="Profile" 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                        e.target.src = `/api/images/staff/profile/${user?.staffId}`;
+                                        e.target.src = getProfilePicFallback(user?.staffId, 'staff');
                                     }}
                                 />
                             </Link>

@@ -1,7 +1,28 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const connectionString = process.env.DATABASE_URL;
+const getPgUrl = () => {
+    const keys = [
+        'DATABASE_URL',
+        'SUPABASE_URL',
+        'SUPABASE_DB_URL',
+        'SUPABASE_POSTGRES_URL',
+        'POSTGRES_URL',
+        'PG_DATABASE_URL'
+    ];
+    for (const k of keys) {
+        const v = process.env[k];
+        if (v && v.trim()) return v.trim();
+    }
+    return null;
+};
+
+const connectionString = getPgUrl();
+
+if (!connectionString) {
+  console.error('Error: No PostgreSQL connection string found in environment variables (checked DATABASE_URL, SUPABASE_URL, etc.)');
+  process.exit(1);
+}
 
 console.log('Connecting to:', connectionString.replace(/:[^:@]*@/, ':****@'));
 

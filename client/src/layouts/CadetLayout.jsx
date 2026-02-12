@@ -179,6 +179,11 @@ const CadetLayout = () => {
                                     await cacheSingleton('attendance_by_day', 'my_history', { data: res.data, timestamp: Date.now() });
                                 }).catch(() => {});
                             }
+                        } else if (data.type === 'cadet_profile_updated' && data.cadetId === user?.cadetId) {
+                            // Re-fetch profile to update UI (like profile picture)
+                            axios.get('/api/cadet/profile').then(res => {
+                                setProfile(res.data);
+                            }).catch(() => {});
                         }
                     } catch {}
                 };
@@ -283,7 +288,7 @@ const CadetLayout = () => {
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                    e.target.src = `/api/images/cadet/profile/${user?.cadetId}`;
+                    e.target.src = getProfilePicFallback(user?.cadetId, 'cadets');
                 }}
             />
         );

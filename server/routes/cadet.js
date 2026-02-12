@@ -90,9 +90,16 @@ router.get('/my-grades', async (req, res) => {
         }
         const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 0;
         const attendanceScore = safeTotalDays > 0 ? (base.attendance_present / safeTotalDays) * 30 : 0;
+        
+        // Aptitude Calculation with 100-point ceiling system:
+        // - All cadets start with 100 base points
+        // - Demerits subtract from the base
+        // - Merits add back BUT cannot exceed 100 ceiling
+        // - Formula: min(100, 100 + merits - demerits)
+        // - This means if a cadet has 100 points and gets merits, no change occurs (already at ceiling)
         let rawAptitude = 100 + (base.merit_points || 0) - (base.demerit_points || 0);
-        if (rawAptitude > 100) rawAptitude = 100;
-        if (rawAptitude < 0) rawAptitude = 0;
+        if (rawAptitude > 100) rawAptitude = 100; // Ceiling: Cannot exceed 100
+        if (rawAptitude < 0) rawAptitude = 0;     // Floor: Cannot go below 0
         const aptitudeScore = rawAptitude * 0.3;
         const subjectScore = ((base.prelim_score + base.midterm_score + base.final_score) / 300) * 40;
         const finalGrade = attendanceScore + aptitudeScore + subjectScore;
@@ -426,10 +433,16 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
                         // Update database with Cloudinary URL
                         db.run('UPDATE cadets SET profile_pic = ? WHERE id = ?', [cloudinaryUrl, cadetId], (err) => {
                             if (err) {
-                                console.error('[Cloudinary] Failed to update DB with Cloudinary URL:', err);
+                                console.error('[Cloudinary] Failed to update cadets table with Cloudinary URL:', err);
                             } else {
-                                console.log('[Cloudinary] Database updated with Cloudinary URL');
+                                console.log('[Cloudinary] Cadets table updated with Cloudinary URL');
                                 
+                                // ALSO update users table
+                                db.run('UPDATE users SET profile_pic = ? WHERE cadet_id = ?', [cloudinaryUrl, cadetId], (err2) => {
+                                    if (err2) console.error('[Cloudinary] Failed to update users table:', err2);
+                                    else console.log('[Cloudinary] Users table updated with Cloudinary URL');
+                                });
+
                                 // Delete local file after successful upload
                                 fs.unlink(localPath, (unlinkErr) => {
                                     if (unlinkErr) {
@@ -475,10 +488,19 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
         // 5. Update Users Table
         if (username && email) {
             console.log('[Profile Update] Updating users table...');
+            let userSql = `UPDATE users SET username=?, email=?, is_approved=TRUE`;
+            let userParams = [username, email];
+            
+            if (imageUrl) {
+                userSql += `, profile_pic=?`;
+                userParams.push(imageUrl);
+            }
+            
+            userSql += ` WHERE cadet_id=?`;
+            userParams.push(cadetId);
+
             await new Promise((resolve, reject) => {
-                db.run(`UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`, 
-                    [username, email, 1, cadetId], 
-                    (err) => {
+                db.run(userSql, userParams, (err) => {
                         if (err) {
                             console.error("[Profile Update] Error updating user credentials:", err);
                             reject(err);

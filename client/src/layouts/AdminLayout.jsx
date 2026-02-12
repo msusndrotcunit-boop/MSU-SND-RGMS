@@ -296,7 +296,7 @@ const AdminLayout = () => {
                                 alt="Profile" 
                                 className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                 onError={(e) => { 
-                                    e.target.src = '/api/admin/profile/image';
+                                    e.target.src = getProfilePicFallback('admin', 'admin');
                                 }}
                             />
                         </Link>

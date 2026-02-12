@@ -1207,10 +1207,15 @@ router.get('/analytics', authenticateToken, isAdmin, (req, res) => {
                 gradeRows.forEach(gradeData => {
                     const attendanceScore = totalTrainingDays > 0 ? (gradeData.attendance_present / totalTrainingDays) * 30 : 0;
                     
-                    // Aptitude: Base 100 + Merits - Demerits (Capped at 100)
+                    // Aptitude Calculation with 100-point ceiling system:
+                    // - All cadets start with 100 base points
+                    // - Demerits subtract from the base
+                    // - Merits add back BUT cannot exceed 100 ceiling
+                    // - Formula: min(100, 100 + merits - demerits)
+                    // - This means if a cadet has 100 points and gets merits, no change occurs (already at ceiling)
                     let rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
-                    if (rawAptitude > 100) rawAptitude = 100;
-                    if (rawAptitude < 0) rawAptitude = 0; 
+                    if (rawAptitude > 100) rawAptitude = 100; // Ceiling: Cannot exceed 100
+                    if (rawAptitude < 0) rawAptitude = 0;     // Floor: Cannot go below 0
                     
                     const aptitudeScore = rawAptitude * 0.3;
 
@@ -1550,10 +1555,15 @@ router.get('/cadets', (req, res) => {
 
                 const attendanceScore = safeTotalDays > 0 ? (present / safeTotalDays) * 30 : 0;
                 
-                // Aptitude: Base 100 + Merits - Demerits (Capped at 100, Floor 0)
+                // Aptitude Calculation with 100-point ceiling system:
+                // - All cadets start with 100 base points
+                // - Demerits subtract from the base
+                // - Merits add back BUT cannot exceed 100 ceiling
+                // - Formula: min(100, 100 + merits - demerits)
+                // - This means if a cadet has 100 points and gets merits, no change occurs (already at ceiling)
                 let rawAptitude = 100 + (cadet.merit_points || 0) - (cadet.demerit_points || 0);
-                if (rawAptitude > 100) rawAptitude = 100;
-                if (rawAptitude < 0) rawAptitude = 0;
+                if (rawAptitude > 100) rawAptitude = 100; // Ceiling: Cannot exceed 100
+                if (rawAptitude < 0) rawAptitude = 0;     // Floor: Cannot go below 0
                 const aptitudeScore = rawAptitude * 0.3;
 
                 // Subject: (Sum / 300) * 40%
@@ -2304,20 +2314,6 @@ router.get('/profile', authenticateToken, isAdmin, (req, res) => {
         res.json(row);
     });
 });
-
-// Helper to serve default placeholder (internal to admin routes for profile image)
-const sendDefaultPlaceholder = (res) => {
-    const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-    
-    if (!res.headersSent) {
-        res.writeHead(200, {
-            'Content-Type': 'image/svg+xml',
-            'Content-Length': Buffer.byteLength(defaultSvg),
-            'Cache-Control': 'public, max-age=3600'
-        });
-        res.end(defaultSvg);
-    }
-};
 
 // Get Current Admin Profile Picture
 router.get('/profile/image', authenticateToken, isAdmin, (req, res) => {
