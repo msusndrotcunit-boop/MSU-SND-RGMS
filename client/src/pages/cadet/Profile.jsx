@@ -140,22 +140,23 @@ const Profile = () => {
         if (isLocked) return;
         const file = e.target.files[0];
         if (file) {
-            // Reduced compression settings for faster upload
+            // Balanced compression - not too aggressive
             const options = {
-                maxSizeMB: 0.3,  // Reduced from 0.5
-                maxWidthOrHeight: 800,  // Reduced from 1024
+                maxSizeMB: 0.2,
+                maxWidthOrHeight: 700,
                 useWebWorker: true,
-                initialQuality: 0.8  // Added quality setting
+                initialQuality: 0.75
             };
 
             try {
-                console.log('[Profile] Compressing image...');
+                console.log('[Profile] Original file size:', file.size, 'bytes');
                 const compressedFile = await imageCompression(file, options);
-                console.log('[Profile] Image compressed:', compressedFile.size, 'bytes');
+                console.log('[Profile] Compressed to:', compressedFile.size, 'bytes');
                 setProfilePic(compressedFile);
                 setPreview(URL.createObjectURL(compressedFile));
             } catch (error) {
                 console.error("Image compression error:", error);
+                // Use original file if compression fails
                 setProfilePic(file);
                 setPreview(URL.createObjectURL(file));
             }
@@ -241,6 +242,9 @@ const Profile = () => {
             }
         } catch (err) {
             console.error('[Profile] Update error:', err);
+            console.error('[Profile] Error response:', err.response?.data);
+            console.error('[Profile] Error status:', err.response?.status);
+            
             const msg = err.response?.data?.message || err.message || 'Unknown error';
             
             // If it's a timeout and we have an image, try without the image
@@ -274,7 +278,7 @@ const Profile = () => {
                 }
             }
             
-            alert('Error updating profile: ' + msg);
+            alert('Error updating profile: ' + msg + '\n\nPlease check the console (F12) for more details.');
         }
     };
 
