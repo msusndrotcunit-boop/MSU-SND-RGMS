@@ -93,10 +93,21 @@ const Activities = () => {
         const files = Array.from(e.target.files);
         const processedImages = [];
         
-        const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
-
+        // Validate file size (20MB max)
+        const maxSize = 20 * 1024 * 1024; // 20MB in bytes
         for (const file of files) {
+            if (file.size > maxSize) {
+                alert(`File "${file.name}" is too large. Maximum size is 20MB.`);
+                continue;
+            }
+            
             try {
+                // For announcements, use lighter compression to preserve quality
+                // For activities, use standard compression
+                const options = activeTab === 'announcement' 
+                    ? { maxSizeMB: 5, maxWidthOrHeight: 2048, useWebWorker: true }
+                    : { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
+                
                 const compressed = await imageCompression(file, options);
                 processedImages.push(compressed);
             } catch (error) {
@@ -493,7 +504,7 @@ const Activities = () => {
                                                 />
                                             </label>
                                         </div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 5MB</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 20MB</p>
                                         {editMode && (
                                             <p className="text-xs text-blue-600 dark:text-blue-400">
                                                 Total: {existingImages.length + form.images.length}
