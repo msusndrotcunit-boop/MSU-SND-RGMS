@@ -937,51 +937,6 @@ const findCadet = async (row, allCadets = []) => {
         fullName: nameToMatch 
     });
     return null;
-};    // 2. Try Student ID (Fallback if extractFromRaw was modified to allow it, or manually passed)
-    const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
-    if (studentId) {
-        try {
-            const cadet = await getCadetByStudentId(studentId);
-            if (cadet) return cadet;
-        } catch (e) {}
-    }
-
-    // 3. Try Email (Fallback)
-    const email = row['Email'] || row['email'] || row['EMAIL'];
-    if (email) {
-        try {
-            const cadet = await getCadetByEmail(email);
-            if (cadet) return cadet;
-        } catch (e) {}
-    }
-
-    // 4. Try Exact Name (Fallback)
-    let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
-    let firstName = row['First Name'] || row['first_name'];
-    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'] || row['Name of Cadet'] || row['Full Name'];
-
-    if (!lastName && !firstName && fullName) {
-        if (fullName.includes(',')) {
-            const parts = fullName.split(',');
-            lastName = parts[0].trim();
-            firstName = parts[1].trim();
-        } else {
-            const parts = fullName.trim().split(/\s+/);
-            if (parts.length >= 2) {
-                lastName = parts[parts.length - 1]; 
-                firstName = parts.slice(0, -1).join(' ');
-            }
-        }
-    }
-
-    if (lastName && firstName) {
-        try {
-            const cadet = await getCadetByName(firstName, lastName);
-            if (cadet) return cadet;
-        } catch (e) {}
-    }
-
-    return null;
 };
 
 const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) => {
