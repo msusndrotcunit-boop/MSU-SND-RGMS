@@ -140,14 +140,18 @@ const Profile = () => {
         if (isLocked) return;
         const file = e.target.files[0];
         if (file) {
+            // Reduced compression settings for faster upload
             const options = {
-                maxSizeMB: 0.5,
-                maxWidthOrHeight: 1024,
+                maxSizeMB: 0.3,  // Reduced from 0.5
+                maxWidthOrHeight: 800,  // Reduced from 1024
                 useWebWorker: true,
+                initialQuality: 0.8  // Added quality setting
             };
 
             try {
+                console.log('[Profile] Compressing image...');
                 const compressedFile = await imageCompression(file, options);
+                console.log('[Profile] Image compressed:', compressedFile.size, 'bytes');
                 setProfilePic(compressedFile);
                 setPreview(URL.createObjectURL(compressedFile));
             } catch (error) {
@@ -182,7 +186,6 @@ const Profile = () => {
 
         // Validation for First Time Completion
         if (!isLocked) {
-            // Check if all required fields are filled
             const requiredFields = ['username', 'firstName', 'lastName', 'email', 'contactNumber', 'address', 'gender', 'course', 'yearLevel', 'schoolYear', 'battalion', 'company', 'platoon', 'cadetCourse', 'semester'];
             const missingFields = requiredFields.filter(field => !profile[field]);
             
@@ -190,8 +193,6 @@ const Profile = () => {
                 alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
                 return;
             }
-
-            // Profile picture optional
         }
 
         const formData = new FormData();
@@ -212,61 +213,35 @@ const Profile = () => {
         }
 
         try {
+            console.log('[Profile] Submitting profile update...');
             const res = await axios.put('/api/cadet/profile', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 timeout: 60000
             });
             
+            console.log('[Profile] Update response:', res.data);
+            
+            // Clear cache immediately
+            try {
+                await cacheSingleton('profiles', user?.cadetId ? `cadet:${user.cadetId}` : 'cadet', null);
+                console.log('[Profile] Cache cleared');
+            } catch (e) {
+                console.error('[Profile] Cache clear error:', e);
+            }
+            
             if (!isLocked) {
                 alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials.');
-                try { await cacheSingleton('profiles', user?.cadetId ? `cadet:${user.cadetId}` : 'cadet', null); } catch {}
                 logout();
                 navigate('/login');
             } else {
                 alert('Profile updated successfully!');
-                if (res.data.profilePic) {
-                    let pic = res.data.profilePic;
-                    if (typeof pic === 'string') {
-                        if (pic.startsWith('http') || pic.startsWith('data:')) {
-                            setPreview(pic);
-                        } else {
-                            if (!pic.startsWith('/')) pic = '/' + pic;
-                            const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
-                            const baseB = import.meta.env.VITE_API_URL || '';
-                            const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
-                            const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
-                            setPreview(`${selectedBase.replace(/\/+$/,'')}${pic}`);
-                        }
-                    }
-                }
+                
+                // Refresh profile data immediately
+                await fetchProfile();
             }
         } catch (err) {
-            const msg = err.response?.data?.message || err.message || '';
-            const isTimeout = msg.toLowerCase().includes('timeout') || err.code === 'ECONNABORTED';
-            if (isTimeout && profilePic) {
-                try {
-                    const retryData = new FormData();
-                    Object.keys(profile).forEach(key => retryData.append(key, profile[key]));
-                    if (!isLocked) retryData.append('is_profile_completed', 'true');
-                    const res2 = await axios.put('/api/cadet/profile', retryData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                        timeout: 60000
-                    });
-                    if (!isLocked) {
-                        alert('Profile completed successfully! You will now be logged out. Please sign in with your new credentials.');
-                        try { await cacheSingleton('profiles', user?.cadetId ? `cadet:${user.cadetId}` : 'cadet', null); } catch {}
-                        logout();
-                        navigate('/login');
-                    } else {
-                        alert('Profile updated successfully! (Saved without photo due to timeout)');
-                    }
-                    return;
-                } catch (err2) {
-                    const msg2 = err2.response?.data?.message || err2.message;
-                    alert('Error updating profile after retry: ' + msg2);
-                    return;
-                }
-            }
+            console.error('[Profile] Update error:', err);
+            const msg = err.response?.data?.message || err.message || 'Unknown error';
             alert('Error updating profile: ' + msg);
         }
     };

@@ -259,13 +259,18 @@ const uploadProfilePic = (req, res, next) => {
     });
 };
 
-router.put('/profile', uploadProfilePic, (req, res) => {
+router.put('/profile', uploadProfilePic, async (req, res) => {
     const cadetId = req.user.cadetId;
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
 
-    // 1. Check if profile is already locked
-    db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [cadetId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
+    try {
+        // 1. Check if profile is already locked
+        const row = await new Promise((resolve, reject) => {
+            db.get("SELECT is_profile_completed FROM cadets WHERE id = ?", [cadetId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
         
         // Handle both PostgreSQL (true/false) and SQLite (1/0) boolean values
         const isLocked = row && (row.is_profile_completed === true || row.is_profile_completed === 1 || row.is_profile_completed === '1');
@@ -275,19 +280,15 @@ router.put('/profile', uploadProfilePic, (req, res) => {
         }
 
         const { 
-            username, // New credential
-            firstName, middleName, lastName, suffixName,
+            username, firstName, middleName, lastName, suffixName,
             email, contactNumber, address,
             course, yearLevel, schoolYear,
             battalion, company, platoon,
-            cadetCourse, semester,
-            gender,
-            is_profile_completed // Frontend sends this as 'true'
+            cadetCourse, semester, gender,
+            is_profile_completed
         } = req.body;
+        
         const isComplete = (is_profile_completed === 'true' || is_profile_completed === true || is_profile_completed === 1 || is_profile_completed === '1');
-
-        // Ensure optional fields are null if undefined/empty strings (optional)
-        // But mainly ensure they are NOT undefined for the DB driver
         const safeParam = (val) => val === undefined ? null : val;
 
         // 2. Mandatory Field Validation (Only if completing profile)
@@ -303,156 +304,136 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                 return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
             }
 
-            // Check for duplicate username/email BEFORE updating
-            const checkUsernameSql = `SELECT id, cadet_id, is_archived FROM users WHERE username = ? LIMIT 1`;
-            const checkEmailSql = `SELECT id, cadet_id, is_archived FROM users WHERE email = ? LIMIT 1`;
-            db.get(checkUsernameSql, [username], (uErr, uRow) => {
-                if (uErr) return res.status(500).json({ message: uErr.message });
-                db.get(checkEmailSql, [email], (eErr, eRow) => {
-                    if (eErr) return res.status(500).json({ message: eErr.message });
-                    
-                    const usernameConflict = uRow && uRow.cadet_id != cadetId;
-                    const emailConflict = eRow && eRow.cadet_id != cadetId;
-                    if (usernameConflict || emailConflict) {
-                        const conflictFields = [
-                            usernameConflict ? 'username' : null,
-                            emailConflict ? 'email' : null
-                        ].filter(Boolean);
-                        return res.status(409).json({
-                            message: `The following fields are already taken by another user: ${conflictFields.join(', ')}`,
-                            conflicts: {
-                                username: usernameConflict ? { userId: uRow.id, cadetId: uRow.cadet_id, is_archived: !!uRow.is_archived } : null,
-                                email: emailConflict ? { userId: eRow.id, cadetId: eRow.cadet_id, is_archived: !!eRow.is_archived } : null
-                            }
-                        });
-                    }
-                    proceedWithUpdate();
+            // Check for duplicate username/email
+            const checkUsername = await new Promise((resolve, reject) => {
+                db.get(`SELECT id, cadet_id FROM users WHERE username = ? LIMIT 1`, [username], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
                 });
             });
-        } else {
-            proceedWithUpdate();
+            
+            const checkEmail = await new Promise((resolve, reject) => {
+                db.get(`SELECT id, cadet_id FROM users WHERE email = ? LIMIT 1`, [email], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            const usernameConflict = checkUsername && checkUsername.cadet_id != cadetId;
+            const emailConflict = checkEmail && checkEmail.cadet_id != cadetId;
+            
+            if (usernameConflict || emailConflict) {
+                const conflictFields = [
+                    usernameConflict ? 'username' : null,
+                    emailConflict ? 'email' : null
+                ].filter(Boolean);
+                return res.status(409).json({
+                    message: `The following fields are already taken: ${conflictFields.join(', ')}`
+                });
+            }
         }
 
-        function proceedWithUpdate() {
-            let sql = `UPDATE cadets SET 
-                first_name=?, middle_name=?, last_name=?, suffix_name=?,
-                email=?, contact_number=?, address=?,
-                course=?, year_level=?, school_year=?,
-                battalion=?, company=?, platoon=?,
-                cadet_course=?, semester=?, gender=?, corp_position=?`;
-            
-            const params = [
-                safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
-                safeParam(email), safeParam(contactNumber), safeParam(address),
-                safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
-                safeParam(battalion), safeParam(company), safeParam(platoon),
-                safeParam(cadetCourse), safeParam(semester), safeParam(gender), safeParam(req.body.corpPosition)
-            ];
+        // 3. Build UPDATE query
+        let sql = `UPDATE cadets SET 
+            first_name=?, middle_name=?, last_name=?, suffix_name=?,
+            email=?, contact_number=?, address=?,
+            course=?, year_level=?, school_year=?,
+            battalion=?, company=?, platoon=?,
+            cadet_course=?, semester=?, gender=?, corp_position=?`;
+        
+        const params = [
+            safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
+            safeParam(email), safeParam(contactNumber), safeParam(address),
+            safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
+            safeParam(battalion), safeParam(company), safeParam(platoon),
+            safeParam(cadetCourse), safeParam(semester), safeParam(gender), safeParam(req.body.corpPosition)
+        ];
 
-            if (req.file) {
-                sql += `, profile_pic=?`;
-                let imageUrl = req.file.secure_url || req.file.url || req.file.path || '';
-                
-                // If using local storage (no http prefix), normalize the path
-                if (imageUrl && !imageUrl.startsWith('http')) {
-                    imageUrl = imageUrl.replace(/\\/g, '/');
-                    const uploadsIndex = imageUrl.indexOf('/uploads/');
-                    if (uploadsIndex !== -1) {
-                        imageUrl = imageUrl.substring(uploadsIndex);
-                    } else if (imageUrl.includes('uploads/')) {
-                        const parts = imageUrl.split('uploads/');
-                        imageUrl = '/uploads/' + parts[parts.length - 1];
-                    }
+        let imageUrl = null;
+        if (req.file) {
+            imageUrl = req.file.secure_url || req.file.url || req.file.path || '';
+            
+            // Normalize local paths
+            if (imageUrl && !imageUrl.startsWith('http')) {
+                imageUrl = imageUrl.replace(/\\/g, '/');
+                const uploadsIndex = imageUrl.indexOf('/uploads/');
+                if (uploadsIndex !== -1) {
+                    imageUrl = imageUrl.substring(uploadsIndex);
+                } else if (imageUrl.includes('uploads/')) {
+                    const parts = imageUrl.split('uploads/');
+                    imageUrl = '/uploads/' + parts[parts.length - 1];
                 }
-                params.push(imageUrl);
-            }
-    
-            // Set completion status if requested
-            if (isComplete) {
-                sql += `, is_profile_completed=?`;
-                // Use TRUE for PostgreSQL compatibility
-                params.push(true);
-                // Also mark cadet as verified
-                sql += `, status=?`;
-                params.push('Verified');
             }
             
-            sql += ` WHERE id=?`;
-            params.push(cadetId);
-    
+            sql += `, profile_pic=?`;
+            params.push(imageUrl);
+            
+            console.log('[Profile Update] Image uploaded:', imageUrl);
+        }
+
+        // Set completion status if requested
+        if (isComplete) {
+            sql += `, is_profile_completed=?, status=?`;
+            params.push(true, 'Verified');
+        }
+        
+        sql += ` WHERE id=?`;
+        params.push(cadetId);
+
+        // 4. Execute UPDATE
+        await new Promise((resolve, reject) => {
             db.run(sql, params, (err) => {
                 if (err) {
                     console.error("DB Update Error (Cadet Profile):", err);
-                    console.error("SQL:", sql);
-                    console.error("Params:", params);
-                    return res.status(500).json({ message: "Database Error: " + err.message });
-                }
-
-                // Notify Admin
-                const notifMsg = `${firstName} ${lastName} has updated their profile.`;
-                db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
-                    [notifMsg, 'profile_update'], 
-                    (nErr) => {
-                         if (nErr) console.error("Error creating profile update notification:", nErr);
-                    }
-                );
-    
-                // 3. Update Users Table (Username/Email sync)
-                if (username && email) {
-                    const userSql = `UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`;
-                    db.run(userSql, [username, email, 1, cadetId], (uErr) => {
-                        if (uErr) console.error("Error updating user credentials:", uErr);
-                        
-                        let returnPath = null;
-                        if (req.file) {
-                             returnPath = req.file.secure_url || req.file.url || req.file.path;
-                             if (returnPath && !returnPath.startsWith('http')) {
-                                 returnPath = returnPath.replace(/\\/g, '/');
-                                 const uploadsIndex = returnPath.indexOf('/uploads/');
-                                 if (uploadsIndex !== -1) {
-                                     returnPath = returnPath.substring(uploadsIndex);
-                                 } else if (returnPath.includes('uploads/')) {
-                                     const parts = returnPath.split('uploads/');
-                                     returnPath = '/uploads/' + parts[parts.length - 1];
-                                 }
-                             }
-                        }
-
-                        res.json({ 
-                            message: 'Profile updated successfully', 
-                            profilePic: returnPath 
-                        });
-                        try {
-                            broadcastEvent({ type: 'cadet_profile_updated', cadetId });
-                        } catch {}
-                    });
+                    reject(err);
                 } else {
-                    let returnPath = null;
-                    if (req.file) {
-                         returnPath = req.file.secure_url || req.file.url || req.file.path;
-                         if (returnPath && !returnPath.startsWith('http')) {
-                             returnPath = returnPath.replace(/\\/g, '/');
-                             const uploadsIndex = returnPath.indexOf('/uploads/');
-                             if (uploadsIndex !== -1) {
-                                 returnPath = returnPath.substring(uploadsIndex);
-                             } else if (returnPath.includes('uploads/')) {
-                                 const parts = returnPath.split('uploads/');
-                                 returnPath = '/uploads/' + parts[parts.length - 1];
-                             }
-                         }
-                    }
-
-                    res.json({ 
-                        message: 'Profile updated successfully', 
-                        profilePic: returnPath 
-                    });
-                    try {
-                        broadcastEvent({ type: 'cadet_profile_updated', cadetId });
-                    } catch {}
+                    resolve();
                 }
             });
+        });
+
+        // 5. Update Users Table
+        if (username && email) {
+            await new Promise((resolve, reject) => {
+                db.run(`UPDATE users SET username=?, email=?, is_approved=? WHERE cadet_id=?`, 
+                    [username, email, 1, cadetId], 
+                    (err) => {
+                        if (err) {
+                            console.error("Error updating user credentials:", err);
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    }
+                );
+            });
         }
-    });
+
+        // 6. Notify Admin
+        const notifMsg = `${firstName} ${lastName} has updated their profile.`;
+        db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)`, 
+            [notifMsg, 'profile_update'], 
+            (err) => {
+                if (err) console.error("Error creating notification:", err);
+            }
+        );
+
+        // 7. Broadcast event
+        try {
+            broadcastEvent({ type: 'cadet_profile_updated', cadetId });
+        } catch {}
+
+        // 8. Return success with the image path
+        res.json({ 
+            message: 'Profile updated successfully', 
+            profilePic: imageUrl,
+            success: true
+        });
+        
+    } catch (err) {
+        console.error("Profile Update Error:", err);
+        res.status(500).json({ message: "Error updating profile: " + err.message });
+    }
 });
 
 router.get('/activities', (req, res) => {

@@ -38,9 +38,10 @@ if (isCloudinaryConfigured) {
                 folder: 'rotc-grading-system',
                 allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'pdf', 'doc', 'docx'],
                 resource_type: 'auto',
+                // Optimized transformation for faster upload
                 transformation: isImage ? [
-                    { width: 500, height: 500, crop: 'limit' },
-                    { quality: 'auto' },
+                    { width: 400, height: 400, crop: 'limit' },  // Reduced from 500x500
+                    { quality: 'auto:low' },  // Changed from auto to auto:low for faster upload
                     { fetch_format: 'auto' }
                 ] : undefined
             };
