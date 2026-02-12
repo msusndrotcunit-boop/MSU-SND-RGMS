@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Lock, MessageCircle, HelpCircle, Bell, Mail, PieChart, Calendar, Trophy } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
@@ -345,6 +345,23 @@ const StaffLayout = () => {
                             >
                                 <Calendar size={20} />
                                 <span>Activities</span>
+                                {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
+                            </Link>
+
+                            <Link
+                                to={user?.isProfileCompleted ? "/staff/achievements" : "#"}
+                                onClick={(e) => {
+                                    if (!user?.isProfileCompleted) e.preventDefault();
+                                    setIsSidebarOpen(false);
+                                }}
+                                className={clsx(
+                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    location.pathname === '/staff/achievements' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
+                                    !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                                <Trophy size={20} />
+                                <span>Achievements</span>
                                 {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                             </Link>
                         </>

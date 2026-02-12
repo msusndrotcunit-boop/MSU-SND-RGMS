@@ -21,6 +21,7 @@ const AdminArchivedCadets = lazy(() => import('./pages/admin/ArchivedCadets'));
 const AdminGrading = lazy(() => import('./pages/admin/Grading'));
 const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
 const AdminActivities = lazy(() => import('./pages/admin/Activities'));
+const AdminAchievements = lazy(() => import('./pages/admin/Achievements'));
 const AdminDataAnalysis = lazy(() => import('./pages/admin/DataAnalysis'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
@@ -42,6 +43,7 @@ const AskAdmin = lazy(() => import('./pages/AskAdmin'));
 const StaffLayout = lazy(() => import('./layouts/StaffLayout'));
 const StaffHome = lazy(() => import('./pages/staff/Home'));
 const StaffDashboard = lazy(() => import('./pages/staff/Dashboard'));
+const StaffAchievements = lazy(() => import('./pages/staff/Achievements'));
 const StaffProfile = lazy(() => import('./pages/staff/Profile'));
 const StaffOnboarding = lazy(() => import('./pages/staff/Onboarding'));
 const StaffCommunication = lazy(() => import('./pages/staff/Communication'));
@@ -82,6 +84,7 @@ function App() {
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
                 <Route path="activities" element={<AdminActivities />} />
+                <Route path="achievements" element={<AdminAchievements />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="messages" element={<AdminMessages />} />
@@ -114,6 +117,7 @@ function App() {
                 <Route path="unit-dashboard" element={<AdminDashboard />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
                 <Route path="activities" element={<AdminActivities />} />
+                <Route path="achievements" element={<StaffAchievements />} />
                 <Route path="profile" element={<StaffProfile />} />
                 <Route path="profile-completion" element={<StaffOnboarding />} />
                 <Route path="communication" element={<StaffCommunication />} />

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../database');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -135,7 +135,7 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
 });
 
 // Get system-wide recognition statistics
-router.get('/stats', authenticateToken, isAdmin, async (req, res) => {
+router.get('/stats', authenticateToken, isAdminOrPrivilegedStaff, async (req, res) => {
     try {
         const stats = await new Promise((resolve, reject) => {
             const sql = `

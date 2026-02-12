@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail, Activity, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, LogOut, UserCheck, User, Menu, X, ClipboardList, Calculator, UserCog, Settings, QrCode, ChevronDown, ChevronRight, PieChart, MessageSquare, Bell, Search, Mail, Activity, AlertCircle, Trophy } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
@@ -250,6 +250,7 @@ const AdminLayout = () => {
             ]
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
+        { path: '/admin/achievements', label: 'Achievements', icon: Trophy },
         { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];
