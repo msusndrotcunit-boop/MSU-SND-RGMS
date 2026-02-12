@@ -1163,7 +1163,7 @@ router.put('/system-settings', authenticateToken, isAdmin, (req, res) => {
 // --- Analytics ---
 
 // Get Dashboard Analytics
-router.get('/analytics', authenticateToken, isAdmin, (req, res) => {
+router.get('/analytics', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
     const analyticsData = {
         attendance: [],
         grades: { passed: 0, failed: 0, incomplete: 0 }
