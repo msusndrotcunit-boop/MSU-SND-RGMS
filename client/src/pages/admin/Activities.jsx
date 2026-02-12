@@ -330,33 +330,35 @@ const Activities = () => {
             {/* Create/Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-                    <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                                {editMode ? 'Edit' : 'Add New'} {activeTab === 'activity' ? 'Activity' : 'Announcement'}
+                    <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-[95vw] sm:max-w-md md:max-w-lg p-3 sm:p-4 my-4 sm:my-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">
+                                {editMode ? 'Edit' : 'Add'} {activeTab === 'activity' ? 'Activity' : 'Announcement'}
                             </h3>
-                            <button onClick={() => { setIsModalOpen(false); resetForms(); }}><X size={24} /></button>
+                            <button onClick={() => { setIsModalOpen(false); resetForms(); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                                <X size={20} />
+                            </button>
                         </div>
                         
                         {/* Tab Toggle inside Modal */}
-                        <div className="flex space-x-4 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                        <div className="flex space-x-2 sm:space-x-4 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
                              <button 
                                 onClick={() => setActiveTab('activity')}
-                                className={`font-medium ${activeTab === 'activity' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
+                                className={`font-medium text-xs sm:text-sm ${activeTab === 'activity' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
                              >Activity</button>
                              <button 
                                 onClick={() => setActiveTab('announcement')}
-                                className={`font-medium ${activeTab === 'announcement' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
+                                className={`font-medium text-xs sm:text-sm ${activeTab === 'announcement' ? 'text-[var(--primary-color)]' : 'text-gray-500 dark:text-gray-400'}`}
                              >Announcement</button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-3">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Title</label>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Title</label>
                                 <input 
                                     type="text" 
                                     required 
-                                    className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={form.title}
                                     onChange={e => setForm({...form, title: e.target.value})}
                                 />
@@ -364,71 +366,71 @@ const Activities = () => {
                             
                             {activeTab === 'activity' ? (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
                                     <textarea 
                                         required 
-                                        className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                        rows="4"
+                                        className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                        rows="3"
                                         value={form.description}
                                         onChange={e => setForm({...form, description: e.target.value})}
                                     ></textarea>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHAT</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.what} onChange={e => setAnnouncement({...announcement, what: e.target.value})} />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                                    <div className="col-span-1 sm:col-span-2">
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">WHAT</label>
+                                        <input type="text" required className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.what} onChange={e => setAnnouncement({...announcement, what: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHEN</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.when} onChange={e => setAnnouncement({...announcement, when: e.target.value})} />
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">WHEN</label>
+                                        <input type="text" required className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.when} onChange={e => setAnnouncement({...announcement, when: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHERE</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.where} onChange={e => setAnnouncement({...announcement, where: e.target.value})} />
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">WHERE</label>
+                                        <input type="text" required className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.where} onChange={e => setAnnouncement({...announcement, where: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">WHO</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.who} onChange={e => setAnnouncement({...announcement, who: e.target.value})} />
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">WHO</label>
+                                        <input type="text" required className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.who} onChange={e => setAnnouncement({...announcement, who: e.target.value})} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">HOW</label>
-                                        <input type="text" required className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.how} onChange={e => setAnnouncement({...announcement, how: e.target.value})} />
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">HOW</label>
+                                        <input type="text" required className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" value={announcement.how} onChange={e => setAnnouncement({...announcement, how: e.target.value})} />
                                     </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">NOTE</label>
-                                        <textarea className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.note} onChange={e => setAnnouncement({...announcement, note: e.target.value})} />
+                                    <div className="col-span-1 sm:col-span-2">
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">NOTE</label>
+                                        <textarea className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.note} onChange={e => setAnnouncement({...announcement, note: e.target.value})} />
                                     </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">REMINDERS</label>
-                                        <textarea className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.reminders} onChange={e => setAnnouncement({...announcement, reminders: e.target.value})} />
+                                    <div className="col-span-1 sm:col-span-2">
+                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">REMINDERS</label>
+                                        <textarea className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100" rows="2" value={announcement.reminders} onChange={e => setAnnouncement({...announcement, reminders: e.target.value})} />
                                     </div>
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Date</label>
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Date</label>
                                 <input 
                                     type="date" 
                                     required 
-                                    className="mt-1 w-full border rounded p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    className="w-full border rounded p-2 text-sm bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                                     value={form.date}
                                     onChange={e => setForm({...form, date: e.target.value})}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                     Photos (Min: {activeTab === 'activity' ? 3 : 1})
                                 </label>
                                 
                                 {/* Existing Images (Edit Mode) */}
                                 {editMode && existingImages.length > 0 && (
-                                    <div className="mt-2 mb-4">
+                                    <div className="mt-2 mb-3">
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Existing Images:</p>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-3 gap-2">
                                             {existingImages.map((imgSrc, index) => (
-                                                <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
+                                                <div key={index} className="relative h-16 sm:h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
                                                     <img 
                                                         src={imgSrc} 
                                                         alt="existing" 
@@ -447,15 +449,15 @@ const Activities = () => {
                                     </div>
                                 )}
                                 
-                                <div className="mt-1 flex items-center justify-center px-3 sm:px-6 pt-4 pb-5 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
+                                <div className="mt-2 flex items-center justify-center px-2 sm:px-4 pt-3 pb-4 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
-                                        <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                                        <div className="flex text-sm text-gray-600 dark:text-gray-300">
+                                        <Upload className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-gray-400 dark:text-gray-500" />
+                                        <div className="flex text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                                             <label 
                                                 htmlFor="file-upload"
                                                 className="relative cursor-pointer bg-white dark:bg-gray-900 rounded-md font-medium text-[var(--primary-color)] hover:opacity-90 focus-within:outline-none"
                                             >
-                                                <span>{editMode ? 'Add More Files' : 'Upload files'}</span>
+                                                <span>{editMode ? 'Add More' : 'Upload'}</span>
                                                 <input 
                                                     id="file-upload"
                                                     type="file" 
@@ -470,7 +472,7 @@ const Activities = () => {
                                         <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 5MB</p>
                                         {editMode && (
                                             <p className="text-xs text-blue-600 dark:text-blue-400">
-                                                Total: {existingImages.length + form.images.length} images
+                                                Total: {existingImages.length + form.images.length}
                                             </p>
                                         )}
                                     </div>
@@ -478,11 +480,11 @@ const Activities = () => {
                                 
                                 {/* New Images */}
                                 {form.images.length > 0 && (
-                                    <div className="mt-4">
+                                    <div className="mt-3">
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">New Images:</p>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-3 gap-2">
                                             {form.images.map((img, index) => (
-                                                <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
+                                                <div key={index} className="relative h-16 sm:h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
                                                     <img 
                                                         src={URL.createObjectURL(img)} 
                                                         alt="preview" 
@@ -502,19 +504,19 @@ const Activities = () => {
                                 )}
                             </div>
 
-                            <div className="flex justify-end space-x-3 pt-4 border-t">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                                 <button 
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 border rounded text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    className="px-3 py-1.5 sm:px-4 sm:py-2 border rounded text-xs sm:text-sm text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[var(--primary-color)] text-white rounded text-xs sm:text-sm hover:opacity-90"
                                 >
-                                    {editMode ? 'Update' : 'Post'} {activeTab === 'activity' ? 'Activity' : 'Announcement'}
+                                    {editMode ? 'Update' : 'Post'}
                                 </button>
                             </div>
                         </form>
