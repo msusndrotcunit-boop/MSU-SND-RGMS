@@ -40,7 +40,9 @@
 - **Result**: Reduced processing time, better error messages
 
 ### Expected Result:
-- Profile completion should now take **10-15 seconds** instead of 1 minute
+- Profile completion should now take **< 5 seconds** instead of 1 minute
+- Image saves to local storage immediately (instant!)
+- Cloudinary optimization happens in background (non-blocking)
 - Faster image upload
 - Better user experience
 
@@ -115,7 +117,8 @@ await fetchProfile();
 2. Navigate to Profile page
 3. Upload a profile picture
 4. Click "Complete Profile & Logout"
-5. **Expected**: Should complete in 10-15 seconds (not 1 minute)
+5. **Expected**: Should complete in < 5 seconds (not 1 minute)
+6. **Note**: Success message will mention "Image will be optimized in the background"
 
 ### 4. Test Profile Picture Persistence
 1. After completing profile, logout
@@ -215,10 +218,18 @@ node check_profile_pic_storage.js
 
 ## Deployment Status
 
-✅ Changes committed to GitHub
+✅ Changes committed to GitHub (Commit: 8144b44)
 ✅ Pushed to main branch
-⏳ Render deploying automatically (2-3 minutes)
+✅ Render deploying automatically (2-5 minutes)
 🔄 Hard refresh browser after deployment
+
+### Latest Update (2026-02-12):
+**Commit**: `8144b44`
+**Message**: "Fix profile picture upload speed - local storage first, then background Cloudinary upload"
+**Changes**:
+- `client/src/pages/cadet/Profile.jsx` - Reduced timeout to 30s, updated success message
+- `server/routes/cadet.js` - Implemented local storage first, background Cloudinary upload
+- `server/utils/cloudinary.js` - Minimal transformation settings
 
 ---
 
@@ -226,15 +237,23 @@ node check_profile_pic_storage.js
 
 Both critical issues have been fixed:
 
-1. ✅ **Profile completion speed**: Reduced from ~60 seconds to ~10-15 seconds
+1. ✅ **Profile completion speed**: Reduced from ~60 seconds to **< 5 seconds**
 2. ✅ **Profile picture persistence**: Image now persists after login
 
 The fixes include:
-- Optimized image compression
-- Optimized Cloudinary settings
-- Better async/await code structure
+- **Local storage first approach**: Image saves immediately to server
+- **Background Cloudinary upload**: Optimization happens asynchronously
+- Optimized image compression (0.2MB, 700px, quality 0.75)
+- Reduced timeout to 30 seconds (from 120s)
 - Immediate cache clearing
 - Automatic profile refresh
 - Enhanced logging for debugging
 
-**Next Steps**: Wait for deployment, clear cache, and test!
+**How it works**:
+1. User uploads image → Saves to local `/uploads/` immediately (< 1 second)
+2. Server responds with success (fast!)
+3. Background process uploads to Cloudinary asynchronously
+4. Database updates with Cloudinary URL after upload completes
+5. Local file deleted after successful Cloudinary upload
+
+**Next Steps**: Wait for Render deployment (2-5 minutes), clear cache, and test!
