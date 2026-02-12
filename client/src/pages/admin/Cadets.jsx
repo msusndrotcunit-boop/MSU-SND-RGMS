@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin, ChevronLeft, Unlock } from 'lucide-react';
+import { Pencil, X, FileDown, Upload, Plus, RefreshCw, Search, Trash2, Eye, Camera, User, Sun, Moon, MapPin, ChevronLeft, Unlock, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import imageCompression from 'browser-image-compression';
@@ -96,6 +96,15 @@ const Cadets = () => {
     
     // Filter State
     const [selectedCadetCourse, setSelectedCadetCourse] = useState('All');
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(() => {
+        const saved = sessionStorage.getItem('cadet_filters_expanded');
+        if (saved !== null) return saved === 'true';
+        return window.innerWidth >= 768;
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem('cadet_filters_expanded', isFiltersExpanded);
+    }, [isFiltersExpanded]);
     
     // Bulk Selection State
     const [selectedCadets, setSelectedCadets] = useState([]);
@@ -720,51 +729,78 @@ const Cadets = () => {
                 </div>
             </div>
 
-            {/* Cadet Course Tabs */}
-            <div className="flex space-x-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-                <button
-                    onClick={() => setSelectedCadetCourse('All')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedCadetCourse === 'All'
-                            ? 'bg-blue-600 text-white shadow'
-                            : 'bg-white text-gray-600 border hover:bg-gray-50'
-                    }`}
-                >
-                    All Cadets
-                </button>
-                <button
-                    onClick={() => setSelectedCadetCourse('Unverified')}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedCadetCourse === 'Unverified'
-                            ? 'bg-yellow-500 text-white shadow'
-                            : 'bg-white text-gray-600 border hover:bg-gray-50'
-                    }`}
-                >
-                    Unverified
-                </button>
-                <button
-                    onClick={() => { setSelectedCadetCourse('Archived'); fetchArchivedCadets(); setSelectedCadets([]); }}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                        selectedCadetCourse === 'Archived'
-                            ? 'bg-gray-700 text-white shadow'
-                            : 'bg-white text-gray-600 border hover:bg-gray-50'
-                    }`}
-                >
-                    Archived
-                </button>
-                {CADET_COURSE_OPTIONS.map(course => (
+            {/* Cadet Course Tabs - Collapsible on Mobile */}
+            <div className="mb-4">
+                <div className="flex items-center justify-between md:hidden mb-2">
                     <button
-                        key={course}
-                        onClick={() => setSelectedCadetCourse(course)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                            selectedCadetCourse === course
-                                ? 'bg-blue-600 text-white shadow'
-                                : 'bg-white text-gray-600 border hover:bg-gray-50'
-                        }`}
+                        onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm text-gray-700 font-medium min-w-[44px] min-h-[44px]"
+                        aria-expanded={isFiltersExpanded}
+                        aria-controls="cadet-filter-tabs"
                     >
-                        {course}
+                        <Filter size={18} />
+                        <span>{isFiltersExpanded ? 'Hide Filters' : 'Show Filters'}</span>
+                        {isFiltersExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                     </button>
-                ))}
+                    {selectedCadetCourse !== 'All' && !isFiltersExpanded && (
+                        <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                            {selectedCadetCourse}
+                        </span>
+                    )}
+                </div>
+
+                <div 
+                    id="cadet-filter-tabs"
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                        isFiltersExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'
+                    }`}
+                >
+                    <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide flex-wrap md:flex-nowrap gap-y-2 md:gap-y-0">
+                        <button
+                            onClick={() => setSelectedCadetCourse('All')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[40px] flex items-center ${
+                                selectedCadetCourse === 'All'
+                                    ? 'bg-blue-600 text-white shadow'
+                                    : 'bg-white text-gray-600 border hover:bg-gray-50'
+                            }`}
+                        >
+                            All Cadets
+                        </button>
+                        <button
+                            onClick={() => setSelectedCadetCourse('Unverified')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[40px] flex items-center ${
+                                selectedCadetCourse === 'Unverified'
+                                    ? 'bg-yellow-500 text-white shadow'
+                                    : 'bg-white text-gray-600 border hover:bg-gray-50'
+                            }`}
+                        >
+                            Unverified
+                        </button>
+                        <button
+                            onClick={() => { setSelectedCadetCourse('Archived'); fetchArchivedCadets(); setSelectedCadets([]); }}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[40px] flex items-center ${
+                                selectedCadetCourse === 'Archived'
+                                    ? 'bg-gray-700 text-white shadow'
+                                    : 'bg-white text-gray-600 border hover:bg-gray-50'
+                            }`}
+                        >
+                            Archived
+                        </button>
+                        {CADET_COURSE_OPTIONS.map(course => (
+                            <button
+                                key={course}
+                                onClick={() => setSelectedCadetCourse(course)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[40px] flex items-center ${
+                                    selectedCadetCourse === course
+                                        ? 'bg-blue-600 text-white shadow'
+                                        : 'bg-white text-gray-600 border hover:bg-gray-50'
+                                }`}
+                            >
+                                {course}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
