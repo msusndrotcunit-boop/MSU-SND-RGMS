@@ -140,9 +140,12 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Middleware
+const { responseTime } = require('./middleware/performance');
+
 app.use(compression());
 app.use(cors());
 app.use(express.json());
+app.use(responseTime); // Add response time tracking
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     maxAge: '7d',
     setHeaders: (res, filePath) => {
