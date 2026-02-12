@@ -460,17 +460,28 @@ const Grading = () => {
 
     const handleLedgerSubmit = async (e) => {
         e.preventDefault();
+        
+        console.log('[Grading] Adding merit/demerit log:', {
+            cadetId: selectedCadet.id,
+            type: ledgerForm.type,
+            points: ledgerForm.points,
+            reason: ledgerForm.reason
+        });
+        
         try {
-            await axios.post('/api/admin/merit-logs', {
+            const response = await axios.post('/api/admin/merit-logs', {
                 cadetId: selectedCadet.id,
                 ...ledgerForm
             });
+            console.log('[Grading] Log added successfully:', response.data);
             fetchLedgerLogs(selectedCadet.id);
             await cacheSingleton('admin', 'cadets_list', null); // Sync with admin list
             fetchCadets(true); // Update total points
             setLedgerForm({ type: 'merit', points: 0, reason: '' });
         } catch (err) {
-            alert('Error adding log');
+            console.error('[Grading] Error adding log:', err);
+            console.error('[Grading] Error response:', err.response?.data);
+            alert('Error adding log: ' + (err.response?.data?.message || err.message));
         }
     };
 

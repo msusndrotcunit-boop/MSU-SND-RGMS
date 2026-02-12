@@ -2548,7 +2548,12 @@ router.post('/ledger/backfill', authenticateToken, isAdmin, async (req, res) => 
 // Add Log Entry (and update Total)
 router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
     const { cadetId, type, points, reason } = req.body;
+    
+    console.log('[POST /merit-logs] Request received:', { cadetId, type, points, reason });
+    
     const issuerUserId = req.user && req.user.id ? Number(req.user.id) : null;
+    console.log('[POST /merit-logs] Issuer user ID:', issuerUserId);
+    
     const getIssuerName = () => new Promise((resolve) => {
         if (!issuerUserId) return resolve(null);
         db.get(`SELECT id, username, staff_id FROM users WHERE id = ?`, [issuerUserId], (uErr, uRow) => {
@@ -2566,14 +2571,20 @@ router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
     });
     
     getIssuerName().then((issuerName) => {
+        console.log('[POST /merit-logs] Issuer name resolved:', issuerName);
         db.run('BEGIN', [], (beginErr) => {
-            if (beginErr) return res.status(500).json({ message: beginErr.message });
+            if (beginErr) {
+                console.error('[POST /merit-logs] BEGIN transaction error:', beginErr);
+                return res.status(500).json({ message: beginErr.message });
+            }
             db.run(`INSERT INTO merit_demerit_logs (cadet_id, type, points, reason, issued_by_user_id, issued_by_name) VALUES (?, ?, ?, ?, ?, ?)`, 
                 [cadetId, type, points, reason, issuerUserId, issuerName], 
                 function(err) {
                 if (err) {
+                    console.error('[POST /merit-logs] INSERT log error:', err);
                     return db.run('ROLLBACK', [], () => res.status(500).json({ message: err.message }));
                 }
+                console.log('[POST /merit-logs] Log inserted, ID:', this.lastID);
                 const column = type === 'merit' ? 'merit_points' : 'demerit_points';
                 const ensureGradeRow = () => {
                     db.get(`SELECT id FROM grades WHERE cadet_id = ?`, [cadetId], (gErr, gRow) => {
