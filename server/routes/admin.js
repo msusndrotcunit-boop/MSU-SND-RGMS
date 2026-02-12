@@ -1435,29 +1435,99 @@ router.post('/cadets', async (req, res) => {
 
 // Get All Cadets (with computed grades) - ONLY APPROVED
 router.get('/cadets', (req, res) => {
+    const { 
+        includeGrades = 'true', 
+        includeArchived = 'false',
+        search = '',
+        course = 'All',
+        company = 'All',
+        page,
+        limit
+    } = req.query;
+
+    const isIncludeGrades = includeGrades === 'true';
+    const isIncludeArchived = includeArchived === 'true';
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+
     // 1. Get Total Training Days first
     db.get("SELECT COUNT(*) as total FROM training_days", [], (err, countRow) => {
         if (err) return res.status(500).json({ message: err.message });
         const totalTrainingDays = countRow.total || 0;
-        const baseSelect = `
+
+        let baseSelect = `
             SELECT c.id, c.rank, c.first_name, c.middle_name, c.last_name, c.suffix_name,
                    c.student_id, c.email, c.contact_number, c.address, 
                    c.course, c.year_level, c.school_year, 
                    c.battalion, c.company, c.platoon, 
                    c.cadet_course, c.semester, c.corp_position, c.status, c.is_profile_completed, c.is_archived,
-                   u.username,
+                   u.username
+        `;
+
+        if (isIncludeGrades) {
+            baseSelect += `,
                    g.attendance_present, g.merit_points, g.demerit_points, 
                    g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
-            FROM cadets c
-            LEFT JOIN users u ON u.cadet_id = c.id
-            LEFT JOIN grades g ON c.id = g.cadet_id
-        `;
-        const sqlActive = `${baseSelect} WHERE c.is_archived IS NOT TRUE ORDER BY c.last_name, c.first_name`;
-        const sqlAll = `${baseSelect} ORDER BY c.last_name, c.first_name`;
+            `;
+        }
 
-        const processRows = (rows) => {
+        baseSelect += ` FROM cadets c LEFT JOIN users u ON u.cadet_id = c.id `;
+        
+        if (isIncludeGrades) {
+            baseSelect += ` LEFT JOIN grades g ON c.id = g.cadet_id `;
+        }
+
+        let conditions = [];
+        let params = [];
+
+        if (!isIncludeArchived) {
+            conditions.push("(c.is_archived IS NOT TRUE OR c.is_archived IS NULL)");
+        }
+
+        if (search) {
+            conditions.push("(c.first_name LIKE ? OR c.last_name LIKE ? OR c.student_id LIKE ? OR (c.first_name || ' ' || c.last_name) LIKE ?)");
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+
+        if (course && course !== 'All') {
+            if (course === 'Unverified') {
+                conditions.push("c.is_profile_completed = 0");
+            } else if (course === 'Archived') {
+                // Handled by includeArchived but explicitly check here if needed
+                conditions.push("c.is_archived = 1");
+            } else {
+                conditions.push("c.cadet_course = ?");
+                params.push(course);
+            }
+        }
+
+        if (company && company !== 'All') {
+            conditions.push("c.company = ?");
+            params.push(company);
+        }
+
+        let sql = baseSelect;
+        if (conditions.length > 0) {
+            sql += " WHERE " + conditions.join(" AND ");
+        }
+
+        sql += " ORDER BY c.last_name, c.first_name";
+
+        // Count query for pagination metadata
+        const countSql = `SELECT COUNT(*) as total FROM (${sql})`;
+        const countParams = [...params];
+
+        if (!isNaN(pageNum) && !isNaN(limitNum)) {
+            sql += " LIMIT ? OFFSET ?";
+            params.push(limitNum, (pageNum - 1) * limitNum);
+        }
+
+        const processRows = (rows, totalCount = null) => {
             // Calculate grades for each cadet
             const cadetsWithGrades = rows.map(cadet => {
+                if (!isIncludeGrades) return { ...cadet, totalTrainingDays };
+
                 const safeTotalDays = totalTrainingDays > 0 ? totalTrainingDays : 0;
                 const present = typeof cadet.attendance_present === 'number' ? cadet.attendance_present : 0;
                 const prelim = typeof cadet.prelim_score === 'number' ? cadet.prelim_score : 0;
@@ -1490,21 +1560,37 @@ router.get('/cadets', (req, res) => {
                     remarks
                 };
             });
-            res.json(cadetsWithGrades);
-        };
 
-        db.all(sqlActive, [], (err, rows) => {
-            if (err) return res.status(500).json({ message: err.message });
-            if (!rows || rows.length === 0) {
-                // Fallback: include archived cadets to avoid empty management list
-                db.all(sqlAll, [], (err2, rows2) => {
-                    if (err2) return res.status(500).json({ message: err2.message });
-                    processRows(rows2 || []);
+            if (totalCount !== null) {
+                res.json({
+                    data: cadetsWithGrades,
+                    pagination: {
+                        total: totalCount,
+                        page: pageNum,
+                        limit: limitNum,
+                        pages: Math.ceil(totalCount / limitNum)
+                    }
                 });
             } else {
-                processRows(rows);
+                res.json(cadetsWithGrades);
             }
-        });
+        };
+
+        if (!isNaN(pageNum) && !isNaN(limitNum)) {
+            db.get(countSql, countParams, (err, countRow) => {
+                if (err) return res.status(500).json({ message: err.message });
+                const totalCount = countRow.total;
+                db.all(sql, params, (err, rows) => {
+                    if (err) return res.status(500).json({ message: err.message });
+                    processRows(rows || [], totalCount);
+                });
+            });
+        } else {
+            db.all(sql, params, (err, rows) => {
+                if (err) return res.status(500).json({ message: err.message });
+                processRows(rows || []);
+            });
+        }
     });
 });
 

@@ -211,12 +211,22 @@ const Cadets = () => {
         }
 
         try {
-            const res = await axios.get('/api/admin/cadets');
-            setCadets(res.data);
+            const res = await axios.get('/api/admin/cadets', {
+                params: {
+                    includeGrades: false,
+                    includeArchived: selectedCadetCourse === 'Archived',
+                    course: selectedCadetCourse,
+                    search: searchTerm
+                }
+            });
+            
+            // The API might return { data, pagination } or just [data]
+            const newData = Array.isArray(res.data) ? res.data : res.data.data;
+            setCadets(newData);
             setLoading(false);
             
             await cacheSingleton('admin', 'cadets_list', {
-                data: res.data,
+                data: newData,
                 timestamp: Date.now()
             });
         } catch (err) {

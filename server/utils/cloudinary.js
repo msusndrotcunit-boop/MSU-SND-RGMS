@@ -38,7 +38,11 @@ if (isCloudinaryConfigured) {
                 folder: 'rotc-grading-system',
                 allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'pdf', 'doc', 'docx'],
                 resource_type: 'auto',
-                transformation: isImage ? [{ width: 500, height: 500, crop: 'limit' }] : undefined
+                transformation: isImage ? [
+                    { width: 500, height: 500, crop: 'limit' },
+                    { quality: 'auto' },
+                    { fetch_format: 'auto' }
+                ] : undefined
             };
         }
     });

@@ -309,40 +309,51 @@ const CadetLayout = () => {
                                         normalizedPath = '/' + normalizedPath;
                                     }
                                     
-                                    // Use absolute URL from window.location if not starting with http
                                     const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
                                     const baseB = import.meta.env.VITE_API_URL || '';
                                     const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
                                     const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
                                     
-                                    if (!normalizedPath.startsWith('/')) {
-                                        normalizedPath = '/' + normalizedPath;
-                                    }
-
                                     if (selectedBase) {
                                         finalSrc = `${selectedBase.replace(/\/+$/,'')}${normalizedPath}`;
                                     } else {
-                                        // Fallback to absolute path relative to current domain
                                         finalSrc = normalizedPath;
                                     }
                                 }
                             } else if (user?.cadetId) {
                                 finalSrc = `/api/images/cadets/${user.cadetId}`;
                             }
+
+                            // Ensure Cloudinary URLs use HTTPS and apply auto-optimizations
+                            if (finalSrc && finalSrc.includes('cloudinary.com')) {
+                                finalSrc = finalSrc.replace('http://', 'https://');
+                                if (!finalSrc.includes('/upload/')) {
+                                    // Handle edge case where /upload/ might be missing or different
+                                } else {
+                                    // Add auto quality and format if not present
+                                    if (!finalSrc.includes('q_auto')) {
+                                        finalSrc = finalSrc.replace('/upload/', '/upload/q_auto,f_auto/');
+                                    }
+                                }
+                            }
+
                             if (finalSrc) return (
                                 <img
+                                    key={finalSrc}
                                     src={finalSrc}
                                     alt="Profile"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                         e.target.onerror = null;
-                                        if (user?.cadetId && !String(e.target.src).includes(`/api/images/cadets/${user.cadetId}`)) {
-                                            e.target.src = `/api/images/cadets/${user.cadetId}`;
-                                            return;
+                                        const fallback = `/api/images/cadets/${user?.cadetId}`;
+                                        if (user?.cadetId && e.target.src !== window.location.origin + fallback && !e.target.src.endsWith(fallback)) {
+                                            e.target.src = fallback;
+                                        } else {
+                                            e.target.style.display = 'none';
+                                            if (e.target.parentElement) {
+                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
+                                            }
                                         }
-                                        // Hide broken image and show inline placeholder
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
                                     }}
                                 />
                             );

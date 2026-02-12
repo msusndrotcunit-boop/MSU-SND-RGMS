@@ -113,32 +113,63 @@ const Profile = () => {
             semester: data.semester || '',
             status: data.status || 'Ongoing'
         });
+        
+        // Handle profile picture URL
         if (data.profile_pic) {
-            if (data.profile_pic.startsWith('data:') || data.profile_pic.startsWith('http')) {
-                setPreview(data.profile_pic);
-            } else {
-                let normalizedPath = data.profile_pic.replace(/\\/g, '/');
-                const uploadsIndex = normalizedPath.indexOf('/uploads/');
-                if (uploadsIndex !== -1) {
-                    normalizedPath = normalizedPath.substring(uploadsIndex);
-                } else if (!normalizedPath.startsWith('/')) {
-                    normalizedPath = '/' + normalizedPath;
+            const pic = data.profile_pic;
+            
+            // Case 1: Already a complete URL (Cloudinary or external)
+            if (pic.startsWith('http://') || pic.startsWith('https://')) {
+                // Ensure Cloudinary URLs use HTTPS and apply auto-optimizations
+                let optimizedUrl = pic.replace('http://', 'https://');
+                if (optimizedUrl.includes('cloudinary.com') && optimizedUrl.includes('/upload/')) {
+                    if (!optimizedUrl.includes('q_auto')) {
+                        optimizedUrl = optimizedUrl.replace('/upload/', '/upload/q_auto,f_auto/');
+                    }
                 }
-                const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
-                const baseB = import.meta.env.VITE_API_URL || '';
-                const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
-                const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
-                
-                // Ensure normalizedPath is just the relative path from root
-                if (!normalizedPath.startsWith('/')) {
-                    normalizedPath = '/' + normalizedPath;
-                }
-                
-                const final = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
-                setPreview(final);
+                setPreview(optimizedUrl);
+                return;
             }
-        } else if (user?.cadetId) {
-            setPreview(`/api/images/cadets/${user.cadetId}`);
+            
+            // Case 2: Base64 data URL
+            if (pic.startsWith('data:')) {
+                setPreview(pic);
+                return;
+            }
+            
+            // Case 3: Local file path - construct full URL
+            let normalizedPath = pic.replace(/\\/g, '/');
+            
+            // Extract /uploads/ path if it exists
+            const uploadsIndex = normalizedPath.indexOf('/uploads/');
+            if (uploadsIndex !== -1) {
+                normalizedPath = normalizedPath.substring(uploadsIndex);
+            } else if (normalizedPath.includes('uploads/')) {
+                // Handle case where path is like "uploads/123.jpg"
+                normalizedPath = '/' + normalizedPath;
+            } else if (!normalizedPath.startsWith('/')) {
+                normalizedPath = '/' + normalizedPath;
+            }
+            
+            // Get base URL
+            const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
+            
+            if (baseURL) {
+                setPreview(`${baseURL.replace(/\/+$/, '')}${normalizedPath}`);
+            } else {
+                // Fallback to relative path
+                setPreview(normalizedPath);
+            }
+        } else {
+            // No profile pic - use fallback endpoint
+            if (user?.cadetId) {
+                const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
+                if (baseURL) {
+                    setPreview(`${baseURL.replace(/\/+$/, '')}/api/images/cadets/${user.cadetId}`);
+                } else {
+                    setPreview(`/api/images/cadets/${user.cadetId}`);
+                }
+            }
         }
     };
 
@@ -346,12 +377,21 @@ const Profile = () => {
                                         alt="Profile" 
                                         className="w-full h-full object-cover" 
                                         onError={(e) => {
+                                            console.error('Profile picture failed to load:', e.target.src);
                                             e.target.onerror = null; 
+                                            
+                                            // Try fallback endpoint if not already using it
                                             if (user?.cadetId && !String(e.target.src).includes(`/api/images/cadets/${user.cadetId}`)) {
-                                                e.target.src = `/api/images/cadets/${user.cadetId}`;
+                                                const baseURL = axios.defaults.baseURL || import.meta.env.VITE_API_URL || '';
+                                                const fallbackUrl = baseURL 
+                                                    ? `${baseURL.replace(/\/+$/, '')}/api/images/cadets/${user.cadetId}`
+                                                    : `/api/images/cadets/${user.cadetId}`;
+                                                console.log('Trying fallback URL:', fallbackUrl);
+                                                e.target.src = fallbackUrl;
                                                 return;
                                             }
-                                            // Hide broken img and show inline placeholder
+                                            
+                                            // Hide broken img and show placeholder
                                             e.target.style.display = 'none';
                                             e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
                                         }}
