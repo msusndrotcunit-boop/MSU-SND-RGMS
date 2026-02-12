@@ -1797,14 +1797,15 @@ router.post('/cadets/unlock', authenticateToken, isAdmin, async (req, res) => {
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ message: 'Invalid IDs' });
 
     const placeholders = ids.map(() => '?').join(',');
-    const sql = `UPDATE cadets SET is_profile_completed = 0 WHERE id IN (${placeholders})`;
+    // Use FALSE for PostgreSQL compatibility (also works with SQLite)
+    const sql = `UPDATE cadets SET is_profile_completed = FALSE WHERE id IN (${placeholders})`;
 
     db.run(sql, ids, function(err) {
         if (err) {
             console.error('Unlock error:', err);
             return res.status(500).json({ message: 'Failed to unlock profiles: ' + err.message });
         }
-        res.json({ message: `Successfully unlocked ${this.changes} profiles` });
+        res.json({ message: `Successfully unlocked ${this.changes} profile(s)` });
         try {
             broadcastEvent({ type: 'cadet_unlocked', cadetIds: ids });
         } catch {}

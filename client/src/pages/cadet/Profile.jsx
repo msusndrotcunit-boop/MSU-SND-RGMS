@@ -5,7 +5,7 @@ import { Save, User, Moon, Sun, Camera, Image as ImageIcon, Lock, AlertTriangle 
 import imageCompression from 'browser-image-compression';
 import { useAuth } from '../../context/AuthContext';
 import { cacheSingleton, getSingleton } from '../../utils/db';
-import { getProfilePicUrl } from '../../utils/image';
+import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
 import { 
     RANK_OPTIONS, 
     YEAR_LEVEL_OPTIONS, 

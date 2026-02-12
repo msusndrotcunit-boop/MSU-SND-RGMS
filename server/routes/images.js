@@ -4,9 +4,24 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
+// Helper to serve default placeholder
+const sendDefaultPlaceholder = (res) => {
+    const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    
+    if (!res.headersSent) {
+        res.writeHead(200, {
+            'Content-Type': 'image/svg+xml',
+            'Content-Length': Buffer.byteLength(defaultSvg),
+            'Cache-Control': 'public, max-age=3600'
+        });
+        res.end(defaultSvg);
+    }
+};
+
 // Helper to serve Base64 image
-const serveBase64Image = (res, imageSource) => {
+const serveBase64Image = (res, imageSource, usePlaceholderOnFailure = false) => {
     if (!imageSource) {
+        if (usePlaceholderOnFailure) return sendDefaultPlaceholder(res);
         return res.status(404).send('Image not found');
     }
 
@@ -40,16 +55,19 @@ const serveBase64Image = (res, imageSource) => {
             return res.redirect(src);
         } else {
             console.log(`[serveBase64Image] Local file not found: ${fullPath}`);
+            if (usePlaceholderOnFailure) return sendDefaultPlaceholder(res);
             return res.status(404).send('Local image file missing on server');
         }
     }
 
     if (!src.startsWith('data:image')) {
+        if (usePlaceholderOnFailure) return sendDefaultPlaceholder(res);
         return res.status(404).send('Image not found or invalid format');
     }
 
     const matches = src.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
+        if (usePlaceholderOnFailure) return sendDefaultPlaceholder(res);
         return res.status(500).send('Invalid image data');
     }
 
@@ -86,20 +104,17 @@ router.get('/activity-images/:id', (req, res) => {
 router.get('/cadets/:id', (req, res) => {
     // Check 'cadets' table first
     db.get('SELECT profile_pic FROM cadets WHERE id = ?', [req.params.id], (err, row) => {
-        if (err) return res.status(500).send(err.message);
+        if (err) {
+            console.error('[images] DB error for cadet:', err);
+            return sendDefaultPlaceholder(res);
+        }
+        
         if (row && row.profile_pic) {
-            return serveBase64Image(res, row.profile_pic);
+            return serveBase64Image(res, row.profile_pic, true);
         }
 
-        // Return a default SVG placeholder instead of 404
-        const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-        
-        res.writeHead(200, {
-            'Content-Type': 'image/svg+xml',
-            'Content-Length': Buffer.byteLength(defaultSvg),
-            'Cache-Control': 'public, max-age=3600'
-        });
-        res.end(defaultSvg);
+        // Return a default SVG placeholder if no pic found
+        sendDefaultPlaceholder(res);
     });
 });
 
