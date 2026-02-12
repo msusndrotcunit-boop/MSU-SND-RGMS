@@ -662,6 +662,7 @@ const Activities = () => {
                     </Link>
                 </div>
             </div>
+        </div>
     );
 };
 
