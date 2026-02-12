@@ -35,6 +35,7 @@ const CadetHome = lazy(() => import('./pages/cadet/Home'));
 const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
+const CadetAchievements = lazy(() => import('./pages/cadet/Achievements'));
 const AskAdmin = lazy(() => import('./pages/AskAdmin'));
 
 // Staff Pages
@@ -96,6 +97,7 @@ function App() {
                 <Route path="home" element={<CadetHome />} />
                 <Route path="dashboard" element={<CadetDashboard />} />
                 <Route path="profile" element={<CadetProfile />} />
+                <Route path="achievements" element={<CadetAchievements />} />
                 <Route path="broadcasts" element={<BroadcastMessages />} />
                 <Route path="about" element={<CadetAbout />} />
                 <Route path="ask-admin" element={<AskAdmin />} />

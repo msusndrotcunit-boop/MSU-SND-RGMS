@@ -23,6 +23,7 @@ const integrationRoutes = require('./routes/integration');
 const notificationRoutes = require('./routes/notifications');
 const messageRoutes = require('./routes/messages');
 const imageRoutes = require('./routes/images');
+const recognitionRoutes = require('./routes/recognition');
 const webpush = require('web-push');
 const { processUrlImport } = require('./utils/importCadets');
 const dbSettingsKey = 'cadet_list_source_url';
@@ -164,6 +165,7 @@ app.use('/api/integration', integrationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api/recognition', recognitionRoutes);
 
 // DEBUG: Print all registered routes
 function printRoutes() {
