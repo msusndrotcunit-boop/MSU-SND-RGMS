@@ -29,7 +29,7 @@ if (isCloudinaryConfigured) {
     const configuredName = cloudinary.config().cloud_name || '(hidden)';
     console.log(`[Upload] Cloudinary configured for cloud: ${configuredName}`);
 
-    // Configure Storage
+    // Configure Storage with faster settings
     storage = new CloudinaryStorage({
         cloudinary: cloudinary,
         params: async (req, file) => {
@@ -38,22 +38,26 @@ if (isCloudinaryConfigured) {
                 folder: 'rotc-grading-system',
                 allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'pdf', 'doc', 'docx'],
                 resource_type: 'auto',
-                // Optimized transformation for faster upload
+                // Minimal transformation for fastest upload
                 transformation: isImage ? [
-                    { width: 400, height: 400, crop: 'limit' },  // Reduced from 500x500
-                    { quality: 'auto:low' },  // Changed from auto to auto:low for faster upload
+                    { width: 300, height: 300, crop: 'limit' },  // Even smaller
+                    { quality: '60' },  // Fixed quality for speed
                     { fetch_format: 'auto' }
-                ] : undefined
+                ] : undefined,
+                // Add timeout settings
+                timeout: 60000
             };
         }
     });
 } else {
-    console.log('[Upload] Cloudinary not configured. Using local storage. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET or CLOUDINARY_URL to enable Cloudinary.');
+    console.log('[Upload] Cloudinary not configured. Using local storage.');
+    console.log('[Upload] WARNING: Local storage on Render may not persist across deployments!');
     
     // Local Storage Fallback
     const uploadDir = path.join(__dirname, '../uploads');
     if (!fs.existsSync(uploadDir)){
         fs.mkdirSync(uploadDir, { recursive: true });
+        console.log('[Upload] Created uploads directory:', uploadDir);
     }
 
     storage = multer.diskStorage({

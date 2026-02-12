@@ -216,7 +216,7 @@ const Profile = () => {
             console.log('[Profile] Submitting profile update...');
             const res = await axios.put('/api/cadet/profile', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
-                timeout: 60000
+                timeout: 120000  // Increased to 2 minutes
             });
             
             console.log('[Profile] Update response:', res.data);
@@ -242,6 +242,38 @@ const Profile = () => {
         } catch (err) {
             console.error('[Profile] Update error:', err);
             const msg = err.response?.data?.message || err.message || 'Unknown error';
+            
+            // If it's a timeout and we have an image, try without the image
+            if ((err.code === 'ECONNABORTED' || msg.includes('timeout')) && profilePic) {
+                const retry = confirm('Image upload is taking too long. Would you like to save without the profile picture and upload it later?');
+                if (retry) {
+                    try {
+                        const retryData = new FormData();
+                        Object.keys(profile).forEach(key => retryData.append(key, profile[key]));
+                        if (!isLocked) retryData.append('is_profile_completed', 'true');
+                        // Don't append profilePic
+                        
+                        const res2 = await axios.put('/api/cadet/profile', retryData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                            timeout: 60000
+                        });
+                        
+                        if (!isLocked) {
+                            alert('Profile completed successfully (without photo)! You will now be logged out. You can upload your photo after logging in.');
+                            logout();
+                            navigate('/login');
+                        } else {
+                            alert('Profile updated successfully (without photo)! Please try uploading the photo separately.');
+                            await fetchProfile();
+                        }
+                        return;
+                    } catch (err2) {
+                        alert('Error updating profile: ' + (err2.response?.data?.message || err2.message));
+                        return;
+                    }
+                }
+            }
+            
             alert('Error updating profile: ' + msg);
         }
     };
