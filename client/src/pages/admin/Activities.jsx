@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X, Upload, Zap } from 'lucide-react';
+import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X, Upload, Zap, Edit } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
@@ -38,9 +38,12 @@ const Activities = () => {
     const [activities, setActivities] = useState([]);
     const [activeTab, setActiveTab] = useState('activity');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editMode, setEditMode] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     
     // Activity Form State
     const [form, setForm] = useState({ title: '', description: '', date: '', images: [] });
+    const [existingImages, setExistingImages] = useState([]); // For edit mode
     
     // Announcement Form State
     const [announcement, setAnnouncement] = useState({
@@ -112,13 +115,61 @@ const Activities = () => {
     const resetForms = () => {
         setForm({ title: '', description: '', date: '', images: [] });
         setAnnouncement({ what: '', when: '', where: '', who: '', how: '', note: '', reminders: '' });
+        setExistingImages([]);
+        setEditMode(false);
+        setEditingId(null);
+    };
+
+    const handleEdit = (activity, e) => {
+        if (e) e.stopPropagation();
+        
+        setEditMode(true);
+        setEditingId(activity.id);
+        setActiveTab(activity.type || 'activity');
+        
+        // Populate form
+        setForm({
+            title: activity.title,
+            description: activity.description,
+            date: activity.date,
+            images: []
+        });
+        
+        // Parse existing images
+        const images = getImages(activity);
+        setExistingImages(images);
+        
+        // Parse announcement fields if it's an announcement
+        if (activity.type === 'announcement') {
+            const desc = activity.description || '';
+            const parseField = (label) => {
+                const regex = new RegExp(`${label}:\\s*([^\\n]+)`, 'i');
+                const match = desc.match(regex);
+                return match ? match[1].trim() : '';
+            };
+            
+            setAnnouncement({
+                what: parseField('WHAT'),
+                when: parseField('WHEN'),
+                where: parseField('WHERE'),
+                who: parseField('WHO'),
+                how: parseField('HOW'),
+                note: parseField('NOTE'),
+                reminders: parseField('REMINDERS')
+            });
+        }
+        
+        setIsModalOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        // Combine existing and new images for validation
+        const totalImages = existingImages.length + form.images.length;
+        
         // Validation
-        if (activeTab === 'activity' && form.images.length < 3) {
+        if (activeTab === 'activity' && totalImages < 3) {
             alert('Please upload at least 3 photos for an activity.');
             return;
         }
@@ -135,19 +186,31 @@ const Activities = () => {
             formData.append('description', form.description);
         }
 
+        // For edit mode, send existing images
+        if (editMode) {
+            formData.append('existingImages', JSON.stringify(existingImages));
+        }
+
+        // Append new images
         form.images.forEach((img) => {
             formData.append('images', img);
         });
 
         try {
-            await axios.post('/api/admin/activities', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            if (editMode) {
+                await axios.put(`/api/admin/activities/${editingId}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                await axios.post('/api/admin/activities', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            }
             fetchActivities(true);
             setIsModalOpen(false);
             resetForms();
         } catch (err) {
-            alert('Error uploading activity: ' + (err.response?.data?.message || err.message));
+            alert(`Error ${editMode ? 'updating' : 'uploading'} activity: ` + (err.response?.data?.message || err.message));
         }
     };
 
@@ -238,12 +301,20 @@ const Activities = () => {
                                     </div>
 
                                     <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
-                                    <button 
-                                        onClick={(e) => handleDelete(activity.id, e)}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
-                                    >
-                                        <Trash2 size={16} className="mr-1" /> Delete
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={(e) => handleEdit(activity, e)}
+                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center z-10 relative"
+                                        >
+                                            <Edit size={16} className="mr-1" /> Edit
+                                        </button>
+                                        <button 
+                                            onClick={(e) => handleDelete(activity.id, e)}
+                                            className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
+                                        >
+                                            <Trash2 size={16} className="mr-1" /> Delete
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -261,8 +332,10 @@ const Activities = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
                     <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-xl sm:max-w-2xl p-4 sm:p-6 my-6 sm:my-8">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Add New {activeTab === 'activity' ? 'Activity' : 'Announcement'}</h3>
-                            <button onClick={() => setIsModalOpen(false)}><X size={24} /></button>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                                {editMode ? 'Edit' : 'Add New'} {activeTab === 'activity' ? 'Activity' : 'Announcement'}
+                            </h3>
+                            <button onClick={() => { setIsModalOpen(false); resetForms(); }}><X size={24} /></button>
                         </div>
                         
                         {/* Tab Toggle inside Modal */}
@@ -348,6 +421,32 @@ const Activities = () => {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                                     Photos (Min: {activeTab === 'activity' ? 3 : 1})
                                 </label>
+                                
+                                {/* Existing Images (Edit Mode) */}
+                                {editMode && existingImages.length > 0 && (
+                                    <div className="mt-2 mb-4">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Existing Images:</p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {existingImages.map((imgSrc, index) => (
+                                                <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
+                                                    <img 
+                                                        src={imgSrc} 
+                                                        alt="existing" 
+                                                        className="w-full h-full object-cover" 
+                                                    />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setExistingImages(existingImages.filter((_, i) => i !== index))}
+                                                        className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="mt-1 flex items-center justify-center px-3 sm:px-6 pt-4 pb-5 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
                                         <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
@@ -356,7 +455,7 @@ const Activities = () => {
                                                 className="relative cursor-pointer bg-white dark:bg-gray-900 rounded-md font-medium text-[var(--primary-color)] hover:opacity-90 focus-within:outline-none"
                                                 onClick={(e) => { e.preventDefault(); setShowUploadConsent(true); }}
                                             >
-                                                <span>Upload files</span>
+                                                <span>{editMode ? 'Add More Files' : 'Upload files'}</span>
                                                 <input 
                                                     type="file" 
                                                     multiple 
@@ -368,26 +467,38 @@ const Activities = () => {
                                             </label>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 5MB</p>
+                                        {editMode && (
+                                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                                                Total: {existingImages.length + form.images.length} images
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {form.images.map((img, index) => (
-                                        <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
-                                            <img 
-                                                src={URL.createObjectURL(img)} 
-                                                alt="preview" 
-                                                className="w-full h-full object-cover" 
-                                            />
-                                            <button 
-                                                type="button"
-                                                onClick={() => removeImage(index)}
-                                                className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <X size={12} />
-                                            </button>
+                                
+                                {/* New Images */}
+                                {form.images.length > 0 && (
+                                    <div className="mt-4">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">New Images:</p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {form.images.map((img, index) => (
+                                                <div key={index} className="relative h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden group">
+                                                    <img 
+                                                        src={URL.createObjectURL(img)} 
+                                                        alt="preview" 
+                                                        className="w-full h-full object-cover" 
+                                                    />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => removeImage(index)}
+                                                        className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex justify-end space-x-3 pt-4 border-t">
@@ -402,7 +513,7 @@ const Activities = () => {
                                     type="submit"
                                     className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
                                 >
-                                    Post {activeTab === 'activity' ? 'Activity' : 'Announcement'}
+                                    {editMode ? 'Update' : 'Post'} {activeTab === 'activity' ? 'Activity' : 'Announcement'}
                                 </button>
                             </div>
                         </form>

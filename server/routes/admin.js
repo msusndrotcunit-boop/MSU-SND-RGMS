@@ -14,6 +14,20 @@ const { updateTotalAttendance, calculateTransmutedGrade } = require('../utils/gr
 
 const router = express.Router();
 
+// Helper to serve default placeholder
+const sendDefaultPlaceholder = (res) => {
+    const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#F3F4F6"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    
+    if (!res.headersSent) {
+        res.writeHead(200, {
+            'Content-Type': 'image/svg+xml',
+            'Content-Length': Buffer.byteLength(defaultSvg),
+            'Cache-Control': 'public, max-age=3600'
+        });
+        res.end(defaultSvg);
+    }
+};
+
 // --- Search Cadets & Staff ---
 router.get('/search', authenticateToken, isAdmin, async (req, res) => {
     const { query } = req.query;
@@ -2138,6 +2152,67 @@ router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'Activity deleted' });
     });
+});
+
+// Update Activity
+router.put('/activities/:id', upload.array('images', 10), (req, res) => {
+    const { id } = req.params;
+    const { title, description, date, type, existingImages } = req.body;
+    
+    // Parse existing images (images that weren't deleted)
+    let images = [];
+    try {
+        if (existingImages) {
+            images = JSON.parse(existingImages);
+        }
+    } catch (e) {
+        console.error('Error parsing existing images:', e);
+    }
+    
+    // Add newly uploaded images
+    if (req.files && req.files.length > 0) {
+        const newImages = req.files.map(file => {
+            if (file.path && (file.path.startsWith('http') || file.path.startsWith('https'))) {
+                return file.path;
+            }
+            if (file.filename) {
+                return `/uploads/${file.filename}`;
+            }
+            if (file.buffer) {
+                return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+            }
+            return null;
+        }).filter(Boolean);
+        images = [...images, ...newImages];
+    }
+
+    const activityType = type || 'activity';
+    
+    // Server-side validation for image count
+    if (activityType === 'activity' && images.length < 3) {
+        return res.status(400).json({ message: 'Activities require at least 3 photos.' });
+    }
+
+    const imagesJson = JSON.stringify(images);
+    const primaryImage = images[0] || null;
+
+    db.run(
+        `UPDATE activities SET title = ?, description = ?, date = ?, image_path = ?, images = ?, type = ? WHERE id = ?`,
+        [title, description, date, primaryImage, imagesJson, activityType, id],
+        function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            
+            // Create notification for the updated activity
+            const notifMsg = `${activityType === 'announcement' ? 'Announcement' : 'Activity'} Updated: ${title}`;
+            db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
+                [notifMsg], 
+                (nErr) => {
+                    if (nErr) console.error("Error creating update notification:", nErr);
+                    res.json({ message: 'Activity updated successfully' });
+                }
+            );
+        }
+    );
 });
 
 // --- User Management (Approvals) ---
