@@ -4,6 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const dns = require('dns');
+require('dotenv').config();
 
 // Force IPv4
 if (dns.setDefaultResultOrder) {
@@ -63,12 +64,13 @@ let sqlite3;
 // DB Adapter to unify SQLite and Postgres
 if (isPostgres) {
     const connectionString = pgUrl;
-    // console.log('Using DB URL:', connectionString.replace(/:[^:@]*@/, ':****@')); // Debug log
-
-    const pool = new Pool({
-        connectionString: connectionString,
-        ssl: { rejectUnauthorized: false }
-    });
+    const poolConfig = {
+        connectionString: connectionString
+    };
+    if (!/sslmode=disable/i.test(connectionString)) {
+        poolConfig.ssl = { rejectUnauthorized: false };
+    }
+    const pool = new Pool(poolConfig);
 
     console.log('Using PostgreSQL database.');
 
@@ -193,6 +195,7 @@ if (isPostgres) {
 } else {
     sqlite3 = require('sqlite3').verbose();
     const dbPath = path.resolve(__dirname, 'rotc.db');
+    console.log('Database absolute path:', dbPath);
     db = new sqlite3.Database(dbPath, (err) => {
         if (err) console.error('Error opening database', err.message);
         else {
@@ -619,6 +622,12 @@ async function initPgDb() {
             `ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`,
             `ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'activity'`,
             `ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS custom_bg TEXT`,
+            `ALTER TABLE merit_demerit_logs ADD COLUMN IF NOT EXISTS issued_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`,
+            `ALTER TABLE merit_demerit_logs ADD COLUMN IF NOT EXISTS issued_by_name TEXT`,
+            `ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS time_in TEXT`,
+            `ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS time_out TEXT`,
+            `ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS time_in TEXT`,
+            `ALTER TABLE staff_attendance_records ADD COLUMN IF NOT EXISTS time_out TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_cadets_company ON cadets(company)`,
             `CREATE INDEX IF NOT EXISTS idx_cadets_platoon ON cadets(platoon)`,
             `CREATE INDEX IF NOT EXISTS idx_cadets_status ON cadets(status)`,
@@ -814,8 +823,18 @@ function initSqliteDb() {
         )`);
 
         // Ensure new columns exist for legacy databases
-        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS images TEXT`);
-        db.run(`ALTER TABLE activities ADD COLUMN IF NOT EXISTS type TEXT`);
+        db.all(`PRAGMA table_info(activities)`, [], (err, rows) => {
+            if (!err && rows) {
+                const hasImages = rows.some(r => r.name === 'images');
+                if (!hasImages) {
+                    db.run(`ALTER TABLE activities ADD COLUMN images TEXT`);
+                }
+                const hasType = rows.some(r => r.name === 'type');
+                if (!hasType) {
+                    db.run(`ALTER TABLE activities ADD COLUMN type TEXT`);
+                }
+            }
+        });
 
         // Merit/Demerit Ledger Table
         db.run(`CREATE TABLE IF NOT EXISTS merit_demerit_logs (

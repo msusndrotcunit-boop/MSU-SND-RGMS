@@ -446,7 +446,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
         }
     }
         
-    db.get("SELECT COUNT(*) as count FROM training_staff WHERE first_name = ? COLLATE NOCASE", [first_name], async (err, row) => {
+    db.get("SELECT COUNT(*) as count FROM training_staff WHERE LOWER(first_name) = LOWER(?)", [first_name], async (err, row) => {
         if (err) {}
 
         const nameCount = row ? row.count : 1;

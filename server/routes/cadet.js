@@ -34,6 +34,8 @@ router.get('/my-grades', async (req, res) => {
         }
     }
 
+    console.log(`[Cadet/Dashboard] User ID: ${req.user.id}, Role: ${req.user.role}, Resolved Cadet ID: ${cadetId}`);
+
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet account' });
     const pGet = (sql, params = []) => new Promise(resolve => {
         db.get(sql, params, (err, row) => resolve(err ? undefined : row));
@@ -192,7 +194,7 @@ router.get('/notifications', (req, res) => {
 });
 
 router.put('/notifications/:id/read', (req, res) => {
-    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+    db.run(`UPDATE notifications SET is_read = TRUE WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'Marked as read' });
     });
@@ -200,7 +202,7 @@ router.put('/notifications/:id/read', (req, res) => {
 
 router.put('/notifications/read-all', (req, res) => {
     const userId = req.user.id;
-    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [userId], function(err) {
+    db.run(`UPDATE notifications SET is_read = TRUE WHERE (user_id IS NULL OR user_id = ?) AND is_read = FALSE`, [userId], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'All marked as read' });
     });
@@ -364,8 +366,8 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             // Set completion status if requested
             if (isComplete) {
                 sql += `, is_profile_completed=?`;
-                // Use 1 for TRUE to be safe across SQLite/Postgres
-                params.push(1);
+                // Use TRUE for PostgreSQL compatibility
+                params.push(true);
                 // Also mark cadet as verified
                 sql += `, status=?`;
                 params.push('Verified');

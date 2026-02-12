@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'rotc_grading_system_db';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
@@ -57,6 +57,9 @@ export const initDB = async () => {
             }
             if (!db.objectStoreNames.contains('attendance_by_day')) {
                 db.createObjectStore('attendance_by_day', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('dashboard')) {
+                db.createObjectStore('dashboard', { keyPath: 'key' });
             }
         },
     });

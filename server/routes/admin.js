@@ -57,7 +57,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         pGet('SELECT COUNT(*) as total FROM users'),
         pGet('SELECT COUNT(*) as total FROM training_days'),
         pGet('SELECT COUNT(*) as total FROM activities'),
-        pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = 0')
+        pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE')
     ]).then(([dbCheck, cadets, users, trainingDays, activities, unreadNotifications]) => {
         const latencyMs = Date.now() - start;
 
@@ -130,7 +130,7 @@ const insertCadet = (cadet) => {
             battalion, company, platoon, 
             cadet_course, semester, status,
             is_profile_completed, is_archived
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
 
         const params = [
             cadet.rank || '', cadet.first_name || '', cadet.middle_name || '', cadet.last_name || '', cadet.suffix_name || '',
@@ -141,9 +141,9 @@ const insertCadet = (cadet) => {
             false, false // Use booleans for Postgres compatibility
         ];
 
-        db.run(sql, params, function(err) {
+        db.get(sql, params, (err, row) => {
             if (err) reject(err);
-            else resolve(this.lastID);
+            else resolve(row ? row.id : null);
         });
     });
 };
@@ -1091,7 +1091,8 @@ router.post('/import-cadets-remote', async (req, res) => {
     }
 });
 
-router.get('/settings/cadet-source', (req, res) => {
+// GET /api/admin/settings/cadet-source
+router.get('/settings/cadet-source', authenticateToken, isAdmin, (req, res) => {
     db.get("SELECT value FROM system_settings WHERE key = 'cadet_list_source_url'", [], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ url: row ? row.value : null });
@@ -1099,7 +1100,7 @@ router.get('/settings/cadet-source', (req, res) => {
 });
 
 // PUT /api/admin/system-settings - Update system-wide settings (admin only)
-router.put('/system-settings', (req, res) => {
+router.put('/system-settings', authenticateToken, isAdmin, (req, res) => {
     const {
         email_alerts,
         push_notifications,
@@ -1148,7 +1149,7 @@ router.put('/system-settings', (req, res) => {
 // --- Analytics ---
 
 // Get Dashboard Analytics
-router.get('/analytics', (req, res) => {
+router.get('/analytics', authenticateToken, isAdmin, (req, res) => {
     const analyticsData = {
         attendance: [],
         grades: { passed: 0, failed: 0, incomplete: 0 }
@@ -1375,27 +1376,29 @@ router.post('/cadets', async (req, res) => {
                 course, year_level, school_year, 
                 battalion, company, platoon, 
                 cadet_course, semester, corp_position, status, is_profile_completed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
 
             const params = [
                 cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
                 cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', cadet.status || 'Ongoing', 0
+                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', cadet.status || 'Ongoing', FALSE
             ];
 
-            db.run(insertSql, params, function(err) {
+            db.get(insertSql, params, (err, row) => {
                 if (err) return res.status(500).json({ message: err.message });
-                const newCadetId = this.lastID;
+                const newCadetId = row ? row.id : null;
+
+                if (!newCadetId) return res.status(500).json({ message: 'Failed to retrieve new cadet ID' });
 
                 // Create User Account (Auto-approved)
                 const baseUsername = cadet.firstName || cadet.studentId; // Default to First Name
                 const dummyHash = '$2a$10$DUMMYPASSWORDHASHDO_NOT_USE_OR_YOU_WILL_BE_HACKED';
                 
                 const insertUser = (uName) => {
-                    db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, ?, ?)`, 
-                        [uName, dummyHash, 'cadet', newCadetId, 1, cadet.email || ''], 
+                    db.run(`INSERT INTO users (username, password, role, cadet_id, is_approved, email) VALUES (?, ?, ?, ?, TRUE, ?)`, 
+                        [uName, dummyHash, 'cadet', newCadetId, cadet.email || ''], 
                         (err) => {
                             if (err) {
                                 // Handle duplicate username error
@@ -2004,12 +2007,12 @@ router.post('/activities', upload.array('images', 10), (req, res) => {
     const imagesJson = JSON.stringify(images);
     const primaryImage = images[0] || null;
 
-    db.run(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?)`,
+    db.get(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
         [title, description, date, primaryImage, imagesJson, activityType],
-        function(err) {
+        (err, row) => {
             if (err) return res.status(500).json({ message: err.message });
             
-            const activityId = this.lastID;
+            const activityId = row ? row.id : null;
             // Create notification for the new activity
             const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
             db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
@@ -2023,7 +2026,7 @@ router.post('/activities', upload.array('images', 10), (req, res) => {
 });
 
 // Delete Activity
-router.delete('/activities/:id', (req, res) => {
+router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
     db.run(`DELETE FROM activities WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'Activity deleted' });
@@ -2033,7 +2036,7 @@ router.delete('/activities/:id', (req, res) => {
 // --- User Management (Approvals) ---
 
 // Get Users (filter by pending)
-router.get('/users', (req, res) => {
+router.get('/users', authenticateToken, isAdmin, (req, res) => {
     const { pending } = req.query;
     let sql = `SELECT u.id, u.username, u.role, u.is_approved, u.email, 
                       c.first_name, c.last_name, c.student_id 
@@ -2045,7 +2048,7 @@ router.get('/users', (req, res) => {
 
     const params = [];
     if (pending === 'true') {
-        sql += ` WHERE u.is_approved = 0`;
+        sql += ` WHERE u.is_approved = FALSE`;
     }
 
     db.all(sql, params, (err, rows) => {
@@ -2059,14 +2062,14 @@ router.get('/users', (req, res) => {
 });
 
 // Approve User
-router.put('/users/:id/approve', (req, res) => {
-    db.run(`UPDATE users SET is_approved = 1 WHERE id = ?`, [req.params.id], function(err) {
+router.put('/users/:id/approve', authenticateToken, isAdmin, (req, res) => {
+    db.run(`UPDATE users SET is_approved = TRUE WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         
         // Ensure grades record exists for the approved cadet
         db.get("SELECT cadet_id, email FROM users WHERE id = ?", [req.params.id], (err, user) => {
             if (user && user.cadet_id) {
-                db.run("INSERT OR IGNORE INTO grades (cadet_id) VALUES (?)", [user.cadet_id], (err) => {
+                db.run("INSERT INTO grades (cadet_id) VALUES (?) ON CONFLICT (cadet_id) DO NOTHING", [user.cadet_id], (err) => {
                     if (err) console.error("Error creating grades record:", err);
                 });
                 
@@ -2087,7 +2090,7 @@ router.put('/users/:id/approve', (req, res) => {
 });
 
 // Delete User (Reject)
-router.delete('/users/:id', (req, res) => {
+router.delete('/users/:id', authenticateToken, isAdmin, (req, res) => {
     db.get("SELECT cadet_id FROM users WHERE id = ?", [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ message: err.message });
         
@@ -2190,9 +2193,8 @@ router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), 
 });
 
 // --- Merit/Demerit Ledger ---
-
 // Get Logs for a Cadet
-router.get('/merit-logs/:cadetId', (req, res) => {
+router.get('/merit-logs/:cadetId', authenticateToken, isAdmin, (req, res) => {
     const sql = `SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC`;
     db.all(sql, [req.params.cadetId], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
@@ -2267,7 +2269,7 @@ router.post('/ledger/backfill', authenticateToken, isAdmin, async (req, res) => 
     res.json({ message: 'Backfill complete', summary });
 });
 // Add Log Entry (and update Total)
-router.post('/merit-logs', (req, res) => {
+router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
     const { cadetId, type, points, reason } = req.body;
     const issuerUserId = req.user && req.user.id ? Number(req.user.id) : null;
     const getIssuerName = () => new Promise((resolve) => {
@@ -2335,9 +2337,9 @@ router.post('/merit-logs', (req, res) => {
 });
 
 // Delete Merit/Demerit Log
-router.delete('/merit-logs/:id', (req, res) => {
+router.delete('/merit-logs/:id', authenticateToken, isAdmin, (req, res) => {
     const logId = req.params.id;
-
+    
     // 1. Get the log details first to know what to subtract
     db.get(`SELECT * FROM merit_demerit_logs WHERE id = ?`, [logId], (err, log) => {
         if (err) return res.status(500).json({ message: err.message });
@@ -2362,38 +2364,38 @@ router.delete('/merit-logs/:id', (req, res) => {
 // --- Notifications ---
 
 // Get Notifications (Admin)
-router.get('/notifications', (req, res) => {
+router.get('/notifications', authenticateToken, isAdmin, (req, res) => {
     // Fetch notifications where user_id is NULL (system/admin) or matches admin's ID
     const sql = `SELECT * FROM notifications WHERE user_id IS NULL OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
     db.all(sql, [req.user.id], (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
+        res.json(rows || []);
     });
 });
 
 // Mark Notification as Read
-router.put('/notifications/:id/read', (req, res) => {
-    db.run(`UPDATE notifications SET is_read = 1 WHERE id = ?`, [req.params.id], function(err) {
+router.put('/notifications/:id/read', authenticateToken, (req, res) => {
+    db.run(`UPDATE notifications SET is_read = TRUE WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'Marked as read' });
     });
 });
 
 // Mark All Notifications as Read
-router.put('/notifications/read-all', (req, res) => {
-    db.run(`UPDATE notifications SET is_read = 1 WHERE (user_id IS NULL OR user_id = ?) AND is_read = 0`, [req.user.id], function(err) {
+router.put('/notifications/read-all', authenticateToken, (req, res) => {
+    db.run(`UPDATE notifications SET is_read = TRUE WHERE (user_id IS NULL OR user_id = ?) AND is_read = FALSE`, [req.user.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
         res.json({ message: 'All marked as read' });
     });
 });
 
 // --- Sync Metrics Dashboard ---
-router.get('/sync/metrics', (req, res) => {
+router.get('/sync/metrics', authenticateToken, isAdmin, (req, res) => {
     const result = { backlog: 0, processed_last_5m: 0, avg_latency_ms: null, p95_latency_ms: null };
     const nowMs = Date.now();
-    db.get(`SELECT COUNT(*) as total FROM sync_events WHERE processed = 0 OR processed = FALSE`, [], (bErr, bRow) => {
-        result.backlog = (!bErr && bRow && (bRow.total ?? bRow.count)) ? Number(bRow.total ?? bRow.count) : 0;
-        db.all(`SELECT created_at, processed_at FROM sync_events WHERE processed = 1 OR processed = TRUE ORDER BY processed_at DESC LIMIT 500`, [], (pErr, rows) => {
+    db.get(`SELECT COUNT(*) as total FROM sync_events WHERE processed = FALSE`, [], (bErr, bRow) => {
+        result.backlog = (!bErr && bRow && bRow.total) ? Number(bRow.total) : 0;
+        db.all(`SELECT created_at, processed_at FROM sync_events WHERE processed = TRUE ORDER BY processed_at DESC LIMIT 500`, [], (pErr, rows) => {
             const latencies = [];
             const recentWindowMs = 5 * 60 * 1000;
             let processedLast5m = 0;
@@ -2420,6 +2422,12 @@ router.get('/sync/metrics', (req, res) => {
 });
 
 // Clear All Notifications
+router.delete('/notifications', authenticateToken, isAdmin, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE (user_id IS NULL OR user_id = ?)`, [req.user.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notifications cleared' });
+    });
+});
 router.delete('/notifications', (req, res) => {
     db.run(`DELETE FROM notifications WHERE user_id IS NULL OR user_id = ?`, [req.user.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });

@@ -143,7 +143,7 @@ router.get('/records/:dayId', authenticateToken, isAdmin, (req, res) => {
         params.push(platoon);
     }
 
-    sql += ' GROUP BY c.id ORDER BY c.last_name ASC';
+    sql += ' GROUP BY c.id, c.last_name, c.first_name, c.rank, c.company, c.platoon, c.corp_position ORDER BY c.last_name ASC';
 
     db.all(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ message: err.message });
@@ -1114,6 +1114,8 @@ router.get('/my-history', authenticateToken, async (req, res) => {
             cadetId = userRow.cadet_id;
         }
     }
+    console.log(`[Attendance/my-history] User ID: ${req.user.id}, Role: ${req.user.role}, Resolved Cadet ID: ${cadetId}`);
+
     if (!cadetId) return res.status(403).json({ message: 'Not a cadet' });
 
     const { status, start, end, page, pageSize, order } = req.query || {};
@@ -1123,9 +1125,8 @@ router.get('/my-history', authenticateToken, async (req, res) => {
 
     const whereDays = [];
     const whereParams = [];
-    if (start) { whereDays.push('date(td.date) >= ?'); whereParams.push(start); }
-    if (end) { whereDays.push('date(td.date) <= ?'); whereParams.push(end); }
-    const whereDaysSql = whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : '';
+    if (start) { whereDays.push('td.date >= ?'); whereParams.push(start); }
+    if (end) { whereDays.push('td.date <= ?'); whereParams.push(end); }
 
     let listSql = '';
     let listParams = [];
@@ -1133,6 +1134,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
     let countParams = [];
 
     if (status && ['present','late','excused','absent'].includes(String(status).toLowerCase())) {
+        const whereClause = ['ar.cadet_id = ?', 'lower(ar.status) = lower(?)', ...whereDays].join(' AND ');
         listSql = `
             SELECT 
                 ar.id,
@@ -1144,23 +1146,20 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 ar.time_out
             FROM attendance_records ar
             JOIN training_days td ON ar.training_day_id = td.id
-            ${whereDaysSql}
-            AND ar.cadet_id = ?
-            AND lower(ar.status) = lower(?)
+            WHERE ${whereClause}
             ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
-        listParams = [...whereParams, cadetId, status, ps, (p - 1) * ps];
+        listParams = [cadetId, status, ...whereParams, ps, (p - 1) * ps];
         countSql = `
             SELECT COUNT(*) as total
             FROM attendance_records ar
             JOIN training_days td ON ar.training_day_id = td.id
-            ${whereDaysSql}
-            AND ar.cadet_id = ?
-            AND lower(ar.status) = lower(?)
+            WHERE ${whereClause}
         `;
-        countParams = [...whereParams, cadetId, status];
+        countParams = [cadetId, status, ...whereParams];
     } else {
+        const whereClause = ['ar.cadet_id = ? OR ar.cadet_id IS NULL', ...whereDays].join(' AND ');
         listSql = `
             SELECT 
                 ar.id,
@@ -1172,7 +1171,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
                 ar.time_out
             FROM training_days td
             LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
-            ${whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : ''}
+            ${whereClause ? `WHERE ${whereClause}` : ''}
             ORDER BY td.date ${ord}
             LIMIT ? OFFSET ?
         `;
@@ -1180,9 +1179,10 @@ router.get('/my-history', authenticateToken, async (req, res) => {
         countSql = `
             SELECT COUNT(*) as total
             FROM training_days td
-            ${whereDays.length ? `WHERE ${whereDays.join(' AND ')}` : ''}
+            LEFT JOIN attendance_records ar ON td.id = ar.training_day_id AND ar.cadet_id = ?
+            ${whereClause ? `WHERE ${whereClause}` : ''}
         `;
-        countParams = [...whereParams];
+        countParams = [cadetId, ...whereParams];
     }
 
     db.get(countSql, countParams, (cErr, cRow) => {

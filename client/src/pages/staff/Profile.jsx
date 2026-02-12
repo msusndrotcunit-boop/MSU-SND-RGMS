@@ -190,14 +190,15 @@ const StaffProfile = () => {
         }
 
         try {
-            // Check if this is a completion event (transition from 0 to 1)
-            // If profile is currently incomplete, we FORCE completion on save.
-            let isMarkingComplete = formData.is_profile_completed == 1;
+            let isMarkingComplete =
+                formData.is_profile_completed === true ||
+                formData.is_profile_completed === 'true' ||
+                formData.is_profile_completed === 1 ||
+                formData.is_profile_completed === '1';
             
             if (!profile.is_profile_completed) {
-                // Force completion for first-time setup
                 isMarkingComplete = true;
-                formData.is_profile_completed = 1;
+                formData.is_profile_completed = true;
             }
             
             if (isMarkingComplete && !profile.is_profile_completed) {
