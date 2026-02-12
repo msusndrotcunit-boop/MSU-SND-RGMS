@@ -2131,8 +2131,12 @@ router.post('/activities', upload.array('images', 10), async (req, res) => {
     const activityType = type || 'activity';
     
     // Server-side validation for image count
-    if (activityType === 'activity' && images.length < 3) {
-        return res.status(400).json({ message: 'Activities require at least 3 photos.' });
+    if (activityType === 'activity' && images.length < 1) {
+        return res.status(400).json({ message: 'Activities require at least 1 photo.' });
+    }
+    
+    if (activityType === 'activity' && images.length > 5) {
+        return res.status(400).json({ message: 'Activities can have maximum 5 photos.' });
     }
     
     if (activityType === 'announcement' && images.length < 1) {
@@ -2280,9 +2284,14 @@ router.put('/activities/:id', upload.array('images', 10), async (req, res) => {
     });
     
     // Server-side validation for image count
-    if (activityType === 'activity' && images.length < 3) {
-        console.log('[PUT /activities/:id] Validation failed: Activity needs 3+ images');
-        return res.status(400).json({ message: 'Activities require at least 3 photos.' });
+    if (activityType === 'activity' && images.length < 1) {
+        console.log('[PUT /activities/:id] Validation failed: Activity needs 1+ image');
+        return res.status(400).json({ message: 'Activities require at least 1 photo.' });
+    }
+    
+    if (activityType === 'activity' && images.length > 5) {
+        console.log('[PUT /activities/:id] Validation failed: Activity can have max 5 images');
+        return res.status(400).json({ message: 'Activities can have maximum 5 photos.' });
     }
     
     if (activityType === 'announcement' && images.length < 1) {

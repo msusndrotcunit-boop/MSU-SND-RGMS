@@ -93,6 +93,15 @@ const Activities = () => {
         const files = Array.from(e.target.files);
         const processedImages = [];
         
+        // Check if adding these files would exceed the limit for activities
+        if (activeTab === 'activity') {
+            const totalAfterUpload = existingImages.length + form.images.length + files.length;
+            if (totalAfterUpload > 5) {
+                alert(`Maximum 5 photos allowed for activities. You can only add ${5 - existingImages.length - form.images.length} more photo(s).`);
+                return;
+            }
+        }
+        
         // Validate file size (20MB max)
         const maxSize = 20 * 1024 * 1024; // 20MB in bytes
         for (const file of files) {
@@ -188,8 +197,13 @@ const Activities = () => {
         });
         
         // Validation
-        if (activeTab === 'activity' && totalImages < 3) {
-            alert('Please upload at least 3 photos for an activity.');
+        if (activeTab === 'activity' && totalImages < 1) {
+            alert('Please upload at least 1 photo for an activity.');
+            return;
+        }
+        
+        if (activeTab === 'activity' && totalImages > 5) {
+            alert('Maximum 5 photos allowed for an activity.');
             return;
         }
         
@@ -456,7 +470,7 @@ const Activities = () => {
 
                             <div>
                                 <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                    Photos (Min: {activeTab === 'activity' ? 3 : 1})
+                                    Photos (Min: 1, Max: {activeTab === 'activity' ? '5' : 'Unlimited'})
                                 </label>
                                 
                                 {/* Existing Images (Edit Mode) */}
