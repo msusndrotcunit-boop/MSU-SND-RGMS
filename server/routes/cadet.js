@@ -75,6 +75,7 @@ router.get('/my-grades', async (req, res) => {
             attendance_present: gradeRow ? gradeRow.attendance_present : attendancePresent,
             merit_points: gradeRow ? gradeRow.merit_points : meritPoints,
             demerit_points: gradeRow ? gradeRow.demerit_points : demeritPoints,
+            lifetime_merit_points: gradeRow ? (gradeRow.lifetime_merit_points || 0) : meritPoints,
             prelim_score: gradeRow?.prelim_score || 0,
             midterm_score: gradeRow?.midterm_score || 0,
             final_score: gradeRow?.final_score || 0,

@@ -2562,7 +2562,19 @@ router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
                     });
                 };
                 const applyGradeUpdate = () => {
-                    db.run(`UPDATE grades SET ${column} = ${column} + ? WHERE cadet_id = ?`, [points, cadetId], (uErr) => {
+                    // Update both current points and lifetime merit points (if merit type)
+                    let updateSql = `UPDATE grades SET ${column} = ${column} + ?`;
+                    const updateParams = [points];
+                    
+                    if (type === 'merit') {
+                        updateSql += `, lifetime_merit_points = COALESCE(lifetime_merit_points, 0) + ?`;
+                        updateParams.push(points);
+                    }
+                    
+                    updateSql += ` WHERE cadet_id = ?`;
+                    updateParams.push(cadetId);
+                    
+                    db.run(updateSql, updateParams, (uErr) => {
                         if (uErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
                         db.run('COMMIT', [], () => {
                             db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (cErr, cadet) => {
