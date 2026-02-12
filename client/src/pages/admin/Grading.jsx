@@ -762,8 +762,8 @@ const Grading = () => {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-xs text-gray-500">Final</div>
-                                    <div className={`font-bold ${cadet.finalGrade >= 75 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {cadet.finalGrade.toFixed(2)}
+                                    <div className={`font-bold ${(cadet.finalGrade || 0) >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {(cadet.finalGrade || 0).toFixed(2)}
                                     </div>
                                 </div>
                             </div>
@@ -792,10 +792,10 @@ const Grading = () => {
                             </div>
                             <div className="text-right bg-white dark:bg-gray-900 p-3 rounded shadow-sm border dark:border-gray-700">
                                 <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">Final Grade</div>
-                                <div className={`text-3xl font-bold ${selectedCadet.finalGrade >= 75 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {selectedCadet.finalGrade.toFixed(2)}
+                                <div className={`text-3xl font-bold ${(selectedCadet.finalGrade || 0) >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {(selectedCadet.finalGrade || 0).toFixed(2)}
                                 </div>
-                                <div className="text-xs text-gray-400">Transmuted: {selectedCadet.transmutedGrade}</div>
+                                <div className="text-xs text-gray-400">Transmuted: {selectedCadet.transmutedGrade || 'N/A'}</div>
                             </div>
                         </div>
 
@@ -1001,7 +1001,7 @@ const Grading = () => {
                                         </div>
                                         <div className="bg-white p-4 rounded shadow-sm border text-center">
                                             <div className="text-gray-500 text-sm uppercase">Attendance Score</div>
-                                            <div className="text-3xl font-bold text-blue-600">{selectedCadet.attendanceScore.toFixed(2)}</div>
+                                            <div className="text-3xl font-bold text-blue-600">{(selectedCadet.attendanceScore || 0).toFixed(2)}</div>
                                         </div>
                                     </div>
 
