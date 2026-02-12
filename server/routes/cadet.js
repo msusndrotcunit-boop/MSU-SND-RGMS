@@ -234,6 +234,12 @@ router.get('/profile', (req, res) => {
         db.get(sql, [id], (err, row) => {
             if (err) return res.status(500).json({ message: err.message });
             if (!row) return res.status(404).json({ message: 'Cadet not found' });
+            
+            // Log what's in the database for debugging
+            console.log('[Profile GET] Cadet ID:', id);
+            console.log('[Profile GET] profile_pic field:', row.profile_pic);
+            console.log('[Profile GET] profile_pic type:', typeof row.profile_pic);
+            
             res.json(row);
         });
     };
