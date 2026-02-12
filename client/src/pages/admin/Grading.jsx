@@ -357,15 +357,18 @@ const Grading = () => {
                         setCadets(verifiedData);
                         setLoading(false);
                         
-                        // If cache is fresh (< 2 mins), skip API
-                        if (timestamp && (Date.now() - timestamp < 2 * 60 * 1000)) {
+                        // If cache is fresh (< 30 seconds), skip API
+                        if (timestamp && (Date.now() - timestamp < 30 * 1000)) {
+                            console.log('[Grading] Using cached data (fresh)');
                             return;
                         }
                     }
                 }
             }
 
+            console.log('[Grading] Fetching fresh data from API...');
             const res = await axios.get('/api/admin/cadets');
+            console.log('[Grading] API response:', res.data.length, 'cadets');
             // Filter unverified cadets
             const verifiedRes = res.data.filter(c => c.is_profile_completed);
             setCadets(verifiedRes);
@@ -378,7 +381,15 @@ const Grading = () => {
             // If a cadet is selected, update their data in the view
             if (selectedCadet) {
                 const updated = res.data.find(c => c.id === selectedCadet.id);
-                if (updated) setSelectedCadet(updated);
+                if (updated) {
+                    console.log('[Grading] Updating selected cadet with fresh data:', updated);
+                    setSelectedCadet(updated);
+                    setProficiencyForm({
+                        prelimScore: updated.prelim_score ?? 0,
+                        midtermScore: updated.midterm_score ?? 0,
+                        finalScore: updated.final_score ?? 0
+                    });
+                }
             }
         } catch (err) {
             console.error("Error fetching cadets", err);
@@ -387,11 +398,18 @@ const Grading = () => {
     };
 
     const handleSelectCadet = (cadet) => {
+        console.log('[Grading] Selected cadet:', cadet);
+        console.log('[Grading] Cadet scores:', {
+            prelim: cadet.prelim_score,
+            midterm: cadet.midterm_score,
+            final: cadet.final_score
+        });
+        
         setSelectedCadet(cadet);
         setProficiencyForm({
-            prelimScore: cadet.prelim_score || 0,
-            midtermScore: cadet.midterm_score || 0,
-            finalScore: cadet.final_score || 0
+            prelimScore: cadet.prelim_score ?? 0,
+            midtermScore: cadet.midterm_score ?? 0,
+            finalScore: cadet.final_score ?? 0
         });
         if (activeTab === 'merit') {
             fetchLedgerLogs(cadet.id);
