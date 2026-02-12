@@ -128,6 +128,12 @@ const Profile = () => {
                 const baseB = import.meta.env.VITE_API_URL || '';
                 const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
                 const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+                
+                // Ensure normalizedPath is just the relative path from root
+                if (!normalizedPath.startsWith('/')) {
+                    normalizedPath = '/' + normalizedPath;
+                }
+                
                 const final = selectedBase ? `${selectedBase.replace(/\/+$/,'')}${normalizedPath}` : normalizedPath;
                 setPreview(final);
             }
@@ -236,11 +242,18 @@ const Profile = () => {
             } else {
                 alert('Profile updated successfully!');
                 if (res.data.profilePic) {
-                    const pic = res.data.profilePic;
-                    if (typeof pic === 'string' && (pic.startsWith('http') || pic.startsWith('data:'))) {
-                        setPreview(pic);
-                    } else {
-                        setPreview(`${import.meta.env.VITE_API_URL || ''}${pic}`);
+                    let pic = res.data.profilePic;
+                    if (typeof pic === 'string') {
+                        if (pic.startsWith('http') || pic.startsWith('data:')) {
+                            setPreview(pic);
+                        } else {
+                            if (!pic.startsWith('/')) pic = '/' + pic;
+                            const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+                            const baseB = import.meta.env.VITE_API_URL || '';
+                            const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
+                            const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
+                            setPreview(`${selectedBase.replace(/\/+$/,'')}${pic}`);
+                        }
                     }
                 }
             }

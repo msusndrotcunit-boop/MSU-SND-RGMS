@@ -315,6 +315,10 @@ const CadetLayout = () => {
                                     const baseC = (typeof window !== 'undefined' && window.location && /^https?:/.test(window.location.origin)) ? window.location.origin : '';
                                     const selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(b)) || '';
                                     
+                                    if (!normalizedPath.startsWith('/')) {
+                                        normalizedPath = '/' + normalizedPath;
+                                    }
+
                                     if (selectedBase) {
                                         finalSrc = `${selectedBase.replace(/\/+$/,'')}${normalizedPath}`;
                                     } else {

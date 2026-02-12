@@ -346,13 +346,16 @@ router.put('/profile', uploadProfilePic, (req, res) => {
             if (req.file) {
                 sql += `, profile_pic=?`;
                 let imageUrl = req.file.secure_url || req.file.url || req.file.path || '';
-                if (!isCloudinaryConfigured) {
-                    if (imageUrl && imageUrl.includes('uploads') && !imageUrl.startsWith('http')) {
-                        const parts = imageUrl.split(/[\\/]/);
-                        const uploadIndex = parts.indexOf('uploads');
-                        if (uploadIndex !== -1) {
-                            imageUrl = '/' + parts.slice(uploadIndex).join('/');
-                        }
+                
+                // If using local storage (no http prefix), normalize the path
+                if (imageUrl && !imageUrl.startsWith('http')) {
+                    imageUrl = imageUrl.replace(/\\/g, '/');
+                    const uploadsIndex = imageUrl.indexOf('/uploads/');
+                    if (uploadsIndex !== -1) {
+                        imageUrl = imageUrl.substring(uploadsIndex);
+                    } else if (imageUrl.includes('uploads/')) {
+                        const parts = imageUrl.split('uploads/');
+                        imageUrl = '/uploads/' + parts[parts.length - 1];
                     }
                 }
                 params.push(imageUrl);
@@ -395,11 +398,14 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                         let returnPath = null;
                         if (req.file) {
                              returnPath = req.file.secure_url || req.file.url || req.file.path;
-                             if (!isCloudinaryConfigured && returnPath && returnPath.includes('uploads')) {
-                                 const parts = returnPath.split(/[\\/]/);
-                                 const uploadIndex = parts.indexOf('uploads');
-                                 if (uploadIndex !== -1) {
-                                     returnPath = '/' + parts.slice(uploadIndex).join('/');
+                             if (returnPath && !returnPath.startsWith('http')) {
+                                 returnPath = returnPath.replace(/\\/g, '/');
+                                 const uploadsIndex = returnPath.indexOf('/uploads/');
+                                 if (uploadsIndex !== -1) {
+                                     returnPath = returnPath.substring(uploadsIndex);
+                                 } else if (returnPath.includes('uploads/')) {
+                                     const parts = returnPath.split('uploads/');
+                                     returnPath = '/uploads/' + parts[parts.length - 1];
                                  }
                              }
                         }
@@ -416,11 +422,14 @@ router.put('/profile', uploadProfilePic, (req, res) => {
                     let returnPath = null;
                     if (req.file) {
                          returnPath = req.file.secure_url || req.file.url || req.file.path;
-                         if (!isCloudinaryConfigured && returnPath && returnPath.includes('uploads')) {
-                             const parts = returnPath.split(/[\\/]/);
-                             const uploadIndex = parts.indexOf('uploads');
-                             if (uploadIndex !== -1) {
-                                 returnPath = '/' + parts.slice(uploadIndex).join('/');
+                         if (returnPath && !returnPath.startsWith('http')) {
+                             returnPath = returnPath.replace(/\\/g, '/');
+                             const uploadsIndex = returnPath.indexOf('/uploads/');
+                             if (uploadsIndex !== -1) {
+                                 returnPath = returnPath.substring(uploadsIndex);
+                             } else if (returnPath.includes('uploads/')) {
+                                 const parts = returnPath.split('uploads/');
+                                 returnPath = '/uploads/' + parts[parts.length - 1];
                              }
                          }
                     }
