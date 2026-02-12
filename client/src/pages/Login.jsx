@@ -408,11 +408,11 @@ const Login = () => {
                                 
                                 <a 
                                     href="/downloads/rgms-app.apk" 
-                                    download="Mobile_RGMS-v2.3.apk"
+                                    download="Mobile_RGMS-v2.4.apk"
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transform hover:-translate-y-1 transition-all w-full sm:w-auto"
                                 >
                                     <Download size={20} />
-                                    Download Mobile_RGMS APK v2.3
+                                    Download Mobile_RGMS APK v2.4
                                 </a>
                                 <p className="text-xs text-gray-500 mt-2">
                                     Note: You may need to allow installation from unknown sources.
