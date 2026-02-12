@@ -2722,4 +2722,43 @@ router.post('/backup/save', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
+// Debug endpoint: Inspect cadet-related data across tables in one place (admin-only, read-only)
+router.get('/debug/cadet/:cadetId', authenticateToken, isAdmin, async (req, res) => {
+    const cadetId = Number(req.params.cadetId);
+    if (!cadetId || Number.isNaN(cadetId)) {
+        return res.status(400).json({ message: 'Invalid cadetId' });
+    }
+    const pGet = (sql, params = []) => new Promise(resolve => {
+        db.get(sql, params, (err, row) => resolve(err ? { __error: err.message } : row || null));
+    });
+    const pAll = (sql, params = []) => new Promise(resolve => {
+        db.all(sql, params, (err, rows) => resolve(err ? { __error: err.message } : (rows || [])));
+    });
+    try {
+        const [cadet, user, grades, attendance, trainingDays, meritLogs] = await Promise.all([
+            pGet('SELECT * FROM cadets WHERE id = ?', [cadetId]),
+            pGet('SELECT * FROM users WHERE cadet_id = ?', [cadetId]),
+            pGet('SELECT * FROM grades WHERE cadet_id = ?', [cadetId]),
+            pAll('SELECT * FROM attendance_records WHERE cadet_id = ? ORDER BY training_day_id', [cadetId]),
+            pAll('SELECT * FROM training_days ORDER BY date', []),
+            pAll('SELECT * FROM merit_demerit_logs WHERE cadet_id = ? ORDER BY date_recorded DESC', [cadetId])
+        ]);
+        res.json({
+            cadet,
+            user,
+            grades,
+            attendance,
+            trainingDays,
+            meritLogs,
+            dbInfo: {
+                databaseUrlPresent: !!process.env.DATABASE_URL,
+                usingExternalDb: !!process.env.DATABASE_URL,
+                sqliteFile: process.env.DATABASE_URL ? null : (process.env.DB_FILE || 'rotc_grading.db')
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
 module.exports = router;
