@@ -21,6 +21,12 @@ const MyQRCode = () => {
     try {
       const res = await axios.get('/api/staff/me');
       setProfile(res.data);
+      
+      // Load saved QR code if exists
+      if (res.data.qr_code_data) {
+        setQrCodeUrl(res.data.qr_code_data);
+      }
+      
       setLoading(false);
     } catch (e) {
       setLoading(false);
@@ -30,6 +36,12 @@ const MyQRCode = () => {
 
   const generate = async () => {
     if (!profile) return;
+    
+    // Generate unique identifier for this QR code
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const uniqueId = `STAFF-${profile.id}-${timestamp}-${randomString}`;
+    
     const payload = {
       id: profile.id,
       role: 'training_staff',
@@ -39,12 +51,23 @@ const MyQRCode = () => {
       email: profile.email || '',
       rotc_unit: profile.rotc_unit || '',
       mobilization_center: profile.mobilization_center || '',
+      unique_id: uniqueId,
+      generated_at: new Date(timestamp).toISOString(),
+      profile_version: `${profile.first_name}-${profile.last_name}-${profile.afpsn}-${timestamp}`.replace(/\s+/g, '-')
     };
     try {
       const data = JSON.stringify(payload);
       const url = await QRCode.toDataURL(data, { errorCorrectionLevel: 'M' });
       setQrCodeUrl(url);
-      toast.success('QR code generated');
+      
+      // Save QR code to backend for persistence
+      try {
+        await axios.post('/api/staff/qr-code', { qr_data: url });
+      } catch (saveErr) {
+        console.error('Failed to save QR code:', saveErr);
+      }
+      
+      toast.success('Unique QR code generated successfully');
     } catch (e) {
       toast.error('Failed to generate QR code');
     }
@@ -99,7 +122,9 @@ const MyQRCode = () => {
           <Link to="/staff/profile" className="text-sm text-green-700 hover:underline">Back to Profile</Link>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          QR code contains your latest profile info. Generate after updating your profile.
+          {qrCodeUrl 
+            ? "Your unique QR code is ready. Regenerate if you've updated your profile." 
+            : "Generate your unique QR code after completing your profile. This QR code will persist and only needs regeneration if you update your profile information."}
         </p>
         <div className="flex flex-col items-center">
           {qrCodeUrl ? (
@@ -109,7 +134,7 @@ const MyQRCode = () => {
           )}
           <div className="mt-4 flex gap-2">
             <button onClick={generate} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded flex items-center gap-2">
-              <RefreshCcw size={16} /> Generate
+              <RefreshCcw size={16} /> {qrCodeUrl ? 'Regenerate' : 'Generate'}
             </button>
             <button onClick={download} disabled={!qrCodeUrl} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50">
               <Download size={16} /> Download
@@ -118,9 +143,14 @@ const MyQRCode = () => {
               <Printer size={16} /> Print
             </button>
           </div>
+          {qrCodeUrl && (
+            <div className="mt-4 text-xs text-green-700 bg-green-100 px-3 py-2 rounded">
+              ✓ QR code generated and saved. It will remain visible until you regenerate it.
+            </div>
+          )}
           {!locked && (
-            <div className="mt-4 text-xs text-amber-700 bg-amber-100 px-3 py-2 rounded">
-              Complete your profile to lock details and avoid future changes.
+            <div className="mt-2 text-xs text-amber-700 bg-amber-100 px-3 py-2 rounded">
+              Complete your profile to lock details and avoid frequent regeneration.
             </div>
           )}
         </div>

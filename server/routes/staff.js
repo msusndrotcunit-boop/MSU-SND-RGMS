@@ -215,6 +215,42 @@ router.get('/me', authenticateToken, (req, res) => {
     });
 });
 
+// Save QR Code Data
+router.post('/qr-code', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    
+    const { qr_data } = req.body;
+    if (!qr_data) return res.status(400).json({ message: 'QR code data is required' });
+    
+    // Check if column exists first
+    db.all("PRAGMA table_info(training_staff)", [], (err, columns) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        const hasQrColumn = columns.some(col => col.name === 'qr_code_data');
+        
+        if (!hasQrColumn) {
+            // Add column if it doesn't exist
+            db.run("ALTER TABLE training_staff ADD COLUMN qr_code_data TEXT", (alterErr) => {
+                if (alterErr && !alterErr.message.includes('duplicate column')) {
+                    return res.status(500).json({ message: alterErr.message });
+                }
+                // Now update
+                updateQrCode();
+            });
+        } else {
+            updateQrCode();
+        }
+    });
+    
+    function updateQrCode() {
+        const sql = `UPDATE training_staff SET qr_code_data = ? WHERE id = ?`;
+        db.run(sql, [qr_data, req.user.staffId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'QR code saved successfully' });
+        });
+    }
+});
+
 // UPDATE Current Staff Profile (Me) - Complete Profile
 router.put('/profile', authenticateToken, (req, res) => {
     if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
