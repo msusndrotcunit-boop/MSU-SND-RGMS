@@ -594,58 +594,12 @@ const extractFromRaw = (line) => {
     const rawLine = line.trim();
     if (!rawLine) return row;
 
-    // ROTCMIS Format Pattern: # LASTNAME, FIRSTNAME Username Program/Course STATUS TimeIn TimeOut
-    // Example: "1 ABAÑO, AL JAME AL_may Basic/MS2 PRESENT - -"
-    // Example: "7 Abkao, JARED jmmeng Basic/MS2 ABSENT - -"
-    
-    // Pattern 1: ROTCMIS table format - prioritize username extraction
-    const rotcmisPattern = /^\s*(\d{1,4})\s+([A-Z][A-Za-z\s,]+?)\s+([A-Za-z0-9._-]{2,})\s+(Basic\/MS[12]|Advance\/MS[34][12])\s+(PRESENT|ABSENT|EXCUSED|LATE)\s*(.*?)$/i;
-    const rotcmisMatch = rawLine.match(rotcmisPattern);
-    
-    if (rotcmisMatch) {
-        const nameRaw = rotcmisMatch[2].trim();
-        const username = rotcmisMatch[3].trim();
-        const program = rotcmisMatch[4].trim();
-        const status = rotcmisMatch[5].trim().toLowerCase();
-        const timeData = rotcmisMatch[6].trim();
-        
-        // PRIORITY 1: Use username for matching (most reliable)
-        row['Username'] = username;
-        
-        // Parse name: "LASTNAME, FIRSTNAME" or "LASTNAME, FIRSTNAME MIDDLENAME"
-        if (nameRaw.includes(',')) {
-            const [lastName, firstPart] = nameRaw.split(',').map(s => s.trim());
-            row['Name'] = `${firstPart} ${lastName}`.trim(); // Convert to "FIRSTNAME LASTNAME"
-            row['Last Name'] = lastName;
-            row['First Name'] = firstPart.split(/\s+/)[0]; // First word is first name
-        } else {
-            row['Name'] = nameRaw;
-        }
-        
-        row['Program'] = program;
-        row['Status'] = status;
-        
-        // Extract timestamps if present (not "-")
-        const timeMatches = timeData.match(/\b(\d{1,2}:\d{2}\s*[APap][Mm])\b/g) || [];
-        if (timeMatches.length > 0 && timeMatches[0] !== '-') {
-            row['Time In'] = timeMatches[0];
-            if (timeMatches.length > 1 && timeMatches[1] !== '-') {
-                row['Time Out'] = timeMatches[1];
-            }
-        }
-        
-        return row;
-    }
-
-    // Pattern 2: Original strict pattern for backward compatibility
     const strictPattern = /^\s*(\d{1,4})[.)]?\s+(.*?)\s+([A-Za-z0-9._-]{3,})\s+(Basic\/MS1|Basic\/MS2|Advance\/MS31|Advance\/MS32|Advance\/MS41|Advance\/MS42)\b(.*)$/i;
     const strictMatch = rawLine.match(strictPattern);
     if (strictMatch) {
         const nameCandidate = strictMatch[2].trim();
-        const username = strictMatch[3].trim();
         const postProgram = strictMatch[5].trim();
 
-        row['Username'] = username;
         row['Name'] = nameCandidate;
 
         const lowerPost = postProgram.toLowerCase();
@@ -664,7 +618,6 @@ const extractFromRaw = (line) => {
         return row;
     }
 
-    // Pattern 3: Program-based extraction
     const programRegex = /\b(Basic\/MS1|Basic\/MS2|Advance\/MS31|Advance\/MS32|Advance\/MS41|Advance\/MS42)\b/i;
     const match = rawLine.match(programRegex);
     if (match) {
@@ -679,8 +632,6 @@ const extractFromRaw = (line) => {
         if (parts.length < 3) return {};
         const usernameCandidate = parts[parts.length - 1];
         if (!/^[A-Za-z0-9._-]{3,}$/.test(usernameCandidate)) return {};
-
-        row['Username'] = usernameCandidate;
 
         const lastSpaceIndex = preProgram.lastIndexOf(' ');
         if (lastSpaceIndex === -1) return {};
@@ -705,7 +656,6 @@ const extractFromRaw = (line) => {
         return row;
     }
 
-    // Pattern 4: Status-based extraction (fallback)
     const lower = rawLine.toLowerCase();
     const statuses = ['present', 'absent', 'excused', 'late'];
     const foundStatus = statuses.find(s => lower.includes(s));
@@ -735,23 +685,6 @@ const extractFromRaw = (line) => {
 };
 
 // --- Shared Import Logic ---
-
-const getCadetByUsername = (username) => {
-    return new Promise((resolve, reject) => {
-        const sql = `
-            SELECT c.id 
-            FROM cadets c 
-            JOIN users u ON u.cadet_id = c.id 
-            WHERE LOWER(u.username) = LOWER(?) 
-              AND u.is_approved = 1 
-              AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
-        `;
-        db.get(sql, [username], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-};
 
 const getCadetByStudentId = (studentId) => {
     return new Promise((resolve, reject) => {
@@ -806,102 +739,23 @@ const getCadetByName = (firstName, lastName) => {
 };
 
 const findCadet = async (row, allCadets = []) => {
-    const username = row['Username'] || row['username'];
-    const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
-    const email = row['Email'] || row['email'] || row['EMAIL'];
-    let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
-    let firstName = row['First Name'] || row['first_name'];
-    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'] || row['Name of Cadet'] || row['Full Name'];
-
-    // Parse full name if first/last not provided
-    if (!lastName && !firstName && fullName) {
-        if (fullName.includes(',')) {
-            const parts = fullName.split(',');
-            lastName = parts[0].trim();
-            firstName = parts[1].trim().split(/\s+/)[0]; // Get first word as first name
-        } else {
-            const parts = fullName.trim().split(/\s+/);
-            if (parts.length >= 2) {
-                firstName = parts[0]; // First word is first name
-                lastName = parts[parts.length - 1]; // Last word is last name
-            }
-        }
-    }
-
-    console.log(`[Attendance Import] Attempting to match:`, { 
-        username, 
-        studentId, 
-        email, 
-        firstName, 
-        lastName, 
-        fullName 
-    });
-
-    // PRIORITY 1: Try Username (Most common identifier from ROTCMIS)
-    if (username) {
-        try {
-            const cadet = await getCadetByUsername(username);
-            if (cadet) {
-                console.log(`✓ [Priority 1] Matched by username: ${username}`);
-                return cadet;
-            }
-        } catch (e) {
-            console.error(`✗ [Priority 1] Error matching username ${username}:`, e);
-        }
-    }
-
-    // PRIORITY 2: Try Student ID (Unique identifier, doesn't change)
-    if (studentId) {
-        try {
-            const cadet = await getCadetByStudentId(studentId);
-            if (cadet) {
-                console.log(`✓ [Priority 2] Matched by student ID: ${studentId}`);
-                return cadet;
-            }
-        } catch (e) {
-            console.error(`✗ [Priority 2] Error matching student ID ${studentId}:`, e);
-        }
-    }
-
-    // PRIORITY 3: Try Email (Reliable if provided)
-    if (email) {
-        try {
-            const cadet = await getCadetByEmail(email);
-            if (cadet) {
-                console.log(`✓ [Priority 3] Matched by email: ${email}`);
-                return cadet;
-            }
-        } catch (e) {
-            console.error(`✗ [Priority 3] Error matching email ${email}:`, e);
-        }
-    }
-
-    // PRIORITY 4: Try Exact Name Match (First Name + Last Name)
-    if (lastName && firstName) {
-        try {
-            const cadet = await getCadetByName(firstName, lastName);
-            if (cadet) {
-                console.log(`✓ [Priority 4] Matched by exact name: ${firstName} ${lastName}`);
-                return cadet;
-            }
-        } catch (e) {
-            console.error(`✗ [Priority 4] Error matching name ${firstName} ${lastName}:`, e);
-        }
-    }
-
-    // PRIORITY 5: Try Fuzzy Name Match (Handles typos, OCR errors, case differences)
-    const nameToMatch = fullName;
+    // 1. Try Name (Fuzzy Match - Priority as per user request)
+    // We check this first or fall back to it. Since we stripped IDs in extractFromRaw, this is the main path.
+    const nameToMatch = row['Name'];
+    
     if (nameToMatch && allCadets.length > 0) {
         let bestMatch = null;
         let minDistance = Infinity;
-        const threshold = 5; // Allow up to 5 character differences
+        // Allow fuzzy match. Threshold depends on name length, but 4-5 is usually safe for full names.
+        // For very short names, we might want to be stricter.
+        const threshold = 5; 
 
         for (const cadet of allCadets) {
-            // Try multiple name format combinations
+            // Construct possible name formats from DB
             const fullNameNormal = `${cadet.first_name} ${cadet.last_name}`;
             const fullNameReverse = `${cadet.last_name} ${cadet.first_name}`;
             const fullNameComma = `${cadet.last_name}, ${cadet.first_name}`;
-            const fullNameCommaReverse = `${cadet.first_name}, ${cadet.last_name}`;
+            const fullNameCommaReverse = `${cadet.first_name}, ${cadet.last_name}`; // Less common but possible
 
             const target = nameToMatch.toLowerCase();
             
@@ -918,24 +772,60 @@ const findCadet = async (row, allCadets = []) => {
             }
         }
 
-        // Accept match if distance is within threshold AND reasonable relative to name length
-        if (minDistance <= threshold && minDistance < (nameToMatch.length * 0.4)) {
-            console.log(`✓ [Priority 5] Matched by fuzzy name: "${nameToMatch}" → "${bestMatch.first_name} ${bestMatch.last_name}" (distance: ${minDistance})`);
-            return bestMatch;
-        } else if (minDistance <= threshold) {
-            console.warn(`⚠ [Priority 5] Fuzzy match found but rejected (distance too high): "${nameToMatch}" → distance: ${minDistance}`);
+        if (minDistance <= threshold) {
+            // Also optionally check if the best match is "close enough" relatively?
+            // e.g. if name is "Junjie", distance 5 is too much.
+            // But for "Junjie Bahian", distance 2 is fine.
+            if (minDistance < (nameToMatch.length * 0.4)) { // 40% difference allowed max
+                 return bestMatch;
+            }
         }
     }
 
-    // No match found after all attempts
-    console.error(`✗ [No Match] Failed to match cadet:`, { 
-        username, 
-        studentId, 
-        email, 
-        firstName, 
-        lastName, 
-        fullName: nameToMatch 
-    });
+    // 2. Try Student ID (Fallback if extractFromRaw was modified to allow it, or manually passed)
+    const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
+    if (studentId) {
+        try {
+            const cadet = await getCadetByStudentId(studentId);
+            if (cadet) return cadet;
+        } catch (e) {}
+    }
+
+    // 3. Try Email (Fallback)
+    const email = row['Email'] || row['email'] || row['EMAIL'];
+    if (email) {
+        try {
+            const cadet = await getCadetByEmail(email);
+            if (cadet) return cadet;
+        } catch (e) {}
+    }
+
+    // 4. Try Exact Name (Fallback)
+    let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
+    let firstName = row['First Name'] || row['first_name'];
+    const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'] || row['Name of Cadet'] || row['Full Name'];
+
+    if (!lastName && !firstName && fullName) {
+        if (fullName.includes(',')) {
+            const parts = fullName.split(',');
+            lastName = parts[0].trim();
+            firstName = parts[1].trim();
+        } else {
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                lastName = parts[parts.length - 1]; 
+                firstName = parts.slice(0, -1).join(' ');
+            }
+        }
+    }
+
+    if (lastName && firstName) {
+        try {
+            const cadet = await getCadetByName(firstName, lastName);
+            if (cadet) return cadet;
+        } catch (e) {}
+    }
+
     return null;
 };
 
