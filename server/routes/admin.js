@@ -2105,7 +2105,7 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 // --- Activity Management ---
 
 // Upload Activity
-router.post('/activities', upload.array('images', 10), (req, res) => {
+router.post('/activities', upload.array('images', 10), async (req, res) => {
     const { title, description, date, type } = req.body;
     
     let images = [];
@@ -2134,25 +2134,86 @@ router.post('/activities', upload.array('images', 10), (req, res) => {
     if (activityType === 'activity' && images.length < 3) {
         return res.status(400).json({ message: 'Activities require at least 3 photos.' });
     }
+    
+    if (activityType === 'announcement' && images.length < 1) {
+        return res.status(400).json({ message: 'Announcements require at least 1 photo.' });
+    }
 
     const imagesJson = JSON.stringify(images);
     const primaryImage = images[0] || null;
 
+    // Insert into database immediately (fast response)
     db.get(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
         [title, description, date, primaryImage, imagesJson, activityType],
         (err, row) => {
             if (err) return res.status(500).json({ message: err.message });
             
             const activityId = row ? row.id : null;
+            
             // Create notification for the new activity
             const notifMsg = `New ${activityType === 'announcement' ? 'Announcement' : 'Activity'} Posted: ${title}`;
             db.run(`INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, 'activity')`, 
                 [notifMsg], 
                 (nErr) => {
                     if (nErr) console.error("Error creating activity notification:", nErr);
-                    res.json({ id: activityId, message: 'Activity created' });
                 }
             );
+            
+            // Send response immediately
+            res.json({ id: activityId, message: 'Activity created' });
+            
+            // Background: Upload local images to Cloudinary if configured
+            if (req.files && req.files.length > 0 && isCloudinaryConfigured()) {
+                setImmediate(async () => {
+                    try {
+                        const cloudinary = require('cloudinary').v2;
+                        const uploadPromises = req.files
+                            .filter(file => file.filename && !file.path?.startsWith('http'))
+                            .map(async (file) => {
+                                try {
+                                    const localPath = path.join(__dirname, '../uploads', file.filename);
+                                    const result = await cloudinary.uploader.upload(localPath, {
+                                        folder: 'rotc-grading-system',
+                                        resource_type: 'auto'
+                                    });
+                                    return { local: `/uploads/${file.filename}`, cloud: result.secure_url };
+                                } catch (uploadErr) {
+                                    console.error('[Background] Cloudinary upload failed:', uploadErr);
+                                    return null;
+                                }
+                            });
+                        
+                        const results = await Promise.all(uploadPromises);
+                        const validResults = results.filter(Boolean);
+                        
+                        if (validResults.length > 0 && activityId) {
+                            // Update images with Cloudinary URLs
+                            db.get('SELECT images FROM activities WHERE id = ?', [activityId], (err, row) => {
+                                if (err || !row) return;
+                                let currentImages = JSON.parse(row.images || '[]');
+                                validResults.forEach(({ local, cloud }) => {
+                                    const index = currentImages.indexOf(local);
+                                    if (index !== -1) {
+                                        currentImages[index] = cloud;
+                                    }
+                                });
+                                const updatedImagesJson = JSON.stringify(currentImages);
+                                const updatedPrimary = currentImages[0] || null;
+                                db.run(
+                                    'UPDATE activities SET images = ?, image_path = ? WHERE id = ?',
+                                    [updatedImagesJson, updatedPrimary, activityId],
+                                    (updateErr) => {
+                                        if (updateErr) console.error('[Background] Failed to update with Cloudinary URLs:', updateErr);
+                                        else console.log('[Background] Successfully updated with Cloudinary URLs');
+                                    }
+                                );
+                            });
+                        }
+                    } catch (bgErr) {
+                        console.error('[Background] Error in Cloudinary upload process:', bgErr);
+                    }
+                });
+            }
         });
 });
 
@@ -2165,7 +2226,7 @@ router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Update Activity
-router.put('/activities/:id', upload.array('images', 10), (req, res) => {
+router.put('/activities/:id', upload.array('images', 10), async (req, res) => {
     const { id } = req.params;
     const { title, description, date, type, existingImages } = req.body;
     
@@ -2189,21 +2250,26 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
         console.error('[PUT /activities/:id] Error parsing existing images:', e);
     }
     
-    // Add newly uploaded images
+    // Add newly uploaded images - handle both Cloudinary and local paths
     if (req.files && req.files.length > 0) {
         const newImages = req.files.map(file => {
+            // Cloudinary path
             if (file.path && (file.path.startsWith('http') || file.path.startsWith('https'))) {
                 return file.path;
             }
+            // Local upload path
             if (file.filename) {
                 return `/uploads/${file.filename}`;
             }
+            // Base64 fallback
             if (file.buffer) {
                 return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
             }
             return null;
         }).filter(Boolean);
         images = [...images, ...newImages];
+        
+        console.log('[PUT /activities/:id] New images added:', newImages.length);
     }
 
     const activityType = type || 'activity';
@@ -2229,6 +2295,7 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
     const imagesJson = JSON.stringify(images);
     const primaryImage = images[0] || null;
 
+    // Update database immediately (fast response)
     db.run(
         `UPDATE activities SET title = ?, description = ?, date = ?, image_path = ?, images = ?, type = ? WHERE id = ?`,
         [title, description, date, primaryImage, imagesJson, activityType, id],
@@ -2246,10 +2313,65 @@ router.put('/activities/:id', upload.array('images', 10), (req, res) => {
                 [notifMsg], 
                 (nErr) => {
                     if (nErr) console.error("[PUT /activities/:id] Error creating update notification:", nErr);
-                    console.log('[PUT /activities/:id] Response sent successfully');
-                    res.json({ message: 'Activity updated successfully' });
                 }
             );
+            
+            // Send response immediately
+            console.log('[PUT /activities/:id] Response sent successfully');
+            res.json({ message: 'Activity updated successfully' });
+            
+            // Background: Upload local images to Cloudinary if configured
+            if (req.files && req.files.length > 0 && isCloudinaryConfigured()) {
+                setImmediate(async () => {
+                    try {
+                        const cloudinary = require('cloudinary').v2;
+                        const uploadPromises = req.files
+                            .filter(file => file.filename && !file.path?.startsWith('http'))
+                            .map(async (file) => {
+                                try {
+                                    const localPath = path.join(__dirname, '../uploads', file.filename);
+                                    const result = await cloudinary.uploader.upload(localPath, {
+                                        folder: 'rotc-grading-system',
+                                        resource_type: 'auto'
+                                    });
+                                    return { local: `/uploads/${file.filename}`, cloud: result.secure_url };
+                                } catch (uploadErr) {
+                                    console.error('[Background] Cloudinary upload failed:', uploadErr);
+                                    return null;
+                                }
+                            });
+                        
+                        const results = await Promise.all(uploadPromises);
+                        const validResults = results.filter(Boolean);
+                        
+                        if (validResults.length > 0) {
+                            // Update images with Cloudinary URLs
+                            db.get('SELECT images FROM activities WHERE id = ?', [id], (err, row) => {
+                                if (err || !row) return;
+                                let currentImages = JSON.parse(row.images || '[]');
+                                validResults.forEach(({ local, cloud }) => {
+                                    const index = currentImages.indexOf(local);
+                                    if (index !== -1) {
+                                        currentImages[index] = cloud;
+                                    }
+                                });
+                                const updatedImagesJson = JSON.stringify(currentImages);
+                                const updatedPrimary = currentImages[0] || null;
+                                db.run(
+                                    'UPDATE activities SET images = ?, image_path = ? WHERE id = ?',
+                                    [updatedImagesJson, updatedPrimary, id],
+                                    (updateErr) => {
+                                        if (updateErr) console.error('[Background] Failed to update with Cloudinary URLs:', updateErr);
+                                        else console.log('[Background] Successfully updated with Cloudinary URLs');
+                                    }
+                                );
+                            });
+                        }
+                    } catch (bgErr) {
+                        console.error('[Background] Error in Cloudinary upload process:', bgErr);
+                    }
+                });
+            }
         }
     );
 });
