@@ -1,6 +1,6 @@
 const express = require('express');
 const { upload, isCloudinaryConfigured } = require('../utils/cloudinary');
-// const multer = require('multer'); // Removed local multer
+const multer = require('multer');
 const path = require('path');
 const db = require('../database');
 const { authenticateToken } = require('../middleware/auth');
@@ -9,7 +9,24 @@ const { calculateTransmutedGrade } = require('../utils/gradesHelper');
 
 const router = express.Router();
 
-// Multer Config Removed (Handled in utils/cloudinary)
+// Local storage for immediate uploads (fast!)
+const localStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../uploads');
+        const fs = require('fs');
+        if (!fs.existsSync(uploadDir)){
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'profile-' + uniqueSuffix + ext);
+    }
+});
+
+const localUpload = multer({ storage: localStorage });
 
 router.use(authenticateToken);
 
@@ -252,12 +269,11 @@ router.get('/profile', (req, res) => {
     });
 });
 
-// Wrapper for upload middleware to handle errors gracefully
+// Wrapper for LOCAL upload middleware (FAST!)
 const uploadProfilePic = (req, res, next) => {
-    upload.single('profilePic')(req, res, (err) => {
+    localUpload.single('profilePic')(req, res, (err) => {
         if (err) {
             console.error("Profile Pic Upload Error:", err);
-            // Return JSON error instead of 500 HTML
             const msg = err.message || 'Unknown upload error';
             return res.status(400).json({ message: `Image upload failed: ${msg}` });
         }
@@ -366,7 +382,8 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
 
         let imageUrl = null;
         if (req.file) {
-            imageUrl = req.file.secure_url || req.file.url || req.file.path || '';
+            // Save to local storage FIRST (instant!)
+            imageUrl = req.file.path || '';
             
             // Normalize local paths
             if (imageUrl && !imageUrl.startsWith('http')) {
@@ -383,7 +400,52 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             sql += `, profile_pic=?`;
             params.push(imageUrl);
             
-            console.log('[Profile Update] Image uploaded:', imageUrl);
+            console.log('[Profile Update] Image saved locally:', imageUrl);
+            
+            // Queue for Cloudinary upload in background (non-blocking)
+            if (isCloudinaryConfigured) {
+                setImmediate(async () => {
+                    try {
+                        console.log('[Cloudinary] Starting background upload for cadet:', cadetId);
+                        const { cloudinary } = require('../utils/cloudinary');
+                        const fs = require('fs');
+                        
+                        const localPath = path.join(__dirname, '..', imageUrl);
+                        
+                        // Upload to Cloudinary
+                        const result = await cloudinary.uploader.upload(localPath, {
+                            folder: 'rotc-grading-system',
+                            transformation: [
+                                { width: 250, height: 250, crop: 'limit' }
+                            ]
+                        });
+                        
+                        const cloudinaryUrl = result.secure_url || result.url;
+                        console.log('[Cloudinary] Upload complete:', cloudinaryUrl);
+                        
+                        // Update database with Cloudinary URL
+                        db.run('UPDATE cadets SET profile_pic = ? WHERE id = ?', [cloudinaryUrl, cadetId], (err) => {
+                            if (err) {
+                                console.error('[Cloudinary] Failed to update DB with Cloudinary URL:', err);
+                            } else {
+                                console.log('[Cloudinary] Database updated with Cloudinary URL');
+                                
+                                // Delete local file after successful upload
+                                fs.unlink(localPath, (unlinkErr) => {
+                                    if (unlinkErr) {
+                                        console.error('[Cloudinary] Failed to delete local file:', unlinkErr);
+                                    } else {
+                                        console.log('[Cloudinary] Local file deleted');
+                                    }
+                                });
+                            }
+                        });
+                    } catch (cloudErr) {
+                        console.error('[Cloudinary] Background upload failed:', cloudErr);
+                        // Keep local file as fallback
+                    }
+                });
+            }
         }
 
         // Set completion status if requested

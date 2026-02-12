@@ -29,23 +29,20 @@ if (isCloudinaryConfigured) {
     const configuredName = cloudinary.config().cloud_name || '(hidden)';
     console.log(`[Upload] Cloudinary configured for cloud: ${configuredName}`);
 
-    // Configure Storage with faster settings
+    // Configure Storage with minimal transformation for speed
     storage = new CloudinaryStorage({
         cloudinary: cloudinary,
         params: async (req, file) => {
             const isImage = file.mimetype.startsWith('image/');
             return {
                 folder: 'rotc-grading-system',
-                allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'pdf', 'doc', 'docx'],
+                allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
                 resource_type: 'auto',
-                // Minimal transformation for fastest upload
+                // Minimal transformation - just resize, no quality processing
                 transformation: isImage ? [
-                    { width: 300, height: 300, crop: 'limit' },  // Even smaller
-                    { quality: '60' },  // Fixed quality for speed
-                    { fetch_format: 'auto' }
+                    { width: 250, height: 250, crop: 'limit' }
                 ] : undefined,
-                // Add timeout settings
-                timeout: 60000
+                timeout: 30000  // 30 second timeout
             };
         }
     });
