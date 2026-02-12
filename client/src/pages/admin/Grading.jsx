@@ -938,10 +938,37 @@ const Grading = () => {
                                                     <span className="text-gray-600">Total Demerits</span>
                                                     <span className="font-bold text-red-600">{selectedCadet.demerit_points}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center py-2 pt-3">
+                                                <div className="flex justify-between items-center py-2 border-b">
                                                     <span className="font-bold text-gray-800">Net Score</span>
-                                                    <span className="font-bold text-xl">{100 + selectedCadet.merit_points - selectedCadet.demerit_points}</span>
+                                                    <span className="font-bold text-xl">{Math.min(100, Math.max(0, 100 + selectedCadet.merit_points - selectedCadet.demerit_points))}</span>
                                                 </div>
+                                                {(() => {
+                                                    const rawScore = 100 + selectedCadet.merit_points - selectedCadet.demerit_points;
+                                                    const cappedScore = Math.min(100, Math.max(0, rawScore));
+                                                    const isAtCeiling = cappedScore === 100 && rawScore >= 100;
+                                                    const wastedPoints = Math.max(0, rawScore - 100);
+                                                    const lifetimeMerit = selectedCadet.lifetime_merit_points || selectedCadet.merit_points || 0;
+                                                    
+                                                    return (
+                                                        <>
+                                                            <div className="flex justify-between items-center py-2 pt-3 bg-purple-50 px-2 rounded mt-2">
+                                                                <span className="text-sm text-purple-700 flex items-center gap-1">
+                                                                    <span>🏆</span>
+                                                                    Lifetime Merit
+                                                                </span>
+                                                                <span className="font-bold text-purple-700">{lifetimeMerit}</span>
+                                                            </div>
+                                                            {isAtCeiling && wastedPoints > 0 && (
+                                                                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                                                                    <p className="text-yellow-800 font-semibold">⚠️ At Ceiling</p>
+                                                                    <p className="text-yellow-700 mt-1">
+                                                                        {wastedPoints} merit points beyond 100 ceiling
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
 

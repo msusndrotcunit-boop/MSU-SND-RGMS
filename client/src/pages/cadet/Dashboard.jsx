@@ -358,6 +358,96 @@ const CadetDashboard = () => {
                                         </span>
                                     </div>
                                 </div>
+                                
+                                {/* Lifetime Merit & Ceiling Status */}
+                                {(() => {
+                                    const rawAptitude = 100 + (gradeData.merit_points || 0) - (gradeData.demerit_points || 0);
+                                    const cappedAptitude = Math.min(100, Math.max(0, rawAptitude));
+                                    const isAtCeiling = cappedAptitude === 100 && rawAptitude >= 100;
+                                    const wastedPoints = Math.max(0, rawAptitude - 100);
+                                    const lifetimeMerit = gradeData.lifetime_merit_points || gradeData.merit_points || 0;
+                                    
+                                    return (
+                                        <div className="mb-4 space-y-3">
+                                            {/* Current Aptitude Score */}
+                                            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-gray-700 mb-1">Current Aptitude Score</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-3xl font-bold text-green-700">{cappedAptitude}</span>
+                                                            <span className="text-lg text-gray-500">/ 100</span>
+                                                            {isAtCeiling && (
+                                                                <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full border border-yellow-300">
+                                                                    AT CEILING
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 mt-1">
+                                                            Formula: 100 + Merits ({gradeData.merit_points}) - Demerits ({gradeData.demerit_points}) = {rawAptitude} → {cappedAptitude}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="w-24 h-24 rounded-full border-8 border-green-500 flex items-center justify-center bg-white shadow-lg">
+                                                            <span className="text-2xl font-bold text-green-700">{cappedAptitude}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Lifetime Merit Achievement */}
+                                            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                                            <span className="text-purple-600">🏆</span>
+                                                            Lifetime Merit Achievement
+                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-3xl font-bold text-purple-700">{lifetimeMerit}</span>
+                                                            <span className="text-sm text-gray-600">total merits earned</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 mt-1">
+                                                            This tracks all merit points you've earned throughout your ROTC career
+                                                        </p>
+                                                    </div>
+                                                    {lifetimeMerit >= 100 && (
+                                                        <div className="text-center">
+                                                            <div className="text-4xl mb-1">🌟</div>
+                                                            <p className="text-xs font-bold text-purple-700">Century Club</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Wasted Points Warning */}
+                                            {wastedPoints > 0 && (
+                                                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                                                    <div className="flex items-start">
+                                                        <div className="flex-shrink-0">
+                                                            <AlertCircle className="h-5 w-5 text-yellow-400" />
+                                                        </div>
+                                                        <div className="ml-3">
+                                                            <h3 className="text-sm font-medium text-yellow-800">
+                                                                Merit Points at Ceiling
+                                                            </h3>
+                                                            <div className="mt-2 text-sm text-yellow-700">
+                                                                <p>
+                                                                    You've earned <strong>{wastedPoints} extra merit points</strong> beyond the 100-point ceiling. 
+                                                                    These points are tracked in your lifetime total but don't increase your current aptitude score.
+                                                                </p>
+                                                                <p className="mt-1 text-xs">
+                                                                    💡 Your lifetime achievement of <strong>{lifetimeMerit} merits</strong> is still recognized for awards and honors!
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                                
                                 <div className="overflow-x-auto max-h-[300px] overflow-y-auto border rounded">
                                     <table className="w-full text-left border-collapse">
                                         <thead className="sticky top-0 bg-gray-100 shadow-sm z-10">
