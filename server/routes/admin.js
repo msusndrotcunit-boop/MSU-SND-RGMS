@@ -2769,13 +2769,22 @@ router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
                 };
                 const applyGradeUpdate = () => {
                     // Check if lifetime_merit_points column exists first
-                    db.all(`PRAGMA table_info(grades)`, [], (pragmaErr, columns) => {
+                    // Use database-agnostic query
+                    const checkColumnSql = db.pool 
+                        ? `SELECT column_name FROM information_schema.columns WHERE table_name = 'grades' AND column_name = 'lifetime_merit_points'`
+                        : `PRAGMA table_info(grades)`;
+                    
+                    db.all(checkColumnSql, [], (pragmaErr, columns) => {
                         if (pragmaErr) {
                             console.error('[POST /merit-logs] Error checking table schema:', pragmaErr);
                             return db.run('ROLLBACK', [], () => res.status(500).json({ message: pragmaErr.message }));
                         }
                         
-                        const hasLifetimeColumn = columns.some(col => col.name === 'lifetime_merit_points');
+                        // Handle different result formats for PostgreSQL vs SQLite
+                        const hasLifetimeColumn = db.pool 
+                            ? columns.length > 0  // PostgreSQL: returns rows if column exists
+                            : columns.some(col => col.name === 'lifetime_merit_points');  // SQLite: returns table info
+                        
                         console.log('[POST /merit-logs] Has lifetime_merit_points column:', hasLifetimeColumn);
                         
                         // Update both current points and lifetime merit points (if merit type and column exists)
