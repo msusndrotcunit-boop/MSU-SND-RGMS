@@ -54,10 +54,10 @@ router.get('/search', authenticateToken, isAdmin, async (req, res) => {
     });
 });
 
-// Cache for system status (30 seconds)
+// Cache for system status (60 seconds - increased for better performance)
 let systemStatusCache = null;
 let systemStatusCacheTime = 0;
-const SYSTEM_STATUS_CACHE_TTL = 30000; // 30 seconds
+const SYSTEM_STATUS_CACHE_TTL = 60000; // 60 seconds
 
 router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const now = Date.now();
@@ -70,25 +70,37 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const start = Date.now();
     const results = {};
 
-    const pGet = (sql, params = []) => new Promise((resolve) => {
-        db.get(sql, params, (err, row) => {
-            if (err) resolve({ error: err.message });
-            else resolve(row || {});
-        });
-    });
+    // Optimized: Use a single query with subqueries for better performance
+    const optimizedQuery = db.pool 
+        ? `
+            SELECT 
+                1 as ok,
+                (SELECT COUNT(*) FROM cadets WHERE is_archived IS NOT TRUE) as cadets_total,
+                (SELECT COUNT(*) FROM users WHERE is_archived IS NOT TRUE) as users_total,
+                (SELECT COUNT(*) FROM training_days) as training_days_total,
+                (SELECT COUNT(*) FROM activities) as activities_total,
+                (SELECT COUNT(*) FROM notifications WHERE is_read = FALSE) as unread_notifications_total
+        `
+        : `
+            SELECT 
+                1 as ok,
+                (SELECT COUNT(*) FROM cadets WHERE is_archived IS FALSE OR is_archived IS NULL) as cadets_total,
+                (SELECT COUNT(*) FROM users WHERE is_archived IS FALSE OR is_archived IS NULL) as users_total,
+                (SELECT COUNT(*) FROM training_days) as training_days_total,
+                (SELECT COUNT(*) FROM activities) as activities_total,
+                (SELECT COUNT(*) FROM notifications WHERE is_read = 0) as unread_notifications_total
+        `;
 
-    // Optimized: Run all queries in parallel with timeout
+    // Single query with timeout
     Promise.race([
-        Promise.all([
-            pGet('SELECT 1 as ok'),
-            pGet('SELECT COUNT(*) as total FROM cadets WHERE is_archived IS FALSE OR is_archived IS NULL'),
-            pGet('SELECT COUNT(*) as total FROM users WHERE is_archived IS FALSE OR is_archived IS NULL'),
-            pGet('SELECT COUNT(*) as total FROM training_days'),
-            pGet('SELECT COUNT(*) as total FROM activities'),
-            pGet('SELECT COUNT(*) as total FROM notifications WHERE is_read = FALSE')
-        ]),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)) // 5 second timeout
-    ]).then(([dbCheck, cadets, users, trainingDays, activities, unreadNotifications]) => {
+        new Promise((resolve, reject) => {
+            db.get(optimizedQuery, [], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)) // 3 second timeout
+    ]).then((row) => {
         const latencyMs = Date.now() - start;
 
         results.app = {
@@ -98,17 +110,17 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         };
 
         results.database = {
-            status: dbCheck && !dbCheck.error ? 'ok' : 'error',
+            status: row && row.ok ? 'ok' : 'error',
             latencyMs,
             type: (db && db.pool) ? 'postgres' : 'sqlite'
         };
 
         results.metrics = {
-            cadets: cadets && cadets.total !== undefined ? cadets.total : null,
-            users: users && users.total !== undefined ? users.total : null,
-            trainingDays: trainingDays && trainingDays.total !== undefined ? trainingDays.total : null,
-            activities: activities && activities.total !== undefined ? activities.total : null,
-            unreadNotifications: unreadNotifications && unreadNotifications.total !== undefined ? unreadNotifications.total : null
+            cadets: row.cadets_total || 0,
+            users: row.users_total || 0,
+            trainingDays: row.training_days_total || 0,
+            activities: row.activities_total || 0,
+            unreadNotifications: row.unread_notifications_total || 0
         };
 
         if (results.database.status !== 'ok') {
@@ -129,7 +141,8 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
             },
             database: {
                 status: 'error',
-                error: err.message
+                error: err.message,
+                latencyMs: Date.now() - start
             }
         };
         res.status(500).json(errorResponse);

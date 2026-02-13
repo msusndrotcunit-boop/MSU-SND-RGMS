@@ -748,6 +748,29 @@ async function initPgDb() {
         }
 
         await db.flushJournal();
+        
+        // Run performance indexes migration
+        console.log('Creating performance indexes...');
+        try {
+            const { createPerformanceIndexes } = require('./migrations/create_performance_indexes');
+            await createPerformanceIndexes();
+            console.log('Performance indexes created successfully.');
+        } catch (indexErr) {
+            console.warn('Performance indexes creation warning:', indexErr.message);
+            // Non-critical, continue
+        }
+        
+        // Run lifetime merit points migration
+        console.log('Adding lifetime_merit_points column...');
+        try {
+            const { addLifetimeMeritPoints } = require('./migrations/add_lifetime_merit_points');
+            await addLifetimeMeritPoints();
+            console.log('Lifetime merit points migration completed.');
+        } catch (meritErr) {
+            console.warn('Lifetime merit points migration warning:', meritErr.message);
+            // Non-critical, continue
+        }
+        
         console.log('Seeding admin...');
         seedAdmin();
         console.log('PostgreSQL initialized successfully.');
