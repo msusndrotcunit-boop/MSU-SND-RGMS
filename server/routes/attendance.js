@@ -11,6 +11,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { cloudinary, isCloudinaryConfigured } = require('../utils/cloudinary');
+const { invalidateCadet, invalidateTrainingDay } = require('../middleware/performance');
 
 const { broadcastEvent, SSE_CLIENTS } = require('../utils/sseHelper');
 const { updateTotalAttendance } = require('../utils/gradesHelper');
@@ -190,6 +191,11 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                     if (err) return res.status(500).json({ message: err.message });
                     
                     await updateTotalAttendance(cadetId);
+                    
+                    // Invalidate cache for this cadet and training day (Requirement 8.2)
+                    invalidateCadet(cadetId);
+                    invalidateTrainingDay(dayId);
+                    
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
 
                     // Notify Cadet
@@ -214,6 +220,11 @@ router.post('/mark', authenticateToken, isAdmin, (req, res) => {
                     if (err) return res.status(500).json({ message: err.message });
                     
                     await updateTotalAttendance(cadetId);
+                    
+                    // Invalidate cache for this cadet and training day (Requirement 8.2)
+                    invalidateCadet(cadetId);
+                    invalidateTrainingDay(dayId);
+                    
                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(cadetId), dayId, status });
 
                     // Notify Cadet

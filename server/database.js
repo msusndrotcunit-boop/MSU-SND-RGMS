@@ -65,7 +65,14 @@ let sqlite3;
 if (isPostgres) {
     const connectionString = pgUrl;
     const poolConfig = {
-        connectionString: connectionString
+        connectionString: connectionString,
+        // Performance optimization: Connection pool settings
+        min: 5,                      // Minimum idle connections
+        max: 20,                     // Maximum connections under load
+        idleTimeoutMillis: 30000,    // Close idle connections after 30s
+        connectionTimeoutMillis: 2000, // Timeout connection attempts after 2s
+        // Connection validation
+        allowExitOnIdle: false
     };
     if (!/sslmode=disable/i.test(connectionString)) {
         poolConfig.ssl = { rejectUnauthorized: false };
@@ -76,6 +83,45 @@ if (isPostgres) {
 
     db = {
         pool: pool, // Expose pool if needed
+        
+        /**
+         * Validate connection before use
+         * Validates Requirements: 7.5
+         */
+        validateConnection: async function() {
+            try {
+                await pool.query('SELECT 1');
+                return true;
+            } catch (err) {
+                console.error('[Database] Connection validation failed:', err.message);
+                return false;
+            }
+        },
+        
+        /**
+         * Execute query with retry logic
+         * Validates Requirements: 7.4
+         */
+        queryWithRetry: async function(sql, params, maxRetries = 1) {
+            let lastError;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const result = await pool.query(sql, params);
+                    return result;
+                } catch (err) {
+                    lastError = err;
+                    const isTimeout = /timeout|ETIMEDOUT|ECONNREFUSED/i.test(err.message || err.code || '');
+                    if (isTimeout && attempt < maxRetries) {
+                        console.warn(`[Database] Query timeout, retrying (attempt ${attempt + 1}/${maxRetries + 1})...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            throw lastError;
+        },
+        
         flushJournal: async function() {
             const journalPath = path.join(__dirname, 'journal.json');
             let entries = [];

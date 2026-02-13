@@ -251,6 +251,7 @@ const AdminLayout = () => {
         },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
         { path: '/admin/achievements', label: 'Achievements', icon: Trophy },
+        { path: '/admin/performance', label: 'Performance Monitor', icon: Activity },
         { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
     ];

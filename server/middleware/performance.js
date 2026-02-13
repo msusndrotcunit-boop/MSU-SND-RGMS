@@ -85,10 +85,11 @@ const cacheMiddleware = (duration = 300, keyGenerator = null) => {
 /**
  * Invalidate cache for specific pattern
  * @param {string} pattern - Pattern to match cache keys (supports wildcards)
+ * Validates Requirements: 2.1, 2.2, 2.3, 8.1, 8.2, 8.3, 8.4
  */
 const invalidateCache = (pattern) => {
     const keys = cache.keys();
-    const regex = new RegExp(pattern.replace('*', '.*'));
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
     
     let invalidated = 0;
     keys.forEach(key => {
@@ -100,6 +101,70 @@ const invalidateCache = (pattern) => {
     
     console.log(`[CACHE] Invalidated ${invalidated} cache entries matching: ${pattern}`);
     return invalidated;
+};
+
+/**
+ * Invalidate cache for a specific cadet
+ * Convenience method for cadet-related cache invalidation
+ * Validates Requirements: 8.1, 8.2
+ */
+const invalidateCadet = (cadetId) => {
+    const patterns = [
+        `*cadet*grades*`,
+        `*cadet*${cadetId}*`,
+        `*cadet:profile:${cadetId}*`,
+        `*cadet:grades:${cadetId}*`
+    ];
+    
+    let total = 0;
+    patterns.forEach(pattern => {
+        total += invalidateCache(pattern);
+    });
+    
+    console.log(`[CACHE] Invalidated ${total} cache entries for cadet ${cadetId}`);
+    return total;
+};
+
+/**
+ * Invalidate cache for a specific training day
+ * Convenience method for training day-related cache invalidation
+ * Validates Requirements: 8.2
+ */
+const invalidateTrainingDay = (trainingDayId) => {
+    const patterns = [
+        `*training_day:attendance:${trainingDayId}*`,
+        `*training*${trainingDayId}*`
+    ];
+    
+    let total = 0;
+    patterns.forEach(pattern => {
+        total += invalidateCache(pattern);
+    });
+    
+    console.log(`[CACHE] Invalidated ${total} cache entries for training day ${trainingDayId}`);
+    return total;
+};
+
+/**
+ * Get or set cache with helper method
+ * Validates Requirements: 2.1
+ */
+const getOrSet = async (key, fn, ttl = 300) => {
+    // Check cache first
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+        console.log(`[CACHE] HIT: ${key}`);
+        return cached;
+    }
+    
+    // Cache miss - execute function
+    console.log(`[CACHE] MISS: ${key}`);
+    const result = await fn();
+    
+    // Store in cache
+    cache.set(key, result, ttl);
+    
+    return result;
 };
 
 /**
@@ -134,6 +199,9 @@ module.exports = {
     responseTime,
     cacheMiddleware,
     invalidateCache,
+    invalidateCadet,
+    invalidateTrainingDay,
+    getOrSet,
     clearCache,
     getCacheStats,
     httpCacheHeaders,

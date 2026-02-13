@@ -142,7 +142,20 @@ process.on('unhandledRejection', (reason, promise) => {
 // Middleware
 const { responseTime } = require('./middleware/performance');
 
-app.use(compression());
+// Response compression with optimized settings (Requirement 3.1, 15.1, 15.2, 15.3, 15.4, 15.5)
+app.use(compression({
+    level: 6,                    // Compression level (1-9, 6 is optimal balance)
+    threshold: 1024,             // Only compress responses > 1KB
+    filter: (req, res) => {
+        // Skip compression for already-compressed content types
+        const contentType = res.getHeader('Content-Type');
+        if (contentType && /image|video|audio|font/.test(contentType)) {
+            return false;
+        }
+        // Use default compression filter for other types
+        return compression.filter(req, res);
+    }
+}));
 app.use(cors());
 app.use(express.json());
 app.use(responseTime); // Add response time tracking
@@ -169,6 +182,10 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/recognition', recognitionRoutes);
+
+// Performance monitoring routes (Validates Requirements: 9.5, 8.5)
+const { router: metricsRouter } = require('./routes/metrics');
+app.use('/api/admin', metricsRouter);
 
 // DEBUG: Print all registered routes
 function printRoutes() {

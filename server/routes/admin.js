@@ -11,7 +11,7 @@ const { sendEmail } = require('../utils/emailService');
 const { processStaffData } = require('../utils/importCadets');
 const { broadcastEvent } = require('../utils/sseHelper');
 const { updateTotalAttendance, calculateTransmutedGrade } = require('../utils/gradesHelper');
-
+const { invalidateCadet, invalidateTrainingDay, invalidateCache, cacheMiddleware, clearCache, getCacheStats } = require('../middleware/performance');
 const router = express.Router();
 
 // Helper to serve default placeholder
@@ -1184,7 +1184,7 @@ router.put('/system-settings', authenticateToken, isAdmin, (req, res) => {
 // --- Analytics ---
 
 // Get Dashboard Analytics
-router.get('/analytics', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
+router.get('/analytics', authenticateToken, isAdminOrPrivilegedStaff, cacheMiddleware(600), (req, res) => {
     const analyticsData = {
         attendance: [],
         grades: { passed: 0, failed: 0, incomplete: 0 }
@@ -2184,6 +2184,9 @@ router.post('/activities', upload.array('images', 10), async (req, res) => {
                 }
             );
             
+            // Invalidate activities list cache (Requirement 8.3)
+            invalidateCache('*activities*');
+            
             // Send response immediately
             res.json({ id: activityId, message: 'Activity created' });
             
@@ -2246,6 +2249,10 @@ router.post('/activities', upload.array('images', 10), async (req, res) => {
 router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
     db.run(`DELETE FROM activities WHERE id = ?`, [req.params.id], function(err) {
         if (err) return res.status(500).json({ message: err.message });
+        
+        // Invalidate activities list cache (Requirement 8.3)
+        invalidateCache('*activities*');
+        
         res.json({ message: 'Activity deleted' });
     });
 });
@@ -2345,6 +2352,9 @@ router.put('/activities/:id', upload.array('images', 10), async (req, res) => {
                     if (nErr) console.error("[PUT /activities/:id] Error creating update notification:", nErr);
                 }
             );
+            
+            // Invalidate activities list cache (Requirement 8.3)
+            invalidateCache('*activities*');
             
             // Send response immediately
             console.log('[PUT /activities/:id] Response sent successfully');
@@ -2615,6 +2625,10 @@ router.put('/profile', authenticateToken, isAdmin, upload.single('profilePic'), 
         if (errRes && !resp.profilePic && !resp.gender) {
             return res.status(500).json({ message: errRes.error || 'Update failed' });
         }
+        
+        // Invalidate user profile cache (Requirement 8.4)
+        invalidateCache(`*user*${req.user.id}*`);
+        
         res.json(resp);
     }).catch((e) => {
         res.status(500).json({ message: e.message || 'Update failed' });
@@ -2786,6 +2800,10 @@ router.post('/merit-logs', authenticateToken, isAdmin, (req, res) => {
                             console.log('[POST /merit-logs] Grades updated successfully');
                             db.run('COMMIT', [], () => {
                                 console.log('[POST /merit-logs] Transaction committed');
+                                
+                                // Invalidate cache for this cadet (Requirement 8.1)
+                                invalidateCadet(cadetId);
+                                
                                 db.get(`SELECT email, first_name, last_name FROM cadets WHERE id = ?`, [cadetId], async (cErr, cadet) => {
                                     if (!cErr && cadet && cadet.email) {
                                         const subject = `ROTC System - New ${type === 'merit' ? 'Merit' : 'Demerit'} Record`;
@@ -2823,6 +2841,9 @@ router.delete('/merit-logs/:id', authenticateToken, isAdmin, (req, res) => {
                 db.run(`UPDATE grades SET ${column} = ${column} - ? WHERE cadet_id = ?`, [log.points, log.cadet_id], (uErr) => {
                     if (uErr) return db.run('ROLLBACK', [], () => res.status(500).json({ message: uErr.message }));
                     db.run('COMMIT', [], () => {
+                        // Invalidate cache for this cadet (Requirement 8.1)
+                        invalidateCadet(log.cadet_id);
+                        
                         broadcastEvent({ type: 'grade_updated', cadetId: Number(log.cadet_id) });
                         res.json({ message: 'Log deleted and points reverted' });
                     });
@@ -3238,6 +3259,40 @@ router.get('/debug/cadet/:cadetId', authenticateToken, isAdmin, async (req, res)
     } catch (e) {
         res.status(500).json({ message: e.message });
     }
+});
+
+// --- Cache Management ---
+
+// Get cache statistics
+router.get('/cache/stats', authenticateToken, isAdmin, (req, res) => {
+    const stats = getCacheStats();
+    res.json({
+        hits: stats.hits,
+        misses: stats.misses,
+        keys: stats.keys,
+        hitRate: stats.hits > 0 ? (stats.hits / (stats.hits + stats.misses) * 100).toFixed(2) + '%' : '0%'
+    });
+});
+
+// Clear all cache
+router.post('/cache/clear', authenticateToken, isAdmin, (req, res) => {
+    const statsBefore = getCacheStats();
+    clearCache();
+    const statsAfter = getCacheStats();
+    
+    res.json({
+        message: 'Cache cleared successfully',
+        before: {
+            keys: statsBefore.keys,
+            hits: statsBefore.hits,
+            misses: statsBefore.misses
+        },
+        after: {
+            keys: statsAfter.keys,
+            hits: statsAfter.hits,
+            misses: statsAfter.misses
+        }
+    });
 });
 
 module.exports = router;

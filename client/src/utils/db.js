@@ -94,7 +94,7 @@ export const clearCache = async (storeName) => {
 
 export const cacheSingleton = async (storeName, key, data) => {
     const db = await initDB();
-    await db.put(storeName, { key, data });
+    await db.put(storeName, { key, data, timestamp: Date.now() });
 };
 
 export const getSingleton = async (storeName, key) => {
@@ -102,3 +102,159 @@ export const getSingleton = async (storeName, key) => {
     const record = await db.get(storeName, key);
     return record ? record.data : null;
 };
+
+/**
+ * Enhanced cache with timestamp and freshness check
+ * Validates Requirements: 6.1, 6.2
+ */
+export const cacheWithTimestamp = async (storeName, key, data) => {
+    const db = await initDB();
+    await db.put(storeName, { 
+        key, 
+        data, 
+        timestamp: Date.now() 
+    });
+    console.log(`[IndexedDB] Cached ${key} in ${storeName} with timestamp`);
+};
+
+/**
+ * Get cached data with freshness check (5 minutes)
+ * Validates Requirements: 6.2
+ */
+export const getCachedWithFreshness = async (storeName, key, maxAgeMs = 300000) => {
+    const db = await initDB();
+    const record = await db.get(storeName, key);
+    
+    if (!record) {
+        console.log(`[IndexedDB] Cache MISS: ${key}`);
+        return null;
+    }
+    
+    const age = Date.now() - (record.timestamp || 0);
+    const isFresh = age < maxAgeMs;
+    
+    if (!isFresh) {
+        console.log(`[IndexedDB] Cache STALE: ${key} (age: ${Math.round(age / 1000)}s)`);
+        return null;
+    }
+    
+    console.log(`[IndexedDB] Cache HIT: ${key} (age: ${Math.round(age / 1000)}s)`);
+    return record.data;
+};
+
+/**
+ * Clean up stale cache entries (older than 24 hours)
+ * Validates Requirements: 6.5
+ */
+export const cleanupStaleCache = async () => {
+    const db = await initDB();
+    const storeNames = ['admin', 'cadets', 'grading', 'training_days', 'analytics', 'profiles', 'dashboard'];
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    let totalCleaned = 0;
+    
+    for (const storeName of storeNames) {
+        try {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            const allRecords = await store.getAll();
+            
+            for (const record of allRecords) {
+                if (record.timestamp) {
+                    const age = Date.now() - record.timestamp;
+                    if (age > maxAge) {
+                        await store.delete(record.key);
+                        totalCleaned++;
+                    }
+                }
+            }
+            
+            await tx.done;
+        } catch (err) {
+            console.error(`[IndexedDB] Error cleaning ${storeName}:`, err);
+        }
+    }
+    
+    if (totalCleaned > 0) {
+        console.log(`[IndexedDB] Cleaned up ${totalCleaned} stale cache entries`);
+    }
+    
+    return totalCleaned;
+};
+
+/**
+ * Offline sync queue for modifications
+ * Validates Requirements: 6.4
+ */
+export const addToSyncQueue = async (operation) => {
+    const db = await initDB();
+    
+    // Create sync_queue store if it doesn't exist
+    if (!db.objectStoreNames.contains('sync_queue')) {
+        db.close();
+        const newDb = await openDB(DB_NAME, DB_VERSION + 1, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains('sync_queue')) {
+                    db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
+                }
+            }
+        });
+        await newDb.put('sync_queue', {
+            ...operation,
+            timestamp: Date.now(),
+            synced: false
+        });
+        return;
+    }
+    
+    await db.put('sync_queue', {
+        ...operation,
+        timestamp: Date.now(),
+        synced: false
+    });
+    
+    console.log(`[IndexedDB] Added operation to sync queue:`, operation.type);
+};
+
+/**
+ * Get pending sync operations
+ * Validates Requirements: 6.4
+ */
+export const getPendingSyncOperations = async () => {
+    const db = await initDB();
+    
+    if (!db.objectStoreNames.contains('sync_queue')) {
+        return [];
+    }
+    
+    const allOps = await db.getAll('sync_queue');
+    return allOps.filter(op => !op.synced);
+};
+
+/**
+ * Mark sync operation as completed
+ * Validates Requirements: 6.4
+ */
+export const markSyncCompleted = async (operationId) => {
+    const db = await initDB();
+    
+    if (!db.objectStoreNames.contains('sync_queue')) {
+        return;
+    }
+    
+    const operation = await db.get('sync_queue', operationId);
+    if (operation) {
+        operation.synced = true;
+        operation.syncedAt = Date.now();
+        await db.put('sync_queue', operation);
+        console.log(`[IndexedDB] Marked operation ${operationId} as synced`);
+    }
+};
+
+// Auto-cleanup on initialization
+initDB().then(() => {
+    // Run cleanup on startup
+    cleanupStaleCache();
+    
+    // Schedule periodic cleanup (every hour)
+    setInterval(cleanupStaleCache, 60 * 60 * 1000);
+});

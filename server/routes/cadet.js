@@ -256,7 +256,7 @@ router.delete('/notifications/delete-all', (req, res) => {
     });
 });
 
-router.get('/profile', (req, res) => {
+router.get('/profile', cacheMiddleware(300), (req, res) => {
     const tryFetch = (id) => {
         const sql = `
             SELECT c.*, u.username 
@@ -553,7 +553,7 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
     }
 });
 
-router.get('/activities', (req, res) => {
+router.get('/activities', cacheMiddleware(300), (req, res) => {
     db.all(
         `SELECT id, title, description, date, type, image_path, images 
          FROM activities 

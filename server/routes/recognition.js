@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
+const { cacheMiddleware } = require('../middleware/performance');
 
 const router = express.Router();
 
@@ -78,7 +79,7 @@ router.get('/cadet/:cadetId/achievements', authenticateToken, async (req, res) =
 });
 
 // Get top performers (leaderboard)
-router.get('/leaderboard', authenticateToken, async (req, res) => {
+router.get('/leaderboard', authenticateToken, cacheMiddleware(600), async (req, res) => {
     const { limit = 10 } = req.query;
     
     try {
