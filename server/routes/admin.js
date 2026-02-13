@@ -1507,7 +1507,8 @@ router.get('/cadets', (req, res) => {
         if (isIncludeGrades) {
             baseSelect += `,
                    g.attendance_present, g.merit_points, g.demerit_points, 
-                   g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status
+                   g.prelim_score, g.midterm_score, g.final_score, g.status as grade_status,
+                   g.lifetime_merit_points
             `;
         }
 
@@ -3302,6 +3303,114 @@ router.post('/cache/clear', authenticateToken, isAdmin, (req, res) => {
             misses: statsAfter.misses
         }
     });
+});
+
+// Sync lifetime merit points from merit_demerit_logs
+router.post('/sync-lifetime-merits', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        console.log('[Sync Lifetime Merits] Starting sync...');
+        
+        // Get all cadets with their current lifetime_merit_points
+        const cadets = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT c.id, c.first_name, c.last_name, g.lifetime_merit_points 
+                 FROM cadets c
+                 LEFT JOIN grades g ON g.cadet_id = c.id
+                 WHERE (c.is_archived IS FALSE OR c.is_archived IS NULL)`,
+                [],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                }
+            );
+        });
+
+        console.log(`[Sync Lifetime Merits] Found ${cadets.length} cadets to sync`);
+
+        let syncedCount = 0;
+        let errorCount = 0;
+        const updates = [];
+
+        for (const cadet of cadets) {
+            try {
+                // Calculate total merit points from logs
+                const meritSum = await new Promise((resolve, reject) => {
+                    db.get(
+                        `SELECT COALESCE(SUM(points), 0) as total 
+                         FROM merit_demerit_logs 
+                         WHERE cadet_id = ? AND type = 'merit'`,
+                        [cadet.id],
+                        (err, row) => {
+                            if (err) reject(err);
+                            else resolve(row ? row.total : 0);
+                        }
+                    );
+                });
+
+                const currentLifetime = cadet.lifetime_merit_points || 0;
+                
+                // Only update if there's a difference
+                if (meritSum !== currentLifetime) {
+                    // Ensure grades row exists
+                    await new Promise((resolve, reject) => {
+                        db.get(`SELECT id FROM grades WHERE cadet_id = ?`, [cadet.id], (err, row) => {
+                            if (err) return reject(err);
+                            if (!row) {
+                                db.run(`INSERT INTO grades (cadet_id, lifetime_merit_points) VALUES (?, ?)`, 
+                                    [cadet.id, meritSum], 
+                                    (insErr) => {
+                                        if (insErr) reject(insErr);
+                                        else resolve();
+                                    }
+                                );
+                            } else {
+                                db.run(`UPDATE grades SET lifetime_merit_points = ? WHERE cadet_id = ?`, 
+                                    [meritSum, cadet.id], 
+                                    (updErr) => {
+                                        if (updErr) reject(updErr);
+                                        else resolve();
+                                    }
+                                );
+                            }
+                        });
+                    });
+
+                    updates.push({
+                        cadetId: cadet.id,
+                        name: `${cadet.first_name} ${cadet.last_name}`,
+                        before: currentLifetime,
+                        after: meritSum
+                    });
+                    
+                    syncedCount++;
+                    console.log(`[Sync] ${cadet.first_name} ${cadet.last_name}: ${currentLifetime} → ${meritSum}`);
+                }
+            } catch (err) {
+                console.error(`[Sync] Error syncing cadet ${cadet.id}:`, err);
+                errorCount++;
+            }
+        }
+
+        // Invalidate cache for all cadets
+        clearCache();
+
+        console.log(`[Sync Lifetime Merits] Complete: ${syncedCount} synced, ${errorCount} errors`);
+
+        res.json({
+            message: 'Lifetime merit points synced successfully',
+            totalCadets: cadets.length,
+            syncedCount,
+            errorCount,
+            updates: updates.slice(0, 10) // Return first 10 updates for display
+        });
+
+    } catch (err) {
+        console.error('[Sync Lifetime Merits] Error:', err);
+        res.status(500).json({ 
+            message: 'Failed to sync lifetime merit points',
+            error: err.message 
+        });
+    }
 });
 
 module.exports = router;

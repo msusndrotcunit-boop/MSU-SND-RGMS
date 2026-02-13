@@ -50,6 +50,7 @@ const Grading = () => {
     // Merit/Demerit State
     const [ledgerLogs, setLedgerLogs] = useState([]);
     const [ledgerForm, setLedgerForm] = useState({ type: 'merit', points: 0, reason: '' });
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Attendance State
     const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -494,6 +495,23 @@ const Grading = () => {
             fetchCadets(true);
         } catch (err) {
             alert('Error deleting log');
+        }
+    };
+
+    const handleSyncLifetimeMerits = async () => {
+        if (!confirm('Sync lifetime merit points from merit/demerit logs?\n\nThis will recalculate lifetime merits for all cadets based on their merit logs.')) return;
+        
+        setIsSyncing(true);
+        try {
+            const res = await axios.post('/api/admin/sync-lifetime-merits');
+            alert(`Sync complete!\n\n${res.data.syncedCount} cadets updated\nTotal cadets: ${res.data.totalCadets}`);
+            await cacheSingleton('admin', 'cadets_list', null);
+            fetchCadets(true);
+        } catch (err) {
+            console.error('Sync error:', err);
+            alert('Failed to sync lifetime merits: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -958,7 +976,18 @@ const Grading = () => {
                                             </div>
                                             
                                             <div className="bg-white p-4 rounded shadow-sm border">
-                                                <h3 className="font-bold mb-2 text-gray-800">Summary</h3>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <h3 className="font-bold text-gray-800">Summary</h3>
+                                                    <button
+                                                        onClick={handleSyncLifetimeMerits}
+                                                        disabled={isSyncing}
+                                                        className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-2 py-1 rounded flex items-center gap-1 transition"
+                                                        title="Sync lifetime merit points from logs"
+                                                    >
+                                                        <Zap size={12} />
+                                                        {isSyncing ? 'Syncing...' : 'Sync'}
+                                                    </button>
+                                                </div>
                                                 <div className="flex justify-between items-center py-2 border-b">
                                                     <span className="text-gray-600">Total Merits</span>
                                                     <span className="font-bold text-blue-600">{selectedCadet.merit_points}</span>
