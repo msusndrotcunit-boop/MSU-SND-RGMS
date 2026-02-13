@@ -142,8 +142,15 @@ const StaffAchievements = () => {
                                             {entry.lifetimeMerit}
                                         </span>
                                     </td>
-                                    <td className="p-3 text-center text-2xl">
-                                        {entry.badge?.icon || '-'}
+                                    <td className="p-3 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <span className="font-bold text-sm text-purple-700">
+                                                {entry.lifetimeMerit}
+                                            </span>
+                                            <span className="text-2xl">
+                                                {entry.badge?.icon || '-'}
+                                            </span>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
