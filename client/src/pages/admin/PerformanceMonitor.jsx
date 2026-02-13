@@ -11,6 +11,7 @@ function PerformanceMonitor() {
     const [metrics, setMetrics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [clearing, setClearing] = useState(false);
+    const [optimizing, setOptimizing] = useState(false);
 
     const fetchMetrics = async () => {
         try {
@@ -40,6 +41,30 @@ function PerformanceMonitor() {
             toast.error('Failed to clear cache');
         } finally {
             setClearing(false);
+        }
+    };
+
+    const optimizeDatabase = async () => {
+        if (!confirm('Optimize database performance?\n\nThis will:\n- Create missing performance indexes\n- Run pending migrations\n- Clear cache\n\nThis may take a few seconds.')) {
+            return;
+        }
+
+        try {
+            setOptimizing(true);
+            const response = await axios.post('/api/admin/force-optimize-db');
+            
+            if (response.data.success) {
+                toast.success(`Database optimized! Created ${response.data.indexesCreated} indexes`);
+            } else {
+                toast.error(`Optimization completed with errors: ${response.data.errors.join(', ')}`);
+            }
+            
+            fetchMetrics(); // Refresh metrics
+        } catch (error) {
+            console.error('Error optimizing database:', error);
+            toast.error('Failed to optimize database');
+        } finally {
+            setOptimizing(false);
         }
     };
 
@@ -78,6 +103,14 @@ function PerformanceMonitor() {
                     <p className="text-gray-600 mt-1">Real-time system performance metrics</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={optimizeDatabase}
+                        disabled={optimizing}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                    >
+                        <Zap className={`w-4 h-4 ${optimizing ? 'animate-pulse' : ''}`} />
+                        {optimizing ? 'Optimizing...' : 'Optimize DB'}
+                    </button>
                     <button
                         onClick={fetchMetrics}
                         disabled={loading}

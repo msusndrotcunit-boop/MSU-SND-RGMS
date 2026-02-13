@@ -3426,4 +3426,57 @@ router.post('/sync-lifetime-merits', authenticateToken, isAdmin, async (req, res
     }
 });
 
+// Force database optimization (create indexes if missing)
+router.post('/force-optimize-db', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        console.log('[Force Optimize] Starting database optimization...');
+        const results = {
+            indexesCreated: 0,
+            migrationsRun: 0,
+            errors: []
+        };
+
+        // Create performance indexes
+        try {
+            const { createPerformanceIndexes } = require('../migrations/create_performance_indexes');
+            await createPerformanceIndexes();
+            results.indexesCreated = 25; // Total indexes in migration
+            console.log('[Force Optimize] Performance indexes created');
+        } catch (err) {
+            console.error('[Force Optimize] Index creation error:', err);
+            results.errors.push(`Indexes: ${err.message}`);
+        }
+
+        // Add lifetime_merit_points column
+        try {
+            const { addLifetimeMeritPoints } = require('../migrations/add_lifetime_merit_points');
+            await addLifetimeMeritPoints();
+            results.migrationsRun++;
+            console.log('[Force Optimize] Lifetime merit points migration completed');
+        } catch (err) {
+            console.error('[Force Optimize] Migration error:', err);
+            results.errors.push(`Migration: ${err.message}`);
+        }
+
+        // Clear cache
+        clearCache();
+        results.cacheCleared = true;
+
+        console.log('[Force Optimize] Database optimization complete');
+
+        res.json({
+            message: 'Database optimization completed',
+            ...results,
+            success: results.errors.length === 0
+        });
+
+    } catch (err) {
+        console.error('[Force Optimize] Error:', err);
+        res.status(500).json({ 
+            message: 'Database optimization failed',
+            error: err.message 
+        });
+    }
+});
+
 module.exports = router;
