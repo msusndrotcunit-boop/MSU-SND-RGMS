@@ -23,9 +23,21 @@ const Settings = ({ role }) => {
         const fetchStatus = async () => {
             if (role !== 'admin') return;
             try {
-                const res = await axios.get('/api/admin/system-status');
+                // Use lightweight health-check for latency measurement
+                const healthRes = await axios.get('/api/admin/health-check');
+                // Use full system-status for metrics (cached)
+                const statusRes = await axios.get('/api/admin/system-status');
+                
                 if (!mounted) return;
-                setSystemStatus(res.data || null);
+                
+                // Combine both responses
+                setSystemStatus({
+                    ...statusRes.data,
+                    database: {
+                        ...statusRes.data.database,
+                        latencyMs: healthRes.data.latencyMs // Use health-check latency
+                    }
+                });
                 setStatusError(false);
             } catch {
                 if (!mounted) return;

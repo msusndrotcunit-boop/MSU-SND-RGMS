@@ -59,6 +59,36 @@ let systemStatusCache = null;
 let systemStatusCacheTime = 0;
 const SYSTEM_STATUS_CACHE_TTL = 60000; // 60 seconds
 
+// Lightweight health check (no counts, just connection test)
+router.get('/health-check', authenticateToken, isAdmin, (req, res) => {
+    const start = Date.now();
+    
+    // Just test database connection
+    Promise.race([
+        new Promise((resolve, reject) => {
+            db.get('SELECT 1 as ok', [], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000)) // 1 second timeout
+    ]).then(() => {
+        const latencyMs = Date.now() - start;
+        res.json({
+            status: 'ok',
+            latencyMs,
+            type: (db && db.pool) ? 'postgres' : 'sqlite',
+            timestamp: new Date().toISOString()
+        });
+    }).catch((err) => {
+        res.status(500).json({
+            status: 'error',
+            error: err.message,
+            latencyMs: Date.now() - start
+        });
+    });
+});
+
 router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const now = Date.now();
     
@@ -70,15 +100,15 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const start = Date.now();
     const results = {};
 
-    // Optimized: Use a single query with subqueries for better performance
+    // Ultra-optimized: Use approximate counts for PostgreSQL, exact for SQLite
     const optimizedQuery = db.pool 
         ? `
             SELECT 
                 1 as ok,
-                (SELECT COUNT(*) FROM cadets WHERE is_archived IS NOT TRUE) as cadets_total,
-                (SELECT COUNT(*) FROM users WHERE is_archived IS NOT TRUE) as users_total,
-                (SELECT COUNT(*) FROM training_days) as training_days_total,
-                (SELECT COUNT(*) FROM activities) as activities_total,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'cadets') as cadets_total,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'users') as users_total,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'training_days') as training_days_total,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'activities') as activities_total,
                 (SELECT COUNT(*) FROM notifications WHERE is_read = FALSE) as unread_notifications_total
         `
         : `
@@ -99,7 +129,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
                 else resolve(row);
             });
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)) // 3 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000)) // 2 second timeout
     ]).then((row) => {
         const latencyMs = Date.now() - start;
 
