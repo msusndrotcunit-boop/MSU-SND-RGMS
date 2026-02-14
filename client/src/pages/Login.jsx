@@ -88,7 +88,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
+        <div className="min-h-screen bg-green-950 relative flex items-center justify-center py-4 sm:py-8 px-2 sm:px-4">
             {/* Background Overlay */}
             <div className="absolute inset-0 z-0 opacity-20" style={{ 
                 backgroundImage: `url(${rgmsLogo})`, 
@@ -97,7 +97,7 @@ const Login = () => {
                 filter: 'blur(8px)'
             }}></div>
 
-            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-2 sm:mx-4 my-4">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 relative">
                 {/* Header Section */}
                 <div className="bg-green-900 p-3 sm:p-4 md:p-6 lg:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 mb-1 sm:mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
@@ -276,8 +276,8 @@ const Login = () => {
             </div>
 
                 {showAccessModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
                             <div className="bg-green-900 p-4 flex items-center justify-between">
                                 <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                     <HelpCircle size={20} />
@@ -291,7 +291,7 @@ const Login = () => {
                                 </button>
                             </div>
                             
-                            <div className="p-6 space-y-5">
+                            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">Cadet</span>
@@ -344,8 +344,8 @@ const Login = () => {
                 )}
 
                 {showForgotModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
                             <div className="bg-green-900 p-4 flex items-center justify-between">
                                 <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                     <HelpCircle size={20} />
@@ -381,8 +381,8 @@ const Login = () => {
 
             {/* Mobile Download Modal */}
             {showMobileModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
                         <div className="bg-green-900 p-4 flex items-center justify-between">
                             <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                 <Smartphone size={20} />
@@ -396,7 +396,7 @@ const Login = () => {
                             </button>
                         </div>
                         
-                        <div className="p-6">
+                        <div className="p-6 max-h-[75vh] overflow-y-auto">
                             <div className="mb-6 text-center">
                                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 text-green-700">
                                     <Download size={32} />
