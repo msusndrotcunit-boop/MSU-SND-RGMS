@@ -36,13 +36,13 @@ if (isCloudinaryConfigured) {
             const isImage = file.mimetype.startsWith('image/');
             return {
                 folder: 'rotc-grading-system',
-                allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
+                allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
                 resource_type: 'auto',
                 // Minimal transformation - just resize, no quality processing
                 transformation: isImage ? [
-                    { width: 250, height: 250, crop: 'limit' }
+                    { width: 1200, height: 1200, crop: 'limit', quality: 'auto:good' }
                 ] : undefined,
-                timeout: 30000  // 30 second timeout
+                timeout: 60000  // 60 second timeout (increased from 30s)
             };
         }
     });
