@@ -88,52 +88,55 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-950 relative flex items-center justify-center py-4 sm:py-8 px-3 sm:px-4">
-            {/* Three-dot menu button - top right */}
-            <button className="absolute top-4 right-4 z-20 bg-green-700 hover:bg-green-600 text-white p-2.5 rounded-xl shadow-lg transition-colors">
-                <MoreVertical size={20} />
-            </button>
+        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
+            {/* Background Overlay */}
+            <div className="absolute inset-0 z-0 opacity-20" style={{ 
+                backgroundImage: `url(${rgmsLogo})`, 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center',
+                filter: 'blur(8px)'
+            }}></div>
 
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden z-10 relative">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
                 {/* Header Section */}
-                <div className="bg-gradient-to-br from-green-800 to-green-900 p-6 sm:p-8 text-center flex flex-col items-center">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 mb-4 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-xl relative">
-                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-1.5" />
+                <div className="bg-green-900 p-6 md:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
+                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-1.5 md:translate-y-2" />
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-wider mb-2">MSU-SND RGMS</h2>
-                    <h1 className="text-xs sm:text-sm font-semibold text-white/90 tracking-wide leading-tight px-2 mb-1">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
-                    <p className="text-white/70 text-[10px] sm:text-xs mt-1 uppercase tracking-wide font-medium">
+                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
                         integrated with Training Staff Attendance System
                     </p>
                 </div>
 
                 {/* Body Section */}
-                <div className="p-6 sm:p-8 pt-5 sm:pt-6">
+                <div className="p-8 pt-6">
                     {/* Role Selector */}
-                    <div className="flex justify-center mb-5 sm:mb-6 bg-gray-50 p-1 rounded-xl shadow-inner">
+                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
                         <button
                             onClick={() => { setLoginType('cadet'); setError(''); }}
-                            className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                                loginType === 'cadet' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <User size={18} className="sm:w-5 sm:h-5" /> Cadet
+                            <User size={14} /> Cadet
                         </button>
                         <button
                             onClick={() => { setLoginType('staff'); setError(''); }}
-                            className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                                loginType === 'staff' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <Briefcase size={18} className="sm:w-5 sm:h-5" /> Staff
+                            <Briefcase size={14} /> Staff
                         </button>
                         <button
                             onClick={() => { setLoginType('admin'); setError(''); }}
-                            className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                                loginType === 'admin' ? 'bg-white text-gray-800 shadow-md' : 'text-gray-500 hover:text-gray-700'
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <ShieldCheck size={18} className="sm:w-5 sm:h-5" /> Admin
+                            <ShieldCheck size={14} /> Admin
                         </button>
                     </div>
 
@@ -143,16 +146,16 @@ const Login = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Input Fields */}
                         {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>
-                                <label className="block text-sm sm:text-base font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">
                                     Username or Email
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                        <User size={18} className="sm:w-5 sm:h-5 text-gray-400" />
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <User size={18} className="text-gray-400" />
                                     </div>
                                     <input
                                         type="text"
@@ -160,8 +163,8 @@ const Login = () => {
                                         value={formData.identifier}
                                         onChange={handleChange}
                                         required
-                                        className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-3.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors placeholder:text-gray-400"
-                                        placeholder={loginType === 'cadet' ? "Enter Student ID or Email" : "Enter Staff Username"}
+                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                        placeholder={loginType === 'cadet' ? "Enter ROTCMIS Username or Email" : "Enter Staff Username"}
                                     />
                                 </div>
                             </div>
@@ -170,12 +173,12 @@ const Login = () => {
                         {loginType === 'admin' && (
                             <>
                                 <div>
-                                    <label className="block text-sm sm:text-base font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                                         Username
                                     </label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                            <User size={18} className="sm:w-5 sm:h-5 text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <User size={18} className="text-gray-400" />
                                         </div>
                                         <input
                                             type="text"
@@ -183,19 +186,19 @@ const Login = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-3.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors placeholder:text-gray-400"
+                                            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                             placeholder="Enter Admin Username"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm sm:text-base font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                                         Password
                                     </label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                                            <Lock size={18} className="sm:w-5 sm:h-5 text-gray-400" />
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Lock size={18} className="text-gray-400" />
                                         </div>
                                         <input
                                             type={showPassword ? "text" : "password"}
@@ -203,15 +206,15 @@ const Login = () => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-3.5 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors placeholder:text-gray-400"
+                                            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                             placeholder="••••••••"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600"
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                                         >
-                                            {showPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
                                     </div>
                                 </div>
@@ -219,15 +222,15 @@ const Login = () => {
                         )}
 
                         {/* Extras: Remember Me / Forgot Password */}
-                        <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <div className="flex items-center justify-between text-xs">
                             <label className="flex items-center text-gray-600 cursor-pointer">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 sm:h-4 sm:w-4 text-green-600 rounded border-gray-300 focus:ring-green-500" />
-                                <span className="ml-2">Remember me</span>
+                                <input type="checkbox" className="form-checkbox h-3 w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
+                                <span className="ml-1.5">Remember me</span>
                             </label>
                             <button 
                                 type="button" 
                                 onClick={() => setShowForgotModal(true)}
-                                className="text-green-600 hover:text-green-800 font-semibold"
+                                className="text-green-600 hover:text-green-800 font-medium"
                             >
                                 Forgot Email/Username?
                             </button>
@@ -237,7 +240,7 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full py-3.5 sm:py-4 px-4 text-base sm:text-lg bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-75 cursor-wait' : ''}`}
+                            className={`w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-75 cursor-wait' : ''}`}
                         >
                             {loading ? (
                                 <span>Authenticating...</span>
@@ -250,31 +253,31 @@ const Login = () => {
                     </form>
 
                     {/* New Footer Links */}
-                    <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-100 space-y-3 sm:space-y-4">
+                    <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('access')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm sm:text-base flex items-center justify-center gap-2 transition-colors group p-2 sm:p-2.5 rounded-lg hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
                         >
-                            <HelpCircle size={18} className="sm:w-5 sm:h-5 text-gray-400 group-hover:text-green-600" />
+                            <HelpCircle size={16} className="text-gray-400 group-hover:text-green-600" />
                             How to access the app
                         </button>
                         
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('mobile')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm sm:text-base flex items-center justify-center gap-2 transition-colors group p-2 sm:p-2.5 rounded-lg hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
                         >
-                            <Download size={18} className="sm:w-5 sm:h-5 text-gray-400 group-hover:text-green-600" />
-                            How to download it in mobile
+                            <Download size={16} className="text-gray-400 group-hover:text-green-600" />
+                            Download Mobile App
                         </button>
                     </div>
                 </div>
             </div>
 
                 {showAccessModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                             <div className="bg-green-900 p-4 flex items-center justify-between">
                                 <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                     <HelpCircle size={20} />
@@ -288,7 +291,7 @@ const Login = () => {
                                 </button>
                             </div>
                             
-                            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                            <div className="p-6 space-y-5">
                                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full border border-green-200">Cadet</span>
@@ -341,8 +344,8 @@ const Login = () => {
                 )}
 
                 {showForgotModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                             <div className="bg-green-900 p-4 flex items-center justify-between">
                                 <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                     <HelpCircle size={20} />
@@ -378,8 +381,8 @@ const Login = () => {
 
             {/* Mobile Download Modal */}
             {showMobileModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 my-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="bg-green-900 p-4 flex items-center justify-between">
                             <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                 <Smartphone size={20} />
@@ -393,7 +396,7 @@ const Login = () => {
                             </button>
                         </div>
                         
-                        <div className="p-6 max-h-[75vh] overflow-y-auto">
+                        <div className="p-6">
                             <div className="mb-6 text-center">
                                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 text-green-700">
                                     <Download size={32} />
