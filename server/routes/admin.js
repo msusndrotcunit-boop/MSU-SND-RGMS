@@ -180,52 +180,6 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     });
 });
 
-        results.app = {
-            status: 'ok',
-            uptimeSeconds: Math.floor(process.uptime()),
-            time: new Date().toISOString()
-        };
-
-        results.database = {
-            status: row && row.ok ? 'ok' : 'error',
-            latencyMs,
-            type: (db && db.pool) ? 'postgres' : 'sqlite'
-        };
-
-        results.metrics = {
-            cadets: row.cadets_total || 0,
-            users: row.users_total || 0,
-            trainingDays: row.training_days_total || 0,
-            activities: row.activities_total || 0,
-            unreadNotifications: row.unread_notifications_total || 0
-        };
-
-        if (results.database.status !== 'ok') {
-            results.app.status = 'degraded';
-        }
-
-        // Cache the response
-        systemStatusCache = results;
-        systemStatusCacheTime = Date.now();
-
-        res.json(results);
-    }).catch((err) => {
-        const errorResponse = {
-            app: {
-                status: 'error',
-                uptimeSeconds: Math.floor(process.uptime()),
-                time: new Date().toISOString()
-            },
-            database: {
-                status: 'error',
-                error: err.message,
-                latencyMs: Date.now() - start
-            }
-        };
-        res.status(500).json(errorResponse);
-    });
-});
-
 // --- Import Helpers ---
 
 const getCadetByStudentId = (studentId) => {
