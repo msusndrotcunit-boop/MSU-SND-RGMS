@@ -116,3 +116,177 @@ body {
     color: var(--primary-color);
   }
 }
+
+/* Mobile-First Responsive Design */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+    font-size: 14px;
+  }
+  
+  * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  
+  /* Text wrapping */
+  p, span, div, h1, h2, h3, h4, h5, h6, label {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Responsive images */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  /* Responsive containers */
+  .container, .max-w-7xl, .max-w-6xl, .max-w-5xl, .max-w-4xl, .max-w-3xl, .max-w-2xl {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* Responsive buttons */
+  button, [role="button"], .btn {
+    min-height: 44px !important;
+    padding: 0.625rem 1rem !important;
+    font-size: 14px !important;
+  }
+  
+  /* Responsive form inputs */
+  input, select, textarea {
+    min-height: 44px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    padding: 0.625rem !important;
+  }
+  
+  /* Responsive tables */
+  table {
+    font-size: 13px !important;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* Responsive modals */
+  .modal, [role="dialog"] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 1rem auto !important;
+  }
+  
+  /* Responsive cards */
+  .card, .bg-white, .shadow {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Responsive grids - force single column */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Responsive flex - wrap items */
+  .flex {
+    flex-wrap: wrap !important;
+  }
+  
+  /* Responsive spacing */
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.75rem !important;
+  }
+  
+  .gap-6 {
+    gap: 1rem !important;
+  }
+  
+  .gap-4 {
+    gap: 0.75rem !important;
+  }
+  
+  /* Responsive text sizes */
+  .text-3xl {
+    font-size: 1.5rem !important;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .text-xl {
+    font-size: 1.125rem !important;
+  }
+  
+  .text-lg {
+    font-size: 1rem !important;
+  }
+  
+  /* Responsive padding */
+  .p-8 {
+    padding: 1rem !important;
+  }
+  
+  .p-6 {
+    padding: 0.875rem !important;
+  }
+  
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  .px-8 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .px-6 {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+  }
+  
+  .py-8 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  .py-6 {
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+  }
+  
+  /* Responsive icons */
+  svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  /* Responsive navigation */
+  nav {
+    padding: 0.75rem !important;
+  }
+  
+  /* Hide desktop-only elements */
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
