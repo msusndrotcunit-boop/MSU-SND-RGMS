@@ -76,20 +76,18 @@ body {
 }
 
 @layer components {
+  /* Simplified hover effects - reduced for performance */
   .hover-highlight {
-    transition: all 150ms ease-in-out;
+    transition: box-shadow 150ms ease-in-out;
   }
   .hover-highlight:hover {
-    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
-    transform: translateY(-1px) scale(1.02);
-    filter: saturate(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
   .hover-icon-highlight {
-    transition: all 150ms ease-in-out;
+    transition: color 150ms ease-in-out;
   }
   .hover-icon-highlight:hover {
     color: var(--primary-color);
-    transform: translateY(-1px) scale(1.05);
   }
   .hover-text-highlight {
     transition: color 150ms ease-in-out;
@@ -98,15 +96,11 @@ body {
     color: var(--primary-color);
   }
 
+  /* Touch-friendly buttons - minimum 44px height */
   button,
   [role="button"] {
-    transition: all 150ms ease-in-out;
-  }
-  button:hover,
-  [role="button"]:hover {
-    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
-    transform: translateY(-1px) scale(1.02);
-    filter: saturate(1.05);
+    min-height: 44px;
+    transition: background-color 150ms ease-in-out;
   }
 
   a {
@@ -114,5 +108,109 @@ body {
   }
   a:hover {
     color: var(--primary-color);
+  }
+}
+
+/* Mobile-First Responsive Utilities */
+@layer utilities {
+  /* Touch targets - minimum 44px for accessibility */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile card layout for tables */
+  .mobile-card {
+    @apply block md:hidden bg-white rounded-lg shadow-sm p-4 mb-3;
+  }
+
+  /* Desktop table layout */
+  .desktop-table {
+    @apply hidden md:table;
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-sm {
+    @apply text-sm md:text-base;
+  }
+  .text-responsive-base {
+    @apply text-base md:text-lg;
+  }
+  .text-responsive-lg {
+    @apply text-lg md:text-xl;
+  }
+
+  /* Responsive spacing */
+  .spacing-responsive {
+    @apply space-y-3 md:space-y-4;
+  }
+  .padding-responsive {
+    @apply p-4 md:p-6;
+  }
+  .margin-responsive {
+    @apply m-3 md:m-4;
+  }
+}
+
+/* Mobile-First Base Styles */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Optimize font rendering for low-end devices */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Reduce motion for performance */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Touch-friendly inputs */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px; /* Prevents iOS zoom */
+    min-height: 44px;
+  }
+
+  /* Simplified shadows for performance */
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  }
+
+  /* Remove unnecessary gradients on mobile */
+  .bg-gradient-to-r,
+  .bg-gradient-to-l,
+  .bg-gradient-to-t,
+  .bg-gradient-to-b,
+  .bg-gradient-to-br,
+  .bg-gradient-to-bl {
+    background-image: none !important;
+  }
+
+  /* Optimize table display */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Card-based mobile layout */
+  .mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }
