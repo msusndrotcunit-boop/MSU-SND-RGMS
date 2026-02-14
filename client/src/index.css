@@ -290,3 +290,356 @@ body {
     padding-right: 1.5rem !important;
   }
 }
+
+/* Enhanced Mobile Responsive Rules for All UI Elements */
+@media (max-width: 768px) {
+  /* Checkboxes and Radio Buttons */
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 18px !important;
+    min-height: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  /* Charts and Graphs - Recharts specific */
+  .recharts-wrapper {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 250px !important;
+  }
+  
+  .recharts-surface {
+    width: 100% !important;
+  }
+  
+  .recharts-legend-wrapper {
+    font-size: 11px !important;
+  }
+  
+  .recharts-cartesian-axis-tick text {
+    font-size: 10px !important;
+  }
+  
+  .recharts-label {
+    font-size: 11px !important;
+  }
+  
+  /* Pie Charts */
+  .recharts-pie-label-text {
+    font-size: 10px !important;
+  }
+  
+  /* Bar Charts */
+  .recharts-bar-rectangle {
+    min-width: 20px !important;
+  }
+  
+  /* Profile Pictures and Avatars */
+  .profile-pic,
+  .avatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  /* Badges and Tags */
+  .badge,
+  .tag,
+  span[class*="badge"],
+  span[class*="tag"] {
+    font-size: 10px !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  /* Dropdown Menus */
+  .dropdown-menu,
+  [role="menu"] {
+    max-width: 90vw !important;
+    font-size: 13px !important;
+  }
+  
+  /* Tooltips */
+  .tooltip,
+  [role="tooltip"] {
+    font-size: 11px !important;
+    padding: 0.375rem 0.5rem !important;
+    max-width: 200px !important;
+  }
+  
+  /* Alerts and Notifications */
+  .alert,
+  .notification {
+    font-size: 13px !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Progress Bars */
+  .progress-bar {
+    height: 8px !important;
+  }
+  
+  /* Tabs */
+  .tab,
+  [role="tab"] {
+    font-size: 13px !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  /* Breadcrumbs */
+  .breadcrumb {
+    font-size: 12px !important;
+  }
+  
+  /* Pagination */
+  .pagination button,
+  .pagination a {
+    min-width: 36px !important;
+    min-height: 36px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Search Bars */
+  .search-input,
+  input[type="search"] {
+    font-size: 14px !important;
+    padding: 0.625rem 0.875rem !important;
+  }
+  
+  /* File Upload Buttons */
+  input[type="file"]::file-selector-button {
+    font-size: 13px !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  /* Date Pickers */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    font-size: 14px !important;
+    padding: 0.625rem !important;
+  }
+  
+  /* Sliders and Range Inputs */
+  input[type="range"] {
+    height: 8px !important;
+  }
+  
+  /* Toggle Switches */
+  .toggle,
+  .switch {
+    width: 44px !important;
+    height: 24px !important;
+  }
+  
+  /* Card Headers */
+  .card-header,
+  .card-title {
+    font-size: 1rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* List Items */
+  li {
+    font-size: 14px !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Sidebar */
+  .sidebar,
+  aside {
+    width: 100% !important;
+    max-width: 280px !important;
+  }
+  
+  /* Dashboard Cards */
+  .dashboard-card {
+    min-height: auto !important;
+    padding: 1rem !important;
+  }
+  
+  /* Stat Cards */
+  .stat-card .stat-value {
+    font-size: 1.5rem !important;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Form Labels */
+  label {
+    font-size: 13px !important;
+    margin-bottom: 0.375rem !important;
+  }
+  
+  /* Help Text */
+  .help-text,
+  .form-text {
+    font-size: 11px !important;
+  }
+  
+  /* Error Messages */
+  .error-message,
+  .field-error {
+    font-size: 12px !important;
+  }
+  
+  /* Loading Spinners */
+  .spinner,
+  .loading-spinner {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  /* Icon Buttons */
+  .icon-button,
+  button[aria-label] {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Accordion Headers */
+  .accordion-header {
+    font-size: 14px !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Collapsible Sections */
+  .collapsible-trigger {
+    font-size: 14px !important;
+    padding: 0.625rem !important;
+  }
+  
+  /* Data Tables */
+  table th {
+    font-size: 12px !important;
+    padding: 0.5rem !important;
+  }
+  
+  table td {
+    font-size: 12px !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Action Buttons in Tables */
+  table button,
+  table a {
+    font-size: 12px !important;
+    padding: 0.375rem 0.625rem !important;
+  }
+  
+  /* Filter Panels */
+  .filter-panel {
+    padding: 0.875rem !important;
+  }
+  
+  /* Sort Buttons */
+  .sort-button {
+    font-size: 12px !important;
+  }
+  
+  /* Status Indicators */
+  .status-indicator {
+    width: 8px !important;
+    height: 8px !important;
+  }
+  
+  /* Timeline Items */
+  .timeline-item {
+    font-size: 13px !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Comment Sections */
+  .comment {
+    font-size: 13px !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Rating Stars */
+  .rating-star {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  /* Calendar Cells */
+  .calendar-cell {
+    min-height: 60px !important;
+    font-size: 12px !important;
+  }
+  
+  /* Kanban Cards */
+  .kanban-card {
+    font-size: 13px !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Metric Displays */
+  .metric-value {
+    font-size: 1.25rem !important;
+  }
+  
+  .metric-label {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Chart Legends */
+  .chart-legend {
+    font-size: 11px !important;
+  }
+  
+  /* Graph Tooltips */
+  .graph-tooltip {
+    font-size: 11px !important;
+    padding: 0.375rem 0.5rem !important;
+  }
+}
+
+/* Small Mobile Devices (< 375px) */
+@media (max-width: 374px) {
+  body {
+    font-size: 13px;
+  }
+  
+  button, [role="button"] {
+    font-size: 12px !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  
+  input, select, textarea {
+    font-size: 14px !important;
+  }
+  
+  .text-3xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .text-2xl {
+    font-size: 1.125rem !important;
+  }
+  
+  .text-xl {
+    font-size: 1rem !important;
+  }
+}
+
+/* Large Mobile / Small Tablet (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+  
+  button, [role="button"] {
+    font-size: 14px !important;
+  }
+  
+  .recharts-wrapper {
+    min-height: 300px !important;
+  }
+}
