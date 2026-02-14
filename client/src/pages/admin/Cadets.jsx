@@ -392,6 +392,7 @@ const Cadets = () => {
             platoon: cadet.platoon || '',
             cadetCourse: cadet.cadet_course || '',
             semester: cadet.semester || '',
+            corpPosition: cadet.corp_position || '',
             status: cadet.status || 'Ongoing'
         });
         setIsEditModalOpen(true);
