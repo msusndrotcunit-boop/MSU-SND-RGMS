@@ -1434,6 +1434,96 @@ router.get('/analytics', authenticateToken, isAdminOrPrivilegedStaff, cacheMiddl
     });
 });
 
+// Get Demographics Analytics (Religion, Age, Courses)
+router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddleware(600), (req, res) => {
+    const demographics = {
+        religion: [],
+        age: [],
+        courses: []
+    };
+    
+    // Get religion distribution
+    const religionSql = `
+        SELECT religion, COUNT(*) as count
+        FROM cadets
+        WHERE is_archived = FALSE AND religion IS NOT NULL AND religion != ''
+        GROUP BY religion
+        ORDER BY count DESC
+    `;
+    
+    db.all(religionSql, [], (err, religionRows) => {
+        if (err) {
+            console.error('Religion analytics error:', err);
+            return res.status(500).json({ message: err.message });
+        }
+        
+        demographics.religion = religionRows;
+        
+        // Get age distribution (calculate from birthdate)
+        const ageSql = db.pool ? `
+            SELECT 
+                CASE 
+                    WHEN birthdate IS NULL THEN 'Unknown'
+                    WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) < 18 THEN 'Under 18'
+                    WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) BETWEEN 18 AND 19 THEN '18-19'
+                    WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) BETWEEN 20 AND 21 THEN '20-21'
+                    WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) BETWEEN 22 AND 23 THEN '22-23'
+                    WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) >= 24 THEN '24+'
+                    ELSE 'Unknown'
+                END as age_range,
+                COUNT(*) as count
+            FROM cadets
+            WHERE is_archived = FALSE
+            GROUP BY age_range
+            ORDER BY age_range
+        ` : `
+            SELECT 
+                CASE 
+                    WHEN birthdate IS NULL THEN 'Unknown'
+                    WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) < 18 THEN 'Under 18'
+                    WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) BETWEEN 18 AND 19 THEN '18-19'
+                    WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) BETWEEN 20 AND 21 THEN '20-21'
+                    WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) BETWEEN 22 AND 23 THEN '22-23'
+                    WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) >= 24 THEN '24+'
+                    ELSE 'Unknown'
+                END as age_range,
+                COUNT(*) as count
+            FROM cadets
+            WHERE is_archived = FALSE
+            GROUP BY age_range
+            ORDER BY age_range
+        `;
+        
+        db.all(ageSql, [], (err, ageRows) => {
+            if (err) {
+                console.error('Age analytics error:', err);
+                return res.status(500).json({ message: err.message });
+            }
+            
+            demographics.age = ageRows;
+            
+            // Get course distribution
+            const courseSql = `
+                SELECT course, COUNT(*) as count
+                FROM cadets
+                WHERE is_archived = FALSE AND course IS NOT NULL AND course != ''
+                GROUP BY course
+                ORDER BY count DESC
+            `;
+            
+            db.all(courseSql, [], (err, courseRows) => {
+                if (err) {
+                    console.error('Course analytics error:', err);
+                    return res.status(500).json({ message: err.message });
+                }
+                
+                demographics.courses = courseRows;
+                res.json(demographics);
+            });
+        });
+    });
+});
+
 // --- Cadet Management ---
 
 // Create Single Cadet (Manual Add)
@@ -1703,7 +1793,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         course, yearLevel, schoolYear, 
         battalion, company, platoon, 
         cadetCourse, semester, status,
-        username
+        username, gender, religion, birthdate
     } = req.body;
 
     let profilePic = null;
@@ -1755,6 +1845,8 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         'semester = ?',
         'corp_position = ?',
         'gender = ?',
+        'religion = ?',
+        'birthdate = ?',
         'status = ?'
     ];
 
@@ -1764,7 +1856,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         studentId || '', email || '', contactNumber || '', address || '', 
         course || '', yearLevel || '', schoolYear || '', 
         battalion || '', company || '', platoon || '', 
-        cadetCourse || '', semester || '', req.body.corpPosition || '', req.body.gender || '', status || ''
+        cadetCourse || '', semester || '', req.body.corpPosition || '', gender || '', religion || '', birthdate || '', status || ''
     ];
 
     if (profilePic) {

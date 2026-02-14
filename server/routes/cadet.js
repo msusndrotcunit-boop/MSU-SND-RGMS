@@ -327,7 +327,7 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             email, contactNumber, address,
             course, yearLevel, schoolYear,
             battalion, company, platoon,
-            cadetCourse, semester, gender,
+            cadetCourse, semester, gender, birthdate,
             is_profile_completed
         } = req.body;
         
@@ -386,14 +386,14 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             email=?, contact_number=?, address=?,
             course=?, year_level=?, school_year=?,
             battalion=?, company=?, platoon=?,
-            cadet_course=?, semester=?, gender=?, corp_position=?`;
+            cadet_course=?, semester=?, gender=?, religion=?, birthdate=?, corp_position=?`;
         
         const params = [
             safeParam(firstName), safeParam(middleName), safeParam(lastName), safeParam(suffixName),
             safeParam(email), safeParam(contactNumber), safeParam(address),
             safeParam(course), safeParam(yearLevel), safeParam(schoolYear),
             safeParam(battalion), safeParam(company), safeParam(platoon),
-            safeParam(cadetCourse), safeParam(semester), safeParam(gender), safeParam(req.body.corpPosition)
+            safeParam(cadetCourse), safeParam(semester), safeParam(gender), safeParam(req.body.religion), safeParam(birthdate), safeParam(req.body.corpPosition)
         ];
 
         let imageUrl = null;

@@ -230,6 +230,7 @@ const AdminLayout = () => {
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
+        { path: '/admin/demographics-analytics', label: 'Demographics Analytics', icon: Users },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { path: '/admin/archived-cadets', label: 'Archived Cadets', icon: UserCheck },
         { 

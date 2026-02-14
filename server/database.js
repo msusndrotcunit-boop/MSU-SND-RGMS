@@ -771,6 +771,28 @@ async function initPgDb() {
             // Non-critical, continue
         }
         
+        // Run religion field migration
+        console.log('Adding religion column to cadets...');
+        try {
+            const { addReligionToCadets } = require('./migrations/add_religion_to_cadets');
+            await addReligionToCadets(db);
+            console.log('Religion column migration completed.');
+        } catch (religionErr) {
+            console.warn('Religion column migration warning:', religionErr.message);
+            // Non-critical, continue
+        }
+        
+        // Run birthdate field migration
+        console.log('Adding birthdate column to cadets...');
+        try {
+            const { addBirthdateToCadets } = require('./migrations/add_birthdate_to_cadets');
+            await addBirthdateToCadets(db);
+            console.log('Birthdate column migration completed.');
+        } catch (birthdateErr) {
+            console.warn('Birthdate column migration warning:', birthdateErr.message);
+            // Non-critical, continue
+        }
+        
         console.log('Seeding admin...');
         seedAdmin();
         console.log('PostgreSQL initialized successfully.');
@@ -1047,6 +1069,10 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
         // Migration: Add corp_position to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN corp_position TEXT`, (err) => {});
+        // Migration: Add religion to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN religion TEXT`, (err) => {});
+        // Migration: Add birthdate to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN birthdate TEXT`, (err) => {});
         // Migration: Add gender to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN gender TEXT`, (err) => {});
 

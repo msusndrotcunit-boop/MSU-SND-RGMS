@@ -19,6 +19,7 @@ import {
     STATUS_OPTIONS,
     GENDER_OPTIONS
 } from '../../constants/options';
+import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
 
 const Profile = () => {
     const { user, logout } = useAuth();
@@ -34,6 +35,8 @@ const Profile = () => {
         contactNumber: '',
         address: '',
         gender: '',
+        religion: '',
+        birthdate: '',
         course: '',
         yearLevel: '',
         schoolYear: '',
@@ -108,6 +111,8 @@ const Profile = () => {
             contactNumber: data.contact_number || '',
             address: data.address || '',
             gender: data.gender || '',
+            religion: data.religion || '',
+            birthdate: data.birthdate || '',
             course: data.course || '',
             yearLevel: data.year_level || '',
             schoolYear: data.school_year || '',
@@ -304,7 +309,7 @@ const Profile = () => {
                 <div className="md:col-span-1 space-y-6">
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow text-center">
                         <div className="relative inline-block">
-                            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden bg-gray-100 mx-auto border-4 border-white dark:border-gray-700 shadow-lg">
+                            <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full overflow-hidden bg-gray-100 mx-auto border-4 border-white dark:border-gray-700 shadow-lg">
                                 {preview ? (
                                     <img 
                                         src={preview} 
@@ -446,6 +451,38 @@ const Profile = () => {
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Religion</label>
+                                <select
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    value={profile.religion}
+                                    onChange={e => setProfile({ ...profile, religion: e.target.value })}
+                                    disabled={isLocked}
+                                >
+                                    <option value="">Select Religion</option>
+                                    {PHILIPPINE_RELIGIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birthdate <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    value={profile.birthdate}
+                                    onChange={e => setProfile({ ...profile, birthdate: e.target.value })}
+                                    disabled={isLocked}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number <span className="text-red-500">*</span></label>
+                                <input className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} disabled={isLocked} required />
                             </div>
                         </div>
 

@@ -97,46 +97,46 @@ const Login = () => {
                 filter: 'blur(8px)'
             }}></div>
 
-            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4 my-4">
                 {/* Header Section */}
-                <div className="bg-green-900 p-6 md:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
-                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                <div className="bg-green-900 p-4 sm:p-6 md:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
                         <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-1.5 md:translate-y-2" />
                     </div>
-                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
-                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
-                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
+                    <h2 className="text-xl sm:text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-1 sm:mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-[10px] sm:text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[9px] sm:text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
                         integrated with Training Staff Attendance System
                     </p>
                 </div>
 
                 {/* Body Section */}
-                <div className="p-8 pt-6">
+                <div className="p-4 sm:p-6 md:p-8 pt-4 sm:pt-6">
                     {/* Role Selector */}
-                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
+                    <div className="flex justify-center mb-4 sm:mb-6 bg-gray-100 p-1 rounded-lg">
                         <button
                             onClick={() => { setLoginType('cadet'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
                                 loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <User size={14} /> Cadet
+                            <User size={12} className="sm:w-3.5 sm:h-3.5" /> Cadet
                         </button>
                         <button
                             onClick={() => { setLoginType('staff'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
                                 loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <Briefcase size={14} /> Staff
+                            <Briefcase size={12} className="sm:w-3.5 sm:h-3.5" /> Staff
                         </button>
                         <button
                             onClick={() => { setLoginType('admin'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
                                 loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
-                            <ShieldCheck size={14} /> Admin
+                            <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5" /> Admin
                         </button>
                     </div>
 
@@ -146,7 +146,7 @@ const Login = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                         {/* Input Fields */}
                         {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>

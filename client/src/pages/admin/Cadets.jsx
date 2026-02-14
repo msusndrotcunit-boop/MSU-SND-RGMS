@@ -21,6 +21,7 @@ import {
     STATUS_OPTIONS,
     GENDER_OPTIONS
 } from '../../constants/options';
+import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -381,6 +382,8 @@ const Cadets = () => {
             contactNumber: cadet.contact_number || '',
             address: cadet.address || '',
             gender: cadet.gender || '',
+            religion: cadet.religion || '',
+            birthdate: cadet.birthdate || '',
             course: cadet.course || '',
             yearLevel: cadet.year_level || '',
             schoolYear: cadet.school_year || '',
@@ -1344,12 +1347,12 @@ const Cadets = () => {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} />
-                                            </div>
-                                            <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID</label>
                                                 <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                                                <input disabled={isViewMode} type="email" className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
                                             </div>
                                         </div>
 
@@ -1365,6 +1368,35 @@ const Cadets = () => {
                                                     <option value="">Select Gender</option>
                                                     {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                                 </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birthdate</label>
+                                                <input
+                                                    type="date"
+                                                    disabled={isViewMode}
+                                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60"
+                                                    value={editForm.birthdate || ''}
+                                                    onChange={e => setEditForm({ ...editForm, birthdate: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Religion</label>
+                                                <select
+                                                    disabled={isViewMode}
+                                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60"
+                                                    value={editForm.religion || ''}
+                                                    onChange={e => setEditForm({ ...editForm, religion: e.target.value })}
+                                                >
+                                                    <option value="">Select Religion</option>
+                                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} />
                                             </div>
                                         </div>
 
