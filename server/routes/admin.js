@@ -100,15 +100,15 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const start = Date.now();
     const results = {};
 
-    // Ultra-optimized: Use approximate counts for PostgreSQL, exact for SQLite
+    // Optimized query with fallback for PostgreSQL
     const optimizedQuery = db.pool 
         ? `
             SELECT 
                 1 as ok,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'cadets') as cadets_total,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'users') as users_total,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'training_days') as training_days_total,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname = 'activities') as activities_total,
+                (SELECT COUNT(*) FROM cadets WHERE is_archived IS NOT TRUE) as cadets_total,
+                (SELECT COUNT(*) FROM users WHERE is_archived IS NOT TRUE) as users_total,
+                (SELECT COUNT(*) FROM training_days) as training_days_total,
+                (SELECT COUNT(*) FROM activities) as activities_total,
                 (SELECT COUNT(*) FROM notifications WHERE is_read = FALSE) as unread_notifications_total
         `
         : `
@@ -129,7 +129,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
                 else resolve(row);
             });
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000)) // 2 second timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)) // 3 second timeout
     ]).then((row) => {
         const latencyMs = Date.now() - start;
 
