@@ -752,8 +752,8 @@ async function initPgDb() {
         // Run performance indexes migration
         console.log('Creating performance indexes...');
         try {
-            const { createPerformanceIndexes } = require('./migrations/create_performance_indexes');
-            await createPerformanceIndexes();
+            const { migrate } = require('./migrations/create_performance_indexes');
+            await migrate();
             console.log('Performance indexes created successfully.');
         } catch (indexErr) {
             console.warn('Performance indexes creation warning:', indexErr.message);

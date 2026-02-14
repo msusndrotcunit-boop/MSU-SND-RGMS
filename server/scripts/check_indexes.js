@@ -24,8 +24,8 @@ async function checkIndexes() {
             
             if (result.rows.length === 0) {
                 console.log('\nNo performance indexes found! Creating them now...');
-                const { createPerformanceIndexes } = require('../migrations/create_performance_indexes');
-                await createPerformanceIndexes();
+                const { migrate } = require('../migrations/create_performance_indexes');
+                await migrate();
                 console.log('Performance indexes created successfully!');
             } else {
                 console.log('\nPerformance indexes are already in place.');
