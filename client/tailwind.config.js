@@ -7,6 +7,17 @@ export default {
   darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
+      fontSize: {
+        'xs': '0.7rem',
+        'sm': '0.8125rem',
+        'base': '0.875rem',
+        'lg': '1rem',
+        'xl': '1.125rem',
+        '2xl': '1.25rem',
+        '3xl': '1.5rem',
+        '4xl': '1.875rem',
+        '5xl': '2.25rem',
+      },
       colors: {
         primary: {
           50: '#f0fdf4',

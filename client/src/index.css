@@ -13,8 +13,8 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.5;
   color: #111827;
   background-color: #f3f4f6;
 }
@@ -79,6 +79,20 @@ body {
 }
 
 @layer components {
+  /* Reduce default text sizes globally */
+  .text-3xl {
+    font-size: 1.5rem !important; /* was 1.875rem */
+    line-height: 2rem !important;
+  }
+  .text-2xl {
+    font-size: 1.25rem !important; /* was 1.5rem */
+    line-height: 1.75rem !important;
+  }
+  .text-xl {
+    font-size: 1.125rem !important; /* was 1.25rem */
+    line-height: 1.75rem !important;
+  }
+  
   .hover-highlight {
     transition: all 150ms ease-in-out;
   }
