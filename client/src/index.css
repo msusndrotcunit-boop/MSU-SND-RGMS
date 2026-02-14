@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import design system utilities */
+@import './styles/utilities.css';
+
 :root {
   --primary-color: #354f32;
   --primary-color-soft: rgba(53, 79, 50, 0.16);
