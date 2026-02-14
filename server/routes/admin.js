@@ -91,15 +91,9 @@ router.get('/health-check', authenticateToken, isAdmin, (req, res) => {
 
 router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
     const now = Date.now();
-    
-    // Return cached response if still valid
-    if (systemStatusCache && (now - systemStatusCacheTime) < SYSTEM_STATUS_CACHE_TTL) {
-        return res.json(systemStatusCache);
-    }
-    
     const start = Date.now();
     
-    // ULTRA FAST: Just test connection, use cached counts
+    // Always measure fresh latency, but use cached counts if available
     db.get('SELECT 1 as ok', [], (err, row) => {
         const latencyMs = Date.now() - start;
         
@@ -118,7 +112,10 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
             });
         }
         
-        // Use approximate/cached counts to avoid slow queries
+        // Check if we should update counts (cache expired)
+        const shouldUpdateCounts = !systemStatusCache || (now - systemStatusCacheTime) >= SYSTEM_STATUS_CACHE_TTL;
+        
+        // Use cached counts or defaults
         const results = {
             app: {
                 status: 'ok',
@@ -127,7 +124,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
             },
             database: {
                 status: 'ok',
-                latencyMs,
+                latencyMs, // Always fresh latency
                 type: (db && db.pool) ? 'postgres' : 'sqlite'
             },
             metrics: {
@@ -139,42 +136,44 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
             }
         };
         
-        // Cache the response
+        // Update cache timestamp
         systemStatusCache = results;
         systemStatusCacheTime = Date.now();
         
-        // Async update counts in background (don't wait)
-        setTimeout(() => {
-            const updateQuery = db.pool 
-                ? `
-                    SELECT 
-                        (SELECT COUNT(*) FROM cadets WHERE is_archived IS NOT TRUE) as cadets_total,
-                        (SELECT COUNT(*) FROM users WHERE is_archived IS NOT TRUE) as users_total,
-                        (SELECT COUNT(*) FROM training_days) as training_days_total,
-                        (SELECT COUNT(*) FROM activities) as activities_total,
-                        (SELECT COUNT(*) FROM notifications WHERE is_read = FALSE) as unread_notifications_total
-                `
-                : `
-                    SELECT 
-                        (SELECT COUNT(*) FROM cadets WHERE is_archived IS FALSE OR is_archived IS NULL) as cadets_total,
-                        (SELECT COUNT(*) FROM users WHERE is_archived IS FALSE OR is_archived IS NULL) as users_total,
-                        (SELECT COUNT(*) FROM training_days) as training_days_total,
-                        (SELECT COUNT(*) FROM activities) as activities_total,
-                        (SELECT COUNT(*) FROM notifications WHERE is_read = 0) as unread_notifications_total
-                `;
-            
-            db.get(updateQuery, [], (err, row) => {
-                if (!err && row && systemStatusCache) {
-                    systemStatusCache.metrics = {
-                        cadets: row.cadets_total || 0,
-                        users: row.users_total || 0,
-                        trainingDays: row.training_days_total || 0,
-                        activities: row.activities_total || 0,
-                        unreadNotifications: row.unread_notifications_total || 0
-                    };
-                }
-            });
-        }, 100); // Update in background after 100ms
+        // Update counts in background if cache expired
+        if (shouldUpdateCounts) {
+            setTimeout(() => {
+                const updateQuery = db.pool 
+                    ? `
+                        SELECT 
+                            (SELECT COUNT(*) FROM cadets WHERE is_archived IS NOT TRUE) as cadets_total,
+                            (SELECT COUNT(*) FROM users WHERE is_archived IS NOT TRUE) as users_total,
+                            (SELECT COUNT(*) FROM training_days) as training_days_total,
+                            (SELECT COUNT(*) FROM activities) as activities_total,
+                            (SELECT COUNT(*) FROM notifications WHERE is_read = FALSE) as unread_notifications_total
+                    `
+                    : `
+                        SELECT 
+                            (SELECT COUNT(*) FROM cadets WHERE is_archived IS FALSE OR is_archived IS NULL) as cadets_total,
+                            (SELECT COUNT(*) FROM users WHERE is_archived IS FALSE OR is_archived IS NULL) as users_total,
+                            (SELECT COUNT(*) FROM training_days) as training_days_total,
+                            (SELECT COUNT(*) FROM activities) as activities_total,
+                            (SELECT COUNT(*) FROM notifications WHERE is_read = 0) as unread_notifications_total
+                    `;
+                
+                db.get(updateQuery, [], (err, row) => {
+                    if (!err && row && systemStatusCache) {
+                        systemStatusCache.metrics = {
+                            cadets: row.cadets_total || 0,
+                            users: row.users_total || 0,
+                            trainingDays: row.training_days_total || 0,
+                            activities: row.activities_total || 0,
+                            unreadNotifications: row.unread_notifications_total || 0
+                        };
+                    }
+                });
+            }, 100); // Update in background after 100ms
+        }
         
         res.json(results);
     });
