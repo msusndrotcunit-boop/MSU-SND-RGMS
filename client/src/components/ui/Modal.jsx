@@ -123,9 +123,9 @@ const Modal = ({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             {title && (
-              <h2 id="modal-title" className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h2>
             )}
@@ -135,7 +135,7 @@ const Modal = ({
                 className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-fast focus-ring rounded p-1"
                 aria-label="Close modal"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -144,13 +144,13 @@ const Modal = ({
         )}
         
         {/* Body */}
-        <div className="px-6 py-4 max-h-[70vh] overflow-y-auto scrollbar-thin">
+        <div className="px-4 py-3 max-h-[70vh] overflow-y-auto scrollbar-thin">
           {children}
         </div>
         
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             {footer}
           </div>
         )}

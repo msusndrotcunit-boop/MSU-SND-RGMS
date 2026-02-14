@@ -79,18 +79,18 @@ const Input = ({
   const displayError = error || validationError;
   const hasError = Boolean(displayError);
   
-  const baseInputStyles = 'w-full px-3 py-2 border rounded-md transition-all duration-200 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
+  const baseInputStyles = 'w-full px-2.5 py-1.5 border rounded-md transition-all duration-200 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
   const errorStyles = hasError 
     ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
     : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:border-gray-600 dark:focus:ring-primary-400';
-  const iconPaddingStyles = icon ? (iconPosition === 'left' ? 'pl-10' : 'pr-10') : '';
+  const iconPaddingStyles = icon ? (iconPosition === 'left' ? 'pl-9' : 'pr-9') : '';
   
   return (
     <div className={`w-full ${className}`}>
       {label && (
         <label 
           htmlFor={inputId.current}
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
           {label}
           {required && <span className="text-error ml-1" aria-label="required">*</span>}
@@ -99,7 +99,7 @@ const Input = ({
       
       <div className="relative">
         {icon && iconPosition === 'left' && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+          <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400">
             {icon}
           </div>
         )}
@@ -125,7 +125,7 @@ const Input = ({
         />
         
         {icon && iconPosition === 'right' && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+          <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400">
             {icon}
           </div>
         )}
@@ -134,7 +134,7 @@ const Input = ({
       {displayError && (
         <p 
           id={`${inputId.current}-error`}
-          className="mt-1 text-sm text-error"
+          className="mt-1 text-xs text-error"
           role="alert"
         >
           {displayError}
@@ -144,7 +144,7 @@ const Input = ({
       {!displayError && helperText && (
         <p 
           id={`${inputId.current}-helper`}
-          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
         >
           {helperText}
         </p>

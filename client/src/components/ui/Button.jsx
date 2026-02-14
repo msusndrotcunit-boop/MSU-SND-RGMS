@@ -30,9 +30,9 @@ const Button = ({
   };
   
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm h-8',
-    md: 'px-4 py-2 text-sm h-9',
-    lg: 'px-5 py-2.5 text-base h-10',
+    sm: 'px-2 py-1 text-xs',
+    md: 'px-3 py-1.5 text-sm',
+    lg: 'px-4 py-2 text-base',
   };
   
   const widthStyles = fullWidth ? 'w-full' : '';
