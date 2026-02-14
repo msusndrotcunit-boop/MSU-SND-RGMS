@@ -1442,11 +1442,14 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
         courses: []
     };
     
+    // Database-agnostic boolean check for is_archived
+    const archivedCheck = db.pool ? 'is_archived IS NOT TRUE' : '(is_archived IS FALSE OR is_archived IS NULL)';
+    
     // Get religion distribution
     const religionSql = `
         SELECT religion, COUNT(*) as count
         FROM cadets
-        WHERE is_archived = FALSE AND religion IS NOT NULL AND religion != ''
+        WHERE ${archivedCheck} AND religion IS NOT NULL AND religion != ''
         GROUP BY religion
         ORDER BY count DESC
     `;
@@ -1457,13 +1460,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
             return res.status(500).json({ message: err.message });
         }
         
-        demographics.religion = religionRows;
+        demographics.religion = religionRows || [];
         
         // Get age distribution (calculate from birthdate)
         const ageSql = db.pool ? `
             SELECT 
                 CASE 
-                    WHEN birthdate IS NULL THEN 'Unknown'
+                    WHEN birthdate IS NULL OR birthdate = '' THEN 'Unknown'
                     WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) < 18 THEN 'Under 18'
                     WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) BETWEEN 18 AND 19 THEN '18-19'
                     WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate::date)) BETWEEN 20 AND 21 THEN '20-21'
@@ -1473,13 +1476,21 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 END as age_range,
                 COUNT(*) as count
             FROM cadets
-            WHERE is_archived = FALSE
+            WHERE ${archivedCheck}
             GROUP BY age_range
-            ORDER BY age_range
+            ORDER BY 
+                CASE age_range
+                    WHEN 'Under 18' THEN 1
+                    WHEN '18-19' THEN 2
+                    WHEN '20-21' THEN 3
+                    WHEN '22-23' THEN 4
+                    WHEN '24+' THEN 5
+                    ELSE 6
+                END
         ` : `
             SELECT 
                 CASE 
-                    WHEN birthdate IS NULL THEN 'Unknown'
+                    WHEN birthdate IS NULL OR birthdate = '' THEN 'Unknown'
                     WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) < 18 THEN 'Under 18'
                     WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) BETWEEN 18 AND 19 THEN '18-19'
                     WHEN (CAST(strftime('%Y', 'now') AS INTEGER) - CAST(strftime('%Y', birthdate) AS INTEGER)) BETWEEN 20 AND 21 THEN '20-21'
@@ -1489,9 +1500,17 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 END as age_range,
                 COUNT(*) as count
             FROM cadets
-            WHERE is_archived = FALSE
+            WHERE ${archivedCheck}
             GROUP BY age_range
-            ORDER BY age_range
+            ORDER BY 
+                CASE age_range
+                    WHEN 'Under 18' THEN 1
+                    WHEN '18-19' THEN 2
+                    WHEN '20-21' THEN 3
+                    WHEN '22-23' THEN 4
+                    WHEN '24+' THEN 5
+                    ELSE 6
+                END
         `;
         
         db.all(ageSql, [], (err, ageRows) => {
@@ -1500,13 +1519,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 return res.status(500).json({ message: err.message });
             }
             
-            demographics.age = ageRows;
+            demographics.age = ageRows || [];
             
             // Get course distribution
             const courseSql = `
                 SELECT course, COUNT(*) as count
                 FROM cadets
-                WHERE is_archived = FALSE AND course IS NOT NULL AND course != ''
+                WHERE ${archivedCheck} AND course IS NOT NULL AND course != ''
                 GROUP BY course
                 ORDER BY count DESC
             `;
@@ -1517,7 +1536,7 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                     return res.status(500).json({ message: err.message });
                 }
                 
-                demographics.courses = courseRows;
+                demographics.courses = courseRows || [];
                 res.json(demographics);
             });
         });
