@@ -20,19 +20,19 @@ const Button = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-fast focus-ring rounded-lg disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus-ring rounded-md disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md';
   
   const variantStyles = {
-    primary: 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600',
-    danger: 'bg-error text-white hover:bg-red-600 active:bg-red-700',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800',
+    primary: 'bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:from-primary-600 hover:to-primary-700 active:from-primary-700 active:to-primary-800',
+    secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 active:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700',
+    danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800',
+    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800 shadow-none hover:shadow-sm',
   };
   
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm min-h-touch',
-    md: 'px-4 py-2 text-base min-h-touch',
-    lg: 'px-6 py-3 text-lg min-h-touch',
+    sm: 'px-3 py-1.5 text-sm h-8',
+    md: 'px-4 py-2 text-sm h-9',
+    lg: 'px-5 py-2.5 text-base h-10',
   };
   
   const widthStyles = fullWidth ? 'w-full' : '';

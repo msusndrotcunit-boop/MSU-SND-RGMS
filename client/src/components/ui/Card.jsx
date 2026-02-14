@@ -17,16 +17,16 @@ const Card = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-fast';
+  const baseStyles = 'bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden transition-all duration-200 border border-gray-100 dark:border-gray-700';
   
   const variantStyles = {
     default: '',
-    bordered: 'border border-gray-200 dark:border-gray-700',
-    elevated: 'shadow-lg',
+    bordered: 'border-2 border-gray-200 dark:border-gray-600',
+    elevated: 'shadow-md',
   };
   
   const interactiveStyles = hoverable || clickable 
-    ? 'hover-lift cursor-pointer hover:shadow-lg' 
+    ? 'hover:shadow-lg hover:-translate-y-0.5 cursor-pointer' 
     : '';
   
   const handleClick = (e) => {
