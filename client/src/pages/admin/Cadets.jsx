@@ -102,10 +102,19 @@ const Cadets = () => {
         if (saved !== null) return saved === 'true';
         return window.innerWidth >= 768;
     });
+    const [isControlsExpanded, setIsControlsExpanded] = useState(() => {
+        const saved = sessionStorage.getItem('cadet_controls_expanded');
+        if (saved !== null) return saved === 'true';
+        return window.innerWidth >= 768;
+    });
 
     useEffect(() => {
         sessionStorage.setItem('cadet_filters_expanded', isFiltersExpanded);
     }, [isFiltersExpanded]);
+    
+    useEffect(() => {
+        sessionStorage.setItem('cadet_controls_expanded', isControlsExpanded);
+    }, [isControlsExpanded]);
     
     // Bulk Selection State
     const [selectedCadets, setSelectedCadets] = useState([]);
@@ -623,7 +632,26 @@ const Cadets = () => {
         <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold">Cadet Management</h2>
-                <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+                
+                {/* Mobile: Collapsible Controls Toggle */}
+                <button
+                    onClick={() => setIsControlsExpanded(!isControlsExpanded)}
+                    className="md:hidden flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm font-medium w-full justify-center min-h-[44px]"
+                    aria-expanded={isControlsExpanded}
+                    aria-controls="cadet-controls"
+                >
+                    <Filter size={18} />
+                    <span>{isControlsExpanded ? 'Hide Controls' : 'Show Controls'}</span>
+                    {isControlsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+
+                {/* Controls Container - Collapsible on Mobile */}
+                <div 
+                    id="cadet-controls"
+                    className={`flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto transition-all duration-300 ease-in-out overflow-hidden ${
+                        isControlsExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'
+                    }`}
+                >
                     {/* Search Bar */}
                     <div className="relative flex-1 md:flex-none">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
