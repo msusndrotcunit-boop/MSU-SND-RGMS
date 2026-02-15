@@ -20,6 +20,8 @@ import {
     GENDER_OPTIONS
 } from '../../constants/options';
 import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
+import MobileModalManager from '../../components/MobileModalManager';
+import { MobileFormLayout, FormSection, FormField, MobileInput, MobileSelect, MobileTextarea, FormActions } from '../../components/MobileFormLayout';
 
 const Profile = () => {
     const { user, logout } = useAuth();
@@ -125,7 +127,7 @@ const Profile = () => {
         });
         
         // Use the centralized image utility for consistent URL construction
-        const profilePicUrl = getProfilePicUrl(data.profile_pic, user?.cadetId);
+        const profilePicUrl = getProfilePicUrl(data.profile_pic, user?.cadetId, 'cadets') || getProfilePicFallback(user?.cadetId, 'cadets');
         console.log('[Profile] Constructed URL:', profilePicUrl);
         setPreview(profilePicUrl);
     };
@@ -638,7 +640,7 @@ const Profile = () => {
 
                         <div className="pt-4">
                             {!isLocked && (
-                                <button type="submit" className="flex items-center justify-center w-full bg-green-700 text-white py-3 rounded hover:bg-green-800 transition shadow">
+                                <button type="submit" className="flex items-center justify-center w-full bg-green-700 text-white py-2 px-4 rounded hover:bg-green-800 transition shadow text-sm">
                                     <Save className="mr-2" size={20} />
                                     Complete Profile & Logout
                                 </button>

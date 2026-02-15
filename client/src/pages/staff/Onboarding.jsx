@@ -238,7 +238,7 @@ const Onboarding = () => {
                                         </div>
                                     )}
                                 </div>
-                                <label className="cursor-pointer bg-green-700 text-white py-2 px-4 rounded hover:bg-green-800 transition flex items-center gap-2">
+                                <label className="cursor-pointer bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-800 transition flex items-center gap-2 text-sm">
                                     <Upload size={16} /> Upload Picture
                                     <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                                 </label>

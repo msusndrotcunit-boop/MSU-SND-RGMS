@@ -8,6 +8,10 @@ import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
+import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
+import AnimationOptimizer from '../components/AnimationOptimizer';
+import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -277,7 +281,9 @@ const CadetLayout = () => {
 
     // Memoize the profile picture URL to avoid recalculation
     const profilePicSrc = useMemo(() => {
-        return getProfilePicUrl(profile?.profile_pic, user?.cadetId);
+        const primary = getProfilePicUrl(profile?.profile_pic, user?.cadetId, 'cadets');
+        if (primary) return primary;
+        return getProfilePicFallback(user?.cadetId, 'cadets');
     }, [profile?.profile_pic, user?.cadetId]);
 
     const renderProfileImage = () => {
@@ -295,21 +301,29 @@ const CadetLayout = () => {
     };
 
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
-             <Toaster position="top-center" reverseOrder={false} />
-             {/* Mobile Sidebar Overlay */}
-             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+        <SafeAreaProvider>
+            <MobilePerformanceOptimizer>
+                <AnimationOptimizer>
+                    <CrossPlatformStandardizer>
+                            <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+                 <Toaster position="top-center" reverseOrder={false} />
+                 {/* Mobile Sidebar Overlay */}
+                 {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-             {/* Sidebar - simplified for Cadet */}
-             <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                 {/* Sidebar - simplified for Cadet */}
+                 <FixedElement 
+                    position="left" 
+                    respectSafeArea={true}
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                    )}
+                >
                 <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>ROTC Cadet</span>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
@@ -328,7 +342,7 @@ const CadetLayout = () => {
                     {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <Link
                         to="/cadet/home"
                         onClick={() => setIsSidebarOpen(false)}
@@ -405,10 +419,14 @@ const CadetLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+            </FixedElement>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow p-4 flex items-center justify-between">
+                <FixedElement 
+                    position="top" 
+                    respectSafeArea={true}
+                    className="bg-white shadow p-4 flex items-center justify-between"
+                >
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar} 
@@ -435,17 +453,21 @@ const CadetLayout = () => {
                             onClear={handleClearMessages}
                         />
                     </div>
-                </header>
+                </FixedElement>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-yellow-600 text-white text-sm p-2 text-center">
                         Degraded mode: Database disconnected. Your changes will be limited until service restores.
                     </div>
                 )}
-                <main className="flex-1 overflow-auto p-6">
+                <SafeAreaManager 
+                    className="flex-1 overflow-auto p-6"
+                    enableKeyboardAdjustment={true}
+                    enableScrollAdjustment={true}
+                >
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
                     </Suspense>
-                </main>
+                </SafeAreaManager>
             </div>
 
             
@@ -560,7 +582,11 @@ const CadetLayout = () => {
                     </div>
                 </div>
             )}
-        </div>
+                            </SafeAreaManager>
+                        </CrossPlatformStandardizer>
+                    </AnimationOptimizer>
+                </MobilePerformanceOptimizer>
+            </SafeAreaProvider>
     );
 };
 

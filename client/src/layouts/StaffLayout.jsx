@@ -6,8 +6,12 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
+import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
+import AnimationOptimizer from '../components/AnimationOptimizer';
+import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 import { cacheSingleton } from '../utils/db';
-import { getProfilePicUrl } from '../utils/image';
+import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -210,21 +214,29 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
-            <Toaster position="top-right" reverseOrder={false} />
-             {/* Mobile Sidebar Overlay */}
-             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+        <SafeAreaProvider>
+            <MobilePerformanceOptimizer>
+                <AnimationOptimizer>
+                    <CrossPlatformStandardizer>
+                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+                <Toaster position="top-right" reverseOrder={false} />
+                 {/* Mobile Sidebar Overlay */}
+                 {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-             {/* Sidebar */}
-             <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                 {/* Sidebar */}
+                 <FixedElement 
+                    position="left" 
+                    respectSafeArea={true}
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                    )}
+                >
                 <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center mb-4">
                         <span className="text-xl font-bold">
@@ -450,10 +462,14 @@ const StaffLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+            </FixedElement>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between">
+                <FixedElement 
+                    position="top" 
+                    respectSafeArea={true}
+                    className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
+                >
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
@@ -476,11 +492,15 @@ const StaffLayout = () => {
                             onClear={handleClearMessages}
                         />
                     </div>
-                </header>
+                </FixedElement>
 
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8">
+                <SafeAreaManager 
+                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8"
+                    enableKeyboardAdjustment={true}
+                    enableScrollAdjustment={true}
+                >
                     <Outlet />
-                </main>
+                </SafeAreaManager>
 
                 
             </div>
@@ -513,8 +533,12 @@ const StaffLayout = () => {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+              )}
+                        </SafeAreaManager>
+                    </CrossPlatformStandardizer>
+                </AnimationOptimizer>
+            </MobilePerformanceOptimizer>
+        </SafeAreaProvider>
     );
 };
 

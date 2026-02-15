@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { getProfilePicUrl } from '../../utils/image';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
+import ResponsiveTable from '../../components/ResponsiveTable';
 
 const TrainingStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
@@ -212,63 +213,58 @@ const TrainingStaffManagement = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded shadow overflow-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-100">
-                        <tr className="border-b shadow-sm">
-                            <th className="p-4 bg-gray-100">Name & Rank</th>
-                            <th className="p-4 bg-gray-100">Role</th>
-                            <th className="p-4 bg-gray-100">Contact</th>
-                            <th className="p-4 text-right bg-gray-100">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedStaffList.length === 0 ? (
-                            <tr>
-                                <td colSpan="4" className="p-8 text-center text-gray-500">
-                                    No training staff found. Import or add one.
-                                </td>
-                            </tr>
-                        ) : (
-                            sortedStaffList.map(staff => (
-                                <tr key={staff.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <div className="font-medium">
-                                            <span className="font-bold text-blue-900 mr-1">{staff.rank}</span>
-                                            {staff.last_name}, {staff.first_name} {staff.middle_name} {staff.suffix_name}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
-                                            {staff.role}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-sm">
-                                        <div className="text-gray-900">{staff.email || '-'}</div>
-                                        <div className="text-gray-500">{staff.contact_number || '-'}</div>
-                                    </td>
-                                    <td className="p-4 text-right space-x-2">
-                                        <button 
-                                            onClick={() => openEditModal(staff)}
-                                            className="text-gray-600 hover:bg-gray-100 p-2 rounded"
-                                            title="Edit Info"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(staff.id)}
-                                            className="text-red-600 hover:bg-red-50 p-2 rounded"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* Responsive Table */}
+            <ResponsiveTable
+                data={sortedStaffList}
+                columns={[
+                    {
+                        key: 'name',
+                        label: 'Name & Rank',
+                        render: (_, staff) => (
+                            <div className="font-medium">
+                                <span className="font-bold text-blue-900 mr-1">{staff.rank}</span>
+                                {staff.last_name}, {staff.first_name} {staff.middle_name} {staff.suffix_name}
+                            </div>
+                        )
+                    },
+                    {
+                        key: 'role',
+                        label: 'Role',
+                        render: (_, staff) => (
+                            <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
+                                {staff.role}
+                            </span>
+                        )
+                    },
+                    {
+                        key: 'contact',
+                        label: 'Contact',
+                        render: (_, staff) => (
+                            <div className="text-sm">
+                                <div className="text-gray-900">{staff.email || '-'}</div>
+                                <div className="text-gray-500">{staff.contact_number || '-'}</div>
+                            </div>
+                        )
+                    }
+                ]}
+                loading={loading}
+                emptyMessage="No training staff found. Import or add one."
+                actions={[
+                    {
+                        icon: Pencil,
+                        label: 'Edit Info',
+                        onClick: openEditModal,
+                        className: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    },
+                    {
+                        icon: Trash2,
+                        label: 'Delete',
+                        onClick: (staff) => handleDelete(staff.id),
+                        className: 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                    }
+                ]}
+                className="bg-white rounded shadow"
+            />
 
             {/* Import Modal */}
             {isImportModalOpen && (

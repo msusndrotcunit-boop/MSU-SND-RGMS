@@ -1,26 +1,10 @@
-// Simple SSE clients registry (shared via global)
-const SSE_CLIENTS = global.__sseClients || [];
-global.__sseClients = SSE_CLIENTS;
-
-function broadcastEvent(event) {
+const SSE_CLIENTS = [];
+function broadcastEvent(evt) {
+  const line = `data: ${JSON.stringify(evt)}\n\n`;
+  for (const res of SSE_CLIENTS) {
     try {
-        const payload = `data: ${JSON.stringify(event)}\n\n`;
-        SSE_CLIENTS.forEach((res) => {
-            try { 
-                // Check if response is still open
-                if (!res.writableEnded) {
-                    res.write(payload); 
-                }
-            } catch (e) { 
-                /* ignore */ 
-            }
-        });
-    } catch (e) {
-        console.error('SSE broadcast error', e);
-    }
+      if (!res.writableEnded) res.write(line);
+    } catch (_) {}
+  }
 }
-
-module.exports = {
-    SSE_CLIENTS,
-    broadcastEvent
-};
+module.exports = { broadcastEvent, SSE_CLIENTS };
