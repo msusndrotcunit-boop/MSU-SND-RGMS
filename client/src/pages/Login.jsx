@@ -1,4 +1,154 @@
-                             {(loginType === 'cadet' || loginType === 'staff') && (
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { User, Lock, Eye, EyeOff, Smartphone, ShieldCheck, Briefcase, HelpCircle, X, Download, Share, MoreVertical } from 'lucide-react';
+import rgmsLogo from '../assets/rgms_logo.webp';
+
+const Login = () => {
+    const [loginType, setLoginType] = useState('cadet'); // 'cadet', 'staff', 'admin'
+    const [formData, setFormData] = useState({ username: '', password: '', identifier: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showMobileModal, setShowMobileModal] = useState(false);
+    const [showAccessModal, setShowAccessModal] = useState(false);
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            let response;
+            if (loginType === 'cadet') {
+                response = await axios.post('/api/auth/cadet-login', { identifier: formData.identifier });
+            } else if (loginType === 'staff') {
+                response = await axios.post('/api/auth/staff-login-no-pass', { identifier: formData.identifier });
+            } else {
+                const username = (formData.username || '').trim();
+                const password = (formData.password || '').trim();
+                response = await axios.post('/api/auth/login', { username, password });
+            }
+
+            const data = response.data;
+            const user = {
+                token: data.token,
+                role: data.role,
+                cadetId: data.cadetId,
+                staffId: data.staffId,
+                isProfileCompleted: data.isProfileCompleted
+            };
+            
+            login(user);
+
+            const role = (user.role || '').toLowerCase();
+
+            if (role === 'admin') {
+                navigate('/admin/cadets');
+            } else if (role === 'training_staff') {
+                navigate('/staff/dashboard');
+            } else if (role === 'cadet') {
+                if (!user.isProfileCompleted) {
+                    navigate('/cadet/profile');
+                } else {
+                    navigate('/cadet/dashboard');
+                }
+            } else {
+                navigate('/');
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            if (err.response) {
+                const serverMsg = err.response.data?.message;
+                setError(serverMsg || 'Login failed. Please check your credentials.');
+            } else if (err.request) {
+                setError('Cannot reach the server. Please check your WiFi or mobile data connection and try again.');
+            } else {
+                setError('Unexpected error during login. Please try again.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleHelpClick = (type) => {
+        if (type === 'access') {
+            setShowAccessModal(true);
+        } else if (type === 'mobile') {
+            setShowMobileModal(true);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
+            {/* Background Overlay */}
+            <div className="absolute inset-0 z-0 opacity-20" style={{ 
+                backgroundImage: `url(${rgmsLogo})`, 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center',
+                filter: 'blur(8px)'
+            }}></div>
+
+            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
+                {/* Header Section - No border, green covers all corners */}
+                <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
+                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.6] translate-y-1" />
+                    </div>
+                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
+                        integrated with Training Staff Attendance System
+                    </p>
+                </div>
+
+                {/* Body Section */}
+                <div className="p-8 pt-6">
+                    {/* Role Selector */}
+                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
+                        <button
+                            onClick={() => { setLoginType('cadet'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <User size={14} /> Cadet
+                        </button>
+                        <button
+                            onClick={() => { setLoginType('staff'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <Briefcase size={14} /> Staff
+                        </button>
+                        <button
+                            onClick={() => { setLoginType('admin'); setError(''); }}
+                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                                loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <ShieldCheck size={14} /> Admin
+                        </button>
+                    </div>
+
+                    {error && (
+                        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Input Fields */}
+                        {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                                     Username or Email
@@ -14,7 +164,7 @@
                                         onChange={handleChange}
                                         required
                                         className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
-                                        placeholder={loginType === 'cadet' ? "Username or Email" : "Staff Username"}
+                                        placeholder={loginType === 'cadet' ? "Student ID or Email" : "Staff Username"}
                                     />
                                 </div>
                             </div>
@@ -149,7 +299,7 @@
                                     </div>
                                     <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside ml-1">
                                         <li>Ensure your account is approved by the ROTC Office.</li>
-                                        <li>Choose Cadet, then enter your Username or Email.</li>
+                                        <li>Choose Cadet, then enter your Student ID or Email.</li>
                                         <li>Tap Sign In. Complete your profile if prompted.</li>
                                     </ol>
                                 </div>
