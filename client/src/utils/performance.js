@@ -468,11 +468,405 @@ export const MemoryManager = {
   }
 };
 
+/**
+ * Platform detection and cross-platform utilities
+ */
+export const PlatformDetector = {
+  /**
+   * Detect the current platform
+   * @returns {Object} Platform information
+   */
+  getPlatform: () => {
+    const userAgent = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) || 
+                  (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(userAgent);
+    const isMobile = isIOS || isAndroid || /Mobile/.test(userAgent);
+    const isTablet = /iPad/.test(userAgent) || 
+                     (isAndroid && !/Mobile/.test(userAgent)) ||
+                     (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Detect specific browsers
+    const isChrome = /Chrome/.test(userAgent) && !/Edge/.test(userAgent);
+    const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+    const isFirefox = /Firefox/.test(userAgent);
+    const isEdge = /Edge/.test(userAgent);
+    
+    // Detect PWA mode
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  window.navigator.standalone === true;
+    
+    return {
+      isIOS,
+      isAndroid,
+      isMobile,
+      isTablet,
+      isDesktop: !isMobile && !isTablet,
+      browser: {
+        isChrome,
+        isSafari,
+        isFirefox,
+        isEdge,
+        name: isChrome ? 'Chrome' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : isEdge ? 'Edge' : 'Unknown'
+      },
+      isPWA,
+      userAgent,
+      platform
+    };
+  },
+
+  /**
+   * Check if a specific feature is supported
+   * @param {string} feature - Feature to check
+   * @returns {boolean} Whether the feature is supported
+   */
+  supportsFeature: (feature) => {
+    const features = {
+      // Touch and interaction
+      touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+      hover: window.matchMedia('(hover: hover)').matches,
+      pointer: window.matchMedia('(pointer: fine)').matches,
+      
+      // Storage
+      localStorage: (() => {
+        try {
+          const test = 'test';
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          return true;
+        } catch {
+          return false;
+        }
+      })(),
+      sessionStorage: (() => {
+        try {
+          const test = 'test';
+          sessionStorage.setItem(test, test);
+          sessionStorage.removeItem(test);
+          return true;
+        } catch {
+          return false;
+        }
+      })(),
+      indexedDB: 'indexedDB' in window,
+      
+      // Network and connectivity
+      serviceWorker: 'serviceWorker' in navigator,
+      pushNotifications: 'PushManager' in window,
+      backgroundSync: 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype,
+      networkInformation: 'connection' in navigator,
+      
+      // Device capabilities
+      geolocation: 'geolocation' in navigator,
+      camera: 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices,
+      vibration: 'vibrate' in navigator,
+      battery: 'getBattery' in navigator,
+      
+      // Display and graphics
+      webGL: (() => {
+        try {
+          const canvas = document.createElement('canvas');
+          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+        } catch {
+          return false;
+        }
+      })(),
+      canvas: (() => {
+        try {
+          const canvas = document.createElement('canvas');
+          return !!(canvas.getContext && canvas.getContext('2d'));
+        } catch {
+          return false;
+        }
+      })(),
+      
+      // Performance APIs
+      performanceObserver: 'PerformanceObserver' in window,
+      intersectionObserver: 'IntersectionObserver' in window,
+      resizeObserver: 'ResizeObserver' in window,
+      
+      // Modern web features
+      webAssembly: 'WebAssembly' in window,
+      webWorkers: 'Worker' in window,
+      sharedArrayBuffer: 'SharedArrayBuffer' in window,
+      
+      // CSS features
+      cssGrid: CSS.supports('display', 'grid'),
+      cssFlexbox: CSS.supports('display', 'flex'),
+      cssCustomProperties: CSS.supports('--test', 'value'),
+      cssBackdropFilter: CSS.supports('backdrop-filter', 'blur(1px)'),
+      
+      // Safe area support
+      safeArea: CSS.supports('padding', 'env(safe-area-inset-top)'),
+      
+      // Reduced motion preference
+      reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    };
+    
+    return features[feature] || false;
+  },
+
+  /**
+   * Get device capabilities and limitations
+   * @returns {Object} Device capabilities
+   */
+  getCapabilities: () => {
+    const platform = PlatformDetector.getPlatform();
+    
+    // Estimate device performance tier
+    const getPerformanceTier = () => {
+      const memory = navigator.deviceMemory || 4; // Default to 4GB if not available
+      const cores = navigator.hardwareConcurrency || 4; // Default to 4 cores
+      
+      if (memory <= 2 || cores <= 2) return 'low';
+      if (memory <= 4 || cores <= 4) return 'medium';
+      return 'high';
+    };
+    
+    // Get connection information
+    const getConnectionInfo = () => {
+      if (!navigator.connection) {
+        return { effectiveType: 'unknown', downlink: 10, rtt: 100 };
+      }
+      
+      return {
+        effectiveType: navigator.connection.effectiveType,
+        downlink: navigator.connection.downlink,
+        rtt: navigator.connection.rtt,
+        saveData: navigator.connection.saveData
+      };
+    };
+    
+    return {
+      performanceTier: getPerformanceTier(),
+      memory: navigator.deviceMemory || 4,
+      cores: navigator.hardwareConcurrency || 4,
+      connection: getConnectionInfo(),
+      maxTouchPoints: navigator.maxTouchPoints || 0,
+      screen: {
+        width: screen.width,
+        height: screen.height,
+        pixelRatio: window.devicePixelRatio || 1,
+        orientation: screen.orientation ? screen.orientation.type : 'unknown'
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      platform
+    };
+  }
+};
+
+/**
+ * Cross-platform feature handling utilities
+ */
+export const CrossPlatformHandler = {
+  /**
+   * Handle platform-specific touch events
+   * @param {HTMLElement} element - Element to attach events to
+   * @param {Object} handlers - Event handlers
+   */
+  handleTouchEvents: (element, handlers = {}) => {
+    const platform = PlatformDetector.getPlatform();
+    const { onTouchStart, onTouchEnd, onTouchMove, onClick } = handlers;
+    
+    if (platform.isMobile) {
+      // Use touch events on mobile
+      if (onTouchStart) {
+        element.addEventListener('touchstart', onTouchStart, { passive: true });
+      }
+      if (onTouchEnd) {
+        element.addEventListener('touchend', onTouchEnd, { passive: true });
+      }
+      if (onTouchMove) {
+        element.addEventListener('touchmove', onTouchMove, { passive: false });
+      }
+    } else {
+      // Use mouse events on desktop
+      if (onTouchStart) {
+        element.addEventListener('mousedown', onTouchStart);
+      }
+      if (onTouchEnd) {
+        element.addEventListener('mouseup', onTouchEnd);
+      }
+      if (onTouchMove) {
+        element.addEventListener('mousemove', onTouchMove);
+      }
+    }
+    
+    // Always add click handler as fallback
+    if (onClick) {
+      element.addEventListener('click', onClick);
+    }
+  },
+
+  /**
+   * Get platform-specific CSS classes
+   * @returns {string} CSS classes for current platform
+   */
+  getPlatformClasses: () => {
+    const platform = PlatformDetector.getPlatform();
+    const capabilities = PlatformDetector.getCapabilities();
+    
+    const classes = [];
+    
+    // Platform classes
+    if (platform.isIOS) classes.push('platform-ios');
+    if (platform.isAndroid) classes.push('platform-android');
+    if (platform.isMobile) classes.push('platform-mobile');
+    if (platform.isTablet) classes.push('platform-tablet');
+    if (platform.isDesktop) classes.push('platform-desktop');
+    if (platform.isPWA) classes.push('platform-pwa');
+    
+    // Browser classes
+    classes.push(`browser-${platform.browser.name.toLowerCase()}`);
+    
+    // Capability classes
+    if (PlatformDetector.supportsFeature('touch')) classes.push('supports-touch');
+    if (PlatformDetector.supportsFeature('hover')) classes.push('supports-hover');
+    if (PlatformDetector.supportsFeature('safeArea')) classes.push('supports-safe-area');
+    if (PlatformDetector.supportsFeature('reducedMotion')) classes.push('prefers-reduced-motion');
+    
+    // Performance classes
+    classes.push(`performance-${capabilities.performanceTier}`);
+    
+    // Connection classes
+    if (capabilities.connection.effectiveType) {
+      classes.push(`connection-${capabilities.connection.effectiveType}`);
+    }
+    if (capabilities.connection.saveData) {
+      classes.push('save-data');
+    }
+    
+    return classes.join(' ');
+  },
+
+  /**
+   * Apply platform-specific optimizations
+   * @param {HTMLElement} element - Element to optimize
+   */
+  applyPlatformOptimizations: (element) => {
+    const platform = PlatformDetector.getPlatform();
+    const capabilities = PlatformDetector.getCapabilities();
+    
+    // Add platform classes
+    element.className += ` ${CrossPlatformHandler.getPlatformClasses()}`;
+    
+    // iOS-specific optimizations
+    if (platform.isIOS) {
+      // Prevent iOS Safari zoom on input focus
+      const inputs = element.querySelectorAll('input, textarea, select');
+      inputs.forEach(input => {
+        if (input.style.fontSize === '' || parseFloat(input.style.fontSize) < 16) {
+          input.style.fontSize = '16px';
+        }
+      });
+      
+      // Fix iOS Safari viewport issues
+      element.style.minHeight = '-webkit-fill-available';
+    }
+    
+    // Android-specific optimizations
+    if (platform.isAndroid) {
+      // Optimize tap highlighting
+      element.style.webkitTapHighlightColor = 'rgba(0, 0, 0, 0.1)';
+      
+      // Improve scrolling performance
+      element.style.webkitOverflowScrolling = 'touch';
+    }
+    
+    // Low-end device optimizations
+    if (capabilities.performanceTier === 'low') {
+      // Disable expensive visual effects
+      element.style.setProperty('--animation-duration', '0.1s');
+      element.style.setProperty('--transition-duration', '0.1s');
+      
+      // Remove shadows and gradients
+      const shadowElements = element.querySelectorAll('[class*="shadow"]');
+      shadowElements.forEach(el => {
+        el.style.boxShadow = 'none';
+      });
+    }
+    
+    // Slow connection optimizations
+    if (capabilities.connection.effectiveType === 'slow-2g' || 
+        capabilities.connection.effectiveType === '2g') {
+      // Reduce image quality
+      const images = element.querySelectorAll('img');
+      images.forEach(img => {
+        if (img.src.includes('cloudinary.com')) {
+          img.src = img.src.replace(/q_\d+/, 'q_50');
+        }
+      });
+    }
+  },
+
+  /**
+   * Handle platform-specific navigation
+   * @param {string} url - URL to navigate to
+   * @param {Object} options - Navigation options
+   */
+  handleNavigation: (url, options = {}) => {
+    const platform = PlatformDetector.getPlatform();
+    const { replace = false, external = false } = options;
+    
+    if (external) {
+      // Handle external links based on platform
+      if (platform.isPWA) {
+        // Open in system browser from PWA
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        window.open(url, '_blank');
+      }
+    } else {
+      // Internal navigation
+      if (replace) {
+        window.location.replace(url);
+      } else {
+        window.location.href = url;
+      }
+    }
+  },
+
+  /**
+   * Get platform-specific storage
+   * @returns {Object} Storage interface
+   */
+  getStorage: () => {
+    const hasLocalStorage = PlatformDetector.supportsFeature('localStorage');
+    const hasSessionStorage = PlatformDetector.supportsFeature('sessionStorage');
+    
+    return {
+      local: hasLocalStorage ? localStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+        clear: () => {}
+      },
+      session: hasSessionStorage ? sessionStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+        clear: () => {}
+      },
+      supported: {
+        local: hasLocalStorage,
+        session: hasSessionStorage
+      }
+    };
+  }
+};
+
 export default {
   ImageOptimizer,
   PerformanceMonitor,
   ResourceLoader,
   AdaptiveLoader,
   ServiceWorkerUtils,
-  MemoryManager
+  MemoryManager,
+  PlatformDetector,
+  CrossPlatformHandler
 };

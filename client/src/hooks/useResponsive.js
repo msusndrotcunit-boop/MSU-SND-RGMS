@@ -6,7 +6,13 @@ import {
   isMobileLandscape,
   getSafeAreaInsets,
   getDeviceCapabilities,
-  debounce
+  debounce,
+  isMobileDevice,
+  isIOSDevice,
+  isAndroidDevice,
+  isPWA,
+  getPlatformClasses,
+  getAdaptiveConfig
 } from '../utils/responsive';
 
 /**
@@ -24,7 +30,15 @@ export const useResponsive = () => {
     orientation: typeof window !== 'undefined' ? 
       (window.innerHeight > window.innerWidth ? 'portrait' : 'landscape') : 'portrait',
     keyboardVisible: false,
-    keyboardHeight: 0
+    keyboardHeight: 0,
+    // Enhanced platform detection
+    platform: {
+      isMobile: isMobileDevice(),
+      isIOS: isIOSDevice(),
+      isAndroid: isAndroidDevice(),
+      isPWA: isPWA()
+    },
+    platformClasses: getPlatformClasses()
   });
 
   // Update responsive state
@@ -197,5 +211,96 @@ export const useSafeArea = () => {
     safeAreaInsets,
     applySafeAreaStyle,
     hasSafeArea: Object.values(safeAreaInsets).some(inset => inset > 0)
+  };
+};
+
+/**
+ * Hook for platform-specific behavior and optimizations
+ * @returns {object} Platform-specific state and utilities
+ */
+export const usePlatform = () => {
+  const { platform, deviceCapabilities, platformClasses } = useResponsive();
+  
+  const getAdaptiveConfiguration = useCallback((baseConfig) => {
+    return getAdaptiveConfig(baseConfig);
+  }, []);
+  
+  const shouldReduceAnimations = useCallback(() => {
+    return deviceCapabilities.features?.reducedMotion || 
+           deviceCapabilities.capabilities?.performanceTier === 'low' ||
+           deviceCapabilities.connectionType === 'slow-2g' ||
+           deviceCapabilities.connectionType === '2g';
+  }, [deviceCapabilities]);
+  
+  const shouldOptimizeImages = useCallback(() => {
+    return deviceCapabilities.connectionType === 'slow-2g' ||
+           deviceCapabilities.connectionType === '2g' ||
+           deviceCapabilities.capabilities?.connection?.saveData;
+  }, [deviceCapabilities]);
+  
+  return {
+    platform,
+    deviceCapabilities,
+    platformClasses,
+    getAdaptiveConfiguration,
+    shouldReduceAnimations,
+    shouldOptimizeImages,
+    // Platform-specific utilities
+    isLowEndDevice: deviceCapabilities.capabilities?.performanceTier === 'low',
+    isSlowConnection: deviceCapabilities.connectionType === 'slow-2g' || deviceCapabilities.connectionType === '2g',
+    supportsAdvancedFeatures: deviceCapabilities.capabilities?.performanceTier === 'high',
+    // Feature flags
+    features: deviceCapabilities.features || {}
+  };
+};
+
+/**
+ * Hook for cross-platform touch handling
+ * @param {Object} handlers - Touch event handlers
+ * @returns {object} Touch utilities
+ */
+export const useCrossPlatformTouch = (handlers = {}) => {
+  const { platform } = usePlatform();
+  
+  const attachTouchHandlers = useCallback((element) => {
+    if (!element) return;
+    
+    const { onTouchStart, onTouchEnd, onTouchMove, onClick } = handlers;
+    
+    if (platform.isMobile) {
+      // Use touch events on mobile
+      if (onTouchStart) {
+        element.addEventListener('touchstart', onTouchStart, { passive: true });
+      }
+      if (onTouchEnd) {
+        element.addEventListener('touchend', onTouchEnd, { passive: true });
+      }
+      if (onTouchMove) {
+        element.addEventListener('touchmove', onTouchMove, { passive: false });
+      }
+    } else {
+      // Use mouse events on desktop
+      if (onTouchStart) {
+        element.addEventListener('mousedown', onTouchStart);
+      }
+      if (onTouchEnd) {
+        element.addEventListener('mouseup', onTouchEnd);
+      }
+      if (onTouchMove) {
+        element.addEventListener('mousemove', onTouchMove);
+      }
+    }
+    
+    // Always add click handler as fallback
+    if (onClick) {
+      element.addEventListener('click', onClick);
+    }
+  }, [handlers, platform.isMobile]);
+  
+  return {
+    attachTouchHandlers,
+    isTouchDevice: platform.isMobile,
+    supportsTouch: deviceCapabilities?.supportsTouch || false,
+    supportsHover: deviceCapabilities?.supportsHover || false
   };
 };

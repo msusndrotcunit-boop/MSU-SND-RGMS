@@ -31,11 +31,53 @@ router.post('/heartbeat', (req, res) => {
   });
 });
 
+// Simple admin login - trusts provided username/password (no DB yet)
 router.post('/login', (req, res) => {
   const token = process.env.API_TOKEN || 'dev-token';
-  const role = process.env.DEFAULT_ROLE || 'admin';
+  const role = 'admin';
   const username = (req.body && req.body.username) || 'admin';
-  res.json({ token, user: { id: 1, role, username } });
+  res.json({
+    token,
+    role,
+    cadetId: null,
+    staffId: null,
+    isProfileCompleted: true,
+    username
+  });
+});
+
+// Cadet login using identifier (student ID / email / username) - placeholder implementation
+router.post('/cadet-login', (req, res) => {
+  const identifier = (req.body && req.body.identifier) || '';
+  if (!identifier) {
+    return res.status(400).json({ message: 'Identifier is required' });
+  }
+  const token = process.env.API_TOKEN || 'dev-token';
+  res.json({
+    token,
+    role: 'cadet',
+    cadetId: null,
+    staffId: null,
+    isProfileCompleted: false,
+    identifier
+  });
+});
+
+// Staff login without password using identifier (username / email) - placeholder implementation
+router.post('/staff-login-no-pass', (req, res) => {
+  const identifier = (req.body && req.body.identifier) || '';
+  if (!identifier) {
+    return res.status(400).json({ message: 'Identifier is required' });
+  }
+  const token = process.env.API_TOKEN || 'dev-token';
+  res.json({
+    token,
+    role: 'training_staff',
+    cadetId: null,
+    staffId: null,
+    isProfileCompleted: false,
+    identifier
+  });
 });
 
 // Read settings

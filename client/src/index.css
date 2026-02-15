@@ -1179,3 +1179,494 @@ body {
 .mobile-performance-optimizer[data-connection="2g"] .lazy-image {
   filter: contrast(0.9) brightness(0.95);
 }
+
+/* Animation Optimizer Styles */
+.animation-optimizer {
+  position: relative;
+}
+
+/* Disable animations on low-end devices or reduced motion */
+.animation-optimizer[data-low-end="true"] *,
+.animation-optimizer[data-reduced-motion="true"] * {
+  animation-duration: var(--animation-duration, 0.1s) !important;
+  transition-duration: var(--transition-duration, 0.1s) !important;
+}
+
+/* Page Transition Styles */
+.page-transition {
+  position: relative;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity var(--transition-duration, 0.3s) ease, 
+              transform var(--transition-duration, 0.3s) ease;
+}
+
+.page-transition[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition[data-loading="true"] {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.page-transition[data-mobile="true"] {
+  transition-duration: calc(var(--transition-duration, 0.3s) * 0.7);
+}
+
+/* Fade Transition Styles */
+.fade-transition {
+  opacity: 0;
+  transition: opacity var(--transition-duration, 200ms) ease;
+}
+
+.fade-transition[data-visible="true"] {
+  opacity: 1;
+}
+
+.fade-transition[data-mobile="true"] {
+  transition-duration: calc(var(--transition-duration, 200ms) * 0.5);
+}
+
+/* Slide Transition Styles */
+.slide-transition {
+  opacity: 0;
+  transition: opacity var(--transition-duration, 300ms) ease,
+              transform var(--transition-duration, 300ms) ease;
+}
+
+.slide-transition[data-visible="true"] {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.slide-transition[data-mobile="true"] {
+  transition-duration: calc(var(--transition-duration, 300ms) * 0.5);
+}
+
+/* Slide directions */
+.slide-transition--up {
+  transform: translateY(20px);
+}
+
+.slide-transition--down {
+  transform: translateY(-20px);
+}
+
+.slide-transition--left {
+  transform: translateX(20px);
+}
+
+.slide-transition--right {
+  transform: translateX(-20px);
+}
+
+.slide-transition--up[data-visible="true"],
+.slide-transition--down[data-visible="true"],
+.slide-transition--left[data-visible="true"],
+.slide-transition--right[data-visible="true"] {
+  transform: translate(0, 0);
+}
+
+/* Scale Transition Styles */
+.scale-transition {
+  opacity: 0;
+  transform: scale(var(--scale-from, 0.95));
+  transition: opacity var(--transition-duration, 200ms) ease,
+              transform var(--transition-duration, 200ms) ease;
+}
+
+.scale-transition[data-visible="true"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.scale-transition[data-mobile="true"] {
+  transition-duration: calc(var(--transition-duration, 200ms) * 0.5);
+}
+
+/* Layout Shift Preventer Styles */
+.layout-shift-preventer {
+  position: relative;
+  overflow: hidden;
+}
+
+.layout-shift-preventer[data-loaded="false"] {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.layout-shift-preventer[data-loaded="true"] {
+  background: none;
+  animation: none;
+}
+
+/* Performant Scroll Styles */
+.performant-scroll {
+  position: relative;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.performant-scroll[data-mobile="true"] {
+  scroll-behavior: auto; /* Disable smooth scrolling on mobile for performance */
+}
+
+.performant-scroll[data-scrolling="true"] {
+  /* Add subtle visual feedback during scrolling */
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Hardware acceleration for smooth animations */
+.animation-optimizer:not([data-low-end="true"]) .fade-transition,
+.animation-optimizer:not([data-low-end="true"]) .slide-transition,
+.animation-optimizer:not([data-low-end="true"]) .scale-transition,
+.animation-optimizer:not([data-low-end="true"]) .page-transition {
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Enable hardware acceleration */
+}
+
+/* Remove hardware acceleration on low-end devices */
+.animation-optimizer[data-low-end="true"] * {
+  will-change: auto !important;
+  transform: none !important;
+}
+
+/* Reduced motion optimizations */
+@media (prefers-reduced-motion: reduce) {
+  .animation-optimizer * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .fade-transition,
+  .slide-transition,
+  .scale-transition,
+  .page-transition {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+/* Cross-Platform Consistency Styles */
+
+/* Platform-specific base styles */
+.platform-ios {
+  /* iOS-specific optimizations */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+.platform-android {
+  /* Android-specific optimizations */
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+.platform-mobile {
+  /* Mobile-specific optimizations */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.platform-pwa {
+  /* PWA-specific optimizations */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Browser-specific styles */
+.browser-safari {
+  /* Safari-specific fixes */
+}
+
+.browser-chrome {
+  /* Chrome-specific optimizations */
+}
+
+.browser-firefox {
+  /* Firefox-specific optimizations */
+}
+
+/* Performance tier optimizations */
+.performance-low {
+  /* Low-end device optimizations */
+}
+
+.performance-low * {
+  animation-duration: 0.1s !important;
+  transition-duration: 0.1s !important;
+}
+
+.performance-low .shadow-lg,
+.performance-low .shadow-xl,
+.performance-low .shadow-2xl {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.performance-low .backdrop-blur,
+.performance-low .backdrop-filter {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.performance-medium {
+  /* Medium performance optimizations */
+}
+
+.performance-high {
+  /* High performance enhancements */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Connection-aware styles */
+.connection-slow-2g,
+.connection-2g {
+  /* Slow connection optimizations */
+}
+
+.connection-slow-2g img,
+.connection-2g img {
+  filter: contrast(0.9) brightness(0.95);
+}
+
+.save-data {
+  /* Data saver mode optimizations */
+}
+
+.save-data img {
+  filter: contrast(0.8) brightness(0.9);
+}
+
+.save-data .bg-gradient-to-r,
+.save-data .bg-gradient-to-l,
+.save-data .bg-gradient-to-t,
+.save-data .bg-gradient-to-b {
+  background-image: none !important;
+}
+
+/* Feature support styles */
+.supports-touch {
+  /* Touch-enabled optimizations */
+}
+
+.supports-hover:hover {
+  /* Hover-enabled interactions */
+}
+
+.supports-safe-area {
+  /* Safe area support */
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+/* Reduced motion support */
+.prefers-reduced-motion,
+.prefers-reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Cross-platform touch feedback */
+.cross-platform-touch {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cross-platform-touch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+  pointer-events: none;
+}
+
+.cross-platform-touch:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* Platform-specific input optimizations */
+.platform-ios input,
+.platform-ios textarea,
+.platform-ios select {
+  -webkit-appearance: none;
+  border-radius: 0.375rem;
+  font-size: 16px !important; /* Prevent zoom */
+}
+
+.platform-android input,
+.platform-android textarea,
+.platform-android select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* PWA-specific styles */
+.platform-pwa .external-link::after {
+  content: ' ↗';
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+/* Consistent font rendering across platforms */
+.platform-ios {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.platform-android {
+  font-family: 'Roboto', system-ui, sans-serif;
+}
+
+/* Platform-specific scrollbar styles */
+.platform-ios ::-webkit-scrollbar {
+  display: none;
+}
+
+.platform-android ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.platform-android ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.platform-android ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+/* Cross-platform button consistency */
+.cross-platform-button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Platform-specific focus styles */
+.platform-ios .focus-visible:focus,
+.platform-android .focus-visible:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.platform-desktop .focus-visible:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+/* Adaptive image loading */
+.adaptive-image {
+  transition: opacity 0.3s ease;
+}
+
+.connection-slow-2g .adaptive-image,
+.connection-2g .adaptive-image,
+.save-data .adaptive-image {
+  background-color: #f3f4f6;
+}
+
+/* Platform-specific modal behavior */
+.platform-ios .modal {
+  border-radius: 12px 12px 0 0;
+}
+
+.platform-android .modal {
+  border-radius: 8px;
+}
+
+/* Cross-platform safe area handling */
+.cross-platform-safe-area {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+/* Platform-specific navigation styles */
+.platform-ios .navigation {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.platform-android .navigation {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Consistent touch target sizes across platforms */
+.cross-platform-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Platform-specific loading states */
+.platform-ios .loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.platform-android .loading-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Accessibility improvements across platforms */
+.cross-platform-accessible {
+  /* Ensure proper contrast ratios */
+  color-contrast: AA;
+}
+
+.cross-platform-accessible:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Platform-specific text selection */
+.platform-ios {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.platform-android {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.platform-desktop {
+  user-select: text;
+}
+
+/* Prevent text selection on interactive elements */
+.cross-platform-button,
+.cross-platform-touch {
+  -webkit-user-select: none;
+  user-select: none;
+}

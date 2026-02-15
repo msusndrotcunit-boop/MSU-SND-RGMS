@@ -3,6 +3,8 @@
  * Provides consistent breakpoint management, device detection, and responsive behavior
  */
 
+import { PlatformDetector, CrossPlatformHandler } from './performance';
+
 // Standard breakpoints following Tailwind CSS conventions
 export const BREAKPOINTS = {
   xs: 0,      // 0px and up
@@ -203,7 +205,7 @@ export const createScrollSafeAreaObserver = (container, callback) => {
 };
 
 /**
- * Detect device capabilities and performance characteristics
+ * Enhanced device capabilities detection with cross-platform support
  * @returns {object} Device capability information
  */
 export const getDeviceCapabilities = () => {
@@ -213,38 +215,37 @@ export const getDeviceCapabilities = () => {
       connectionType: 'unknown',
       batteryLevel: null,
       supportsTouch: false,
-      supportsHover: true
+      supportsHover: true,
+      platform: { isMobile: false, isIOS: false, isAndroid: false }
     };
   }
 
-  // Detect low-end device based on hardware concurrency and memory
-  const isLowEndDevice = (
-    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ||
-    (navigator.deviceMemory && navigator.deviceMemory <= 2)
-  );
-
-  // Get connection type
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const connectionType = connection ? connection.effectiveType || 'unknown' : 'unknown';
-
-  // Get battery level if available
-  let batteryLevel = null;
-  if (navigator.getBattery) {
-    navigator.getBattery().then(battery => {
-      batteryLevel = battery.level;
-    });
-  }
-
-  // Detect touch and hover support
-  const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const supportsHover = window.matchMedia('(hover: hover)').matches;
-
+  const platform = PlatformDetector.getPlatform();
+  const capabilities = PlatformDetector.getCapabilities();
+  
   return {
-    isLowEndDevice,
-    connectionType,
-    batteryLevel,
-    supportsTouch,
-    supportsHover
+    // Legacy compatibility
+    isLowEndDevice: capabilities.performanceTier === 'low',
+    connectionType: capabilities.connection.effectiveType,
+    batteryLevel: null, // Will be populated asynchronously if available
+    supportsTouch: PlatformDetector.supportsFeature('touch'),
+    supportsHover: PlatformDetector.supportsFeature('hover'),
+    
+    // Enhanced platform information
+    platform,
+    capabilities,
+    
+    // Feature detection
+    features: {
+      localStorage: PlatformDetector.supportsFeature('localStorage'),
+      serviceWorker: PlatformDetector.supportsFeature('serviceWorker'),
+      pushNotifications: PlatformDetector.supportsFeature('pushNotifications'),
+      geolocation: PlatformDetector.supportsFeature('geolocation'),
+      camera: PlatformDetector.supportsFeature('camera'),
+      vibration: PlatformDetector.supportsFeature('vibration'),
+      safeArea: PlatformDetector.supportsFeature('safeArea'),
+      reducedMotion: PlatformDetector.supportsFeature('reducedMotion')
+    }
   };
 };
 
@@ -281,4 +282,123 @@ export const throttle = (func, limit) => {
       setTimeout(() => inThrottle = false, limit);
     }
   };
+};
+
+/**
+ * Apply cross-platform optimizations to an element
+ * @param {HTMLElement} element - Element to optimize
+ */
+export const applyCrossPlatformOptimizations = (element) => {
+  if (!element) return;
+  
+  CrossPlatformHandler.applyPlatformOptimizations(element);
+};
+
+/**
+ * Get platform-specific CSS classes
+ * @returns {string} CSS classes for current platform
+ */
+export const getPlatformClasses = () => {
+  return CrossPlatformHandler.getPlatformClasses();
+};
+
+/**
+ * Handle platform-specific touch events
+ * @param {HTMLElement} element - Element to attach events to
+ * @param {Object} handlers - Event handlers
+ */
+export const handleCrossPlatformTouch = (element, handlers) => {
+  CrossPlatformHandler.handleTouchEvents(element, handlers);
+};
+
+/**
+ * Get platform-aware storage interface
+ * @returns {Object} Storage interface with fallbacks
+ */
+export const getCrossPlatformStorage = () => {
+  return CrossPlatformHandler.getStorage();
+};
+
+/**
+ * Enhanced mobile detection with platform awareness
+ * @returns {boolean} True if mobile device
+ */
+export const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+  
+  const platform = PlatformDetector.getPlatform();
+  return platform.isMobile;
+};
+
+/**
+ * Check if device is iOS
+ * @returns {boolean} True if iOS device
+ */
+export const isIOSDevice = () => {
+  if (typeof window === 'undefined') return false;
+  
+  const platform = PlatformDetector.getPlatform();
+  return platform.isIOS;
+};
+
+/**
+ * Check if device is Android
+ * @returns {boolean} True if Android device
+ */
+export const isAndroidDevice = () => {
+  if (typeof window === 'undefined') return false;
+  
+  const platform = PlatformDetector.getPlatform();
+  return platform.isAndroid;
+};
+
+/**
+ * Check if running as PWA
+ * @returns {boolean} True if PWA
+ */
+export const isPWA = () => {
+  if (typeof window === 'undefined') return false;
+  
+  const platform = PlatformDetector.getPlatform();
+  return platform.isPWA;
+};
+
+/**
+ * Get adaptive configuration based on device capabilities
+ * @param {Object} baseConfig - Base configuration object
+ * @returns {Object} Adapted configuration
+ */
+export const getAdaptiveConfig = (baseConfig = {}) => {
+  const capabilities = getDeviceCapabilities();
+  const adaptedConfig = { ...baseConfig };
+  
+  // Adapt based on performance tier
+  if (capabilities.capabilities.performanceTier === 'low') {
+    adaptedConfig.animationDuration = Math.min(adaptedConfig.animationDuration || 300, 100);
+    adaptedConfig.lazyLoadThreshold = Math.min(adaptedConfig.lazyLoadThreshold || 100, 50);
+    adaptedConfig.enableShadows = false;
+    adaptedConfig.enableGradients = false;
+  }
+  
+  // Adapt based on connection
+  if (capabilities.connectionType === 'slow-2g' || capabilities.connectionType === '2g') {
+    adaptedConfig.imageQuality = Math.min(adaptedConfig.imageQuality || 0.8, 0.6);
+    adaptedConfig.preloadImages = false;
+    adaptedConfig.enableAnimations = false;
+  }
+  
+  // Adapt based on reduced motion preference
+  if (capabilities.features.reducedMotion) {
+    adaptedConfig.enableAnimations = false;
+    adaptedConfig.animationDuration = 0;
+  }
+  
+  // Adapt based on save data preference
+  if (capabilities.capabilities.connection.saveData) {
+    adaptedConfig.imageQuality = 0.5;
+    adaptedConfig.enableAnimations = false;
+    adaptedConfig.preloadImages = false;
+  }
+  
+  return adaptedConfig;
 };

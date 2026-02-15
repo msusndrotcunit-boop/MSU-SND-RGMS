@@ -11,6 +11,8 @@ import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
 import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
+import AnimationOptimizer from '../components/AnimationOptimizer';
+import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -300,8 +302,10 @@ const CadetLayout = () => {
     return (
         <SafeAreaProvider>
             <MobilePerformanceOptimizer>
-                <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                    <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+                <AnimationOptimizer>
+                    <CrossPlatformStandardizer>
+                        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+                            <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -580,6 +584,8 @@ const CadetLayout = () => {
             )}
             </SafeAreaManager>
         </TouchTargetValidator>
+        </CrossPlatformStandardizer>
+        </AnimationOptimizer>
         </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
