@@ -113,6 +113,96 @@ export const applySafeAreaConstraints = (element) => {
 };
 
 /**
+ * Handle fixed element positioning during scroll with safe area awareness
+ * @param {HTMLElement} element - Fixed element to manage
+ * @param {string} position - Position type ('top', 'bottom', 'left', 'right')
+ * @param {boolean} respectSafeArea - Whether to respect safe area insets
+ */
+export const handleFixedElementScroll = (element, position = 'top', respectSafeArea = true) => {
+  if (!element) return;
+
+  const insets = respectSafeArea ? getSafeAreaInsets() : { top: 0, right: 0, bottom: 0, left: 0 };
+  
+  const updatePosition = () => {
+    const scrollY = window.scrollY;
+    
+    switch (position) {
+      case 'top':
+        element.style.top = `${insets.top}px`;
+        element.style.left = `${insets.left}px`;
+        element.style.right = `${insets.right}px`;
+        break;
+      case 'bottom':
+        element.style.bottom = `${insets.bottom}px`;
+        element.style.left = `${insets.left}px`;
+        element.style.right = `${insets.right}px`;
+        break;
+      case 'left':
+        element.style.left = `${insets.left}px`;
+        element.style.top = `${insets.top}px`;
+        element.style.bottom = `${insets.bottom}px`;
+        break;
+      case 'right':
+        element.style.right = `${insets.right}px`;
+        element.style.top = `${insets.top}px`;
+        element.style.bottom = `${insets.bottom}px`;
+        break;
+    }
+    
+    // Add scroll-aware class for CSS transitions
+    element.classList.toggle('scroll-aware-fixed', scrollY > 0);
+  };
+
+  // Initial positioning
+  updatePosition();
+  
+  // Update on scroll with throttling for performance
+  const throttledUpdate = throttle(updatePosition, 16); // ~60fps
+  window.addEventListener('scroll', throttledUpdate, { passive: true });
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('scroll', throttledUpdate);
+  };
+};
+
+/**
+ * Create a scroll-aware safe area observer
+ * @param {HTMLElement} container - Container element to observe
+ * @param {Function} callback - Callback function for scroll events
+ * @returns {Function} Cleanup function
+ */
+export const createScrollSafeAreaObserver = (container, callback) => {
+  if (!container || typeof callback !== 'function') return () => {};
+
+  let isScrolling = false;
+  let scrollTimeout;
+
+  const handleScroll = () => {
+    if (!isScrolling) {
+      isScrolling = true;
+      callback({ type: 'scroll-start', scrollY: window.scrollY, container });
+    }
+
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      isScrolling = false;
+      callback({ type: 'scroll-end', scrollY: window.scrollY, container });
+    }, 150);
+
+    callback({ type: 'scroll', scrollY: window.scrollY, container });
+  };
+
+  const throttledScroll = throttle(handleScroll, 16);
+  container.addEventListener('scroll', throttledScroll, { passive: true });
+
+  return () => {
+    container.removeEventListener('scroll', throttledScroll);
+    clearTimeout(scrollTimeout);
+  };
+};
+
+/**
  * Detect device capabilities and performance characteristics
  * @returns {object} Device capability information
  */

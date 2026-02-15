@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
+import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
@@ -265,22 +266,27 @@ const AdminLayout = () => {
     };
 
     return (
-        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-            <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
-            <Toaster position="top-right" reverseOrder={false} />
-            {/* Mobile Sidebar Overlay */}
-            {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+        <SafeAreaProvider>
+            <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+                <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
+                <Toaster position="top-right" reverseOrder={false} />
+                {/* Mobile Sidebar Overlay */}
+                {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-            {/* Sidebar */}
-            <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                {/* Sidebar */}
+                <FixedElement 
+                    position="left" 
+                    respectSafeArea={true}
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                    )}
+                >
                 <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center">
                         <button
@@ -384,11 +390,15 @@ const AdminLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+                </FixedElement>
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between z-10">
+                <FixedElement 
+                    position="top" 
+                    respectSafeArea={true}
+                    className="bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between z-10"
+                >
                     <div className="flex items-center flex-1">
                         <button 
                             onClick={toggleSidebar} 
@@ -452,7 +462,7 @@ const AdminLayout = () => {
 
                         <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
                     </div>
-                </header>
+                </FixedElement>
 
                 {/* System Status Bar */}
                 {(() => {
@@ -527,8 +537,9 @@ const AdminLayout = () => {
                     </div>
                 </div>
             )}
-            </div>
+            </SafeAreaManager>
         </TouchTargetValidator>
+        </SafeAreaProvider>
     );
 };
 

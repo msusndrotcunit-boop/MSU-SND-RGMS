@@ -882,7 +882,7 @@ body {
   }
 }
 
-/* Safe Area Insets for Notched Devices (iPhone X and newer) */
+  /* Safe Area Insets for Notched Devices (iPhone X and newer) */
 @supports (padding: max(0px)) {
   body {
     padding-left: max(0px, env(safe-area-inset-left));
@@ -899,6 +899,111 @@ body {
   footer.sticky,
   .sticky-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  /* Safe area manager styles */
+  .safe-area-container {
+    position: relative;
+  }
+
+  .safe-area-container[data-has-safe-area="true"] {
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-right: max(0px, env(safe-area-inset-right));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    padding-left: max(0px, env(safe-area-inset-left));
+  }
+
+  /* Fixed elements with safe area support */
+  .fixed-element {
+    position: fixed;
+  }
+
+  .fixed-element[data-respect-safe-area="true"].fixed-element--top {
+    top: max(0px, env(safe-area-inset-top));
+    left: max(0px, env(safe-area-inset-left));
+    right: max(0px, env(safe-area-inset-right));
+  }
+
+  .fixed-element[data-respect-safe-area="true"].fixed-element--bottom {
+    bottom: max(0px, env(safe-area-inset-bottom));
+    left: max(0px, env(safe-area-inset-left));
+    right: max(0px, env(safe-area-inset-right));
+  }
+
+  .fixed-element[data-respect-safe-area="true"].fixed-element--left {
+    left: max(0px, env(safe-area-inset-left));
+    top: max(0px, env(safe-area-inset-top));
+    bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  .fixed-element[data-respect-safe-area="true"].fixed-element--right {
+    right: max(0px, env(safe-area-inset-right));
+    top: max(0px, env(safe-area-inset-top));
+    bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  /* Viewport adjuster styles */
+  .viewport-adjuster {
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-right: max(0px, env(safe-area-inset-right));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    padding-left: max(0px, env(safe-area-inset-left));
+    transition: padding 0.3s ease;
+  }
+
+  /* Safe area spacer styles */
+  .safe-area-spacer {
+    flex-shrink: 0;
+  }
+
+  .safe-area-spacer--top {
+    height: max(0px, env(safe-area-inset-top));
+  }
+
+  .safe-area-spacer--bottom {
+    height: max(0px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-spacer--left {
+    width: max(0px, env(safe-area-inset-left));
+  }
+
+  .safe-area-spacer--right {
+    width: max(0px, env(safe-area-inset-right));
+  }
+
+  /* Scroll-aware safe area handling */
+  .safe-area-container[data-scrolling="true"] .fixed-element {
+    transition: transform 0.15s ease-out;
+  }
+
+  /* Scroll-aware fixed elements */
+  .scroll-aware-fixed {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  }
+
+  .scroll-aware-fixed.fixed-element--top {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .scroll-aware-fixed.fixed-element--bottom {
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Keyboard-aware safe area adjustments */
+  .safe-area-container[data-keyboard-visible="true"] {
+    padding-bottom: calc(max(0px, env(safe-area-inset-bottom)) + var(--keyboard-height, 0px));
+  }
+
+  /* Dynamic safe area CSS custom properties */
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --has-safe-area: 0;
+    --is-mobile: 0;
+    --keyboard-height: 0px;
   }
 }
 
