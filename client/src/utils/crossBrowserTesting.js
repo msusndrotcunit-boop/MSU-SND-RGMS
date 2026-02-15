@@ -404,7 +404,7 @@ export const CrossBrowserTestSuite = {
       status: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
+          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
             'passed' : 'warning';
         } catch (e) {
           return 'warning';
@@ -413,7 +413,7 @@ export const CrossBrowserTestSuite = {
       message: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
+          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
             'WebGL is supported' : 'WebGL not supported';
         } catch (e) {
           return 'WebGL not supported';

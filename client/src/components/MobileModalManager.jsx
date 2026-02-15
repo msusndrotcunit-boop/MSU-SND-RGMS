@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import clsx from 'clsx';
 import { useMobile, useSafeArea } from '../hooks/useResponsive';
-import TouchTargetValidator from './TouchTargetValidator';
 
 /**
  * MobileModalManager - Viewport-aware modal component optimized for mobile devices
@@ -160,7 +159,6 @@ const MobileModalManager = ({
       onClick={handleBackdropClick}
       {...props}
     >
-      <TouchTargetValidator autoCorrect={true}>
         <div
           ref={modalRef}
           className={clsx(
@@ -269,7 +267,6 @@ const MobileModalManager = ({
             />
           )}
         </div>
-      </TouchTargetValidator>
     </div>
   );
 };

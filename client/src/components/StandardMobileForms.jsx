@@ -1,7 +1,6 @@
 import React from 'react';
 import { MobileFormLayout, FormSection, FormField, MobileInput, MobileSelect, MobileTextarea, FormActions } from './MobileFormLayout';
 import MobileModalManager from './MobileModalManager';
-import TouchTargetValidator from './TouchTargetValidator';
 
 /**
  * StandardMobileForms - Collection of standardized mobile form patterns

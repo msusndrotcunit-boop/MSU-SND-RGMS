@@ -8,7 +8,6 @@ import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
-import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
 import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 import AnimationOptimizer from '../components/AnimationOptimizer';
@@ -304,7 +303,6 @@ const CadetLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
                             <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
@@ -582,12 +580,11 @@ const CadetLayout = () => {
                     </div>
                 </div>
             )}
-            </SafeAreaManager>
-        </TouchTargetValidator>
-        </CrossPlatformStandardizer>
-        </AnimationOptimizer>
-        </MobilePerformanceOptimizer>
-        </SafeAreaProvider>
+                            </SafeAreaManager>
+                        </CrossPlatformStandardizer>
+                    </AnimationOptimizer>
+                </MobilePerformanceOptimizer>
+            </SafeAreaProvider>
     );
 };
 

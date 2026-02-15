@@ -260,7 +260,7 @@ export const usePlatform = () => {
  * @returns {object} Touch utilities
  */
 export const useCrossPlatformTouch = (handlers = {}) => {
-  const { platform } = usePlatform();
+  const { platform, deviceCapabilities } = usePlatform();
   
   const attachTouchHandlers = useCallback((element) => {
     if (!element) return;

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { useMobile } from '../hooks/useResponsive';
-import TouchTargetValidator from './TouchTargetValidator';
 
 /**
  * MobileFormLayout - Mobile-optimized form component with proper spacing and keyboard handling
@@ -29,7 +28,6 @@ const MobileFormLayout = ({
   };
 
   return (
-    <TouchTargetValidator autoCorrect={true}>
       <form
         onSubmit={onSubmit}
         className={clsx(
@@ -57,7 +55,6 @@ const MobileFormLayout = ({
           children
         )}
       </form>
-    </TouchTargetValidator>
   );
 };
 

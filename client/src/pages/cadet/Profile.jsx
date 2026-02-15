@@ -22,7 +22,6 @@ import {
 import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
 import MobileModalManager from '../../components/MobileModalManager';
 import { MobileFormLayout, FormSection, FormField, MobileInput, MobileSelect, MobileTextarea, FormActions } from '../../components/MobileFormLayout';
-import TouchTargetValidator from '../../components/TouchTargetValidator';
 
 const Profile = () => {
     const { user, logout } = useAuth();

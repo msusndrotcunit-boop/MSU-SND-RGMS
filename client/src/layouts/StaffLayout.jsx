@@ -6,7 +6,6 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
-import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
 import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 import AnimationOptimizer from '../components/AnimationOptimizer';
@@ -219,8 +218,7 @@ const StaffLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                            <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -535,12 +533,11 @@ const StaffLayout = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            </SafeAreaManager>
-        </TouchTargetValidator>
-        </CrossPlatformStandardizer>
-        </AnimationOptimizer>
-        </MobilePerformanceOptimizer>
+              )}
+                        </SafeAreaManager>
+                    </CrossPlatformStandardizer>
+                </AnimationOptimizer>
+            </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
 };

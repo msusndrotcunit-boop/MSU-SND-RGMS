@@ -81,10 +81,10 @@ const MyComponent = () => {
   - `ResponsiveButton.jsx`
   - `ResponsiveContainer.jsx`
 
-- **Utility components**: Descriptive names
-  - `TouchTargetValidator.jsx`
-  - `SafeAreaManager.jsx`
-  - `MobilePerformanceOptimizer.jsx`
+- **Utility modules/hooks**: Descriptive names
+  - `useResponsive.js`
+  - `useSafeArea` (from `useResponsive.js`)
+  - `utils/accessibility.js`
 
 ### CSS Class Naming
 
@@ -123,7 +123,6 @@ Prefer Tailwind utilities over custom CSS:
 ```jsx
 import React from 'react';
 import { useResponsive } from '../hooks/useResponsive';
-import { TouchTargetValidator } from './TouchTargetValidator';
 
 /**
  * MobileComponent - Brief description
@@ -192,17 +191,10 @@ All interactive elements MUST meet WCAG 2.5.5 standards:
 ### Implementation
 
 ```jsx
-// Using Tailwind classes
+// Using Tailwind classes to meet touch target standards
 <button className="min-h-[44px] min-w-[44px] p-3">
   Click Me
 </button>
-
-// Using TouchTargetValidator
-import { TouchTargetValidator } from '../components/TouchTargetValidator';
-
-<TouchTargetValidator>
-  <button>Click Me</button>
-</TouchTargetValidator>
 ```
 
 ### Touch Target Validation
@@ -254,16 +246,20 @@ module.exports = {
 };
 ```
 
-### SafeAreaManager Component
+### Safe Area Hooks
 
 ```jsx
-import { SafeAreaManager } from '../components/SafeAreaManager';
+import { useSafeArea } from '../hooks/useResponsive';
 
-<SafeAreaManager>
-  <div className="mobile-content">
-    {/* Content automatically respects safe areas */}
-  </div>
-</SafeAreaManager>
+const MobileContent = ({ children }) => {
+  const { applySafeAreaStyle } = useSafeArea();
+
+  return (
+    <div className="mobile-content" style={applySafeAreaStyle('all')}>
+      {children}
+    </div>
+  );
+};
 ```
 
 ## Performance Guidelines
@@ -278,13 +274,6 @@ import { SafeAreaManager } from '../components/SafeAreaManager';
   alt="Description"
   className="w-full h-auto"
 />
-
-// Use MobilePerformanceOptimizer
-import { MobilePerformanceOptimizer } from '../components/MobilePerformanceOptimizer';
-
-<MobilePerformanceOptimizer>
-  <img src={imageUrl} alt="Description" />
-</MobilePerformanceOptimizer>
 ```
 
 ### Code Splitting

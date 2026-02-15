@@ -7,7 +7,6 @@ import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
-import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
 import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 import AnimationOptimizer from '../components/AnimationOptimizer';
@@ -273,8 +272,7 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                            <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
+                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
                 <Toaster position="top-right" reverseOrder={false} />
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
@@ -543,11 +541,10 @@ const AdminLayout = () => {
                     </div>
                 </div>
             )}
-            </SafeAreaManager>
-        </TouchTargetValidator>
-        </CrossPlatformStandardizer>
-        </AnimationOptimizer>
-        </MobilePerformanceOptimizer>
+                        </SafeAreaManager>
+                    </CrossPlatformStandardizer>
+                </AnimationOptimizer>
+            </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
 };

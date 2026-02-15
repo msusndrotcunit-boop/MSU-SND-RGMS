@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast';
 import { Send, MessageSquare, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { ContactForm } from '../components/StandardMobileForms';
-import TouchTargetValidator from '../components/TouchTargetValidator';
 
 const AskAdmin = () => {
     const [messages, setMessages] = useState([]);
@@ -59,7 +58,6 @@ const AskAdmin = () => {
     };
 
     return (
-        <TouchTargetValidator autoCorrect={true}>
             <div className="max-w-4xl mx-auto space-y-6 p-4">
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <MessageSquare className="text-blue-600" />
@@ -121,7 +119,6 @@ const AskAdmin = () => {
                 )}
             </div>
             </div>
-        </TouchTargetValidator>
     );
 };
 
