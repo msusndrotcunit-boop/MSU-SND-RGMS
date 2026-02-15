@@ -239,23 +239,28 @@ const ResponsiveTable = ({
     <div
       key={item.id || item.key || index}
       className={clsx(
-        "bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 transition-shadow",
-        onRowClick && "cursor-pointer hover:shadow-md"
+        "bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 transition-all duration-200",
+        onRowClick && "cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 active:scale-[0.98]"
       )}
       onClick={() => onRowClick && onRowClick(item)}
     >
-      {/* Selection checkbox */}
-      {selectable && (
-        <div className="flex items-center justify-between">
-          <input
-            type="checkbox"
-            checked={selectedItems.includes(item.id || item.key)}
-            onChange={() => handleSelectItem(item.id || item.key)}
-            onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 touch-target"
-          />
+      {/* Selection checkbox and actions header */}
+      {(selectable || actions.length > 0) && (
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
+          {selectable && (
+            <label className="flex items-center space-x-2 cursor-pointer touch-target" style={{ minHeight: '44px' }}>
+              <input
+                type="checkbox"
+                checked={selectedItems.includes(item.id || item.key)}
+                onChange={() => handleSelectItem(item.id || item.key)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Select</span>
+            </label>
+          )}
           {actions.length > 0 && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               {actions.map((action, actionIndex) => (
                 <button
                   key={actionIndex}
@@ -264,7 +269,7 @@ const ResponsiveTable = ({
                     action.onClick(item);
                   }}
                   className={clsx(
-                    "p-2 rounded-lg transition-colors touch-target",
+                    "p-2 rounded-lg transition-all duration-200 touch-target active:scale-95",
                     action.className || "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700"
                   )}
                   title={action.label}
@@ -278,49 +283,92 @@ const ResponsiveTable = ({
         </div>
       )}
 
-      {/* Card content */}
-      <div className="space-y-2">
-        {columns.map((column) => {
+      {/* Card content with improved layout */}
+      <div className="space-y-3">
+        {columns.map((column, colIndex) => {
           const value = item[column.key];
           if (value === null || value === undefined || value === '') return null;
 
+          const isFirstColumn = colIndex === 0;
+          const renderedValue = column.render ? column.render(value, item) : value;
+
           return (
-            <div key={column.key} className="flex flex-col sm:flex-row sm:justify-between">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-0">
-                {column.label}:
+            <div 
+              key={column.key} 
+              className={clsx(
+                "flex flex-col space-y-1",
+                isFirstColumn && "pb-2 border-b border-gray-100 dark:border-gray-700"
+              )}
+            >
+              <span className={clsx(
+                "font-medium text-gray-500 dark:text-gray-400",
+                isFirstColumn ? "text-xs uppercase tracking-wide" : "text-sm"
+              )}>
+                {column.label}
               </span>
-              <span className="text-sm text-gray-900 dark:text-gray-100 sm:text-right">
-                {column.render ? column.render(value, item) : value}
+              <span className={clsx(
+                "text-gray-900 dark:text-gray-100 break-words",
+                isFirstColumn ? "text-lg font-semibold" : "text-sm"
+              )}>
+                {renderedValue}
               </span>
             </div>
           );
         })}
       </div>
 
-      {/* Actions for cards without selection */}
-      {!selectable && actions.length > 0 && (
-        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-          {actions.map((action, actionIndex) => (
-            <button
-              key={actionIndex}
-              onClick={(e) => {
-                e.stopPropagation();
-                action.onClick(item);
-              }}
-              className={clsx(
-                "p-2 rounded-lg transition-colors touch-target",
-                action.className || "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700"
-              )}
-              title={action.label}
-              style={{ minHeight: '44px', minWidth: '44px' }}
-            >
-              {action.icon && <action.icon size={18} />}
-            </button>
-          ))}
-        </div>
+      {/* Visual feedback for interactive cards */}
+      {onRowClick && (
+        <div className="absolute inset-0 rounded-lg pointer-events-none opacity-0 bg-blue-50 dark:bg-blue-900/20 transition-opacity duration-200 group-active:opacity-100" />
       )}
     </div>
   );
+
+  const renderMobileSortControls = () => {
+    if (!sortable || !useCardLayout) return null;
+
+    const sortableColumns = columns.filter(col => col.sortable !== false);
+    if (sortableColumns.length === 0) return null;
+
+    return (
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort by:</span>
+          <div className="flex items-center space-x-2">
+            <select
+              value={sortConfig.key || ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleSort(e.target.value);
+                } else {
+                  setSortConfig({ key: null, direction: 'asc' });
+                }
+              }}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target"
+              style={{ minHeight: '44px', minWidth: '120px' }}
+            >
+              <option value="">None</option>
+              {sortableColumns.map(column => (
+                <option key={column.key} value={column.key}>
+                  {column.label}
+                </option>
+              ))}
+            </select>
+            {sortConfig.key && (
+              <button
+                onClick={() => handleSort(sortConfig.key)}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors touch-target"
+                title={`Sort ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}`}
+                style={{ minHeight: '44px', minWidth: '44px' }}
+              >
+                {sortConfig.direction === 'asc' ? <SortAsc size={20} /> : <SortDesc size={20} />}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderPagination = () => {
     if (!pagination || totalPages <= 1) return null;
@@ -341,40 +389,93 @@ const ResponsiveTable = ({
     }
 
     return (
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+      <div className={clsx(
+        "bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700",
+        isMobile ? "px-4 py-4 space-y-3" : "px-4 py-3 flex items-center justify-between"
+      )}>
+        {/* Results info */}
+        <div className={clsx(
+          "text-sm text-gray-700 dark:text-gray-300",
+          isMobile ? "text-center" : "flex items-center"
+        )}>
           Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} results
         </div>
-        <div className="flex items-center space-x-1">
+        
+        {/* Pagination controls */}
+        <div className={clsx(
+          "flex items-center justify-center",
+          isMobile ? "space-x-2" : "space-x-1"
+        )}>
+          {/* Previous button */}
           <button
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+            className={clsx(
+              "font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target",
+              isMobile ? "px-4 py-3 text-sm" : "px-3 py-2 text-sm"
+            )}
+            style={{ minHeight: '44px' }}
           >
-            Previous
+            {isMobile ? '← Prev' : 'Previous'}
           </button>
-          {pages.map(page => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={clsx(
-                "px-3 py-2 text-sm font-medium rounded-md touch-target",
-                page === currentPage
-                  ? "text-blue-600 bg-blue-50 border border-blue-300"
-                  : "text-gray-500 bg-white border border-gray-300 hover:bg-gray-50"
-              )}
-            >
-              {page}
-            </button>
-          ))}
+
+          {/* Page numbers - simplified for mobile */}
+          {isMobile ? (
+            <div className="flex items-center space-x-2">
+              <span className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                {currentPage} of {totalPages}
+              </span>
+            </div>
+          ) : (
+            pages.map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={clsx(
+                  "px-3 py-2 text-sm font-medium rounded-md touch-target transition-colors",
+                  page === currentPage
+                    ? "text-blue-600 bg-blue-50 dark:bg-blue-900 dark:text-blue-300 border border-blue-300 dark:border-blue-700"
+                    : "text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                )}
+                style={{ minHeight: '44px', minWidth: '44px' }}
+              >
+                {page}
+              </button>
+            ))
+          )}
+
+          {/* Next button */}
           <button
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+            className={clsx(
+              "font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target",
+              isMobile ? "px-4 py-3 text-sm" : "px-3 py-2 text-sm"
+            )}
+            style={{ minHeight: '44px' }}
           >
-            Next
+            {isMobile ? 'Next →' : 'Next'}
           </button>
         </div>
+
+        {/* Mobile page jump controls */}
+        {isMobile && totalPages > 5 && (
+          <div className="flex items-center justify-center space-x-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Go to page:</span>
+            <select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+              className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target"
+              style={{ minHeight: '44px', minWidth: '80px' }}
+            >
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <option key={page} value={page}>
+                  {page}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     );
   };
@@ -402,6 +503,9 @@ const ResponsiveTable = ({
           </button>
         </div>
       )}
+
+      {/* Mobile sort controls */}
+      {renderMobileSortControls()}
 
       {useCardLayout ? (
         /* Card Layout for Mobile */

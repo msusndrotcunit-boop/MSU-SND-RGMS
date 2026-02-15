@@ -145,6 +145,92 @@ body {
     pointer-events: none;
   }
 
+  /* Enhanced Mobile Card Interactions */
+  .mobile-card-interactive {
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0); /* Enable hardware acceleration */
+  }
+
+  .mobile-card-interactive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.05);
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .mobile-card-interactive:active::before {
+    opacity: 1;
+  }
+
+  /* Mobile Sort Controls */
+  .mobile-sort-control {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    backdrop-filter: blur(8px);
+  }
+
+  .dark .mobile-sort-control {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+  }
+
+  /* Enhanced Pagination for Mobile */
+  .mobile-pagination-button {
+    position: relative;
+    overflow: hidden;
+    transform: translateZ(0);
+  }
+
+  .mobile-pagination-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease-out, height 0.3s ease-out;
+  }
+
+  .mobile-pagination-button:active::after {
+    width: 100px;
+    height: 100px;
+  }
+
+  /* Touch Ripple Effect */
+  .touch-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .touch-ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .touch-ripple:active::after {
+    width: 200px;
+    height: 200px;
+  }
+
   /* Mobile Navigation Styles */
   .mobile-nav-sidebar {
     backdrop-filter: blur(8px);
