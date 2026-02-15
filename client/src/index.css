@@ -10,7 +10,7 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   color: #111827;
   background-color: #f3f4f6;
@@ -102,10 +102,10 @@ body {
     color: var(--primary-color);
   }
 
-  /* Touch-friendly buttons - minimum 44px height */
+  /* Touch-friendly buttons - minimum 40px height */
   button,
   [role="button"] {
-    min-height: 44px;
+    min-height: 40px;
     transition: background-color 150ms ease-in-out;
   }
 

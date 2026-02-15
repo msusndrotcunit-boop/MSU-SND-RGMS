@@ -30,7 +30,7 @@
 Base body settings (from `index.css`):
 
 - Font family: `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
-- Base body font size: `15px`
+- Base body font size: `14px`
 - Line-height: `1.6`
 
 Tailwind extended font sizes:
@@ -83,15 +83,15 @@ Key layout spacings:
 
 Global touch target:
 
-- All `button` and `[role="button"]` have `min-height: 44px` (from `index.css`)
-- Many primary buttons add extra vertical padding to reach ~`48–52px` total height
+- All `button` and `[role="button"]` have `min-height: 40px` (from `index.css`)
+- Many primary buttons add extra vertical padding to reach ~`44–48px` total height
 
 Primary actions (example: Submit button in ExcuseLetterSubmission):
 
 - Classes: `py-3 px-6 rounded-lg text-white bg-blue-600 hover:bg-blue-700`
 - Vertical padding: `py-3` → `24px` total (approx; based on extended scale)
 - Horizontal padding: `px-6` → `48px`
-- Height: ≥ `44px` enforced, effectively ≈ `48–52px`
+- Height: ≥ `40px` enforced, effectively ≈ `44–48px`
 - Font size: defaults to `text-sm` or `text-base` depending on parent (`13–14px`)
 - Icon size: `18px` (`<Upload size={18} />`, `<Loader2 size={18} />`)
 
@@ -103,15 +103,15 @@ Secondary buttons (outline / neutral):
   - Alternative: `bg-green-700 text-white hover:bg-green-800`
 - Horizontal padding: `px-4` → `32px`
 - Vertical padding: `py-2` → `16px`
-- Minimum height: `44px` (global rule)
+- Minimum height: `40px` (global rule)
 - Font size: `text-sm` → `13px`
 
 Icon-only controls:
 
 - Example: section collapse toggle in MobileFormLayout:
-  - Classes: `p-1 touch-target`
-  - Inline style: `minHeight: 44px`, `minWidth: 44px`
-  - Icon size: `20px`
+-  - Classes: `p-1 touch-target`
+-  - Inline style: `minHeight: 40px`, `minWidth: 40px`
+-  - Icon size: `20px`
 
 ## Iconography
 
@@ -269,4 +269,3 @@ Key responsive behaviors:
   - Many lists and summaries use `flex items-center justify-between` for headers
 
 This guide reflects the measurements and visual system used throughout the current client, matching the deployed ROTC Grading Management System’s layout, proportions, and spacing on both mobile and desktop views.
-
