@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
+import ChartWrapper from '../../components/ChartWrapper';
 
 // Refined Color Scheme
 const COLORS = {
