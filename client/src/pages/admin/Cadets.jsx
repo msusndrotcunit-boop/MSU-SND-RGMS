@@ -22,6 +22,7 @@ import {
     GENDER_OPTIONS
 } from '../../constants/options';
 import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
+import ResponsiveTable from '../../components/ResponsiveTable';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -551,23 +552,7 @@ const Cadets = () => {
         return valB - valA;
     });
 
-    // Bulk Selection Handlers
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelectedCadets(filteredCadets.map(c => c.id));
-        } else {
-            setSelectedCadets([]);
-        }
-    };
-
-    const handleSelectCadet = (id) => {
-        setSelectedCadets(prev => 
-            prev.includes(id) 
-                ? prev.filter(cId => cId !== id) 
-                : [...prev, id]
-        );
-    };
-
+    // Bulk Selection Handlers - now handled by ResponsiveTable
     const handleBulkDelete = async () => {
         if (!window.confirm(`Are you sure you want to delete ${selectedCadets.length} cadets? This action cannot be undone.`)) return;
 
@@ -820,96 +805,86 @@ const Cadets = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-100 sticky top-0 z-10">
-                        <tr className="border-b shadow-sm">
-                            <th className="p-4 bg-gray-100 text-center w-12">
-                                <input
-                                    type="checkbox"
-                                    onChange={handleSelectAll}
-                                    checked={filteredCadets.length > 0 && selectedCadets.length === filteredCadets.length}
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                            </th>
-                            <th className="p-4 bg-gray-100">Name & Rank</th>
-                            <th className="p-4 bg-gray-100">Username</th>
-                            <th className="p-4 text-center bg-gray-100">Unit (Coy/Plt)</th>
-                            <th className="p-4 text-center bg-gray-100">Status</th>
-                            <th className="p-4 text-right bg-gray-100">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredCadets.length === 0 ? (
-                             <tr>
-                                <td colSpan="6" className="p-4 text-center text-gray-500">No cadets found.</td>
-                             </tr>
-                        ) : (
-                            filteredCadets.map(cadet => (
-                                <tr key={cadet.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 text-center">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={selectedCadets.includes(cadet.id)}
-                                            onChange={() => handleSelectCadet(cadet.id)}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                        />
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-medium">
-                                            <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
-                                            {cadet.last_name}, {cadet.first_name}
-                                        </div>
-                                        <div className="text-xs text-gray-500">{cadet.email}</div>
-                                    </td>
-                                    <td className="p-4">{cadet.username || cadet.student_id}</td>
-                                    <td className="p-4 text-center">{cadet.company || '-'}/{cadet.platoon || '-'}</td>
-                                    <td className="p-4 text-center">
-                                        {!cadet.is_profile_completed ? (
-                                            <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                                Unverified
-                                            </span>
-                                        ) : (
-                                            <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
-                                                cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {cadet.status}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-4 text-right space-x-2">
-                                        {cadet.is_profile_completed ? (
-                                            <button 
-                                                onClick={() => handleSingleUnlock(cadet.id)}
-                                                className="text-yellow-600 hover:bg-yellow-50 p-2 rounded"
-                                                title="Unlock Profile"
-                                            >
-                                                <Unlock size={18} />
-                                            </button>
-                                        ) : null}
-                                        <button 
-                                            onClick={() => openViewModal(cadet)}
-                                            className="text-blue-600 hover:bg-blue-50 p-2 rounded"
-                                            title="View Profile"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => openEditModal(cadet)}
-                                            className="text-gray-600 hover:bg-gray-50 p-2 rounded"
-                                            title="Edit Info"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* Responsive Table */}
+            <ResponsiveTable
+                data={filteredCadets}
+                columns={[
+                    {
+                        key: 'name',
+                        label: 'Name & Rank',
+                        render: (_, cadet) => (
+                            <div>
+                                <div className="font-medium">
+                                    <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
+                                    {cadet.last_name}, {cadet.first_name}
+                                </div>
+                                <div className="text-xs text-gray-500">{cadet.email}</div>
+                            </div>
+                        )
+                    },
+                    {
+                        key: 'username',
+                        label: 'Username',
+                        render: (_, cadet) => cadet.username || cadet.student_id
+                    },
+                    {
+                        key: 'unit',
+                        label: 'Unit (Coy/Plt)',
+                        align: 'center',
+                        render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
+                    },
+                    {
+                        key: 'status',
+                        label: 'Status',
+                        align: 'center',
+                        render: (_, cadet) => (
+                            !cadet.is_profile_completed ? (
+                                <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                    Unverified
+                                </span>
+                            ) : (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                    cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
+                                    cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {cadet.status}
+                                </span>
+                            )
+                        )
+                    }
+                ]}
+                loading={loading}
+                emptyMessage="No cadets found."
+                selectable={true}
+                selectedItems={selectedCadets}
+                onSelectionChange={setSelectedCadets}
+                sortable={true}
+                filterable={true}
+                pagination={true}
+                itemsPerPage={20}
+                actions={[
+                    ...(filteredCadets.some(c => c.is_profile_completed) ? [{
+                        icon: Unlock,
+                        label: 'Unlock Profile',
+                        onClick: (cadet) => handleSingleUnlock(cadet.id),
+                        className: 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50'
+                    }] : []),
+                    {
+                        icon: Eye,
+                        label: 'View Profile',
+                        onClick: openViewModal,
+                        className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                    },
+                    {
+                        icon: Pencil,
+                        label: 'Edit Info',
+                        onClick: openEditModal,
+                        className: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    }
+                ]}
+                className="bg-white rounded shadow"
+            />
 
             {/* Export Modal */}
             {isExportModalOpen && (

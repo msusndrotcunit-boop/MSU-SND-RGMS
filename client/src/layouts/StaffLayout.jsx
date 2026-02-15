@@ -8,7 +8,7 @@ import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
 import { cacheSingleton } from '../utils/db';
-import { getProfilePicUrl } from '../utils/image';
+import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)

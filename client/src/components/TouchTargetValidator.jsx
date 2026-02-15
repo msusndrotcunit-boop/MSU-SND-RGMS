@@ -8,7 +8,7 @@ import { TOUCH_TARGETS } from '../utils/responsive';
 const TouchTargetValidator = ({ 
   children, 
   autoCorrect = true, 
-  showWarnings = process.env.NODE_ENV === 'development',
+  showWarnings = import.meta.env && import.meta.env.DEV,
   className = '',
   ...props 
 }) => {
@@ -211,7 +211,7 @@ const TouchTargetValidator = ({
       {children}
       
       {/* Development overlay showing validation results */}
-      {showWarnings && process.env.NODE_ENV === 'development' && (
+      {showWarnings && (import.meta.env && import.meta.env.DEV) && (
         <div className="fixed bottom-4 right-4 z-50 max-w-sm">
           {validationResults.filter(r => !r.isValid).map((result, index) => (
             <div 

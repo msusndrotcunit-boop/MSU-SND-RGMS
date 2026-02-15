@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, XCircle, ExternalLink, Filter, Trash2, Download } from 'lucide-react';
 import { cacheData, getCachedData } from '../utils/db';
+import ResponsiveTable from '../ResponsiveTable';
 
 const ExcuseLetterManager = () => {
     const [letters, setLetters] = useState([]);
@@ -77,93 +78,98 @@ const ExcuseLetterManager = () => {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead>
-                        <tr className="bg-gray-100 border-b">
-                            <th className="p-3">Cadet</th>
-                            <th className="p-3">Date Absent</th>
-                            <th className="p-3">Reason</th>
-                            <th className="p-3">Proof</th>
-                            <th className="p-3">Status</th>
-                            <th className="p-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredLetters.length > 0 ? filteredLetters.map(letter => (
-                            <tr key={letter.id} className="border-b hover:bg-gray-50">
-                                <td className="p-3 font-medium">
-                                    {letter.last_name}, {letter.first_name}
-                                </td>
-                                <td className="p-3">{new Date(letter.date_absent).toLocaleDateString()}</td>
-                                <td className="p-3 max-w-xs truncate" title={letter.reason}>{letter.reason}</td>
-                                <td className="p-3">
-                                    <div className="flex flex-col space-y-1">
-                                        <a 
-                                            href={letter.file_url} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
-                                            className="text-blue-600 hover:underline flex items-center"
-                                        >
-                                            <ExternalLink size={14} className="mr-1" /> View
-                                        </a>
-                                        <a 
-                                            href={letter.file_url} 
-                                            download 
-                                            className="text-green-700 hover:underline flex items-center text-xs"
-                                        >
-                                            <Download size={12} className="mr-1" /> Download
-                                        </a>
-                                    </div>
-                                </td>
-                                <td className="p-3">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                        letter.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                        letter.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                        {letter.status}
-                                    </span>
-                                </td>
-                                <td className="p-3 space-x-2 flex items-center">
-                                    {letter.status === 'pending' && (
-                                        <>
-                                            <button 
-                                                onClick={() => handleUpdateStatus(letter.id, 'approved')}
-                                                className="text-green-600 hover:text-green-800"
-                                                title="Approve"
-                                            >
-                                                <CheckCircle size={18} />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleUpdateStatus(letter.id, 'rejected')}
-                                                className="text-red-600 hover:text-red-800"
-                                                title="Reject"
-                                            >
-                                                <XCircle size={18} />
-                                            </button>
-                                        </>
-                                    )}
-                                    {/* Delete option for approved/rejected (or all if desired, but user specified 'after approved') */}
-                                    {['approved', 'rejected'].includes(letter.status) && (
-                                        <button 
-                                            onClick={() => handleDelete(letter.id)}
-                                            className="text-gray-500 hover:text-red-600 ml-2"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        )) : (
-                            <tr>
-                                <td colSpan="6" className="p-4 text-center text-gray-500">No excuse letters found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <ResponsiveTable
+                data={filteredLetters}
+                columns={[
+                    {
+                        key: 'cadet',
+                        label: 'Cadet',
+                        render: (_, letter) => (
+                            <span className="font-medium">
+                                {letter.last_name}, {letter.first_name}
+                            </span>
+                        )
+                    },
+                    {
+                        key: 'date_absent',
+                        label: 'Date Absent',
+                        render: (_, letter) => new Date(letter.date_absent).toLocaleDateString()
+                    },
+                    {
+                        key: 'reason',
+                        label: 'Reason',
+                        render: (_, letter) => (
+                            <div className="max-w-xs truncate" title={letter.reason}>
+                                {letter.reason}
+                            </div>
+                        )
+                    },
+                    {
+                        key: 'proof',
+                        label: 'Proof',
+                        render: (_, letter) => (
+                            <div className="flex flex-col space-y-1">
+                                <a 
+                                    href={letter.file_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-blue-600 hover:underline flex items-center"
+                                >
+                                    <ExternalLink size={14} className="mr-1" /> View
+                                </a>
+                                <a 
+                                    href={letter.file_url} 
+                                    download 
+                                    className="text-green-700 hover:underline flex items-center text-xs"
+                                >
+                                    <Download size={12} className="mr-1" /> Download
+                                </a>
+                            </div>
+                        )
+                    },
+                    {
+                        key: 'status',
+                        label: 'Status',
+                        render: (_, letter) => (
+                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                letter.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                letter.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }`}>
+                                {letter.status}
+                            </span>
+                        )
+                    }
+                ]}
+                loading={loading}
+                emptyMessage="No excuse letters found."
+                actions={[
+                    ...(filteredLetters.some(l => l.status === 'pending') ? [
+                        {
+                            icon: CheckCircle,
+                            label: 'Approve',
+                            onClick: (letter) => handleUpdateStatus(letter.id, 'approved'),
+                            className: 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                        },
+                        {
+                            icon: XCircle,
+                            label: 'Reject',
+                            onClick: (letter) => handleUpdateStatus(letter.id, 'rejected'),
+                            className: 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                        }
+                    ] : []),
+                    {
+                        icon: Trash2,
+                        label: 'Delete',
+                        onClick: (letter) => handleDelete(letter.id),
+                        className: 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                    }
+                ]}
+                filterable={true}
+                pagination={true}
+                itemsPerPage={10}
+                className="bg-white"
+            />
         </div>
     );
 };

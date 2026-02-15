@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
+import ResponsiveTable from '../ResponsiveTable';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);
@@ -140,58 +141,66 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
             {/* History Section */}
             <div className="bg-white p-6 rounded shadow">
                 <h3 className="text-lg font-bold mb-4">My Excuse Letters</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead>
-                            <tr className="bg-gray-100 border-b">
-                                <th className="p-2">Date Absent</th>
-                                <th className="p-2">Reason</th>
-                                <th className="p-2">Status</th>
-                                <th className="p-2">Proof</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {history.length > 0 ? history.map(item => (
-                                <tr key={item.id} className="border-b">
-                                    <td className="p-2">{new Date(item.date_absent).toLocaleDateString()}</td>
-                                    <td className="p-2 max-w-xs truncate" title={item.reason}>{item.reason}</td>
-                                    <td className="p-2">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                            item.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                            item.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                            'bg-yellow-100 text-yellow-800'
-                                        }`}>
-                                            {item.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-2">
-                                        <div className="flex flex-col space-y-1">
-                                            <a 
-                                                href={item.file_url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
-                                                className="text-blue-600 hover:underline flex items-center"
-                                            >
-                                                <ExternalLink size={14} className="mr-1" /> View
-                                            </a>
-                                            <a 
-                                                href={item.file_url} 
-                                                download 
-                                                className="text-green-700 hover:underline flex items-center text-xs"
-                                            >
-                                                <Download size={12} className="mr-1" /> Download
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="4" className="p-4 text-center text-gray-500">No excuse letters submitted.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                <ResponsiveTable
+                    data={history}
+                    columns={[
+                        {
+                            key: 'date_absent',
+                            label: 'Date Absent',
+                            render: (_, item) => new Date(item.date_absent).toLocaleDateString()
+                        },
+                        {
+                            key: 'reason',
+                            label: 'Reason',
+                            render: (_, item) => (
+                                <div className="max-w-xs truncate" title={item.reason}>
+                                    {item.reason}
+                                </div>
+                            )
+                        },
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            render: (_, item) => (
+                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                                    item.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    item.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                    {item.status}
+                                </span>
+                            )
+                        },
+                        {
+                            key: 'proof',
+                            label: 'Proof',
+                            render: (_, item) => (
+                                <div className="flex flex-col space-y-1">
+                                    <a 
+                                        href={item.file_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-blue-600 hover:underline flex items-center"
+                                    >
+                                        <ExternalLink size={14} className="mr-1" /> View
+                                    </a>
+                                    <a 
+                                        href={item.file_url} 
+                                        download 
+                                        className="text-green-700 hover:underline flex items-center text-xs"
+                                    >
+                                        <Download size={12} className="mr-1" /> Download
+                                    </a>
+                                </div>
+                            )
+                        }
+                    ]}
+                    loading={false}
+                    emptyMessage="No excuse letters submitted."
+                    pagination={true}
+                    itemsPerPage={5}
+                    className="bg-white"
+                />
             </div>
 
             {showUploadConsent && (
