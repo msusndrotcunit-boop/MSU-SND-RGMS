@@ -98,10 +98,10 @@ const Login = () => {
             }}></div>
 
             <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
-                {/* Header Section */}
-                <div className="bg-green-900 p-6 md:p-8 text-center border-b-4 border-green-600 flex flex-col items-center">
+                {/* Header Section - No border, green covers all corners */}
+                <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
                     <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
-                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.37] translate-y-1.5 md:translate-y-2" />
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.6] translate-y-1" />
                     </div>
                     <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
                     <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
@@ -163,8 +163,8 @@ const Login = () => {
                                         value={formData.identifier}
                                         onChange={handleChange}
                                         required
-                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
-                                        placeholder={loginType === 'cadet' ? "Enter ROTCMIS Username or Email" : "Enter Staff Username"}
+                                        className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                        placeholder={loginType === 'cadet' ? "Student ID or Email" : "Staff Username"}
                                     />
                                 </div>
                             </div>
@@ -186,8 +186,8 @@ const Login = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
-                                            placeholder="Enter Admin Username"
+                                            className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            placeholder="Admin Username"
                                         />
                                     </div>
                                 </div>
@@ -206,7 +206,7 @@ const Login = () => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            className="w-full pl-11 pr-11 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                             placeholder="••••••••"
                                         />
                                         <button
