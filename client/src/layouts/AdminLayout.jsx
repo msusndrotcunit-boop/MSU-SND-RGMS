@@ -272,7 +272,7 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100 max-w-full admin-layout-container">
+                        <SafeAreaManager className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full admin-layout-container">
                 <Toaster position="top-right" reverseOrder={false} />
                 
                 <style>{`
@@ -284,9 +284,24 @@ const AdminLayout = () => {
                         .admin-layout-container main {
                             width: 100% !important;
                             max-width: 100vw !important;
+                            overflow-y: auto !important;
+                            overflow-x: hidden !important;
+                            -webkit-overflow-scrolling: touch !important;
                         }
                         .admin-layout-container .flex-1 {
                             min-width: 0 !important;
+                        }
+                        /* Ensure body and html allow scrolling */
+                        html, body {
+                            overflow-x: hidden !important;
+                            overflow-y: auto !important;
+                            height: 100% !important;
+                        }
+                        /* Fix the main container */
+                        .admin-layout-container {
+                            overflow: visible !important;
+                            height: 100vh !important;
+                            display: flex !important;
                         }
                     }
                 `}</style>
@@ -413,7 +428,7 @@ const AdminLayout = () => {
                 </FixedElement>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative w-full">
+            <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
                 <FixedElement 
                     position="top" 
                     respectSafeArea={true}
@@ -523,8 +538,8 @@ const AdminLayout = () => {
                     );
                 })()}
 
-                <main className="flex-1 overflow-auto p-3 md:p-6 flex flex-col w-full max-w-full">
-                    <div className="flex-grow w-full max-w-full overflow-hidden">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full max-w-full">
+                    <div className="flex-grow w-full max-w-full">
                         <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                             <Outlet />
                         </Suspense>
