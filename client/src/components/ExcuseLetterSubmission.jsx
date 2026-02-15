@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
 import ResponsiveTable from './ResponsiveTable';
+import { MobileFormLayout, FormField, MobileInput, MobileTextarea, FormActions } from './MobileFormLayout';
+import TouchTargetValidator from './TouchTargetValidator';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);
@@ -67,80 +69,92 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="bg-white p-6 rounded shadow">
-                <h3 className="text-lg font-bold mb-4 flex items-center">
-                    <FileText className="mr-2 text-blue-600" />
-                    Submit Excuse Letter
-                </h3>
-                
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
-                {success && <div className="bg-green-50 text-green-600 p-3 rounded mb-4 text-sm flex items-center"><CheckCircle size={16} className="mr-2"/>{success}</div>}
+        <TouchTargetValidator autoCorrect={true}>
+            <div className="space-y-6">
+                <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded shadow">
+                    <h3 className="text-lg font-bold mb-4 flex items-center dark:text-gray-100">
+                        <FileText className="mr-2 text-blue-600" />
+                        Submit Excuse Letter
+                    </h3>
+                    
+                    {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
+                    {success && <div className="bg-green-50 text-green-600 p-3 rounded mb-4 text-sm flex items-center"><CheckCircle size={16} className="mr-2"/>{success}</div>}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Absence</label>
-                        <input 
-                            type="date" 
-                            value={date} 
-                            onChange={(e) => setDate(e.target.value)} 
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                        <textarea 
-                            value={reason} 
-                            onChange={(e) => setReason(e.target.value)} 
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 h-24"
-                            placeholder="Explain why you were absent..."
-                            required
-                        ></textarea>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload Letter/Proof</label>
-                        <div 
-                            className="border-2 border-dashed border-gray-300 rounded p-4 text-center hover:bg-gray-50 transition relative"
-                            onClick={() => setShowUploadConsent(true)}
-                        >
-                            <input 
-                                type="file" 
-                                ref={fileInputRef}
-                                onChange={(e) => setFile(e.target.files[0])} 
-                                className="absolute inset-0 w-full h-full opacity-0"
-                                style={{ pointerEvents: 'none' }}
-                                tabIndex={-1}
-                                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    <MobileFormLayout onSubmit={handleSubmit}>
+                        <FormField label="Date of Absence" required>
+                            <MobileInput
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                disabled={loading}
+                                required
                             />
-                            {file ? (
-                                <div className="text-sm text-green-600 font-medium truncate">
-                                    Selected: {file.name}
-                                </div>
-                            ) : (
-                                <div className="text-gray-500 text-sm">
-                                    <Upload className="mx-auto mb-2 text-gray-400" />
-                                    Click to upload (PDF, Word, or Image)
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                        </FormField>
 
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition flex justify-center items-center"
-                    >
-                        {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : 'Submit Excuse'}
-                    </button>
-                </form>
-            </div>
+                        <FormField label="Reason" required>
+                            <MobileTextarea
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder="Explain why you were absent..."
+                                rows={4}
+                                disabled={loading}
+                                required
+                            />
+                        </FormField>
 
-            {/* History Section */}
-            <div className="bg-white p-6 rounded shadow">
-                <h3 className="text-lg font-bold mb-4">My Excuse Letters</h3>
+                        <FormField label="Upload Letter/Proof" required>
+                            <div 
+                                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer touch-target"
+                                onClick={() => setShowUploadConsent(true)}
+                                style={{ minHeight: '120px' }}
+                            >
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef}
+                                    onChange={(e) => setFile(e.target.files[0])} 
+                                    className="hidden"
+                                    accept={ORIGINAL_ACCEPT}
+                                />
+                                {file ? (
+                                    <div className="text-sm text-green-600 font-medium">
+                                        <CheckCircle size={24} className="mx-auto mb-2" />
+                                        Selected: {file.name}
+                                    </div>
+                                ) : (
+                                    <div className="text-gray-500 dark:text-gray-400">
+                                        <Upload size={32} className="mx-auto mb-2" />
+                                        <p className="font-medium">Click to upload file</p>
+                                        <p className="text-xs mt-1">PDF, Word, or Image files</p>
+                                    </div>
+                                )}
+                            </div>
+                        </FormField>
+
+                        <FormActions alignment="right">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors touch-target flex items-center gap-2"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload size={18} />
+                                        Submit Letter
+                                    </>
+                                )}
+                            </button>
+                        </FormActions>
+                    </MobileFormLayout>
+                </div>
+
+                {/* History Section */}
+                <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded shadow">
+                    <h3 className="text-lg font-bold mb-4 dark:text-gray-100">My Excuse Letters</h3>
                 <ResponsiveTable
                     data={history}
                     columns={[
@@ -238,7 +252,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                                     } catch {}
                                     setShowUploadConsent(false);
                                 }}
-                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 touch-target"
                             >
                                 Use Camera
                             </button>
@@ -254,7 +268,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                                     } catch {}
                                     setShowUploadConsent(false);
                                 }}
-                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800 touch-target"
                             >
                                 Choose Files
                             </button>
@@ -262,7 +276,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                     </div>
                 </div>
             )}
-        </div>
+        </TouchTargetValidator>
     );
 };
 
