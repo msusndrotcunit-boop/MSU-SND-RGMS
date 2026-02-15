@@ -622,60 +622,6 @@ body {
     gap: 12px !important;
   }
 
-  /* Flex containers - wrap properly */
-  .flex {
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-  }
-
-  /* Spacing - standard mobile spacing */
-  .space-y-6 > * + * { margin-top: 16px !important; }
-  .space-y-4 > * + * { margin-top: 12px !important; }
-  .space-y-3 > * + * { margin-top: 10px !important; }
-  .space-y-2 > * + * { margin-top: 8px !important; }
-  
-  .gap-6 { gap: 16px !important; }
-  .gap-4 { gap: 12px !important; }
-  .gap-3 { gap: 10px !important; }
-  .gap-2 { gap: 8px !important; }
-
-  /* Padding - standard mobile padding */
-  .p-8 { padding: 16px !important; }
-  .p-6 { padding: 14px !important; }
-  .p-4 { padding: 12px !important; }
-  .p-3 { padding: 10px !important; }
-  .p-2 { padding: 8px !important; }
-
-  .px-8 { padding-left: 16px !important; padding-right: 16px !important; }
-  .px-6 { padding-left: 14px !important; padding-right: 14px !important; }
-  .px-4 { padding-left: 12px !important; padding-right: 12px !important; }
-
-  .py-8 { padding-top: 16px !important; padding-bottom: 16px !important; }
-  .py-6 { padding-top: 14px !important; padding-bottom: 14px !important; }
-  .py-4 { padding-top: 12px !important; padding-bottom: 12px !important; }
-
-  /* Margins - prevent overflow */
-  .m-8 { margin: 16px !important; }
-  .m-6 { margin: 14px !important; }
-  .m-4 { margin: 12px !important; }
-
-  /* Simplified shadows for performance */
-  .shadow-lg,
-  .shadow-xl,
-  .shadow-2xl {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-  }
-
-  /* Remove unnecessary gradients on mobile */
-  .bg-gradient-to-r,
-  .bg-gradient-to-l,
-  .bg-gradient-to-t,
-  .bg-gradient-to-b,
-  .bg-gradient-to-br,
-  .bg-gradient-to-bl {
-    background-image: none !important;
-  }
-
   /* Dropdowns - fit screen */
   select,
   .dropdown,
