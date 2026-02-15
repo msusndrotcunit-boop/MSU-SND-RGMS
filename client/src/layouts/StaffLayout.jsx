@@ -8,6 +8,7 @@ import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
@@ -213,8 +214,9 @@ const StaffLayout = () => {
     
     return (
         <SafeAreaProvider>
-            <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+            <MobilePerformanceOptimizer>
+                <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+                    <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -532,6 +534,7 @@ const StaffLayout = () => {
             )}
             </SafeAreaManager>
         </TouchTargetValidator>
+        </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
 };

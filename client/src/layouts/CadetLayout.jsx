@@ -10,6 +10,7 @@ import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -298,8 +299,9 @@ const CadetLayout = () => {
 
     return (
         <SafeAreaProvider>
-            <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+            <MobilePerformanceOptimizer>
+                <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+                    <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -578,6 +580,7 @@ const CadetLayout = () => {
             )}
             </SafeAreaManager>
         </TouchTargetValidator>
+        </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
 };

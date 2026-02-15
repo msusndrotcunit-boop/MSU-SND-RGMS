@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
 import TouchTargetValidator from '../components/TouchTargetValidator';
 import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
@@ -267,8 +268,9 @@ const AdminLayout = () => {
 
     return (
         <SafeAreaProvider>
-            <TouchTargetValidator autoCorrect={true} showWarnings={false}>
-                <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
+            <MobilePerformanceOptimizer>
+                <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+                    <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
                 <Toaster position="top-right" reverseOrder={false} />
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
@@ -539,6 +541,7 @@ const AdminLayout = () => {
             )}
             </SafeAreaManager>
         </TouchTargetValidator>
+        </MobilePerformanceOptimizer>
         </SafeAreaProvider>
     );
 };
