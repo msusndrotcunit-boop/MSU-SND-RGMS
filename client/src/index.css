@@ -177,6 +177,28 @@ body {
     width: 100%;
     overflow-x: auto;
   }
+
+  /* Modals - fit screen properly */
+  .modal,
+  [role="dialog"] {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100vh - 2rem) !important;
+    margin: 0 !important;
+    overflow-y: auto;
+  }
+
+  /* Modal backdrop */
+  .fixed.inset-0 {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
 }
 
 /* Exception for header images - maintain fixed sizes */
