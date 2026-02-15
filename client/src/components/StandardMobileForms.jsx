@@ -36,13 +36,13 @@ export const LoginForm = ({
         <FormField 
           label="Username or Email" 
           required
-          hint={loginType === 'cadet' ? "Use your Student ID or Email" : "Use your Staff Username"}
+          hint={loginType === 'cadet' ? "Use your Username or Email" : "Use your Staff Username"}
         >
           <MobileInput
             type="text"
             value={formData.identifier || ''}
             onChange={handleChange('identifier')}
-            placeholder={loginType === 'cadet' ? "Student ID or Email" : "Staff Username"}
+            placeholder={loginType === 'cadet' ? "Username or Email" : "Staff Username"}
             disabled={loading}
             required
           />

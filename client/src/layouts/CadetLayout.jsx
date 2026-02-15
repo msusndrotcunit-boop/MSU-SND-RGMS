@@ -281,7 +281,9 @@ const CadetLayout = () => {
 
     // Memoize the profile picture URL to avoid recalculation
     const profilePicSrc = useMemo(() => {
-        return getProfilePicUrl(profile?.profile_pic, user?.cadetId);
+        const primary = getProfilePicUrl(profile?.profile_pic, user?.cadetId, 'cadets');
+        if (primary) return primary;
+        return getProfilePicFallback(user?.cadetId, 'cadets');
     }, [profile?.profile_pic, user?.cadetId]);
 
     const renderProfileImage = () => {
@@ -340,7 +342,7 @@ const CadetLayout = () => {
                     {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <Link
                         to="/cadet/home"
                         onClick={() => setIsSidebarOpen(false)}

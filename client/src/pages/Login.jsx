@@ -164,7 +164,7 @@ const Login = () => {
                                         onChange={handleChange}
                                         required
                                         className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
-                                        placeholder={loginType === 'cadet' ? "Student ID or Email" : "Staff Username"}
+                                        placeholder={loginType === 'cadet' ? "Username or Email" : "Staff Username"}
                                     />
                                 </div>
                             </div>
@@ -299,7 +299,7 @@ const Login = () => {
                                     </div>
                                     <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside ml-1">
                                         <li>Ensure your account is approved by the ROTC Office.</li>
-                                        <li>Choose Cadet, then enter your Student ID or Email.</li>
+                                        <li>Choose Cadet, then enter your Username or Email.</li>
                                         <li>Tap Sign In. Complete your profile if prompted.</li>
                                     </ol>
                                 </div>
