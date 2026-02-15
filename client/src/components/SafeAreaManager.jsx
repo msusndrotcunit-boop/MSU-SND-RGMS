@@ -188,13 +188,15 @@ export const FixedElement = ({
         styles.right = `${safeAreaInsets.right}px`;
         break;
       case 'bottom':
-        let bottomOffset = safeAreaInsets.bottom;
-        if (adjustForKeyboard && keyboardVisible) {
-          bottomOffset += keyboardHeight;
+        {
+          let bottomOffset = safeAreaInsets.bottom;
+          if (adjustForKeyboard && keyboardVisible) {
+            bottomOffset += keyboardHeight;
+          }
+          styles.bottom = `${bottomOffset}px`;
+          styles.left = `${safeAreaInsets.left}px`;
+          styles.right = `${safeAreaInsets.right}px`;
         }
-        styles.bottom = `${bottomOffset}px`;
-        styles.left = `${safeAreaInsets.left}px`;
-        styles.right = `${safeAreaInsets.right}px`;
         break;
       case 'left':
         styles.left = `${safeAreaInsets.left}px`;

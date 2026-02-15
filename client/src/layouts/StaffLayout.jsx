@@ -530,7 +530,7 @@ const StaffLayout = () => {
                     </div>
                 </div>
             )}
-            </div>
+            </SafeAreaManager>
         </TouchTargetValidator>
         </SafeAreaProvider>
     );

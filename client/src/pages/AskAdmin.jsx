@@ -120,6 +120,7 @@ const AskAdmin = () => {
                     </div>
                 )}
             </div>
+            </div>
         </TouchTargetValidator>
     );
 };

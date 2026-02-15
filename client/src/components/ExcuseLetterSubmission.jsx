@@ -276,6 +276,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
                     </div>
                 </div>
             )}
+            </div>
         </TouchTargetValidator>
     );
 };

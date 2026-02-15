@@ -576,7 +576,7 @@ const CadetLayout = () => {
                     </div>
                 </div>
             )}
-            </div>
+            </SafeAreaManager>
         </TouchTargetValidator>
         </SafeAreaProvider>
     );
