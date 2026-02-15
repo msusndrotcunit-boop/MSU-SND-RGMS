@@ -272,8 +272,24 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
+                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100 max-w-full admin-layout-container">
                 <Toaster position="top-right" reverseOrder={false} />
+                
+                <style>{`
+                    @media (max-width: 768px) {
+                        /* Override aggressive mobile CSS */
+                        .admin-layout-container * {
+                            max-width: none !important;
+                        }
+                        .admin-layout-container main {
+                            width: 100% !important;
+                            max-width: 100vw !important;
+                        }
+                        .admin-layout-container .flex-1 {
+                            min-width: 0 !important;
+                        }
+                    }
+                `}</style>
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
                     <div 
@@ -287,8 +303,8 @@ const AdminLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+                        isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">
@@ -397,22 +413,27 @@ const AdminLayout = () => {
                 </FixedElement>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div className="flex-1 flex flex-col overflow-hidden relative w-full">
                 <FixedElement 
                     position="top" 
                     respectSafeArea={true}
-                    className="bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between z-10"
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
                 >
-                    <div className="flex items-center flex-1">
+                    <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0"
                         >
                             <Menu size={24} />
                         </button>
                         
+                        {/* Mobile Title */}
+                        <h1 className="md:hidden text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
+                            ROTC Admin
+                        </h1>
+                        
                         {/* Search Bar */}
-                        <div className="relative hidden md:flex items-center w-96 ml-4">
+                        <div className="relative hidden md:flex items-center w-96 ml-4 flex-shrink-0">
                             <Search className="absolute left-3 text-gray-400 dark:text-gray-300" size={18} />
                             <input
                                 value={searchQuery}
@@ -443,7 +464,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-5 mr-2">
+                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -502,8 +523,8 @@ const AdminLayout = () => {
                     );
                 })()}
 
-                <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
-                    <div className="flex-grow">
+                <main className="flex-1 overflow-auto p-3 md:p-6 flex flex-col w-full max-w-full">
+                    <div className="flex-grow w-full max-w-full overflow-hidden">
                         <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                             <Outlet />
                         </Suspense>
