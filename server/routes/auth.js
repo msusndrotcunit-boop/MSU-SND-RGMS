@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const db = require('../database');
+const bcrypt = require('bcryptjs');
+const { authenticateToken, setSession, clearSession } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
 
 // In-memory settings store (ephemeral on server restarts)
@@ -31,53 +33,172 @@ router.post('/heartbeat', (req, res) => {
   });
 });
 
-// Simple admin login - trusts provided username/password (no DB yet)
-router.post('/login', (req, res) => {
-  const token = process.env.API_TOKEN || 'dev-token';
-  const role = 'admin';
-  const username = (req.body && req.body.username) || 'admin';
-  res.json({
-    token,
-    role,
-    cadetId: null,
-    staffId: null,
-    isProfileCompleted: true,
-    username
+// Admin login with database verification
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+  
+  db.get('SELECT * FROM users WHERE username = ? AND role = ?', [username, 'admin'], async (err, user) => {
+    if (err) {
+      return res.status(500).json({ message: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const token = process.env.API_TOKEN || 'dev-token';
+    
+    // Store session
+    setSession(token, {
+      id: user.id,
+      role: 'admin',
+      cadetId: null,
+      staffId: null
+    });
+    
+    res.json({
+      token,
+      role: 'admin',
+      cadetId: null,
+      staffId: null,
+      isProfileCompleted: true,
+      username: user.username,
+      userId: user.id
+    });
   });
 });
 
-// Cadet login using identifier (student ID / email / username) - placeholder implementation
-router.post('/cadet-login', (req, res) => {
-  const identifier = (req.body && req.body.identifier) || '';
+// Cadet login using identifier (student ID / email / username)
+router.post('/cadet-login', async (req, res) => {
+  const { identifier, password } = req.body;
+  
   if (!identifier) {
     return res.status(400).json({ message: 'Identifier is required' });
   }
-  const token = process.env.API_TOKEN || 'dev-token';
-  res.json({
-    token,
-    role: 'cadet',
-    cadetId: null,
-    staffId: null,
-    isProfileCompleted: false,
-    identifier
+  
+  // Query for user by username, email, or student_id
+  const sql = `
+    SELECT u.*, c.is_profile_completed, c.student_id 
+    FROM users u 
+    LEFT JOIN cadets c ON u.cadet_id = c.id 
+    WHERE (u.username = ? OR u.email = ? OR c.student_id = ?) 
+    AND u.role = 'cadet'
+    LIMIT 1
+  `;
+  
+  db.get(sql, [identifier, identifier, identifier], async (err, user) => {
+    if (err) {
+      console.error('[Cadet Login] Database error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // If password is provided and user has a password, verify it
+    if (password && user.password) {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+    }
+    
+    const token = process.env.API_TOKEN || 'dev-token';
+    
+    // Store session
+    setSession(token, {
+      id: user.id,
+      role: 'cadet',
+      cadetId: user.cadet_id,
+      staffId: null
+    });
+    
+    res.json({
+      token,
+      role: 'cadet',
+      cadetId: user.cadet_id,
+      staffId: null,
+      isProfileCompleted: user.is_profile_completed || false,
+      identifier: user.username,
+      userId: user.id
+    });
   });
 });
 
-// Staff login without password using identifier (username / email) - placeholder implementation
-router.post('/staff-login-no-pass', (req, res) => {
-  const identifier = (req.body && req.body.identifier) || '';
+// Staff login using identifier (username / email)
+router.post('/staff-login-no-pass', async (req, res) => {
+  const { identifier, password } = req.body;
+  
   if (!identifier) {
     return res.status(400).json({ message: 'Identifier is required' });
   }
-  const token = process.env.API_TOKEN || 'dev-token';
-  res.json({
-    token,
-    role: 'training_staff',
-    cadetId: null,
-    staffId: null,
-    isProfileCompleted: false,
-    identifier
+  
+  const sql = `
+    SELECT u.*, s.id as staff_id 
+    FROM users u 
+    LEFT JOIN training_staff s ON u.staff_id = s.id 
+    WHERE (u.username = ? OR u.email = ?) 
+    AND u.role = 'training_staff'
+    LIMIT 1
+  `;
+  
+  db.get(sql, [identifier, identifier], async (err, user) => {
+    if (err) {
+      console.error('[Staff Login] Database error:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // If password is provided and user has a password, verify it
+    if (password && user.password) {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+    }
+    
+    const token = process.env.API_TOKEN || 'dev-token';
+    
+    // Store session
+    setSession(token, {
+      id: user.id,
+      role: 'training_staff',
+      cadetId: null,
+      staffId: user.staff_id
+    });
+    
+    res.json({
+      token,
+      role: 'training_staff',
+      cadetId: null,
+      staffId: user.staff_id,
+      isProfileCompleted: true,
+      identifier: user.username,
+      userId: user.id
+    });
   });
+});
+
+// Logout endpoint
+router.post('/logout', authenticateToken, (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+  clearSession(token);
+  res.json({ message: 'Logged out successfully' });
 });
 
 // Read settings
