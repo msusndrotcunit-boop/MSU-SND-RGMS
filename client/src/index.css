@@ -35,6 +35,12 @@ body {
   background-attachment: fixed;
 }
 
+@media (max-width: 768px) {
+  .app-bg {
+    background-attachment: scroll;
+  }
+}
+
 .dark .app-bg {
   background-image: 
     linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),

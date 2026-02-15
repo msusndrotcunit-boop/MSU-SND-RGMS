@@ -101,7 +101,7 @@ const Login = () => {
                 {/* Header Section - No border, green covers all corners */}
                 <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
                     <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
-                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-cover scale-[1.6] translate-y-1" />
+                        <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-contain" />
                     </div>
                     <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
                     <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>

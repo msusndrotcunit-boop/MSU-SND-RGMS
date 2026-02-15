@@ -272,15 +272,15 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
-                <Toaster position="top-right" reverseOrder={false} />
-                {/* Mobile Sidebar Overlay */}
-                {isSidebarOpen && (
-                    <div 
-                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                        onClick={() => setIsSidebarOpen(false)}
-                    ></div>
-                )}
+                        <SafeAreaManager className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
+            <Toaster position="top-right" reverseOrder={false} />
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                ></div>
+            )}
 
                 {/* Sidebar */}
                 <FixedElement 

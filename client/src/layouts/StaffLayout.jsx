@@ -218,7 +218,7 @@ const StaffLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+                        <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
