@@ -14,6 +14,12 @@ body {
   line-height: 1.6;
   color: #111827;
   background-color: #f3f4f6;
+  /* Prevent zoom on iOS when focusing inputs */
+  -webkit-text-size-adjust: 100%;
+  /* Smooth scrolling for iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
 }
 
 .dark {
@@ -212,5 +218,156 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+}
+
+/* iOS-Specific Optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  body {
+    /* Fix iOS Safari bottom bar issue */
+    min-height: -webkit-fill-available;
+  }
+
+  /* Prevent iOS Safari from adding rounded corners to inputs */
+  input,
+  textarea,
+  select,
+  button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0.375rem;
+  }
+
+  /* Fix iOS Safari input zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Prevent iOS Safari from styling buttons */
+  button {
+    -webkit-appearance: none;
+  }
+
+  /* Fix iOS Safari sticky positioning */
+  .sticky {
+    position: -webkit-sticky;
+    position: sticky;
+  }
+}
+
+/* Android-Specific Optimizations */
+@media screen and (max-width: 768px) {
+  /* Android Chrome specific styles */
+  
+  /* Prevent text inflation on Android */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Optimize tap highlighting for Android */
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Remove Android default button styling */
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Optimize scrolling for Android */
+  * {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+}
+
+/* Safe Area Insets for Notched Devices (iPhone X and newer) */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  /* Fixed headers with safe area */
+  header.sticky,
+  .sticky-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  /* Fixed footers with safe area */
+  footer.sticky,
+  .sticky-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Landscape Mode Optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Reduce vertical spacing in landscape */
+  .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
+  }
+
+  /* Compact headers in landscape */
+  header {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Reduce modal heights in landscape */
+  .modal,
+  [role="dialog"] {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Small Phone Screens (< 375px) */
+@media (max-width: 374px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Further reduce spacing on very small screens */
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  /* Smaller buttons on tiny screens */
+  button {
+    font-size: 14px !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+}
+
+/* Large Phone Screens (> 414px) */
+@media (min-width: 415px) and (max-width: 768px) {
+  /* Slightly larger text for bigger phones */
+  body {
+    font-size: 16px;
+  }
+
+  /* More comfortable spacing */
+  .p-4 {
+    padding: 1.25rem !important;
   }
 }
