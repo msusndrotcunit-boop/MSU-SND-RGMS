@@ -23,6 +23,8 @@ import {
 } from '../../constants/options';
 import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import MobileModalManager from '../../components/MobileModalManager';
+import { MobileFormLayout, FormField, MobileInput, MobileSelect, FormActions } from '../../components/MobileFormLayout';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -886,78 +888,68 @@ const Cadets = () => {
                 className="bg-white rounded shadow"
             />
 
-            {/* Export Modal */}
-            {isExportModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Export Settings</h3>
-                            <button onClick={() => setIsExportModalOpen(false)}><X size={20} /></button>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Document Title</label>
-                                <input 
-                                    className="w-full border p-2 rounded" 
-                                    value={exportOptions.title} 
-                                    onChange={e => setExportOptions({...exportOptions, title: e.target.value})} 
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Company</label>
-                                <select 
-                                    className="w-full border p-2 rounded"
-                                    value={exportOptions.company}
-                                    onChange={e => setExportOptions({...exportOptions, company: e.target.value})}
-                                >
-                                    <option value="All">All Companies</option>
-                                    {companies.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
-                            </div>
+            {/* Export Modal - Mobile Optimized */}
+            <MobileModalManager
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                title="Export Settings"
+                size="default"
+                footerActions={
+                    <>
+                        <button 
+                            onClick={() => setIsExportModalOpen(false)}
+                            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors touch-target"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={handleExportPDF}
+                            className="w-full sm:w-auto px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 flex justify-center items-center transition-colors touch-target"
+                        >
+                            <FileDown size={18} className="mr-2" />
+                            Generate PDF
+                        </button>
+                    </>
+                }
+            >
+                <MobileFormLayout className="space-y-4">
+                    <FormField label="Document Title" required>
+                        <MobileInput 
+                            value={exportOptions.title} 
+                            onChange={e => setExportOptions({...exportOptions, title: e.target.value})}
+                            placeholder="Enter document title"
+                        />
+                    </FormField>
+                    
+                    <FormField label="Filter by Company">
+                        <MobileSelect
+                            value={exportOptions.company}
+                            onChange={e => setExportOptions({...exportOptions, company: e.target.value})}
+                            options={[
+                                { value: 'All', label: 'All Companies' },
+                                ...companies.map(c => ({ value: c, label: c }))
+                            ]}
+                        />
+                    </FormField>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Prepared By</label>
-                                    <input 
-                                        className="w-full border p-2 rounded" 
-                                        value={exportOptions.preparedBy} 
-                                        onChange={e => setExportOptions({...exportOptions, preparedBy: e.target.value})} 
-                                        placeholder="Name"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Noted By</label>
-                                    <input 
-                                        className="w-full border p-2 rounded" 
-                                        value={exportOptions.notedBy} 
-                                        onChange={e => setExportOptions({...exportOptions, notedBy: e.target.value})} 
-                                        placeholder="Commandant"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-4 flex space-x-3">
-                                <button 
-                                    onClick={() => setIsExportModalOpen(false)}
-                                    className="flex-1 px-4 py-2 border rounded text-gray-600 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={handleExportPDF}
-                                    className="flex-1 px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 flex justify-center items-center"
-                                >
-                                    <FileDown size={18} className="mr-2" />
-                                    Generate PDF
-                                </button>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField label="Prepared By">
+                            <MobileInput 
+                                value={exportOptions.preparedBy} 
+                                onChange={e => setExportOptions({...exportOptions, preparedBy: e.target.value})}
+                                placeholder="Name"
+                            />
+                        </FormField>
+                        <FormField label="Noted By">
+                            <MobileInput 
+                                value={exportOptions.notedBy} 
+                                onChange={e => setExportOptions({...exportOptions, notedBy: e.target.value})}
+                                placeholder="Commandant"
+                            />
+                        </FormField>
                     </div>
-                </div>
-            )}
+                </MobileFormLayout>
+            </MobileModalManager>
 
             {/* Import Modal */}
             {isImportModalOpen && (

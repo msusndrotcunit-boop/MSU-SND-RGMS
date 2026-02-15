@@ -231,6 +231,94 @@ body {
     height: 200px;
   }
 
+  /* Mobile Modal Optimizations */
+  .mobile-modal-backdrop {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .mobile-modal-content {
+    transform: translateZ(0); /* Enable hardware acceleration */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-modal-slide-up {
+    animation: slideUpModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-modal-slide-down {
+    animation: slideDownModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUpModal {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideDownModal {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Mobile Form Optimizations */
+  .mobile-form-field {
+    position: relative;
+  }
+
+  .mobile-form-field input:focus,
+  .mobile-form-field textarea:focus,
+  .mobile-form-field select:focus {
+    transform: translateZ(0); /* Prevent iOS zoom issues */
+  }
+
+  /* Enhanced focus states for mobile */
+  .mobile-form-field input:focus + .field-border,
+  .mobile-form-field textarea:focus + .field-border,
+  .mobile-form-field select:focus + .field-border {
+    transform: scaleX(1);
+  }
+
+  .field-border {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #3b82f6;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+
+  /* Modal keyboard adjustments */
+  .modal-keyboard-adjusted {
+    transition: margin-bottom 0.3s ease;
+  }
+
+  /* Improved modal shadows for mobile */
+  .mobile-modal-shadow {
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .mobile-modal-shadow {
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
   /* Mobile Navigation Styles */
   .mobile-nav-sidebar {
     backdrop-filter: blur(8px);

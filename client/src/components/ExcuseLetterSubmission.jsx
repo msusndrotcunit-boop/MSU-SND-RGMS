@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
-import ResponsiveTable from '../ResponsiveTable';
+import ResponsiveTable from './ResponsiveTable';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);

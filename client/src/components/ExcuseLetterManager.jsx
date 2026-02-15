@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, XCircle, ExternalLink, Filter, Trash2, Download } from 'lucide-react';
 import { cacheData, getCachedData } from '../utils/db';
-import ResponsiveTable from '../ResponsiveTable';
+import ResponsiveTable from './ResponsiveTable';
 
 const ExcuseLetterManager = () => {
     const [letters, setLetters] = useState([]);
