@@ -88,32 +88,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden login-page">
-            <style>{`
-                /* Override aggressive mobile CSS for login page */
-                @media (max-width: 768px) {
-                    .login-page * {
-                        max-width: none !important;
-                        font-size: inherit !important;
-                        padding: inherit !important;
-                        margin: inherit !important;
-                        min-height: auto !important;
-                        min-width: auto !important;
-                    }
-                    .login-page input,
-                    .login-page button,
-                    .login-page select {
-                        font-size: 14px !important;
-                        padding: 10px 12px !important;
-                    }
-                    .login-page button[type="submit"] {
-                        padding: 12px 16px !important;
-                    }
-                    .login-page .max-w-md {
-                        max-width: 28rem !important;
-                    }
-                }
-            `}</style>
+        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
             {/* Background Overlay */}
             <div className="absolute inset-0 z-0 opacity-20" style={{ 
                 backgroundImage: `url(${rgmsLogo})`, 

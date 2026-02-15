@@ -272,39 +272,8 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full admin-layout-container">
+                        <SafeAreaManager className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
                 <Toaster position="top-right" reverseOrder={false} />
-                
-                <style>{`
-                    @media (max-width: 768px) {
-                        /* Override aggressive mobile CSS */
-                        .admin-layout-container * {
-                            max-width: none !important;
-                        }
-                        .admin-layout-container main {
-                            width: 100% !important;
-                            max-width: 100vw !important;
-                            overflow-y: auto !important;
-                            overflow-x: hidden !important;
-                            -webkit-overflow-scrolling: touch !important;
-                        }
-                        .admin-layout-container .flex-1 {
-                            min-width: 0 !important;
-                        }
-                        /* Ensure body and html allow scrolling */
-                        html, body {
-                            overflow-x: hidden !important;
-                            overflow-y: auto !important;
-                            height: 100% !important;
-                        }
-                        /* Fix the main container */
-                        .admin-layout-container {
-                            overflow: visible !important;
-                            height: 100vh !important;
-                            display: flex !important;
-                        }
-                    }
-                `}</style>
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
                     <div 
