@@ -253,7 +253,7 @@ const Login = () => {
                     </form>
 
                     {/* New Footer Links */}
-                    <div className="mt-8 pt-6 border-t border-gray-100 space-y-3">
+                    <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('access')}
