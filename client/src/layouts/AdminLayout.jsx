@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
+import TouchTargetValidator from '../components/TouchTargetValidator';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
@@ -264,7 +265,8 @@ const AdminLayout = () => {
     };
 
     return (
-        <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
+        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+            <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
             <Toaster position="top-right" reverseOrder={false} />
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
@@ -525,7 +527,8 @@ const AdminLayout = () => {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </TouchTargetValidator>
     );
 };
 

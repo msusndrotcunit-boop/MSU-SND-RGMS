@@ -6,6 +6,7 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
+import TouchTargetValidator from '../components/TouchTargetValidator';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
@@ -210,7 +211,8 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
+        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+            <div className="flex h-screen app-bg overflow-hidden">
             <Toaster position="top-right" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
              {isSidebarOpen && (
@@ -514,7 +516,8 @@ const StaffLayout = () => {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </TouchTargetValidator>
     );
 };
 

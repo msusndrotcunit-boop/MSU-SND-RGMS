@@ -8,6 +8,7 @@ import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
+import TouchTargetValidator from '../components/TouchTargetValidator';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -295,7 +296,8 @@ const CadetLayout = () => {
     };
 
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
+        <TouchTargetValidator autoCorrect={true} showWarnings={false}>
+            <div className="flex h-screen app-bg overflow-hidden">
              <Toaster position="top-center" reverseOrder={false} />
              {/* Mobile Sidebar Overlay */}
              {isSidebarOpen && (
@@ -560,7 +562,8 @@ const CadetLayout = () => {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </TouchTargetValidator>
     );
 };
 
