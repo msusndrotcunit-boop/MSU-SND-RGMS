@@ -425,8 +425,8 @@ body {
     max-width: 100vw;
   }
 
-  /* Ensure all elements respect viewport width */
-  * {
+  /* Ensure all elements respect viewport width - BUT NOT FOR SPECIFIC LAYOUTS */
+  body > div:not(.login-page):not(.admin-layout-container) * {
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -446,31 +446,25 @@ body {
     }
   }
 
-  /* Standard element sizing for mobile */
-  
   /* Touch-friendly inputs - standard 44px minimum */
-  input,
-  select,
-  textarea,
-  button {
+  input:not(.login-page input):not(.admin-layout-container input),
+  select:not(.login-page select):not(.admin-layout-container select),
+  textarea:not(.login-page textarea):not(.admin-layout-container textarea),
+  button:not(.login-page button):not(.admin-layout-container button) {
     font-size: 16px !important; /* Prevents iOS zoom */
     min-height: 44px !important;
     padding: 10px 12px !important;
-    width: 100%;
   }
 
   /* Buttons - standard sizing */
-  button,
-  [role="button"],
-  .btn {
+  button:not(.login-page button):not(.admin-layout-container button),
+  [role="button"]:not(.login-page [role="button"]):not(.admin-layout-container [role="button"]),
+  .btn:not(.login-page .btn):not(.admin-layout-container .btn) {
     min-height: 44px !important;
     min-width: 44px !important;
     padding: 10px 16px !important;
     font-size: 14px !important;
     line-height: 1.5 !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   /* Icon buttons */
@@ -509,19 +503,20 @@ body {
     height: 20px !important;
   }
 
-  /* Text sizing - standard hierarchy */
-  h1 { font-size: 24px !important; line-height: 1.3 !important; margin-bottom: 16px !important; }
-  h2 { font-size: 20px !important; line-height: 1.3 !important; margin-bottom: 12px !important; }
-  h3 { font-size: 18px !important; line-height: 1.4 !important; margin-bottom: 10px !important; }
-  h4 { font-size: 16px !important; line-height: 1.4 !important; margin-bottom: 8px !important; }
-  h5 { font-size: 14px !important; line-height: 1.4 !important; margin-bottom: 6px !important; }
-  h6 { font-size: 13px !important; line-height: 1.4 !important; margin-bottom: 6px !important; }
+  /* Text sizing - standard hierarchy - EXCLUDE login and admin layout */
+  body:not(.login-page) h1:not(.admin-layout-container h1) { font-size: 24px !important; line-height: 1.3 !important; margin-bottom: 16px !important; }
+  body:not(.login-page) h2:not(.admin-layout-container h2) { font-size: 20px !important; line-height: 1.3 !important; margin-bottom: 12px !important; }
+  body:not(.login-page) h3:not(.admin-layout-container h3) { font-size: 18px !important; line-height: 1.4 !important; margin-bottom: 10px !important; }
+  body:not(.login-page) h4:not(.admin-layout-container h4) { font-size: 16px !important; line-height: 1.4 !important; margin-bottom: 8px !important; }
+  body:not(.login-page) h5:not(.admin-layout-container h5) { font-size: 14px !important; line-height: 1.4 !important; margin-bottom: 6px !important; }
+  body:not(.login-page) h6:not(.admin-layout-container h6) { font-size: 13px !important; line-height: 1.4 !important; margin-bottom: 6px !important; }
   
-  p, span, div, label {
+  body:not(.login-page) p:not(.admin-layout-container p), 
+  body:not(.login-page) span:not(.admin-layout-container span), 
+  body:not(.login-page) div:not(.admin-layout-container div), 
+  body:not(.login-page) label:not(.admin-layout-container label) {
     font-size: 14px !important;
     line-height: 1.5 !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
   }
 
   /* Small text */
