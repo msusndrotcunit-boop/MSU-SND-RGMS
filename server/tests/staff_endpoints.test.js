@@ -42,6 +42,12 @@ async function seedStaff(id, profilePic = null) {
   });
 }
 
+async function clearStaffMapping() {
+  await new Promise((resolve) => {
+    db.run(`UPDATE users SET staff_id = NULL WHERE id = 1`, [], () => resolve());
+  });
+}
+
 async function waitForTables() {
   const needed = new Set(['users', 'training_staff', 'training_days', 'staff_attendance_records']);
   for (let i = 0; i < 50; i++) {
@@ -71,6 +77,7 @@ async function run() {
 
   try {
     await waitForTables();
+    await clearStaffMapping();
     // Case A: No staff mapping yet -> /api/staff/me returns placeholder object
     const meA = await axios.get(`${base}/api/staff/me`);
     assert(meA.status === 200, 'Expected 200 for placeholder staff profile');
