@@ -32,6 +32,7 @@ const Attendance = () => {
     const [filterCompany, setFilterCompany] = useState('');
     const [filterPlatoon, setFilterPlatoon] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [controlsOpen, setControlsOpen] = useState(true);
 
     useEffect(() => {
         fetchDays();
@@ -782,12 +783,24 @@ const Attendance = () => {
                         {selectedDay ? (
                             <>
                         <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
-                            <div className="flex flex-col md:flex-row justify-between items-start mb-4">
+                            <div className="flex flex-col md:flex-row justify-between items-start gap-2 mb-2">
                                 <div>
                                     <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 dark:text-gray-400 mb-2 flex items-center text-sm">
                                         <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
                                     </button>
-                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                        <button
+                                            type="button"
+                                            onClick={() => setControlsOpen(o => !o)}
+                                            className="touch-target px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300 hover:bg-white/10 hover-highlight"
+                                            aria-expanded={controlsOpen}
+                                            aria-controls="attendance-controls"
+                                            title={controlsOpen ? 'Collapse controls' : 'Expand controls'}
+                                        >
+                                            {controlsOpen ? 'Hide Controls' : 'Show Controls'}
+                                        </button>
+                                    </div>
                                     <p className="text-gray-600 dark:text-gray-300 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
@@ -852,9 +865,12 @@ const Attendance = () => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            {/* Filters */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div
+                                id="attendance-controls"
+                                className={`grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 transition-all duration-300 ease-in-out overflow-hidden ${controlsOpen ? 'opacity-100 max-h-[800px]' : 'opacity-0 max-h-0 pointer-events-none'}`}
+                                aria-hidden={!controlsOpen}
+                            >
+                                {/* Tabs */}
                                 <div className="md:col-span-3 flex justify-center mb-2">
                                     <div className="bg-gray-200 dark:bg-gray-800 rounded p-1 flex">
                                         <button
