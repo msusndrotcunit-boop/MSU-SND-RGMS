@@ -1482,26 +1482,46 @@ router.post('/mark/staff', authenticateToken, isAdmin, (req, res) => {
 
 // Get Staff My History
 router.get('/my-history/staff', authenticateToken, (req, res) => {
-    const staffId = req.user.staffId;
-    if (!staffId) return res.status(403).json({ message: 'Not a staff member' });
+    const respond = (sid) => {
+        const sql = `
+            SELECT 
+                td.date,
+                td.title,
+                sar.status,
+                sar.remarks,
+                sar.time_in,
+                sar.time_out
+            FROM training_days td
+            LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
+            ORDER BY td.date DESC
+        `;
+    
+        db.all(sql, [sid], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows || []);
+        });
+    };
 
-    const sql = `
-        SELECT 
-            td.date,
-            td.title,
-            sar.status,
-            sar.remarks,
-            sar.time_in,
-            sar.time_out
-        FROM training_days td
-        LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
-        ORDER BY td.date DESC
-    `;
+    let staffId = req.user.staffId;
+    if (staffId) {
+        return respond(staffId);
+    }
 
-    db.all(sql, [staffId], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
+    // Fallback: resolve staff_id from users if role is staff
+    if (req.user && req.user.role === 'training_staff') {
+        db.get('SELECT staff_id FROM users WHERE id = ?', [req.user.id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row && row.staff_id) {
+                return respond(row.staff_id);
+            }
+            // Non-throwing response for staff without mapping yet
+            return res.json([]);
+        });
+        return;
+    }
+
+    // Not a staff session
+    return res.status(403).json({ message: 'Not a staff member' });
 });
 
 // Scan Staff QR Code

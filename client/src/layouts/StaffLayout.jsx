@@ -113,6 +113,7 @@ const StaffLayout = () => {
 
     React.useEffect(() => {
         const fetchStaffRole = async () => {
+            if (!user || user.role !== 'training_staff') return;
             try {
                 const res = await axios.get('/api/staff/me');
                 setStaffRole(res.data?.role || null);
@@ -120,7 +121,7 @@ const StaffLayout = () => {
             } catch {}
         };
         fetchStaffRole();
-    }, []);
+    }, [user]);
 
     React.useEffect(() => {
         try {
@@ -187,7 +188,7 @@ const StaffLayout = () => {
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
                         } else if (data.type === 'staff_attendance_updated') {
-                            const shouldPrefetch = !data.staffId || (user && user.staffId && data.staffId === user.staffId);
+                            const shouldPrefetch = (user && user.role === 'training_staff') && (!data.staffId || (user && user.staffId && data.staffId === user.staffId));
                             if (shouldPrefetch) {
                                 axios.get('/api/attendance/my-history/staff').then(async res => {
                                     await cacheSingleton('attendance_by_day', 'my_staff_history', { data: res.data, timestamp: Date.now() });

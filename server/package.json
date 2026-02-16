@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test:rotcmis": "node tests/rotcmis.test.js"
+    "test:rotcmis": "node tests/rotcmis.test.js",
+    "test:staff": "node tests/staff_endpoints.test.js"
   },
   "engines": {
     "node": ">=18"

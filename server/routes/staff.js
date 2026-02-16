@@ -200,19 +200,58 @@ router.post('/profile/photo', authenticateToken, uploadProfilePic, (req, res) =>
 
 // GET Current Staff Profile (Me)
 router.get('/me', authenticateToken, (req, res) => {
-    if (!req.user.staffId) return res.status(404).json({ message: 'Not logged in as staff' });
-    
-    // Join with users table to get username
-    const sql = `SELECT s.*, u.username 
-                 FROM training_staff s 
-                 LEFT JOIN users u ON u.staff_id = s.id 
-                 WHERE s.id = ?`;
+    // Resolve staffId from session or users table
+    const resolveAndRespond = (staffId) => {
+        // Join with users table to get username
+        const sql = `SELECT s.*, u.username 
+                     FROM training_staff s 
+                     LEFT JOIN users u ON u.staff_id = s.id 
+                     WHERE s.id = ?`;
+        db.get(sql, [staffId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!row) {
+                // Non-throwing response for missing record (placeholder)
+                return res.json({
+                    id: null,
+                    first_name: '',
+                    last_name: '',
+                    rank: '',
+                    role: 'training_staff',
+                    profile_pic: null,
+                    username: null
+                });
+            }
+            res.json(row);
+        });
+    };
 
-    db.get(sql, [req.user.staffId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
-        if (!row) return res.status(404).json({ message: 'Staff profile not found' });
-        res.json(row);
-    });
+    if (req.user && req.user.staffId) {
+        return resolveAndRespond(req.user.staffId);
+    }
+
+    // Fallback: if the role is training_staff, try to resolve staff_id from users table
+    if (req.user && req.user.role === 'training_staff') {
+        db.get('SELECT staff_id FROM users WHERE id = ?', [req.user.id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row && row.staff_id) {
+                return resolveAndRespond(row.staff_id);
+            }
+            // No mapping yet; return safe placeholder instead of 404
+            return res.json({
+                id: null,
+                first_name: '',
+                last_name: '',
+                rank: '',
+                role: 'training_staff',
+                profile_pic: null,
+                username: null
+            });
+        });
+        return;
+    }
+
+    // Not a staff session
+    return res.status(404).json({ message: 'Not logged in as staff' });
 });
 
 // Save QR Code Data
