@@ -1,0 +1,27 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+.env
+client/.env
+server/.env
+*.db
+*.sqlite
+*.sqlite-journal
+*.ps1
+!sync.ps1
+!pinger.ps1
+client/dist/
+client/dev-dist/
+.DS_Store
+logs/
+*.log
+
+# Uploads
+uploads/
+server/uploads/
+client/public/uploads/
+
+.vscode/
+*.swp
+*.zip
+dist-electron/

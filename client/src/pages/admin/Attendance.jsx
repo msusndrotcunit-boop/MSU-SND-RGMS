@@ -1,0 +1,1445 @@
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Save, Search, ChevronRight, Camera, FileText, Download, RefreshCw, X, Layers } from 'lucide-react';
+import ExcuseLetterManager from '../../components/ExcuseLetterManager';
+import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
+import { toast } from 'react-hot-toast';
+
+const Attendance = () => {
+    const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
+    const [attendanceType, setAttendanceType] = useState('cadet'); // 'cadet' | 'staff'
+    const [days, setDays] = useState([]);
+    const [selectedDay, setSelectedDay] = useState(null);
+    const [attendanceRecords, setAttendanceRecords] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [createForm, setCreateForm] = useState({ date: '', title: '', description: '' });
+    
+    // Scanner State (Smart OCR)
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scanResults, setScanResults] = useState([]); // Array of detected records
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [isCameraActive, setIsCameraActive] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [capturedImage, setCapturedImage] = useState(null);
+
+    const [isImporting, setIsImporting] = useState(false);
+    const [importSummary, setImportSummary] = useState(null);
+    const fileInputRef = useRef(null);
+
+    const [isRotcmisModalOpen, setIsRotcmisModalOpen] = useState(false);
+    const [rotcmisPreview, setRotcmisPreview] = useState(null);
+    const [rotcmisSelectedRecords, setRotcmisSelectedRecords] = useState([]);
+    const [rotcmisDetailLevel, setRotcmisDetailLevel] = useState('standard');
+    const rotcmisFileInputRef = useRef(null);
+    const [rotcmisUploading, setRotcmisUploading] = useState(false);
+
+    // Filters for marking
+    const [filterCompany, setFilterCompany] = useState('');
+    const [filterPlatoon, setFilterPlatoon] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        fetchDays();
+    }, []);
+
+    useEffect(() => {
+        if (selectedDay) {
+            selectDay(selectedDay);
+        }
+    }, [attendanceType]);
+
+    const fetchDays = async (forceRefresh = false) => {
+        try {
+            if (!forceRefresh) {
+                try {
+                    const cached = await getSingleton('admin', 'training_days');
+                    if (cached) {
+                        let data = cached;
+                        let timestamp = 0;
+                        if (cached.data && cached.timestamp) {
+                            data = cached.data;
+                            timestamp = cached.timestamp;
+                        } else if (Array.isArray(cached)) {
+                            data = cached;
+                        }
+
+                        if (Array.isArray(data) && data.length > 0) {
+                            setDays(data);
+                            setLoading(false);
+                            // If fresh (< 2 mins), skip API
+                            if (timestamp && (Date.now() - timestamp < 120 * 1000)) {
+                                return;
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            const res = await axios.get('/api/attendance/days');
+            setDays(res.data);
+            await cacheSingleton('admin', 'training_days', {
+                data: res.data,
+                timestamp: Date.now()
+            });
+            setLoading(false);
+        } catch (err) {
+            console.error(err);
+            setLoading(false);
+        }
+    };
+
+    const handleCreateDay = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post('/api/attendance/days', createForm);
+            await cacheSingleton('admin', 'training_days', null); // Explicit clear
+            fetchDays(true); // Force refresh to update list and cache
+            setIsCreateModalOpen(false);
+            setCreateForm({ date: '', title: '', description: '' });
+        } catch (err) {
+            alert('Error creating training day');
+        }
+    };
+
+    const handleDeleteDay = async (id, e) => {
+        e.stopPropagation();
+        if (!confirm('Delete this training day and all associated records?')) return;
+        try {
+            await axios.delete(`/api/attendance/days/${id}`);
+            if (selectedDay?.id === id) setSelectedDay(null);
+            await cacheSingleton('admin', 'training_days', null); // Explicit clear
+            fetchDays(true); // Force refresh
+        } catch (err) {
+            alert('Error deleting day');
+        }
+    };
+
+    const selectDay = async (day, forceRefresh = false) => {
+        setSelectedDay(day);
+        setLoading(true);
+        try {
+            const cacheKey = `${day.id}_${attendanceType}`;
+            
+            if (!forceRefresh) {
+                try {
+                    const cached = await getSingleton('attendance_by_day', cacheKey);
+                    if (cached) {
+                        let data = cached;
+                        let timestamp = 0;
+                        if (cached.data && cached.timestamp) {
+                            data = cached.data;
+                            timestamp = cached.timestamp;
+                        } else if (Array.isArray(cached)) {
+                            data = cached;
+                        }
+                        
+                        if (Array.isArray(data)) {
+                            setAttendanceRecords(data);
+                            if (timestamp && (Date.now() - timestamp < 10 * 1000)) { // Reduced to 10s
+                                setLoading(false);
+                                return;
+                            }
+                        }
+                    }
+                } catch {}
+            }
+            
+            const endpoint = attendanceType === 'cadet' 
+                ? `/api/attendance/records/${day.id}`
+                : `/api/attendance/records/staff/${day.id}`;
+
+            const res = await axios.get(endpoint);
+            setAttendanceRecords(res.data);
+            await cacheSingleton('attendance_by_day', cacheKey, {
+                data: res.data,
+                timestamp: Date.now()
+            });
+            setLoading(false);
+        } catch (err) {
+            console.error(err);
+            setLoading(false);
+        }
+    };
+
+    // --- SMART SCANNER LOGIC ---
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setIsCameraActive(true);
+                setCapturedImage(null);
+                setScanResults([]);
+            }
+        } catch (err) {
+            console.error("Camera Error", err);
+            toast.error("Failed to access camera. Please check permissions.");
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            setIsCameraActive(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isScannerOpen) stopCamera();
+        return () => stopCamera();
+    }, [isScannerOpen]);
+
+    const captureAndScan = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        
+        setIsProcessing(true);
+        try {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const dataUrl = canvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            stopCamera();
+
+            // Check if Tesseract is loaded
+            if (!window.Tesseract) {
+                throw new Error("OCR Library not loaded. Check internet connection.");
+            }
+
+            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'eng');
+            
+            processOCRText(text);
+
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || "OCR Failed");
+            setIsProcessing(false);
+        }
+    };
+
+    const processOCRText = (text) => {
+        // We have the full text of the image.
+        // We need to find which cadets from 'attendanceRecords' are present in this text.
+        // Improved heuristic: Search for "Rank Lastname" or "Lastname, Firstname"
+        
+        const lines = text.split('\n');
+        const matches = [];
+        
+        // Regex for time: 12-hour format with AM/PM (optional space, case insensitive)
+        const timeRegex = /(\d{1,2}:\d{2}\s*[APap][Mm]?)/g;
+        
+        attendanceRecords.forEach(record => {
+            // Construct patterns to search for
+            // 1. Lastname, Firstname (Standard List format)
+            // 2. Rank Lastname (e.g. Cdt Smith)
+            
+            const lastName = record.last_name.replace(/[^a-zA-Z0-9]/g, ''); // Clean for regex
+            const firstName = record.first_name.split(' ')[0].replace(/[^a-zA-Z0-9]/g, ''); // First word of first name
+            
+            // Flexible pattern: Lastname followed by Firstname OR Rank followed by Lastname
+            // We use the line as the context
+            
+            const namePattern = new RegExp(`${lastName}`, 'i');
+            
+            // Check if any line contains the last name
+            const matchingLines = lines.filter(l => namePattern.test(l));
+            
+            let bestMatchLine = null;
+            
+            // Refine match: check for first name or rank in those lines
+            for (const line of matchingLines) {
+                if (line.toLowerCase().includes(firstName.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+                if (record.rank && line.toLowerCase().includes(record.rank.toLowerCase())) {
+                    bestMatchLine = line;
+                    break;
+                }
+            }
+            
+            // If we found a line with the name
+            if (bestMatchLine) {
+                let status = 'present'; // Default to present if found on sheet
+                const lowerLine = bestMatchLine.toLowerCase();
+                
+                if (lowerLine.includes('absent')) status = 'absent';
+                else if (lowerLine.includes('excused')) status = 'excused';
+                else if (lowerLine.includes('late')) status = 'late';
+
+                // Extract times from this line
+                const times = bestMatchLine.match(timeRegex) || [];
+                // Sort times to ensure Time In is earlier (simple heuristic, or just take first two)
+                // Usually Time In is first column, Time Out is second
+                const timeIn = times[0] || '';
+                const timeOut = times[1] || '';
+
+                // Extract/Verify Course
+                let detectedCourse = null;
+                if (record.cadet_course) {
+                    // Simple check if the course acronym is in the line
+                    // We remove special chars from course code for regex
+                    const cleanCourse = record.cadet_course.replace(/[^a-zA-Z0-9]/g, '');
+                    if (cleanCourse.length > 0) {
+                        const courseRegex = new RegExp(`\\b${cleanCourse}\\b`, 'i');
+                        if (courseRegex.test(bestMatchLine.replace(/[^a-zA-Z0-9\s]/g, ''))) {
+                             detectedCourse = record.cadet_course;
+                        }
+                    }
+                }
+                
+                // If not found by record, try to find generic course pattern (optional enhancement)
+                // const genericCourseMatch = bestMatchLine.match(/\b(BS\w+|AB\w+)\b/i);
+                // if (!detectedCourse && genericCourseMatch) detectedCourse = genericCourseMatch[0];
+
+                matches.push({
+                    id: attendanceType === 'cadet' ? record.cadet_id : record.staff_id,
+                    name: `${record.last_name}, ${record.first_name}`,
+                    rank: record.rank, // Pass rank for display
+                    detectedStatus: status,
+                    timeIn,
+                    timeOut,
+                    detectedCourse,
+                    recordCourse: record.cadet_course,
+                    originalRecord: record
+                });
+            }
+        });
+
+        // Remove duplicates (in case multiple lines match the same person? Unlikely with this logic but possible)
+        const uniqueMatches = Array.from(new Map(matches.map(m => [m.id, m])).values());
+
+        setScanResults(uniqueMatches);
+        setIsProcessing(false);
+        
+        if (uniqueMatches.length === 0) {
+            toast.error("No matching names found in scan. Ensure the image is clear and contains names from the list.");
+        } else {
+            toast.success(`Found ${uniqueMatches.length} records! Review before confirming.`);
+        }
+    };
+
+    const handleConfirmScan = async () => {
+        if (scanResults.length === 0 || !selectedDay) return;
+
+        try {
+            const existingById = new Map();
+            attendanceRecords.forEach(r => {
+                const key = attendanceType === 'cadet' ? r.cadet_id : r.staff_id;
+                if (key) existingById.set(key, r);
+            });
+
+            const enriched = scanResults.map(match => {
+                const existing = existingById.get(match.id);
+                const hasConflict = existing && existing.status && existing.status !== match.detectedStatus;
+                return {
+                    match,
+                    existing,
+                    hasConflict
+                };
+            });
+
+            const conflicts = enriched.filter(e => e.hasConflict);
+            const ok = enriched.filter(e => !e.hasConflict);
+
+            const payloads = ok.map(e => {
+                return {
+                    dayId: selectedDay.id,
+                    [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: e.match.id,
+                    status: e.match.detectedStatus,
+                    remarks: `Smart Scan: ${e.match.timeIn ? 'In ' + e.match.timeIn : ''} ${e.match.timeOut ? 'Out ' + e.match.timeOut : ''}`.trim(),
+                    time_in: e.match.timeIn,
+                    time_out: e.match.timeOut
+                };
+            });
+
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            const promises = payloads.map(p => axios.post(endpoint, p));
+
+            await Promise.all(promises);
+
+            const appliedCount = payloads.length;
+            const conflictCount = conflicts.length;
+
+            toast.success(`Updated ${appliedCount} records${conflictCount ? `, ${conflictCount} flagged as conflicts` : ''}`);
+
+            selectDay(selectedDay, true);
+
+            setScanResults([]);
+            setCapturedImage(null);
+            setIsScannerOpen(false);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update some records from scan");
+        }
+    };
+
+    const handleMarkAttendance = async (id, status) => {
+        const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+        const currentRemarks = record?.remarks || '';
+        const currentTimeIn = record?.time_in || '';
+        const currentTimeOut = record?.time_out || '';
+
+        // Optimistic update
+        const updatedRecords = attendanceRecords.map(r => 
+            (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, status: status } : r
+        );
+        setAttendanceRecords(updatedRecords);
+        
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
+
+        try {
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status,
+                remarks: currentRemarks,
+                time_in: currentTimeIn,
+                time_out: currentTimeOut
+            };
+
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
+        } catch (err) {
+            console.error('Failed to save attendance', err);
+        }
+    };
+
+    const handleRemarkChange = async (id, remarks) => {
+        const updatedRecords = attendanceRecords.map(r => 
+            (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) ? { ...r, remarks: remarks } : r
+        );
+        setAttendanceRecords(updatedRecords);
+
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
+    };
+    
+    const saveRemark = async (id, remarks, status) => {
+        try {
+            const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status: status || record?.status || 'present',
+                remarks: record?.remarks || '',
+                time_in: record?.time_in || '',
+                time_out: record?.time_out || ''
+            };
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
+        } catch (err) {
+            console.error('Failed to save time fields', err);
+        }
+    };
+
+    const handleTimeChange = (id, field, value) => {
+        const updatedRecords = attendanceRecords.map(r => {
+            if (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id) {
+                return { ...r, [field]: value };
+            }
+            return r;
+        });
+        setAttendanceRecords(updatedRecords);
+
+        // Update cache
+        if (selectedDay) {
+            const cacheKey = `${selectedDay.id}_${attendanceType}`;
+            cacheSingleton('attendance_by_day', cacheKey, {
+                data: updatedRecords,
+                timestamp: Date.now()
+            }).catch(console.error);
+        }
+    };
+
+    const saveTime = async (id, field, value) => {
+        try {
+            const record = attendanceRecords.find(r => (attendanceType === 'cadet' ? r.cadet_id === id : r.staff_id === id));
+            const payload = {
+                dayId: selectedDay.id,
+                [attendanceType === 'cadet' ? 'cadetId' : 'staffId']: id,
+                status: record?.status || 'present',
+                remarks: record?.remarks || '',
+                time_in: field === 'time_in' ? value : (record?.time_in || ''),
+                time_out: field === 'time_out' ? value : (record?.time_out || '')
+            };
+            const endpoint = attendanceType === 'cadet' ? '/api/attendance/mark' : '/api/attendance/mark/staff';
+            await axios.post(endpoint, payload);
+
+            // Invalidate other modules
+            if (attendanceType === 'cadet') {
+                await cacheSingleton('grading', 'cadets_list', null);
+                await cacheSingleton('admin', 'cadets_list', null);
+            }
+        } catch (err) {
+            console.error('Failed to save time', err);
+        }
+    };
+
+    // Filter logic
+    const filteredRecords = attendanceRecords.filter(record => {
+        if (attendanceType === 'cadet') {
+            const matchesCompany = filterCompany ? record.company === filterCompany : true;
+            const matchesPlatoon = filterPlatoon ? record.platoon === filterPlatoon : true;
+            const matchesSearch = searchTerm ? 
+                `${record.last_name} ${record.first_name}`.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+            return matchesCompany && matchesPlatoon && matchesSearch;
+        } else {
+            // Staff Filter
+            const matchesSearch = searchTerm ? 
+                `${record.last_name} ${record.first_name}`.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+            return matchesSearch;
+        }
+    });
+
+    // Stats
+    const stats = attendanceRecords.reduce((acc, curr) => {
+        const status = curr.status || 'unmarked';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {});
+
+    const handleExport = () => {
+        if (!selectedDay) return;
+        const headers = ["Cadet/Staff ID", "Name", "Role/Rank", "Status", "Time In", "Time Out", "Remarks"];
+        const now = new Date();
+        const generatedAt = now.toLocaleString();
+        const totalRecords = filteredRecords.length;
+        // Resolve dynamic signatories based on cadet positions
+        let s1 = null;
+        let commander = null;
+        if (attendanceType === 'cadet') {
+            const byPosition = (r) => (r.corp_position || r.battalion || '').toLowerCase();
+            // Prefer Brigade S1; fallback to any S1
+            s1 = attendanceRecords.find(r => byPosition(r).includes('bde s1')) 
+                || attendanceRecords.find(r => byPosition(r).includes('s1'));
+            // Match Corp Commander
+            commander = attendanceRecords.find(r => {
+                const p = byPosition(r);
+                return p.includes('corp cmdr') || p.includes('corp commander') || p.includes('corps commander');
+            });
+        }
+        const preparedName = s1 ? `${s1.first_name} ${s1.last_name}` : 'VINCENT R URTAL';
+        const preparedRole = s1 ? `${s1.rank} • S1/Personnel Officer` : 'CDT LIEUTENANT COLONEL (1CL) • S1/Personnel Officer';
+        const certifiedName = commander ? `${commander.first_name} ${commander.last_name}` : 'JOHN MARK C LANGUIDO';
+        const certifiedRole = commander ? `${commander.rank} • Corp Commander` : 'CDT COLONEL (1CL) • Corp Commander';
+        
+        const headerBlock = [
+            `Report,Attendance,Day,"${selectedDay.title}"`,
+            `Generated,"${generatedAt}"`,
+            ''
+        ].join('\n');
+
+        const bodyBlock = [
+            headers.join(','),
+            ...filteredRecords.map(r => {
+                const name = `"${r.last_name}, ${r.first_name}"`;
+                const id = attendanceType === 'cadet' ? r.cadet_id : r.staff_id;
+                const role = attendanceType === 'cadet' ? r.rank : (r.role || 'Instructor');
+                return [
+                    id,
+                    name,
+                    role,
+                    r.status,
+                    r.time_in,
+                    r.time_out,
+                    `"${r.remarks || ''}"`
+                ].join(',');
+            })
+        ].join('\n');
+
+        const footerBlock = [
+            '',
+            `Prepared By,"${preparedName}","${preparedRole}"`,
+            `Certified Correct,"${certifiedName}","${certifiedRole}"`,
+            `Total Records,${totalRecords}`,
+        ].join('\n');
+
+        const csvContent = [headerBlock, bodyBlock, footerBlock].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_${selectedDay.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const handleRotcmisDrop = async (e) => {
+        e.preventDefault();
+        if (!selectedDay || rotcmisUploading) return;
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        await handleRotcmisFile(file);
+    };
+
+    const handleRotcmisFile = async (file) => {
+        if (!selectedDay || !file) return;
+        setRotcmisUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('dayId', selectedDay.id);
+            const res = await axios.post('/api/attendance/import-rotcmis-preview', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const preview = res.data || {};
+            setRotcmisPreview(preview);
+            const previewRecords = preview.previewRecords || [];
+            const autoSelected = previewRecords.filter(r => r.canApply && r.cadetId).map(r => r.index);
+            setRotcmisSelectedRecords(autoSelected);
+        } catch (err) {
+            console.error(err);
+            const msg = err.response?.data?.message || 'Failed to parse ROTCMIS export';
+            toast.error(msg);
+            setRotcmisPreview(null);
+            setRotcmisSelectedRecords([]);
+        } finally {
+            setRotcmisUploading(false);
+        }
+    };
+
+    const toggleRotcmisRecord = (index) => {
+        setRotcmisSelectedRecords(prev => {
+            if (prev.includes(index)) {
+                return prev.filter(i => i !== index);
+            }
+            return [...prev, index];
+        });
+    };
+
+    const bulkSelectRotcmis = (mode) => {
+        if (!rotcmisPreview || !Array.isArray(rotcmisPreview.previewRecords)) return;
+        if (mode === 'none') {
+            setRotcmisSelectedRecords([]);
+            return;
+        }
+        const records = rotcmisPreview.previewRecords;
+        if (mode === 'all') {
+            setRotcmisSelectedRecords(records.filter(r => r.cadetId).map(r => r.index));
+        } else if (mode === 'valid') {
+            setRotcmisSelectedRecords(records.filter(r => r.cadetId && r.canApply && !r.validation?.hasConflict).map(r => r.index));
+        } else if (mode === 'conflicts') {
+            setRotcmisSelectedRecords(records.filter(r => r.validation?.hasConflict).map(r => r.index));
+        }
+    };
+
+    const handleRotcmisCommit = async () => {
+        if (!selectedDay || !rotcmisPreview || !Array.isArray(rotcmisPreview.previewRecords)) return;
+        if (rotcmisSelectedRecords.length === 0) {
+            toast.error('Select at least one record to apply');
+            return;
+        }
+        const recordsToSend = rotcmisPreview.previewRecords
+            .filter(r => rotcmisSelectedRecords.includes(r.index) && r.cadetId)
+            .map(r => ({
+                cadetId: r.cadetId,
+                status: r.status,
+                remarks: r.remarks || '',
+                time_in: r.time_in || null,
+                time_out: r.time_out || null
+            }));
+        if (recordsToSend.length === 0) {
+            toast.error('No applicable records selected');
+            return;
+        }
+        try {
+            const res = await axios.post('/api/attendance/import-rotcmis-commit', {
+                dayId: selectedDay.id,
+                records: recordsToSend
+            });
+            const msg = res.data?.message || 'ROTCMIS import applied';
+            toast.success(msg);
+            setImportSummary({
+                message: msg,
+                summary: res.data?.summary || null,
+                errors: res.data?.errors || [],
+                at: new Date().toISOString()
+            });
+            await selectDay(selectedDay, true);
+            setIsRotcmisModalOpen(false);
+            setRotcmisPreview(null);
+            setRotcmisSelectedRecords([]);
+        } catch (err) {
+            console.error(err);
+            const msg = err.response?.data?.message || 'Failed to apply ROTCMIS import';
+            toast.error(msg);
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-900 p-4 rounded shadow gap-4">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">Attendance & Excuses</h1>
+                <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
+                    <button 
+                        onClick={() => setViewMode('attendance')}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'attendance' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                        <Calendar size={18} className="mr-2" />
+                        <span className="whitespace-nowrap">Training Days</span>
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('excuse')}
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                            viewMode === 'excuse' 
+                                ? 'bg-[var(--primary-color)] text-white' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                        <FileText size={18} className="mr-2" />
+                        <span className="whitespace-nowrap">Excuse Letters</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Smart Scanner Modal */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl h-full md:h-[90vh] flex flex-col md:flex-row overflow-hidden relative">
+                        <button onClick={() => setIsScannerOpen(false)} className="absolute top-4 right-4 z-50 text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-80">
+                            <X size={24} />
+                        </button>
+
+                        {/* Camera Section */}
+                        <div className="w-full md:w-1/2 bg-black flex flex-col relative h-[60vh] md:h-auto md:flex-1">
+                            <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay playsInline muted 
+                                    className={`absolute inset-0 w-full h-full object-cover ${capturedImage ? 'hidden' : ''}`}
+                                />
+                                <canvas ref={canvasRef} className="hidden" />
+                                {capturedImage && (
+                                    <img src={capturedImage} alt="Scan" className="absolute inset-0 w-full h-full object-contain" />
+                                )}
+                                
+                                {!isCameraActive && !capturedImage && (
+                                    <div className="text-white text-center">
+                                        <Camera size={48} className="mx-auto mb-2 opacity-50" />
+                                        <p>Camera is inactive</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="p-4 bg-gray-900 flex justify-center gap-4">
+                                {!isCameraActive ? (
+                                    <button 
+                                        onClick={startCamera}
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90"
+                                    >
+                                        <Camera size={20} /> Start Camera
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={captureAndScan}
+                                        disabled={isProcessing}
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
+                                    >
+                                        {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
+                                        {isProcessing ? 'Processing...' : 'Capture & Scan'}
+                                    </button>
+                                )}
+                                {capturedImage && (
+                                    <button 
+                                        onClick={() => { setCapturedImage(null); setScanResults([]); startCamera(); }}
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full"
+                                    >
+                                        Retake
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Results Section */}
+                        <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 flex flex-col h-[40vh] md:h-auto md:flex-1">
+                            <div className="p-4 border-b bg-white dark:bg-gray-900 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Scan Results</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {scanResults.length > 0 ? `Found ${scanResults.length} records matching current list.` : 'Capture an attendance sheet to detect names.'}
+                                </p>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                {scanResults.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                                        <FileText size={48} className="mb-2 opacity-20" />
+                                        <p>No records detected yet</p>
+                                    </div>
+                                ) : (
+                                    scanResults.map((res, idx) => (
+                                        <div key={idx} className="bg-white p-3 rounded shadow-sm border flex flex-col gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-bold text-gray-800">{res.name}</div>
+                                                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                        <span>{res.rank}</span>
+                                                        {res.recordCourse && (
+                                                            <span className={`px-1 rounded ${res.detectedCourse ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {res.detectedCourse ? res.detectedCourse : `Mismatch: ${res.recordCourse}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className={`px-2 py-0.5 text-xs rounded font-bold uppercase ${
+                                                    res.detectedStatus === 'present' ? 'bg-green-100 text-green-800' : 
+                                                    res.detectedStatus === 'absent' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {res.detectedStatus}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 text-sm text-gray-600">
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">IN</span>
+                                                    {res.timeIn || '--:--'}
+                                                </div>
+                                                <div className="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                                    <span className="text-xs text-gray-400 mr-1">OUT</span>
+                                                    {res.timeOut || '--:--'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {scanResults.length > 0 && (
+                                <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
+                                    <button 
+                                        onClick={handleConfirmScan}
+                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2"
+                                    >
+                                        <CheckCircle size={20} />
+                                        Confirm & Update {scanResults.length} Records
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isRotcmisModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                            <div className="flex items-center gap-2">
+                                <Layers size={18} className="text-[var(--primary-color)]" />
+                                <div>
+                                    <div className="font-semibold text-gray-800 dark:text-gray-100">Import ROTCMIS Export</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        Drag and drop ROTCMIS export files for QR-validated batch processing.
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setIsRotcmisModalOpen(false); setRotcmisPreview(null); setRotcmisSelectedRecords([]); }}
+                                className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                            <div className="md:w-1/3 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+                                <div
+                                    className="m-4 flex-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-center p-4 cursor-pointer hover:border-[var(--primary-color)] hover-highlight"
+                                    onDrop={handleRotcmisDrop}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onClick={() => rotcmisFileInputRef.current?.click()}
+                                >
+                                    <input
+                                        ref={rotcmisFileInputRef}
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg,.bmp,.webp,.gif,.tiff"
+                                        className="hidden"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            await handleRotcmisFile(file);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                    <FileText size={32} className="text-gray-400 mb-2" />
+                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                                        {rotcmisUploading ? 'Uploading and parsing...' : 'Drop ROTCMIS export here'}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Supported: Excel, CSV, PDF, Word, Images
+                                    </div>
+                                </div>
+                                <div className="px-4 pb-4 space-y-3 text-xs text-gray-600 dark:text-gray-300">
+                                    <div className="font-semibold text-gray-700 dark:text-gray-100">Summary Detail</div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            className={`px-2 py-1 rounded border text-xs ${rotcmisDetailLevel === 'minimal' ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)]' : 'border-gray-300 dark:border-gray-700'}`}
+                                            onClick={() => setRotcmisDetailLevel('minimal')}
+                                        >
+                                            Minimal
+                                        </button>
+                                        <button
+                                            className={`px-2 py-1 rounded border text-xs ${rotcmisDetailLevel === 'standard' ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)]' : 'border-gray-300 dark:border-gray-700'}`}
+                                            onClick={() => setRotcmisDetailLevel('standard')}
+                                        >
+                                            Standard
+                                        </button>
+                                        <button
+                                            className={`px-2 py-1 rounded border text-xs ${rotcmisDetailLevel === 'comprehensive' ? 'bg-[var(--primary-color)] text-white border-[var(--primary-color)]' : 'border-gray-300 dark:border-gray-700'}`}
+                                            onClick={() => setRotcmisDetailLevel('comprehensive')}
+                                        >
+                                            Full
+                                        </button>
+                                    </div>
+                                    {rotcmisPreview && (
+                                        <div className="space-y-1">
+                                            <div className="text-xs">
+                                                Total: {rotcmisPreview.summary?.total || 0}
+                                            </div>
+                                            <div className="text-xs">
+                                                Mappable: {rotcmisPreview.summary?.mappable || 0} • Unmapped: {rotcmisPreview.summary?.unmapped || 0}
+                                            </div>
+                                            {rotcmisDetailLevel !== 'minimal' && (
+                                                <>
+                                                    <div className="text-xs">
+                                                        Duplicates: {rotcmisPreview.summary?.duplicateCount || 0} • Conflicts: {rotcmisPreview.summary?.conflictCount || 0}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        QR Invalid: {rotcmisPreview.summary?.qrInvalidCount || 0}
+                                                    </div>
+                                                </>
+                                            )}
+                                            {rotcmisDetailLevel === 'comprehensive' && (
+                                                <div className="text-xs">
+                                                    Data Quality Score: {rotcmisPreview.summary?.dataQualityScore ?? 0}%
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="md:w-2/3 flex flex-col">
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                                        {rotcmisPreview
+                                            ? `Select which ROTCMIS entries to apply to ${selectedDay?.title || ''}.`
+                                            : 'No preview yet. Drop a file on the left to start.'}
+                                    </div>
+                                    {rotcmisPreview && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700"
+                                                onClick={() => bulkSelectRotcmis('none')}
+                                            >
+                                                Clear
+                                            </button>
+                                            <button
+                                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700"
+                                                onClick={() => bulkSelectRotcmis('valid')}
+                                            >
+                                                Valid only
+                                            </button>
+                                            <button
+                                                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700"
+                                                onClick={() => bulkSelectRotcmis('all')}
+                                            >
+                                                All mapped
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+                                    {rotcmisPreview && Array.isArray(rotcmisPreview.previewRecords) && rotcmisPreview.previewRecords.length > 0 ? (
+                                        <table className="min-w-full text-xs">
+                                            <thead className="bg-gray-100 dark:bg-gray-800">
+                                                <tr>
+                                                    <th className="px-2 py-1 text-left">Apply</th>
+                                                    <th className="px-2 py-1 text-left">Name</th>
+                                                    <th className="px-2 py-1 text-left">Student ID</th>
+                                                    <th className="px-2 py-1 text-left">Status</th>
+                                                    <th className="px-2 py-1 text-left">Time In</th>
+                                                    <th className="px-2 py-1 text-left">Time Out</th>
+                                                    {rotcmisDetailLevel !== 'minimal' && <th className="px-2 py-1 text-left">Flags</th>}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {rotcmisPreview.previewRecords.map((r) => {
+                                                    const selected = rotcmisSelectedRecords.includes(r.index);
+                                                    const hasConflict = r.validation?.hasConflict;
+                                                    const isDuplicate = r.validation?.isDuplicate;
+                                                    const unmapped = !r.cadetId;
+                                                    return (
+                                                        <tr
+                                                            key={r.index}
+                                                            className={`${selected ? 'bg-green-50 dark:bg-green-900/20' : ''} ${hasConflict ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${unmapped ? 'opacity-70' : ''}`}
+                                                        >
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    disabled={!r.cadetId}
+                                                                    checked={selected}
+                                                                    onChange={() => toggleRotcmisRecord(r.index)}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1">
+                                                                <div className="font-medium">{r.name || 'Unknown'}</div>
+                                                            </td>
+                                                            <td className="px-2 py-1">{r.studentId || '-'}</td>
+                                                            <td className="px-2 py-1 capitalize">{r.status}</td>
+                                                            <td className="px-2 py-1">{r.time_in || '-'}</td>
+                                                            <td className="px-2 py-1">{r.time_out || '-'}</td>
+                                                            {rotcmisDetailLevel !== 'minimal' && (
+                                                                <td className="px-2 py-1">
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {unmapped && <span className="px-1 rounded bg-red-100 text-red-800 text-[10px]">Unmapped</span>}
+                                                                        {isDuplicate && <span className="px-1 rounded bg-yellow-100 text-yellow-800 text-[10px]">Duplicate</span>}
+                                                                        {hasConflict && <span className="px-1 rounded bg-orange-100 text-orange-800 text-[10px]">Conflict</span>}
+                                                                        {r.qrValid === false && <span className="px-1 rounded bg-red-100 text-red-800 text-[10px]">QR invalid</span>}
+                                                                        {r.qrValid && <span className="px-1 rounded bg-green-100 text-green-800 text-[10px]">QR ok</span>}
+                                                                    </div>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+                                            Waiting for ROTCMIS export file.
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex justify-between items-center">
+                                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                                        Selected: {rotcmisSelectedRecords.length}
+                                    </div>
+                                    <button
+                                        onClick={handleRotcmisCommit}
+                                        className="px-4 py-2 rounded bg-[var(--primary-color)] text-white text-sm font-semibold disabled:opacity-60"
+                                        disabled={!rotcmisPreview || rotcmisSelectedRecords.length === 0}
+                                    >
+                                        Apply Selected
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {viewMode === 'excuse' ? (
+                <ExcuseLetterManager />
+            ) : (
+                <div className="flex flex-col md:flex-row h-full md:h-[calc(100vh-180px)] gap-6">
+                    {/* Sidebar List */}
+                    <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedDay ? 'hidden md:flex' : ''}`}>
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-800 rounded-t">
+                            <h2 className="font-bold text-lg text-gray-700 dark:text-gray-100">Training Days</h2>
+                            <button 
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90"
+                                title="Add Training Day"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                            {days.map(day => (
+                                <div 
+                                    key={day.id}
+                                    onClick={() => selectDay(day)}
+                                    className={`p-4 rounded border cursor-pointer transition ${
+                                        selectedDay?.id === day.id 
+                                            ? 'bg-[var(--primary-color)]/10 border-[var(--primary-color)]' 
+                                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold text-gray-800 dark:text-gray-100">{day.title}</div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
+                                                <Calendar size={14} className="mr-1" />
+                                                {new Date(day.date).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => handleDeleteDay(day.id, e)}
+                                            className="text-gray-400 hover:text-red-600"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {days.length === 0 && <div className="p-4 text-center text-gray-500 dark:text-gray-400">No training days found.</div>}
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
+                        {selectedDay ? (
+                            <>
+                        <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
+                            <div className="flex flex-col md:flex-row justify-between items-start mb-4">
+                                <div>
+                                    <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 dark:text-gray-400 mb-2 flex items-center text-sm">
+                                        <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
+                                    </button>
+                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1">{selectedDay.description || 'No description'}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleExport}
+                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition"
+                                            title="Export CSV"
+                                        >
+                                            <Download size={16} className="mr-2" /> Export
+                                        </button>
+                                        <input 
+                                            ref={fileInputRef}
+                                            type="file" 
+                                            accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.bmp,.webp,.gif,.tiff"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                if (!selectedDay) return;
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setIsImporting(true);
+                                                try {
+                                                    const formData = new FormData();
+                                                    formData.append('file', file);
+                                                    formData.append('dayId', selectedDay.id);
+                                                    const res = await axios.post('/api/attendance/import', formData, {
+                                                        headers: { 'Content-Type': 'multipart/form-data' }
+                                                    });
+                                                    const msg = res.data?.message || 'Import complete';
+                                                    toast.success(msg);
+                                                    setImportSummary({
+                                                        message: msg,
+                                                        summary: res.data?.summary || null,
+                                                        errors: res.data?.errors || [],
+                                                        at: new Date().toISOString()
+                                                    });
+                                                    selectDay(selectedDay, true);
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    const msg = err.response?.data?.message || 'Failed to import file';
+                                                    toast.error(msg);
+                                                    setImportSummary({
+                                                        message: msg,
+                                                        summary: null,
+                                                        errors: err.response?.data?.errors || [],
+                                                        at: new Date().toISOString()
+                                                    });
+                                                } finally {
+                                                    setIsImporting(false);
+                                                    if (e.target) e.target.value = '';
+                                                }
+                                            }}
+                                        />
+                                        <button 
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition disabled:opacity-50"
+                                            disabled={!selectedDay || isImporting}
+                                            title="Import ROTCMIS PDF or scanned photo"
+                                        >
+                                            <FileText size={16} className="mr-2" /> {isImporting ? 'Importing...' : 'Import'}
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsScannerOpen(true)}
+                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition"
+                                        >
+                                            <Camera size={16} className="mr-2" /> Smart Scan
+                                        </button>
+                                        <button
+                                            onClick={() => setIsRotcmisModalOpen(true)}
+                                            className="flex items-center text-sm bg-gray-900 text-white px-3 py-1 rounded hover:bg-black transition"
+                                        >
+                                            <Layers size={16} className="mr-2" /> ROTCMIS Import
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 text-sm">
+                                        <div className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded"><CheckCircle size={16} className="mr-1"/> Present: {stats.present || 0}</div>
+                                        <div className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded"><XCircle size={16} className="mr-1"/> Absent: {stats.absent || 0}</div>
+                                        <div className="flex items-center text-yellow-700 bg-yellow-50 px-2 py-1 rounded"><Clock size={16} className="mr-1"/> Late: {stats.late || 0}</div>
+                                        <div className="flex items-center text-blue-700 bg-blue-50 px-2 py-1 rounded"><AlertTriangle size={16} className="mr-1"/> Excused: {stats.excused || 0}</div>
+                                    </div>
+                                    {importSummary && (
+                                        <div className="mt-2 w-full md:w-auto bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs text-gray-700 dark:text-gray-200 max-w-md hover-highlight">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-semibold">Last Import</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setImportSummary(null)}
+                                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                            <div className="mb-1">{importSummary.message}</div>
+                                            {importSummary.summary && (
+                                                <div className="flex flex-wrap gap-2 text-[11px]">
+                                                    <span className="text-green-700 dark:text-green-400">Success: {importSummary.summary.successCount}</span>
+                                                    <span className="text-yellow-700 dark:text-yellow-400">Skipped: {importSummary.summary.skippedCount}</span>
+                                                    <span className="text-red-700 dark:text-red-400">Failed: {importSummary.summary.failCount}</span>
+                                                </div>
+                                            )}
+                                            {importSummary.errors && importSummary.errors.length > 0 && (
+                                                <ul className="mt-1 text-[11px] max-h-24 overflow-y-auto list-disc list-inside">
+                                                    {importSummary.errors.slice(0, 3).map((errText, idx) => (
+                                                        <li key={idx}>{errText}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Filters */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div className="md:col-span-3 flex justify-center mb-2">
+                                    <div className="bg-gray-200 dark:bg-gray-800 rounded p-1 flex">
+                                        <button
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'cadet' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
+                                            onClick={() => setAttendanceType('cadet')}
+                                        >
+                                            Cadets
+                                        </button>
+                                        <button
+                                            className={`px-4 py-1 rounded text-sm font-semibold transition ${
+                                                attendanceType === 'staff' 
+                                                    ? 'bg-white dark:bg-gray-900 shadow text-[var(--primary-color)]' 
+                                                    : 'text-gray-600 dark:text-gray-300'
+                                            }`}
+                                            onClick={() => setAttendanceType('staff')}
+                                        >
+                                            Training Staff
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <input 
+                                    placeholder="Search Name..." 
+                                    className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                                {attendanceType === 'cadet' && (
+                                    <>
+                                        <input 
+                                            placeholder="Company (A/B/C)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                            value={filterCompany}
+                                            onChange={e => setFilterCompany(e.target.value)}
+                                        />
+                                        <input 
+                                            placeholder="Platoon (1/2/3)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                            value={filterPlatoon}
+                                            onChange={e => setFilterPlatoon(e.target.value)}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {filteredRecords.length === 0 ? (
+                                <div className="text-center text-gray-500 dark:text-gray-400 py-10">
+                                    No records found matching filters.
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {filteredRecords.map(record => (
+                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition border-gray-200 dark:border-gray-700">
+                                            <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
+                                                <div className="flex items-center">
+                                                    <span className="font-bold text-gray-800 dark:text-gray-100 mr-2">
+                                                        {record.last_name}, {record.first_name}
+                                                    </span>
+                                                    {attendanceType === 'cadet' && (
+                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                                                            {record.company}/{record.platoon}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-300 flex flex-wrap gap-4 mt-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">In:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                                            value={record.time_in || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs uppercase">Out:</span>
+                                                        <input 
+                                                            type="time" 
+                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                                            value={record.time_out || ''}
+                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <input 
+                                                        className="border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs w-32 bg-transparent dark:text-gray-100"
+                                                        placeholder="Remarks..."
+                                                        value={record.remarks || ''}
+                                                        onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
+                                                        onBlur={(e) => saveRemark(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value, record.status)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                        <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
+                                                    title="Present"
+                                                >
+                                                    <CheckCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'late')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'late' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'}`}
+                                                    title="Late"
+                                                >
+                                                    <Clock size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'absent')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'absent' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`}
+                                                    title="Absent"
+                                                >
+                                                    <XCircle size={20} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'excused')}
+                                                    className={`p-2 rounded-full transition ${record.status === 'excused' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'}`}
+                                                    title="Excused"
+                                                >
+                                                    <AlertTriangle size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                                <Calendar size={64} className="mb-4 opacity-20" />
+                                <p className="text-lg">Select a training day to view attendance</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            
+            {/* Create Day Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded p-6 w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-gray-100">New Training Day</h3>
+                        <form onSubmit={handleCreateDay} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Date</label>
+                                <input 
+                                    type="date" required
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.date}
+                                    onChange={e => setCreateForm({...createForm, date: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
+                                <input 
+                                    type="text" required
+                                    placeholder="e.g. Drill Day 1"
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.title}
+                                    onChange={e => setCreateForm({...createForm, title: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
+                                <textarea 
+                                    className="w-full border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                    value={createForm.description}
+                                    onChange={e => setCreateForm({...createForm, description: e.target.value})}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                                >
+                                    Create Day
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Attendance;
