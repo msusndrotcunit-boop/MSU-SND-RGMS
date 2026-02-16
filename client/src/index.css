@@ -108,6 +108,41 @@ body {
     transform: translateY(-1px) scale(1.02);
     filter: saturate(1.05);
   }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+  @media (min-width: 768px) {
+    .btn {
+      min-height: 40px;
+    }
+  }
+  .btn--sm { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+  .btn--md { padding: 0.625rem 1rem; font-size: 1rem; }
+  .btn--lg { padding: 0.75rem 1.25rem; font-size: 1.125rem; }
+  .btn--block { width: 100%; }
+  .btn--primary { background-color: #16a34a; color: #ffffff; }
+  .btn--primary:hover { background-color: #15803d; }
+  .btn--secondary { background-color: #e5e7eb; color: #111827; }
+  .btn--secondary:hover { background-color: #d1d5db; }
+  .btn--ghost { background-color: transparent; color: #374151; }
+  .btn--ghost:hover { background-color: rgba(0,0,0,0.06); }
+  .nav-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+  }
   .hover-icon-highlight {
     transition: all 150ms ease-in-out;
   }
@@ -288,4 +323,41 @@ header img {
     width: 1.35rem;
     height: 1.35rem;
   }
+}
+
+.mobile-scroll-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding: 0.5rem 0.25rem;
+}
+.mobile-scroll-nav .pill {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  line-height: 1;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.scroll-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+}
+.scroll-fade.left {
+  left: 0;
+  background: linear-gradient(90deg, rgba(0,0,0,0.25), rgba(0,0,0,0));
+}
+.scroll-fade.right {
+  right: 0;
+  background: linear-gradient(270deg, rgba(0,0,0,0.25), rgba(0,0,0,0));
 }

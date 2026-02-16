@@ -321,6 +321,34 @@ const AdminLayout = () => {
                         </div>
                     </div>
                 </div>
+                <div className="relative md:hidden border-b border-white/10">
+                    <div className="scroll-fade left"></div>
+                    <div className="scroll-fade right"></div>
+                    <div className="mobile-scroll-nav">
+                        {[
+                            ...navItems.flatMap(i => i.children ? i.children.map(c => ({ path: c.path, label: c.label })) : [{ path: i.path, label: i.label }]),
+                        ].map(it => (
+                            <Link
+                                key={`m-${it.path}`}
+                                to={it.path}
+                                onClick={() => setIsSidebarOpen(false)}
+                                className={clsx(
+                                    "pill bg-white/10 text-white/90 hover:bg-white/20",
+                                    location.pathname === it.path && "bg-black/30 text-white"
+                                )}
+                            >
+                                {it.label}
+                            </Link>
+                        ))}
+                        <button
+                            onClick={handleLogout}
+                            className="pill bg-red-600 text-white hover:opacity-90"
+                            type="button"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {navItems.map((item) => {
                         const Icon = item.icon;
@@ -334,7 +362,7 @@ const AdminLayout = () => {
                                     <button
                                         onClick={() => toggleMenu(item.label)}
                                         className={clsx(
-                                            "w-full flex items-center justify-between p-3 rounded transition hover-highlight",
+                                            "w-full nav-link justify-between transition hover-highlight",
                                             isActiveParent ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
                                     >
@@ -355,7 +383,7 @@ const AdminLayout = () => {
                                                         to={child.path}
                                                         onClick={() => setIsSidebarOpen(false)}
                                                         className={clsx(
-                                                            "block p-2 text-sm rounded transition hover-highlight",
+                                                            "nav-link text-sm transition hover-highlight",
                                                             isChildActive ? "text-white font-medium bg-black/20" : "text-white/80 hover:text-white"
                                                         )}
                                                     >
@@ -376,7 +404,7 @@ const AdminLayout = () => {
                                 to={item.path}
                                 onClick={() => setIsSidebarOpen(false)}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    "nav-link space-x-3 transition hover-highlight",
                                     isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                 )}
                             >

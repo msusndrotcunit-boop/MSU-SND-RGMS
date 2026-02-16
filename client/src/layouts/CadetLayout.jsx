@@ -341,13 +341,47 @@ const CadetLayout = () => {
                     </div>
                     {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
                 </div>
+                
+                <div className="relative md:hidden border-b border-white/10">
+                    <div className="scroll-fade left"></div>
+                    <div className="scroll-fade right"></div>
+                    <div className="mobile-scroll-nav">
+                        {[
+                            { path: "/cadet/home", label: "Home" },
+                            { path: "/cadet/dashboard", label: "My Portal" },
+                            { path: "/cadet/achievements", label: "Achievements" },
+                            { path: "/cadet/ask-admin", label: "Ask Admin" },
+                            { path: "/cadet/about", label: "About" },
+                            { path: "/cadet/settings", label: "Settings" },
+                        ].map(it => (
+                            <Link
+                                key={`m-${it.path}`}
+                                to={it.path}
+                                onClick={() => setIsSidebarOpen(false)}
+                                className={clsx(
+                                    "pill bg-white/10 text-white/90 hover:bg-white/20",
+                                    location.pathname === it.path && "bg-black/30 text-white"
+                                )}
+                            >
+                                {it.label}
+                            </Link>
+                        ))}
+                        <button
+                            onClick={handleLogout}
+                            className="pill bg-red-600 text-white hover:opacity-90"
+                            type="button"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <Link
                         to="/cadet/home"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/home' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -358,7 +392,7 @@ const CadetLayout = () => {
                         to="/cadet/dashboard"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/dashboard' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -369,7 +403,7 @@ const CadetLayout = () => {
                         to="/cadet/achievements"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/achievements' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -380,7 +414,7 @@ const CadetLayout = () => {
                         to="/cadet/ask-admin"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/ask-admin' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -391,7 +425,7 @@ const CadetLayout = () => {
                         to="/cadet/about"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/about' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
@@ -402,7 +436,7 @@ const CadetLayout = () => {
                         to="/cadet/settings"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/cadet/settings' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
                         )}
                     >
