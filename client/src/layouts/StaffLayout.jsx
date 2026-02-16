@@ -473,9 +473,10 @@ const StaffLayout = () => {
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4"
+                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target p-2"
+                            style={{ minHeight: '48px', minWidth: '48px' }}
                         >
-                            <Menu size={24} />
+                            <Menu size={28} />
                         </button>
                         <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>

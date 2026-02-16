@@ -194,10 +194,10 @@ const MobileNavigation = ({
         <button
           onClick={toggleSidebar}
           className="md:hidden p-2 text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white touch-target"
-          style={{ minHeight: '44px', minWidth: '44px' }}
+          style={{ minHeight: '48px', minWidth: '48px' }}
           aria-label="Toggle navigation menu"
         >
-          <Menu size={24} />
+          <Menu size={28} />
         </button>
       )}
 
@@ -327,10 +327,10 @@ export const MobileHeader = ({
           <button
             onClick={onMenuClick}
             className="md:hidden p-2 text-gray-600 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white touch-target"
-            style={{ minHeight: '44px', minWidth: '44px' }}
+            style={{ minHeight: '48px', minWidth: '48px' }}
             aria-label="Toggle navigation menu"
           >
-            <Menu size={24} />
+            <Menu size={28} />
           </button>
         )}
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
