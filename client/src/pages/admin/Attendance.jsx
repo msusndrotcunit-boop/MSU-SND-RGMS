@@ -865,7 +865,7 @@ const Attendance = () => {
                                                     return (
                                                         <tr key={i} className={err ? 'bg-red-50 dark:bg-red-900/20' : (r.isDuplicateInBatch ? 'bg-yellow-50 dark:bg-yellow-900/20' : '')}>
                                                             <td className="p-2">
-                                                                <input type="checkbox" checked={rotcSelected.has(i)} onChange={() => toggleRotcRow(i)} />
+                                                                <input type="checkbox" className="h-3 w-3" checked={rotcSelected.has(i)} onChange={() => toggleRotcRow(i)} />
                                                             </td>
                                                             <td className="p-2 font-mono text-sm">{r.student_id || '—'}</td>
                                                             <td className="p-2 text-sm">{r.name || '—'}</td>

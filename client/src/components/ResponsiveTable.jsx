@@ -124,7 +124,7 @@ const ResponsiveTable = ({
               type="checkbox"
               checked={isAllSelected}
               onChange={(e) => handleSelectAll(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 touch-target"
+              className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
             />
           </th>
         )}
@@ -132,11 +132,12 @@ const ResponsiveTable = ({
           <th
             key={column.key}
             className={clsx(
-              "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider",
+              column.headerClassName || "px-4 py-3",
+              "text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider",
               sortable && column.sortable !== false && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none",
               column.align === 'center' && "text-center",
               column.align === 'right' && "text-right",
-              column.headerClassName
+              column.headerClassName && column.headerClassName
             )}
             onClick={() => column.sortable !== false && handleSort(column.key)}
           >
@@ -194,7 +195,7 @@ const ResponsiveTable = ({
             checked={selectedItems.includes(item.id || item.key)}
             onChange={() => handleSelectItem(item.id || item.key)}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 touch-target"
+            className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
         </td>
       )}
@@ -202,10 +203,11 @@ const ResponsiveTable = ({
         <td
           key={column.key}
           className={clsx(
-            "px-4 py-3 text-sm text-gray-900 dark:text-gray-100",
+            column.cellClassName || "px-4 py-3",
+            "text-sm text-gray-900 dark:text-gray-100",
             column.align === 'center' && "text-center",
             column.align === 'right' && "text-right",
-            column.cellClassName
+            column.cellClassName && column.cellClassName
           )}
         >
           {column.render ? column.render(item[column.key], item) : item[column.key]}
@@ -250,13 +252,13 @@ const ResponsiveTable = ({
       {(selectable || actions.length > 0) && (
         <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700">
           {selectable && (
-            <label className="flex items-center space-x-2 cursor-pointer touch-target" style={{ minHeight: '44px' }}>
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectedItems.includes(item.id || item.key)}
                 onChange={() => handleSelectItem(item.id || item.key)}
                 onClick={(e) => e.stopPropagation()}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
               <span className="text-sm text-gray-600 dark:text-gray-400">Select</span>
             </label>

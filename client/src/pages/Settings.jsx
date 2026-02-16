@@ -133,7 +133,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.notifications.emailAlerts}
                                 onChange={(e) => handleChange('notifications', 'emailAlerts', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Email Alerts</span>
                         </label>
@@ -142,7 +142,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.notifications.pushNotifications}
                                 onChange={(e) => handleChange('notifications', 'pushNotifications', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                className="form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500"
                             />
                             <span className="text-gray-700">Push Notifications</span>
                         </label>
@@ -151,7 +151,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.notifications.activityUpdates}
                                 onChange={(e) => handleChange('notifications', 'activityUpdates', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                className="form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500"
                             />
                             <span className="text-gray-700">Activity Updates</span>
                         </label>
@@ -170,7 +170,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.display.darkMode}
                                 onChange={(e) => handleChange('display', 'darkMode', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Dark Mode (Beta)</span>
                         </label>
@@ -179,7 +179,7 @@ const Settings = ({ role }) => {
                                 type="checkbox"
                                 checked={localSettings.display.compactMode}
                                 onChange={(e) => handleChange('display', 'compactMode', e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
                             />
                             <span className="text-gray-700">Compact Mode</span>
                         </label>
