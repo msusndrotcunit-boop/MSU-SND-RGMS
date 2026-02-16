@@ -64,13 +64,19 @@ const CadetDashboard = () => {
                 return;
             }
             try {
-                // 1. Try Cache First & Render Immediately
+                // Always fetch latest grades first for real-time sync
                 let hasCachedData = false;
-                
-                const cachedGrades = await getSingleton('dashboard', 'cadet_grades');
-                if (cachedGrades) {
-                    setGrades(cachedGrades.data);
-                    hasCachedData = true;
+                try {
+                    const fresh = await axios.get('/api/cadet/my-grades');
+                    setGrades(fresh.data);
+                    await cacheSingleton('dashboard', 'cadet_grades', { data: fresh.data, timestamp: Date.now() });
+                } catch (e) {
+                    // Fallback to cached grades if network fails
+                    const cachedGrades = await getSingleton('dashboard', 'cadet_grades');
+                    if (cachedGrades) {
+                        setGrades(cachedGrades.data);
+                        hasCachedData = true;
+                    }
                 }
 
                 const cachedLogs = await getSingleton('dashboard', 'cadet_logs');
@@ -98,29 +104,6 @@ const CadetDashboard = () => {
                 const CACHE_TTL = 5 * 60 * 1000;
 
                 const promises = [];
-
-                promises.push(
-                    axios.get('/api/cadet/my-grades').then(async res => {
-                        setGrades(res.data);
-                        await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: now });
-                    }).catch(e => {
-                        console.warn("Grades fetch failed", e);
-                        setGrades({
-                            attendanceScore: 0,
-                            attendance_present: 0,
-                            aptitudeScore: 0,
-                            merit_points: 0,
-                            demerit_points: 0,
-                            subjectScore: 0,
-                            prelim_score: 0,
-                            midterm_score: 0,
-                            final_score: 0,
-                            finalGrade: 0,
-                            transmutedGrade: '5.00',
-                            remarks: 'No Data'
-                        });
-                    })
-                );
 
                 const shouldFetchLogs = (!cachedLogs || (now - cachedLogs.timestamp > CACHE_TTL) || (cachedLogs && (!cachedLogs.data || (Array.isArray(cachedLogs.data) ? cachedLogs.data.length === 0 : true))));
                 if (shouldFetchLogs) {

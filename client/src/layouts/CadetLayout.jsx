@@ -356,9 +356,13 @@ const CadetLayout = () => {
                         {renderProfileImage()}
                     </Link>
                     <div className="font-semibold text-sm text-yellow-400">
-                        {profile ? `${profile.rank} ${profile.last_name}` : (user?.username || 'Cadet')}
+                        {profile ? `${profile.rank || ''} ${profile.first_name || ''} ${profile.last_name || ''}`.trim() : (user?.username || 'Cadet')}
                     </div>
-                    {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
+                    {profile && (
+                        <>
+                            <div className="text-xs text-green-200">{profile.email || user?.username}</div>
+                        </>
+                    )}
                 </div>
                 
                 
