@@ -20,6 +20,7 @@ const AdminCadets = lazy(() => import('./pages/admin/Cadets'));
 const AdminArchivedCadets = lazy(() => import('./pages/admin/ArchivedCadets'));
 const AdminGrading = lazy(() => import('./pages/admin/Grading'));
 const AdminAttendance = lazy(() => import('./pages/admin/Attendance'));
+const AdminImportRotcmis = lazy(() => import('./pages/admin/ImportRotcmis'));
 const AdminActivities = lazy(() => import('./pages/admin/Activities'));
 const AdminAchievements = lazy(() => import('./pages/admin/Achievements'));
 const AdminDataAnalysis = lazy(() => import('./pages/admin/DataAnalysis'));
@@ -83,6 +84,7 @@ function App() {
                 <Route path="staff" element={<AdminStaff />} />
                 <Route path="grading" element={<AdminGrading />} />
                 <Route path="attendance" element={<AdminAttendance />} />
+                <Route path="import-rotcmis" element={<AdminImportRotcmis />} />
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
                 <Route path="demographics-analytics" element={<AdminDemographicsAnalytics />} />

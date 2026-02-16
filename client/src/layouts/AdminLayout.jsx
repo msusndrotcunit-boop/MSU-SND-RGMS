@@ -242,7 +242,8 @@ const AdminLayout = () => {
             icon: Calculator,
             children: [
                 { path: '/admin/grading', label: 'Grading' },
-                { path: '/admin/attendance', label: 'Attendance' }
+                { path: '/admin/attendance', label: 'Attendance' },
+                { path: '/admin/import-rotcmis', label: 'Import ROTCMIS' }
             ]
         },
         { 

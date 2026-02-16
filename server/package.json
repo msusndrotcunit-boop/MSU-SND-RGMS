@@ -5,7 +5,8 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:rotcmis": "node tests/rotcmis.test.js"
   },
   "engines": {
     "node": ">=18"
