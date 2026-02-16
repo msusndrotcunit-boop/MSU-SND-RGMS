@@ -15,11 +15,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Fluid base scaling within safe bounds */
+  font-size: clamp(14px, 1.2vw + 12px, 16px);
 }
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
+  /* Use rems based on html clamp to keep copy readable on 320–480px */
+  font-size: 1rem;
   line-height: 1.6;
   color: #111827;
   background-color: #f3f4f6;
@@ -192,6 +195,47 @@ body {
   h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); line-height: 1.2; }
   h2 { font-size: clamp(1.25rem, 4.5vw, 1.875rem); line-height: 1.3; }
   h3 { font-size: clamp(1.125rem, 4vw, 1.5rem); line-height: 1.35; }
+  h4 { font-size: clamp(1rem, 3.8vw, 1.25rem); line-height: 1.4; }
+  h5 { font-size: clamp(0.9375rem, 3.2vw, 1.125rem); line-height: 1.45; }
+  h6 { font-size: clamp(0.875rem, 3vw, 1rem); line-height: 1.5; }
+
+  /* Copy and microcopy */
+  p, li {
+    font-size: clamp(0.9375rem, 5vw, 1rem);
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  small, .text-xs { font-size: clamp(0.75rem, 3.5vw, 0.875rem); }
+  label { font-size: clamp(0.875rem, 3.5vw, 1rem); }
+
+  /* Headings balance for multi-word titles */
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  /* Readable line-length utilities (45–75ch) */
+  .readable-text,
+  .prose,
+  .content,
+  article,
+  section.content {
+    --measure: 75ch;
+  }
+  .readable-text p,
+  .prose p,
+  .content p,
+  article p {
+    max-width: min(var(--measure), 100%);
+  }
+  .measure-tight { --measure: 65ch; }
+  .measure-relaxed { --measure: 85ch; }
+
+  /* Utilities to opt-in anywhere */
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
 
   /* Touch targets - minimum 44px for accessibility */
   .touch-target {

@@ -498,7 +498,7 @@ const StaffLayout = () => {
                 </FixedElement>
 
                 <SafeAreaManager 
-                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8"
+                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8 readable-text text-balance"
                     enableKeyboardAdjustment={true}
                     enableScrollAdjustment={true}
                 >

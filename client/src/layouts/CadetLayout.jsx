@@ -322,7 +322,7 @@ const CadetLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                            <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden">
+                            <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden readable-text text-balance">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -485,7 +485,7 @@ const CadetLayout = () => {
                     </div>
                 )}
                 <SafeAreaManager 
-                    className="flex-1 overflow-auto p-6"
+                    className="flex-1 overflow-auto p-6 readable-text text-balance"
                     enableKeyboardAdjustment={true}
                     enableScrollAdjustment={true}
                 >

@@ -271,7 +271,7 @@ const AdminLayout = () => {
             <MobilePerformanceOptimizer>
                 <AnimationOptimizer>
                     <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full overflow-hidden">
+                        <SafeAreaManager className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full overflow-hidden readable-text text-balance">
             <Toaster position="top-right" reverseOrder={false} />
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
