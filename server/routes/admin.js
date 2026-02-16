@@ -4,6 +4,7 @@ const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../mid
 const path = require('path');
 const fs = require('fs');
 const db = require('../database');
+const multer = require('multer');
 const ExcelJS = require('exceljs');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
@@ -2316,8 +2317,33 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 
 // --- Activity Management ---
 
+// Use disk storage for activity images to avoid synchronous Cloudinary latency on uploads
+const ensureUploadsDir = () => {
+    try {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        return uploadDir;
+    } catch (_) {
+        return path.join(process.cwd(), 'uploads');
+    }
+};
+const activityStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, ensureUploadsDir());
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname || '');
+        cb(null, (file.fieldname || 'image') + '-' + uniqueSuffix + ext);
+    }
+});
+const activityUpload = multer({
+    storage: activityStorage,
+    limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+});
+
 // Upload Activity
-router.post('/activities', upload.array('images', 10), async (req, res) => {
+router.post('/activities', activityUpload.array('images', 10), async (req, res) => {
     try {
         const { title, description, date, type } = req.body;
         
@@ -2479,7 +2505,7 @@ router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Update Activity
-router.put('/activities/:id', upload.array('images', 10), async (req, res) => {
+router.put('/activities/:id', activityUpload.array('images', 10), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, date, type, existingImages } = req.body;
