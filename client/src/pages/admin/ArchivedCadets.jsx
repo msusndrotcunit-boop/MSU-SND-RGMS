@@ -239,6 +239,7 @@ const ArchivedCadets = () => {
         filterable={true}
         pagination={true}
         itemsPerPage={20}
+        cardLayout="never"
         className="bg-white rounded shadow"
       />
     </div>

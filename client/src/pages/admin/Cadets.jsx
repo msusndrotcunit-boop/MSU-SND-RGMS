@@ -865,6 +865,7 @@ const Cadets = () => {
                 filterable={true}
                 pagination={true}
                 itemsPerPage={20}
+                cardLayout="never"
                 actions={[
                     ...(filteredCadets.some(c => c.is_profile_completed) ? [{
                         icon: Unlock,
