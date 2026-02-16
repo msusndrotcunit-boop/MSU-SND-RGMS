@@ -1,6 +1,0 @@
-dist
-node_modules
-.eslintrc.cjs
-vite.config.js
-tailwind.config.js
-postcss.config.js

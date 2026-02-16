@@ -38,6 +38,8 @@ body {
 @media (max-width: 768px) {
   .app-bg {
     background-attachment: scroll;
+    background-image: none;
+    background-color: #f3f4f6;
   }
 }
 
