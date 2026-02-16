@@ -339,7 +339,7 @@ const CadetLayout = () => {
                     id="cadet-sidebar"
                     aria-hidden={!isSidebarOpen}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transform-gpu transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden md:overflow-visible overscroll-contain",
+                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transform-gpu transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden overscroll-contain",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -449,7 +449,7 @@ const CadetLayout = () => {
                 
             </FixedElement>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden md:ml-64">
                 <FixedElement 
                     position="top" 
                     respectSafeArea={true}
