@@ -34,16 +34,29 @@ async function updateTotalAttendance(cadetId) {
 }
 
 function calculateTransmutedGrade(finalGrade, status) {
-  // Handle special statuses
   const special = (status || '').toUpperCase();
-  if (special === 'INC') return { transmutedGrade: null, remarks: 'Incomplete' };
-  if (special === 'DO')  return { transmutedGrade: null, remarks: 'Dropped' };
-  if (special === 'T')   return { transmutedGrade: null, remarks: 'Deferred' };
+  if (special === 'INC') return { transmutedGrade: null, gradeLetter: null, remarks: 'Incomplete' };
+  if (special === 'DO')  return { transmutedGrade: null, gradeLetter: null, remarks: 'Dropped' };
+  if (special === 'T')   return { transmutedGrade: null, gradeLetter: null, remarks: 'Deferred' };
 
   const g = Math.max(0, Math.min(100, Number(finalGrade || 0)));
-  const transmuted = Math.round(g);
-  const remarks = transmuted >= 75 ? 'Passed' : 'Failed';
-  return { transmutedGrade: transmuted, remarks };
+  let transmuted;
+  let gradeLetter;
+  if (g >= 95) {
+    transmuted = 1.00; gradeLetter = 'A';
+  } else if (g >= 90) {
+    transmuted = 1.50; gradeLetter = 'A';
+  } else if (g >= 85) {
+    transmuted = 2.00; gradeLetter = 'B';
+  } else if (g >= 80) {
+    transmuted = 2.50; gradeLetter = 'B';
+  } else if (g >= 75) {
+    transmuted = 3.00; gradeLetter = 'C';
+  } else {
+    transmuted = 5.00; gradeLetter = 'Failure';
+  }
+  const remarks = transmuted === 5.00 ? 'Failed' : 'Passed';
+  return { transmutedGrade: transmuted, gradeLetter, remarks };
 }
 
 module.exports = { updateTotalAttendance, calculateTransmutedGrade };
