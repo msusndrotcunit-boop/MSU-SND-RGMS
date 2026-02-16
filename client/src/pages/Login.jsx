@@ -88,16 +88,19 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-green-950 relative overflow-hidden">
-            {/* Background Overlay */}
-            <div className="absolute inset-0 z-0 opacity-20" style={{ 
-                backgroundImage: `url(${rgmsLogo})`, 
-                backgroundSize: 'cover', 
-                backgroundPosition: 'center',
-                filter: 'blur(8px)'
-            }}></div>
+        <div className="min-h-screen flex items-center justify-center bg-green-900 relative overflow-hidden px-4">
+            {/* Background Overlay - desktop only */}
+            <div 
+                className="hidden md:block absolute inset-0 z-0 opacity-20"
+                style={{ 
+                    backgroundImage: `url(${rgmsLogo})`, 
+                    backgroundSize: 'cover', 
+                    backgroundPosition: 'center',
+                    filter: 'blur(8px)'
+                }}
+            ></div>
 
-            <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden z-10 mx-4">
+            <div className="w-full max-w-md md:max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden z-10">
                 {/* Header Section - No border, green covers all corners */}
                 <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
                     <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
