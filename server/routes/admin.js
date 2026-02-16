@@ -4,7 +4,7 @@ const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../mid
 const path = require('path');
 const fs = require('fs');
 const db = require('../database');
-const xlsx = require('xlsx');
+const ExcelJS = require('exceljs');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
@@ -749,22 +749,35 @@ router.post('/import-staff', upload.single('file'), async (req, res) => {
 
     try {
         let data = [];
+        async function excelAllSheetsToJson(buf) {
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.load(buf);
+            const out = [];
+            wb.worksheets.forEach(ws => {
+                const headers = [];
+                ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                const max = Math.min(ws.rowCount, 10000 + 1);
+                for (let r = 2; r <= max; r++) {
+                    const row = ws.getRow(r);
+                    if (!row || row.cellCount === 0) continue;
+                    const obj = {};
+                    headers.forEach((h, idx) => {
+                        const cell = row.getCell(idx + 1);
+                        let v = cell?.value;
+                        if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                        obj[h] = v ?? '';
+                    });
+                    out.push(obj);
+                }
+            });
+            return out;
+        }
         
         // Only Excel for now
         if (req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf')) {
             return res.status(400).json({ message: 'PDF import not supported for staff. Please use Excel.' });
         } else {
-            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-            if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                return res.status(400).json({ message: 'Excel file has no sheets' });
-            }
-            let aggregated = [];
-            workbook.SheetNames.forEach(name => {
-                const sheet = workbook.Sheets[name];
-                const sheetData = xlsx.utils.sheet_to_json(sheet);
-                aggregated = aggregated.concat(sheetData);
-            });
-            data = aggregated;
+            data = await excelAllSheetsToJson(req.file.buffer);
         }
 
         const result = await processStaffData(data);
@@ -794,17 +807,29 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
                 return res.status(400).json({ message: 'Failed to parse PDF: ' + err.message });
             }
         } else {
-            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-            if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                return res.status(400).json({ message: 'Excel file has no sheets' });
-            }
-            let aggregated = [];
-            workbook.SheetNames.forEach(name => {
-                const sheet = workbook.Sheets[name];
-                const sheetData = xlsx.utils.sheet_to_json(sheet);
-                aggregated = aggregated.concat(sheetData);
-            });
-            data = aggregated;
+            data = await (async () => {
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(req.file.buffer);
+                const merged = [];
+                wb.worksheets.forEach(ws => {
+                    const headers = [];
+                    ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                    const max = Math.min(ws.rowCount, 10000 + 1);
+                    for (let r = 2; r <= max; r++) {
+                        const row = ws.getRow(r);
+                        if (!row || row.cellCount === 0) continue;
+                        const obj = {};
+                        headers.forEach((h, idx) => {
+                            const cell = row.getCell(idx + 1);
+                            let v = cell?.value;
+                            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                            obj[h] = v ?? '';
+                        });
+                        merged.push(obj);
+                    }
+                });
+                return merged;
+            })();
         }
 
         const result = await processCadetData(data);
@@ -938,14 +963,25 @@ const processUrlImport = async (url) => {
         } else {
             // Assume Excel
             try {
-                const workbook = xlsx.read(buffer, { type: 'buffer' });
-                if (workbook.SheetNames.length === 0) throw new Error("Excel file is empty");
-                
-                // Read all sheets
-                workbook.SheetNames.forEach(sheetName => {
-                    const sheet = workbook.Sheets[sheetName];
-                    const sheetData = xlsx.utils.sheet_to_json(sheet);
-                    data = data.concat(sheetData);
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(buffer);
+                if (!wb.worksheets || wb.worksheets.length === 0) throw new Error("Excel file is empty");
+                wb.worksheets.forEach(ws => {
+                    const headers = [];
+                    ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                    const max = Math.min(ws.rowCount, 10000 + 1);
+                    for (let r = 2; r <= max; r++) {
+                        const row = ws.getRow(r);
+                        if (!row || row.cellCount === 0) continue;
+                        const obj = {};
+                        headers.forEach((h, idx) => {
+                            const cell = row.getCell(idx + 1);
+                            let v = cell?.value;
+                            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                            obj[h] = v ?? '';
+                        });
+                        data.push(obj);
+                    }
                 });
             } catch (err) {
                  console.error("Excel Parse Error:", err);

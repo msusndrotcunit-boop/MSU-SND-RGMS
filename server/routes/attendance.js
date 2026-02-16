@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
-const xlsx = require('xlsx');
+const ExcelJS = require('exceljs');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
@@ -18,6 +18,47 @@ const { updateTotalAttendance } = require('../utils/gradesHelper');
 
 // Simple SSE clients registry (shared via global)
 // Removed local definition as it's now in sseHelper.js
+
+async function excelBufferToJson(buf) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws = wb.worksheets[0];
+    if (!ws) return [];
+    const headers = [];
+    ws.getRow(1).eachCell((cell, col) => {
+        headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim();
+    });
+    const out = [];
+    const max = Math.min(ws.rowCount, 10000 + 1);
+    for (let r = 2; r <= max; r++) {
+        const row = ws.getRow(r);
+        if (!row || row.cellCount === 0) continue;
+        const obj = {};
+        headers.forEach((h, idx) => {
+            const cell = row.getCell(idx + 1);
+            let v = cell?.value;
+            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+            obj[h] = v ?? '';
+        });
+        out.push(obj);
+    }
+    return out;
+}
+
+function parseCSVBuffer(buf) {
+    const text = buf.toString('utf8');
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length && rows.length < 10000; i++) {
+        const parts = lines[i].split(',');
+        const row = {};
+        headers.forEach((h, idx) => row[h] = (parts[idx] || '').trim());
+        rows.push(row);
+    }
+    return rows;
+}
 
 router.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -402,10 +443,11 @@ router.post('/import-local', authenticateToken, isAdmin, async (req, res) => {
             const rawRows = await parseImage(buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
+            if (ext === '.csv') {
+                data = parseCSVBuffer(buffer);
+            } else {
+                data = await excelBufferToJson(buffer);
+            }
         } else {
             return res.status(400).json({ message: 'Unsupported file format for local import' });
         }
@@ -1028,10 +1070,11 @@ router.post('/import', authenticateToken, isAdmin, upload.single('file'), async 
 
         if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
             if (!buffer) throw new Error('File buffer missing for spreadsheet import');
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
+            if (filename.endsWith('.csv')) {
+                data = parseCSVBuffer(buffer);
+            } else {
+                data = await excelBufferToJson(buffer);
+            }
         } else if (filename.endsWith('.pdf')) {
             if (!buffer) throw new Error('File buffer missing for PDF import');
             const rawRows = await parsePdf(buffer);

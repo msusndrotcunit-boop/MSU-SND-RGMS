@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
-const { parseFile, summarize } = require('../utils/rotcmisParser');
+const { parseFileAsync, summarize } = require('../utils/rotcmisParser');
 
 const router = express.Router();
 
@@ -31,7 +31,7 @@ router.post('/rotcmis/validate', authenticateToken, isAdmin, upload.array('files
     if (files.length === 0) return res.status(400).json({ message: 'No files uploaded' });
     let all = [];
     for (const f of files) {
-      const recs = parseFile(f.buffer, f.originalname);
+      const recs = await parseFileAsync(f.buffer, f.originalname);
       all = all.concat(recs);
     }
     // Duplicate detection by student_id + date (day)

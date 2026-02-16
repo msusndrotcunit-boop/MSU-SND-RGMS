@@ -1,4 +1,4 @@
-const xlsx = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 
@@ -24,15 +24,37 @@ function parseCSV(text) {
   return rows;
 }
 
-function parseXLSX(buffer) {
-  const wb = xlsx.read(buffer, { type: 'buffer' });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const json = xlsx.utils.sheet_to_json(sheet, { raw: false });
-  return json.map(r => {
-    const out = {};
-    Object.keys(r).forEach(k => out[normalizeHeader(k)] = r[k]);
-    return out;
+const MAX_ROWS = 10000;
+
+async function parseXLSXExcelJS(buffer) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer);
+  const sheet = wb.worksheets[0];
+  if (!sheet) return [];
+  const headerRow = sheet.getRow(1);
+  const headers = [];
+  headerRow.eachCell((cell, colNumber) => {
+    headers[colNumber - 1] = normalizeHeader(cell?.value?.text || cell?.value || '');
   });
+  const rows = [];
+  const max = Math.min(sheet.rowCount, MAX_ROWS + 1);
+  for (let r = 2; r <= max; r++) {
+    const row = sheet.getRow(r);
+    if (!row || row.cellCount === 0) continue;
+    const obj = {};
+    headers.forEach((h, idx) => {
+      const cell = row.getCell(idx + 1);
+      let val = cell?.value;
+      if (val && typeof val === 'object') {
+        if ('text' in val) val = val.text;
+        else if ('result' in val) val = val.result;
+        else val = String(val);
+      }
+      obj[h] = val ?? '';
+    });
+    rows.push(obj);
+  }
+  return rows;
 }
 
 function parseJSON(text) {
@@ -119,11 +141,11 @@ function validateRecord(rec) {
   return { ...rec, errors };
 }
 
-function parseFile(filePathOrBuffer, filename) {
+async function parseFileAsync(filePathOrBuffer, filename) {
   let rows = [];
   const ext = (filename || '').toLowerCase();
   if (Buffer.isBuffer(filePathOrBuffer)) {
-    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) rows = parseXLSX(filePathOrBuffer);
+    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) rows = await parseXLSXExcelJS(filePathOrBuffer);
     else {
       const text = filePathOrBuffer.toString('utf8');
       if (ext.endsWith('.json')) rows = parseJSON(text);
@@ -132,7 +154,7 @@ function parseFile(filePathOrBuffer, filename) {
   } else {
     const abs = path.resolve(filePathOrBuffer);
     const buf = fs.readFileSync(abs);
-    return parseFile(buf, filename || abs);
+    return parseFileAsync(buf, filename || abs);
   }
   const normalized = rows.map(normalizeRecord).map(validateRecord);
   return normalized;
@@ -152,7 +174,7 @@ function summarize(records) {
 }
 
 module.exports = {
-  parseFile,
+  parseFileAsync,
   summarize
 };
 
