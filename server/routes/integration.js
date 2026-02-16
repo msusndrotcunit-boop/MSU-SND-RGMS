@@ -34,8 +34,13 @@ router.post('/rotcmis/validate', authenticateToken, isAdmin, upload.array('files
       const recs = await parseFileAsync(f.buffer, f.originalname);
       all = all.concat(recs);
     }
-    // Duplicate detection by student_id + date (day)
-    const dupKey = (r) => `${r.student_id || '_'}|${r.date ? r.date.toISOString().slice(0,10) : '_'}`;
+    // Duplicate detection by (student_id OR normalized name) + date (day)
+    const normName = (n) => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const dupKey = (r) => {
+      const idOrName = r.student_id ? String(r.student_id) : normName(r.name);
+      const d = r.date ? r.date.toISOString().slice(0,10) : (new Date()).toISOString().slice(0,10);
+      return `${idOrName}|${d}`;
+    };
     const counts = all.reduce((m, r) => { const k = dupKey(r); m[k] = (m[k] || 0) + 1; return m; }, {});
     const withDupFlag = all.map(r => ({ ...r, isDuplicateInBatch: counts[dupKey(r)] > 1 }));
     const summary = summarize(withDupFlag);
@@ -82,6 +87,49 @@ router.post('/rotcmis/import', authenticateToken, isAdmin, async (req, res) => {
         });
       });
     }
+    // helpers for fuzzy name matching (PDFs often lack IDs)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      const matrix = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+          else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+    async function getAllCadets() {
+      return new Promise((resolve, reject) => {
+        db.all('SELECT id, first_name, last_name FROM cadets', [], (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows || []);
+        });
+      });
+    }
+    function findCadetByNameFuzzy(name, cadets) {
+      if (!name || !cadets || cadets.length === 0) return null;
+      const target = String(name).toLowerCase();
+      let best = null;
+      let minD = Infinity;
+      for (const c of cadets) {
+        const options = [
+          `${c.first_name} ${c.last_name}`,
+          `${c.last_name} ${c.first_name}`,
+          `${c.last_name}, ${c.first_name}`,
+          `${c.first_name}, ${c.last_name}`,
+        ].map(s => s.toLowerCase());
+        const d = Math.min(...options.map(opt => levenshteinDistance(target, opt)));
+        if (d < minD) { minD = d; best = c; }
+      }
+      // threshold relative to length
+      if (minD <= 5 && minD < target.length * 0.4) return best;
+      return null;
+    }
+    const cadetsCache = await getAllCadets();
     // helper: upsert attendance
     async function upsertAttendance(dayId, cadetId, status) {
       return new Promise((resolve, reject) => {
@@ -111,11 +159,19 @@ router.post('/rotcmis/import', authenticateToken, isAdmin, async (req, res) => {
 
     for (const r of records) {
       try {
-        if (!r || r.errors?.length) { insertCount.skipped += 1; continue; }
-        if (!r.student_id || !r.date || !r.status) { insertCount.skipped += 1; continue; }
-        const cadetId = await getCadetIdByStudentId(String(r.student_id));
+        if (!r) { insertCount.skipped += 1; continue; }
+        if (!r.status) { insertCount.skipped += 1; continue; }
+        const dateObj = r.date ? new Date(r.date) : new Date();
+        const dayId = await getOrCreateTrainingDay(dateObj);
+        let cadetId = null;
+        if (r.student_id) {
+          cadetId = await getCadetIdByStudentId(String(r.student_id));
+        }
+        if (!cadetId && r.name) {
+          const match = findCadetByNameFuzzy(r.name, cadetsCache);
+          cadetId = match ? match.id : null;
+        }
         if (!cadetId) { insertCount.skipped += 1; continue; }
-        const dayId = await getOrCreateTrainingDay(new Date(r.date));
         await upsertAttendance(dayId, cadetId, r.status);
       } catch (e) {
         insertCount.errors += 1;

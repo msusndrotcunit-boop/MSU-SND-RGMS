@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
+const pdfParse = require('pdf-parse');
 
 function normalizeHeader(h) {
   return String(h || '')
@@ -55,6 +56,48 @@ async function parseXLSXExcelJS(buffer) {
     rows.push(obj);
   }
   return rows;
+}
+
+function extractFromRawLine(rawLine) {
+  const line = String(rawLine || '').trim();
+  if (!line) return {};
+  const lower = line.toLowerCase();
+  let status = null;
+  if (lower.includes(' present')) status = 'present';
+  else if (lower.includes(' absent')) status = 'absent';
+  else if (lower.includes(' excused')) status = 'excused';
+  else if (lower.includes(' late')) status = 'late';
+  if (!status) return {};
+  const idx = lower.indexOf(status);
+  let left = line.slice(0, idx);
+  // strip leading numbering and trailing usernames
+  left = left.replace(/^\s*\d{1,4}[.)]?\s+/, '').replace(/\s+[A-Za-z0-9._-]{3,}\s*$/, '').trim();
+  if (!left) return { status };
+  // Normalize "LAST, FIRST" to "FIRST LAST"
+  let name = left;
+  if (left.includes(',')) {
+    const parts = left.split(',');
+    const last = parts[0].trim();
+    const first = parts.slice(1).join(' ').trim();
+    if (last && first) name = `${first} ${last}`;
+  }
+  return { name, status };
+}
+
+async function parsePDFToRows(buffer) {
+  try {
+    const { text } = await pdfParse(buffer);
+    const lines = String(text || '').split(/\r?\n/);
+    const rows = [];
+    for (const l of lines) {
+      const r = extractFromRawLine(l);
+      if (r && (r.name || r.status)) rows.push(r);
+      if (rows.length >= MAX_ROWS) break;
+    }
+    return rows;
+  } catch (_) {
+    return [];
+  }
 }
 
 function parseJSON(text) {
@@ -135,7 +178,8 @@ function normalizeRecord(row) {
 
 function validateRecord(rec) {
   const errors = [];
-  if (!rec.student_id) errors.push('Missing student_id/QR');
+  // Accept either student_id or name (PDFs may not include IDs)
+  if (!rec.student_id && !rec.name) errors.push('Missing student_id or name');
   if (!rec.date) errors.push('Invalid or missing date');
   if (!rec.status) errors.push('Invalid or missing status');
   return { ...rec, errors };
@@ -145,7 +189,8 @@ async function parseFileAsync(filePathOrBuffer, filename) {
   let rows = [];
   const ext = (filename || '').toLowerCase();
   if (Buffer.isBuffer(filePathOrBuffer)) {
-    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) rows = await parseXLSXExcelJS(filePathOrBuffer);
+    if (ext.endsWith('.pdf')) rows = await parsePDFToRows(filePathOrBuffer);
+    else if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) rows = await parseXLSXExcelJS(filePathOrBuffer);
     else {
       const text = filePathOrBuffer.toString('utf8');
       if (ext.endsWith('.json')) rows = parseJSON(text);
@@ -156,7 +201,14 @@ async function parseFileAsync(filePathOrBuffer, filename) {
     const buf = fs.readFileSync(abs);
     return parseFileAsync(buf, filename || abs);
   }
-  const normalized = rows.map(normalizeRecord).map(validateRecord);
+  // If rows came from PDF and lack a date, set today's date by default
+  const today = new Date();
+  const normalized = rows.map(r => {
+    if ((ext.endsWith('.pdf')) && (r.date == null)) {
+      return normalizeRecord({ ...r, date: today.toISOString().slice(0,10) });
+    }
+    return normalizeRecord(r);
+  }).map(validateRecord);
   return normalized;
 }
 
