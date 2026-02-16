@@ -36,6 +36,58 @@ const Attendance = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [controlsOpen, setControlsOpen] = useState(true);
 
+    // ROTCMIS Import (inline)
+    const [rotcModalOpen, setRotcModalOpen] = useState(false);
+    const [rotcFiles, setRotcFiles] = useState([]);
+    const [rotcParsing, setRotcParsing] = useState(false);
+    const [rotcRecords, setRotcRecords] = useState([]);
+    const [rotcSummary, setRotcSummary] = useState(null);
+    const [rotcSelected, setRotcSelected] = useState(new Set());
+    const [rotcStrategy, setRotcStrategy] = useState('skip-duplicates');
+
+    const handleRotcPick = (e) => {
+        const picked = Array.from(e.target.files || []);
+        setRotcFiles(prev => [...prev, ...picked]);
+    };
+    const handleRotcRemove = (idx) => {
+        setRotcFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+    const handleRotcValidate = async () => {
+        if (rotcFiles.length === 0) { toast.error('Select at least one file'); return; }
+        try {
+            setRotcParsing(true);
+            const fd = new FormData();
+            rotcFiles.forEach(f => fd.append('files', f));
+            const { data } = await axios.post('/api/integration/rotcmis/validate', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setRotcRecords(data.records || []);
+            setRotcSummary(data.summary || null);
+            setRotcSelected(new Set((data.records || []).map((_, i) => i)));
+            toast.success('Parsed ROTCMIS export');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Validation failed');
+        } finally {
+            setRotcParsing(false);
+        }
+    };
+    const toggleRotcRow = (i) => {
+        const copy = new Set(rotcSelected);
+        if (copy.has(i)) copy.delete(i); else copy.add(i);
+        setRotcSelected(copy);
+    };
+    const handleRotcImport = async () => {
+        try {
+            const chosen = rotcRecords.filter((_, i) => rotcSelected.has(i));
+            if (chosen.length === 0) { toast.error('No records selected'); return; }
+            const payload = { strategy: rotcStrategy, records: chosen };
+            const { data } = await axios.post('/api/integration/rotcmis/import', payload);
+            toast.success(`Import done: ${data?.result?.inserted || 0} inserted, ${data?.result?.updated || 0} updated, ${data?.result?.skipped || 0} skipped`);
+            setRotcModalOpen(false);
+            if (selectedDay) selectDay(selectedDay, true);
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Import failed');
+        }
+    };
+
     useEffect(() => {
         fetchDays();
     }, []);
@@ -732,6 +784,116 @@ const Attendance = () => {
                 </div>
             )}
 
+            {rotcModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-5xl shadow-lg overflow-hidden">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Import ROTCMIS Export</h3>
+                            <button onClick={() => setRotcModalOpen(false)} className="text-gray-500 hover:text-gray-800">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="bg-white dark:bg-gray-900 border rounded p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-sm text-gray-600 dark:text-gray-300">Select ROTCMIS files</div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs">Strategy</label>
+                                        <select value={rotcStrategy} onChange={e => setRotcStrategy(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                                            <option value="skip-duplicates">Skip duplicates</option>
+                                            <option value="overwrite">Overwrite existing</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handleRotcPick} />
+                                {rotcFiles.length > 0 && (
+                                    <div className="mt-3 grid md:grid-cols-3 gap-2">
+                                        {rotcFiles.map((f, i) => (
+                                            <div key={i} className="flex items-center justify-between p-2 border rounded bg-gray-50 dark:bg-gray-800">
+                                                <div className="text-sm">{f.name}</div>
+                                                <button onClick={() => handleRotcRemove(i)} className="text-xs text-red-600 hover:underline">Remove</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button onClick={handleRotcValidate} disabled={rotcParsing} className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-black disabled:opacity-50">
+                                        {rotcParsing ? 'Validating…' : 'Validate Files'}
+                                    </button>
+                                </div>
+                            </div>
+                            {rotcSummary && (
+                                <div className="bg-white dark:bg-gray-900 border rounded p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="font-bold">Summary</div>
+                                        <div className="text-sm text-gray-500">Total: {rotcSummary.total || 0} • Valid: {rotcSummary.valid || 0} • Invalid: {rotcSummary.invalid || 0} • Duplicates: {rotcSummary.duplicates || 0}</div>
+                                    </div>
+                                </div>
+                            )}
+                            {rotcRecords.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">Select records to import</div>
+                                        <button
+                                            onClick={() => {
+                                                if (rotcSelected.size === rotcRecords.length) {
+                                                    setRotcSelected(new Set());
+                                                } else {
+                                                    setRotcSelected(new Set(rotcRecords.map((_, i) => i)));
+                                                }
+                                            }}
+                                            className="text-sm text-green-700 hover:underline"
+                                        >
+                                            {rotcSelected.size === rotcRecords.length ? 'Deselect all' : 'Select all'}
+                                        </button>
+                                    </div>
+                                    <div className="overflow-auto border rounded">
+                                        <table className="min-w-full">
+                                            <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
+                                                <tr>
+                                                    <th className="p-2 text-left">Pick</th>
+                                                    <th className="p-2 text-left">Student ID</th>
+                                                    <th className="p-2 text-left">Name</th>
+                                                    <th className="p-2 text-left">Date</th>
+                                                    <th className="p-2 text-left">Status</th>
+                                                    <th className="p-2 text-left">Duplicate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {rotcRecords.map((r, i) => {
+                                                    const err = r.errors?.length > 0;
+                                                    return (
+                                                        <tr key={i} className={err ? 'bg-red-50 dark:bg-red-900/20' : (r.isDuplicateInBatch ? 'bg-yellow-50 dark:bg-yellow-900/20' : '')}>
+                                                            <td className="p-2">
+                                                                <input type="checkbox" checked={rotcSelected.has(i)} onChange={() => toggleRotcRow(i)} />
+                                                            </td>
+                                                            <td className="p-2 font-mono text-sm">{r.student_id || '—'}</td>
+                                                            <td className="p-2 text-sm">{r.name || '—'}</td>
+                                                            <td className="p-2 text-sm">{r.date ? new Date(r.date).toLocaleString() : '—'}</td>
+                                                            <td className="p-2 text-sm capitalize">
+                                                                {r.status || '—'}
+                                                            </td>
+                                                            <td className="p-2 text-sm">
+                                                                {r.isDuplicateInBatch ? 'Possible duplicate' : '—'}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button onClick={handleRotcImport} className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-800">
+                                            Confirm Import
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {viewMode === 'excuse' ? (
                 <ExcuseLetterManager />
             ) : (
@@ -845,7 +1007,7 @@ const Attendance = () => {
                                             }}
                                         />
                                         <button 
-                                            onClick={() => navigate('/admin/import-rotcmis')}
+                                            onClick={() => setRotcModalOpen(true)}
                                             className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition"
                                             title="Import ROTCMIS"
                                         >
