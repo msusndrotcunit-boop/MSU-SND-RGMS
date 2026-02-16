@@ -253,6 +253,7 @@ const AdminLayout = () => {
                 { path: '/admin/staff-analytics', label: 'Analytics' }
             ]
         },
+        { path: '/admin/3d', label: '3D Studio', icon: Activity },
         { path: '/admin/activities', label: 'Activities', icon: Calendar },
         { path: '/admin/achievements', label: 'Achievements', icon: Trophy },
         { path: '/admin/performance', label: 'Performance Monitor', icon: Activity },
