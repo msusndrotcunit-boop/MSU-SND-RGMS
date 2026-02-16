@@ -233,7 +233,7 @@ const StaffLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto",
+                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >

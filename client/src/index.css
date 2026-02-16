@@ -6,6 +6,15 @@
   --primary-color: #354f32;
   --primary-color-soft: rgba(53, 79, 50, 0.16);
   --bg-image: url('./assets/background_1.jpg');
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -47,6 +56,13 @@ body {
   background-image: 
     linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),
     var(--bg-image);
+}
+
+.icon {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1;
 }
 
 .weather-bg {
@@ -124,6 +140,10 @@ body {
     color: var(--primary-color);
   }
 
+  h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); line-height: 1.2; }
+  h2 { font-size: clamp(1.25rem, 4.5vw, 1.875rem); line-height: 1.3; }
+  h3 { font-size: clamp(1.125rem, 4vw, 1.5rem); line-height: 1.35; }
+
   /* Touch targets - minimum 44px for accessibility */
   .touch-target {
     min-height: 44px;
@@ -184,6 +204,9 @@ body {
   textarea,
   select {
     font-size: 16px;
+    min-height: 44px;
+    line-height: 1.4;
+    width: 100%;
   }
 
   /* Containers - prevent overflow */
@@ -235,9 +258,34 @@ body {
     right: 0 !important;
     bottom: 0 !important;
   }
+
+  button,
+  [role="button"],
+  .btn,
+  .icon-button {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 /* Exception for header images - maintain fixed sizes */
 header img {
   max-width: none !important;
+}
+
+@media (min-resolution: 2dppx) {
+  :root {
+    --primary-color-soft: rgba(53, 79, 50, 0.18);
+  }
+  .icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
 }
