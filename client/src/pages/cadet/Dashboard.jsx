@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, AlertCircle, User, Info, Link } from 'lucide-react';
 import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
+import { useAuth } from '../../context/AuthContext';
 
 const CadetDashboard = () => {
     const navigate = useNavigate();
+    const { user } = useAuth ? useAuth() : { user: null };
     const [grades, setGrades] = useState(null);
     const [logs, setLogs] = useState([]);
     const [attendanceLogs, setAttendanceLogs] = useState([]);
@@ -57,6 +59,10 @@ const CadetDashboard = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user || user.role !== 'cadet') {
+                setLoading(false);
+                return;
+            }
             try {
                 // 1. Try Cache First & Render Immediately
                 let hasCachedData = false;
@@ -137,9 +143,10 @@ const CadetDashboard = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
+        if (!user || user.role !== 'cadet') return;
         const refresh = async () => {
             try {
                 const res = await axios.get('/api/cadet/my-grades');
@@ -156,9 +163,10 @@ const CadetDashboard = () => {
             window.removeEventListener('focus', refresh);
             document.removeEventListener('visibilitychange', onVisible);
         };
-    }, []);
+    }, [user]);
 
     useEffect(() => {
+        if (!user || user.role !== 'cadet') return;
         let es;
         const connectSSE = () => {
             try {
@@ -191,7 +199,7 @@ const CadetDashboard = () => {
         };
         connectSSE();
         return () => { try { es && es.close(); } catch {} };
-    }, []);
+    }, [user]);
 
     if (loading) return <div className="text-center p-10">Loading...</div>;
 

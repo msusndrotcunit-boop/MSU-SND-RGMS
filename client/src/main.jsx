@@ -11,13 +11,14 @@ console.log('Axios Base URL:', import.meta.env.VITE_API_URL || '(relative)');
 
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
-// Global Axios interceptors for graceful 404/403 handling on staff endpoints
+// Global Axios interceptors for graceful 404/403 handling on staff/cadet endpoints
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     try {
       const status = error?.response?.status;
       const url = error?.config?.url || '';
+      const msg = (error?.response?.data && (error.response.data.message || error.response.data.error)) || '';
       // Transform missing staff profile into a safe placeholder
       if (status === 404 && url.includes('/api/staff/me')) {
         return Promise.resolve({
@@ -45,6 +46,41 @@ axios.interceptors.response.use(
           headers: error.response?.headers || {},
           config: error.config
         });
+      }
+      // Gracefully handle accidental cadet calls when not a cadet
+      const notCadet = (status === 403) && /not a cadet/i.test(msg);
+      if (notCadet) {
+        if (url.includes('/api/cadet/my-merit-logs')) {
+          return Promise.resolve({ data: [], status: 200, statusText: 'OK', headers: error.response?.headers || {}, config: error.config });
+        }
+        if (url.includes('/api/cadet/my-grades')) {
+          return Promise.resolve({
+            data: {
+              attendanceScore: 0,
+              attendance_present: 0,
+              aptitudeScore: 0,
+              merit_points: 0,
+              demerit_points: 0,
+              subjectScore: 0,
+              prelim_score: 0,
+              midterm_score: 0,
+              final_score: 0,
+              finalGrade: 0,
+              transmutedGrade: '5.00',
+              remarks: 'Not a cadet'
+            },
+            status: 200,
+            statusText: 'OK',
+            headers: error.response?.headers || {},
+            config: error.config
+          });
+        }
+        if (url.includes('/api/cadet/profile')) {
+          return Promise.resolve({ data: null, status: 200, statusText: 'OK', headers: error.response?.headers || {}, config: error.config });
+        }
+        if (url.includes('/api/attendance/my-history')) {
+          return Promise.resolve({ data: [], status: 200, statusText: 'OK', headers: error.response?.headers || {}, config: error.config });
+        }
       }
     } catch {}
     return Promise.reject(error);

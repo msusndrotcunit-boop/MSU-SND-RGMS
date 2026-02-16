@@ -117,7 +117,7 @@ const CadetLayout = () => {
     };
 
     React.useEffect(() => {
-        if (user) {
+        if (user && user.role === 'cadet') {
             fetchNotifications();
             fetchMessages();
         }
@@ -179,7 +179,7 @@ const CadetLayout = () => {
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
-                        if (data.type === 'admin_broadcast') {
+                        if (data.type === 'admin_broadcast' && user?.role === 'cadet') {
                             fetchNotifications();
                             fetchMessages();
                             if (navigator.vibrate) navigator.vibrate(80);
