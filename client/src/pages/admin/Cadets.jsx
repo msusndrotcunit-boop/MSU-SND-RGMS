@@ -827,18 +827,24 @@ const Cadets = () => {
                     {
                         key: 'username',
                         label: 'Username',
+                        headerClassName: 'px-3',
+                        cellClassName: 'px-3 whitespace-nowrap',
                         render: (_, cadet) => cadet.username || cadet.student_id
                     },
                     {
                         key: 'unit',
                         label: 'Unit (Coy/Plt)',
                         align: 'center',
+                        headerClassName: 'px-2',
+                        cellClassName: 'px-2 whitespace-nowrap',
                         render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
                     },
                     {
                         key: 'status',
                         label: 'Status',
                         align: 'center',
+                        headerClassName: 'px-2',
+                        cellClassName: 'px-2',
                         render: (_, cadet) => (
                             !cadet.is_profile_completed ? (
                                 <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">

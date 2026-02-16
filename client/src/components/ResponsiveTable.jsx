@@ -135,7 +135,8 @@ const ResponsiveTable = ({
               "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider",
               sortable && column.sortable !== false && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 select-none",
               column.align === 'center' && "text-center",
-              column.align === 'right' && "text-right"
+              column.align === 'right' && "text-right",
+              column.headerClassName
             )}
             onClick={() => column.sortable !== false && handleSort(column.key)}
           >
@@ -203,15 +204,16 @@ const ResponsiveTable = ({
           className={clsx(
             "px-4 py-3 text-sm text-gray-900 dark:text-gray-100",
             column.align === 'center' && "text-center",
-            column.align === 'right' && "text-right"
+            column.align === 'right' && "text-right",
+            column.cellClassName
           )}
         >
           {column.render ? column.render(item[column.key], item) : item[column.key]}
         </td>
       ))}
       {actions.length > 0 && (
-        <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end space-x-2">
+        <td className="px-3 py-3 text-right">
+          <div className="flex items-center justify-end space-x-1">
             {actions.map((action, actionIndex) => (
               <button
                 key={actionIndex}
