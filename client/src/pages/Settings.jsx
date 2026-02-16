@@ -195,32 +195,45 @@ const Settings = ({ role }) => {
                     <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
-                            <div className="flex gap-4 flex-wrap">
-                                {['default', 'blue', 'green', 'red', 'purple', 'orange', 'teal'].map(color => {
-                                    const swatches = {
+                            <div className="flex gap-3 flex-wrap">
+                                {[
+                                    'default','blue','indigo','green','emerald','red','pink','purple','orange','amber','cyan','teal','slate',
+                                    'gradient-emerald','gradient-sunset','gradient-ocean'
+                                ].map(token => {
+                                    const solids = {
                                         default: '#0f766e',
                                         blue: '#2563eb',
+                                        indigo: '#4f46e5',
                                         green: '#16a34a',
+                                        emerald: '#059669',
                                         red: '#dc2626',
+                                        pink: '#db2777',
                                         purple: '#7c3aed',
                                         orange: '#ea580c',
-                                        teal: '#0f766e'
+                                        amber: '#d97706',
+                                        cyan: '#06b6d4',
+                                        teal: '#0f766e',
+                                        slate: '#334155'
                                     };
-                                    const label =
-                                        color === 'default'
-                                            ? 'Default'
-                                            : color === 'teal'
-                                            ? 'Teal (Outdoor)'
-                                            : color;
+                                    const isGradient = token.startsWith('gradient-');
+                                    const label = isGradient
+                                        ? token.replace('gradient-', '').replace('-', ' ') + ' gradient'
+                                        : token === 'default' ? 'Default' : token;
                                     return (
                                         <button
-                                            key={color}
-                                            onClick={() => handleChange('theme', 'primaryColor', color)}
-                                            className={`w-10 h-10 rounded-full border-2 transition-transform ${
-                                                localSettings.theme.primaryColor === color ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
+                                            key={token}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`w-8 h-8 rounded-full border-2 transition-transform ${
+                                                localSettings.theme.primaryColor === token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
                                             }`}
-                                            style={{ backgroundColor: swatches[color] }}
+                                            style={isGradient ? { backgroundImage: 'var(--primary-gradient)', background: token === 'gradient-emerald'
+                                                ? 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)'
+                                                : token === 'gradient-sunset'
+                                                ? 'linear-gradient(135deg, #fb7185 0%, #f59e0b 50%, #ea580c 100%)'
+                                                : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #1d4ed8 100%)'
+                                            } : { backgroundColor: solids[token] }}
                                             aria-label={label}
+                                            title={label}
                                         />
                                     );
                                 })}
