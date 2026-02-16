@@ -286,7 +286,7 @@ const AdminLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto",
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-y-auto md:overflow-visible",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -369,31 +369,35 @@ const AdminLayout = () => {
                         }
 
                         const isActive = location.pathname === item.path;
+                        const isSettings = item.path === '/admin/settings';
                         return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={clsx(
-                                    "nav-link space-x-3 transition hover-highlight",
-                                    isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
+                            <React.Fragment key={item.path}>
+                                <Link
+                                    to={item.path}
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className={clsx(
+                                        "nav-link space-x-3 transition hover-highlight",
+                                        isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
+                                    )}
+                                >
+                                    <Icon size={20} />
+                                    <span>{item.label}</span>
+                                </Link>
+                                {isSettings && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                                        className="nav-link space-x-3 transition hover-highlight text-white/80 hover:bg-black/20 hover:text-white"
+                                    >
+                                        <LogOut size={20} />
+                                        <span>Logout</span>
+                                    </button>
                                 )}
-                            >
-                                <Icon size={20} />
-                                <span>{item.label}</span>
-                            </Link>
+                            </React.Fragment>
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-white/10">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded transition hover-highlight"
-                    >
-                        <LogOut size={20} />
-                        <span>Logout</span>
-                    </button>
-                </div>
+                
                 </FixedElement>
 
             {/* Main Content */}

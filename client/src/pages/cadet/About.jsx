@@ -38,7 +38,7 @@ const About = () => {
                         <h2 className="text-2xl font-bold text-green-800 dark:text-green-500 mb-3 border-b border-gray-200 pb-2">
                             About the System
                         </h2>
-                        <p className="leading-relaxed">
+                        <p className="leading-relaxed" style={{ textAlign: 'justify' }}>
                             The ROTC Grading Management System is a comprehensive platform designed to streamline the management of cadet records, grading, attendance, and performance tracking for the MSU-SND ROTC Unit. This system ensures transparency, accuracy, and efficiency in handling cadet data.
                         </p>
                     </section>

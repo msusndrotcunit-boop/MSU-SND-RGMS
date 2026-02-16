@@ -88,7 +88,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-green-900 relative overflow-hidden px-4">
+        <div className="min-h-screen flex items-start md:items-center justify-center bg-green-900 relative overflow-hidden px-4 py-6 overflow-auto">
             {/* Background Overlay - desktop only */}
             <div 
                 className="hidden md:block absolute inset-0 z-0 opacity-20"

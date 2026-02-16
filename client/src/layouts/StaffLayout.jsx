@@ -234,7 +234,7 @@ const StaffLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto",
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-y-auto md:overflow-visible",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -454,16 +454,16 @@ const StaffLayout = () => {
                         <span>Settings</span>
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
-                </nav>
-                <div className="p-4 border-t border-white/10">
                     <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/10 rounded transition hover-highlight"
+                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                        className="nav-link space-x-3 transition hover-highlight text-white/80 hover:text-white hover:bg-black/10"
+                        type="button"
+                        aria-label="Logout"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
                     </button>
-                </div>
+                </nav>
             </FixedElement>
 
             <div className="flex-1 flex flex-col overflow-hidden">

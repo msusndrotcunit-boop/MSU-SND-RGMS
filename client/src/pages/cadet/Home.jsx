@@ -29,18 +29,25 @@ const CadetHome = () => {
 
         imgs = (imgs || []).filter(Boolean);
 
+        const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
+        const baseB = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
+        const baseC = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
+        let selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(String(b))) || '';
+        selectedBase = String(selectedBase).replace(/\/+$/, '');
+
         if (imgs.length === 0 && activity.image_path) {
+            const norm = String(activity.image_path).replace(/\\/g, '/');
             const src = activity.image_path.startsWith('data:')
                 ? activity.image_path
-                : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
+                : `${selectedBase}${norm.startsWith('/') ? '' : '/'}${norm}`;
             return [src];
         }
 
-        return imgs.map((src) =>
-            src.startsWith('data:') || src.startsWith('http')
-                ? src
-                : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
-        );
+        return imgs.map((src) => {
+            if (src.startsWith('data:') || src.startsWith('http')) return src;
+            const norm = String(src).replace(/\\/g, '/');
+            return `${selectedBase}${norm.startsWith('/') ? '' : '/'}${norm}`;
+        });
     };
 
     useEffect(() => {

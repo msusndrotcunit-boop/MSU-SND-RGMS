@@ -805,7 +805,7 @@ const Attendance = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handleRotcPick} />
+                                <input type="file" multiple accept=".csv,.xlsx,.xls,.json,.pdf" onChange={handleRotcPick} />
                                 {rotcFiles.length > 0 && (
                                     <div className="mt-3 grid md:grid-cols-3 gap-2">
                                         {rotcFiles.map((f, i) => (

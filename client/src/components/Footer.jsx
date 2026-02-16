@@ -3,6 +3,7 @@ import { Shield, Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import rgmsLogo from '../assets/rgms_logo.webp';
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -106,16 +107,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-green-100/60">
         <div className="flex items-center gap-3 mb-4 md:mb-0">
            <div className="w-8 h-8 rounded-full shadow-lg overflow-hidden">
-             <svg viewBox="0 0 48 48" className="w-full h-full">
-               <defs>
-                 <linearGradient id="rgmsGrad" x1="0" y1="0" x2="1" y2="1">
-                   <stop offset="0%" stopColor="#065f46" />
-                   <stop offset="100%" stopColor="#10b981" />
-                 </linearGradient>
-               </defs>
-               <circle cx="24" cy="24" r="23" fill="url(#rgmsGrad)" />
-               <text x="24" y="28" textAnchor="middle" fontSize="12" fontWeight="700" fill="#fff" letterSpacing="0.5">RGMS</text>
-             </svg>
+             <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
            </div>
            <div>
              <p className="font-bold text-white">© {new Date().getFullYear()} MSU-SND ROTC Unit</p>
