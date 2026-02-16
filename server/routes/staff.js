@@ -608,20 +608,58 @@ router.put('/:id', authenticateToken, isAdmin, (req, res) => {
 // DELETE Staff
 router.delete('/:id', authenticateToken, isAdmin, (req, res) => {
     const staffId = req.params.id;
-    
-    // First delete the user account associated with this staff
-    db.run("DELETE FROM users WHERE staff_id = ?", [staffId], (err) => {
-        if (err) {
-            console.error('Error deleting user account for staff:', err);
-            // Proceed to delete staff profile anyway? Or fail?
-            // Better to proceed so we don't get stuck with undeletable staff.
-        }
-        
-        // Then delete the staff profile
-        db.run("DELETE FROM training_staff WHERE id = ?", [staffId], function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            res.json({ message: 'Staff deleted successfully' });
+    // Create audit table if missing
+    db.run(`CREATE TABLE IF NOT EXISTS staff_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        staff_id INTEGER,
+        before_json TEXT,
+        after_json TEXT,
+        user_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`, [], () => {
+        db.get(`SELECT * FROM training_staff WHERE id = ?`, [staffId], (selErr, beforeRow) => {
+            // Write audit entry (best-effort)
+            try {
+                const beforeJson = beforeRow ? JSON.stringify(beforeRow) : null;
+                db.run(`INSERT INTO staff_audit (action, staff_id, before_json, user_id) VALUES (?, ?, ?, ?)`,
+                    ['delete', staffId, beforeJson, req.user.id || null], () => {});
+            } catch (_) {}
+            // Try soft-delete first: archive records if column exists
+            db.run(`UPDATE users SET is_archived = 1, is_approved = 0 WHERE staff_id = ?`, [staffId], () => {
+                db.run(`UPDATE training_staff SET is_archived = 1 WHERE id = ?`, [staffId], function(updErr) {
+                    if (!updErr && this && this.changes > 0) {
+                        return res.json({ message: 'Staff archived successfully' });
+                    }
+                    // Fallback: hard delete if archive column not present
+                    db.run("DELETE FROM users WHERE staff_id = ?", [staffId], (uDelErr) => {
+                        // Proceed regardless of user deletion error
+                        db.run("DELETE FROM training_staff WHERE id = ?", [staffId], function(err) {
+                            if (err) return res.status(500).json({ message: err.message });
+                            res.json({ message: 'Staff deleted successfully' });
+                        });
+                    });
+                });
+            });
         });
+    });
+});
+
+// RESTORE archived Staff
+router.post('/:id/restore', authenticateToken, isAdmin, (req, res) => {
+    const staffId = req.params.id;
+    db.run(`UPDATE training_staff SET is_archived = 0 WHERE id = ?`, [staffId], function(err) {
+        if (err) {
+            // If column missing, return bad request
+            return res.status(400).json({ message: 'Archive feature not available on this database.' });
+        }
+        if (this.changes === 0) return res.status(404).json({ message: 'Staff not found or not archived' });
+        // Also un-archive related user if exists
+        db.run(`UPDATE users SET is_archived = 0, is_approved = 1 WHERE staff_id = ?`, [staffId], () => {});
+        // Audit
+        db.run(`INSERT INTO staff_audit (action, staff_id, before_json, after_json, user_id) VALUES (?, ?, ?, ?, ?)`,
+            ['restore', staffId, null, null, req.user.id || null], () => {});
+        res.json({ message: 'Staff restored' });
     });
 });
 

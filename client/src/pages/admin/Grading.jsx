@@ -17,7 +17,8 @@ import {
     CheckCircle,
     AlertCircle,
     RefreshCw,
-    Zap
+    Zap,
+    Upload
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
@@ -576,8 +577,94 @@ const Grading = () => {
         window.URL.revokeObjectURL(url);
     };
 
+    const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
+    const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
+    const [scoresFiles, setScoresFiles] = useState([]);
+    const [ledgerFiles, setLedgerFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
+
+    const handlePickScores = (e) => setScoresFiles(Array.from(e.target.files || []));
+    const handlePickLedger = (e) => setLedgerFiles(Array.from(e.target.files || []));
+    const uploadFormData = async (url, files) => {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        return axios.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    };
+    const handleUploadScores = async () => {
+        if (scoresFiles.length === 0) return;
+        setUploading(true);
+        try {
+            await uploadFormData('/api/integration/grades/import', scoresFiles);
+            setIsScoresModalOpen(false);
+            setScoresFiles([]);
+            fetchCadets(true);
+            alert('Examination scores imported');
+        } catch (e) {
+            alert('Import failed');
+        } finally {
+            setUploading(false);
+        }
+    };
+    const handleUploadLedger = async () => {
+        if (ledgerFiles.length === 0) return;
+        setUploading(true);
+        try {
+            await uploadFormData('/api/integration/ledger/import', ledgerFiles);
+            setIsLedgerModalOpen(false);
+            setLedgerFiles([]);
+            fetchCadets(true);
+            alert('Merit/Demerit records imported');
+        } catch (e) {
+            alert('Import failed');
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div className="relative h-full">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setIsScoresModalOpen(true)} className="px-3 py-2 bg-blue-600 text-white rounded hover:opacity-90 flex items-center gap-2">
+                        <Upload size={16} /> Import Exam Scores
+                    </button>
+                    <button onClick={() => setIsLedgerModalOpen(true)} className="px-3 py-2 bg-green-600 text-white rounded hover:opacity-90 flex items-center gap-2">
+                        <Upload size={16} /> Import Merit/Demerit
+                    </button>
+                </div>
+            </div>
+
+            {isScoresModalOpen && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg w-full max-w-md p-6 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-lg">Import Examination Scores</h3>
+                            <button onClick={() => setIsScoresModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handlePickScores} />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setIsScoresModalOpen(false)} className="px-3 py-2 border rounded">Cancel</button>
+                            <button disabled={uploading || scoresFiles.length === 0} onClick={handleUploadScores} className="px-3 py-2 bg-blue-600 text-white rounded">{uploading ? 'Uploading...' : 'Upload'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isLedgerModalOpen && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg w-full max-w-md p-6 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-lg">Import Merit/Demerit</h3>
+                            <button onClick={() => setIsLedgerModalOpen(false)}><X size={20} /></button>
+                        </div>
+                        <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handlePickLedger} />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setIsLedgerModalOpen(false)} className="px-3 py-2 border rounded">Cancel</button>
+                            <button disabled={uploading || ledgerFiles.length === 0} onClick={handleUploadLedger} className="px-3 py-2 bg-green-600 text-white rounded">{uploading ? 'Uploading...' : 'Upload'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Scanner Modal */}
             {isScannerOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm">

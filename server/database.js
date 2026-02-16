@@ -1048,6 +1048,13 @@ function initSqliteDb() {
             FOREIGN KEY(sender_staff_id) REFERENCES training_staff(id) ON DELETE CASCADE
         )`);
 
+        // Migration: Add is_archived to training_staff if missing
+        db.all(`PRAGMA table_info('training_staff')`, [], (err, cols) => {
+            if (!err && Array.isArray(cols) && !cols.find(c => String(c.name).toLowerCase() === 'is_archived')) {
+                db.run(`ALTER TABLE training_staff ADD COLUMN is_archived INTEGER DEFAULT 0`, () => {});
+            }
+        });
+
         // Migration for SQLite: Add staff_id to users
         db.run(`PRAGMA foreign_keys=OFF;`);
         db.run(`ALTER TABLE users ADD COLUMN staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`, (err) => {
