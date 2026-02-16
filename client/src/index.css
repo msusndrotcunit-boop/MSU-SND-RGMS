@@ -108,6 +108,12 @@ body {
     transform: translateY(-1px) scale(1.02);
     filter: saturate(1.05);
   }
+  .bg-primary-surface {
+    background: var(--primary-color);
+    background-image: var(--primary-gradient);
+    background-size: cover;
+    background-origin: border-box;
+  }
   .btn {
     display: inline-flex;
     align-items: center;

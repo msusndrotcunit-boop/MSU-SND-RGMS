@@ -155,7 +155,7 @@ const CadetLayout = () => {
     // Check for Guide on mount (if profile completed)
     React.useEffect(() => {
         const checkGuideStatus = async () => {
-            if (user && user.isProfileCompleted) {
+            if (user && user.role === 'cadet' && user.isProfileCompleted) {
                 try {
                     const profileRes = await axios.get('/api/cadet/profile');
                     setProfile(profileRes.data);
@@ -185,7 +185,7 @@ const CadetLayout = () => {
                             if (navigator.vibrate) navigator.vibrate(80);
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
-                        } else if (data.type === 'grade_updated') {
+                        } else if (data.type === 'grade_updated' && user?.role === 'cadet') {
                             toast.success('Grades updated');
                             axios.get('/api/cadet/my-grades').then(async res => {
                                 await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
@@ -200,7 +200,7 @@ const CadetLayout = () => {
                                     await cacheSingleton('attendance_by_day', 'my_history', { data: res.data, timestamp: Date.now() });
                                 }).catch(() => {});
                             }
-                        } else if (data.type === 'cadet_profile_updated' && data.cadetId === user?.cadetId) {
+                        } else if (data.type === 'cadet_profile_updated' && user?.role === 'cadet' && data.cadetId === user?.cadetId) {
                             // Re-fetch profile to update UI (like profile picture)
                             axios.get('/api/cadet/profile').then(res => {
                                 setProfile(res.data);

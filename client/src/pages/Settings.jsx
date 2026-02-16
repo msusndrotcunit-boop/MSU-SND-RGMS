@@ -195,6 +195,18 @@ const Settings = ({ role }) => {
                     <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
+                            <label className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-400">
+                                <input 
+                                    type="checkbox" 
+                                    checked={!!localSettings.display?.compactSwatches} 
+                                    onChange={(e) => setLocalSettings(prev => ({ 
+                                        ...prev, 
+                                        display: { ...prev.display, compactSwatches: e.target.checked } 
+                                    }))}
+                                    className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                                />
+                                Compact swatches
+                            </label>
                             <div className="flex gap-3 flex-wrap">
                                 {[
                                     'default','blue','indigo','green','emerald','red','pink','purple','orange','amber','cyan','teal','slate',
@@ -223,7 +235,7 @@ const Settings = ({ role }) => {
                                         <button
                                             key={token}
                                             onClick={() => handleChange('theme', 'primaryColor', token)}
-                                            className={`w-8 h-8 rounded-full border-2 transition-transform ${
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 transition-transform ${
                                                 localSettings.theme.primaryColor === token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
                                             }`}
                                             style={isGradient ? { backgroundImage: 'var(--primary-gradient)', background: token === 'gradient-emerald'
@@ -237,6 +249,65 @@ const Settings = ({ role }) => {
                                         />
                                     );
                                 })}
+                            </div>
+                        </div>
+
+                        {/* Grouped sections */}
+                        <div className="space-y-2">
+                            <div className="text-xs font-semibold uppercase text-gray-500">Solids</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {['default','blue','indigo','green','emerald','red','pink','purple','orange','amber','cyan','teal','slate'].map(token => {
+                                    const solids = {
+                                        default: '#0f766e', blue: '#2563eb', indigo: '#4f46e5', green: '#16a34a', emerald: '#059669',
+                                        red: '#dc2626', pink: '#db2777', purple: '#7c3aed', orange: '#ea580c', amber: '#d97706',
+                                        cyan: '#06b6d4', teal: '#0f766e', slate: '#334155'
+                                    };
+                                    return (
+                                        <button
+                                            key={`solid-${token}`}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${localSettings.theme.primaryColor===token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'} transition-transform`}
+                                            style={{ backgroundColor: solids[token] }}
+                                            title={token}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs font-semibold uppercase text-gray-500">Gradients</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {['gradient-emerald','gradient-sunset','gradient-ocean'].map(token => {
+                                    const gradients = {
+                                        'gradient-emerald': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+                                        'gradient-sunset': 'linear-gradient(135deg, #fb7185 0%, #f59e0b 50%, #ea580c 100%)',
+                                        'gradient-ocean': 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #1d4ed8 100%)'
+                                    };
+                                    return (
+                                        <button
+                                            key={`grad-${token}`}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${localSettings.theme.primaryColor===token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'} transition-transform`}
+                                            style={{ background: gradients[token] }}
+                                            title={token.replace('gradient-','') + ' gradient'}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs font-semibold uppercase text-gray-500">Unit Packages</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {[
+                                    { token: 'default', name: 'ROTC Green' },
+                                    { token: 'slate', name: 'Ops Slate' },
+                                    { token: 'gradient-emerald', name: 'Field Blend' }
+                                ].map(p => (
+                                    <button
+                                        key={`pkg-${p.token}`}
+                                        onClick={() => handleChange('theme', 'primaryColor', p.token)}
+                                        className={`${localSettings.display?.compactSwatches ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded border-2 ${localSettings.theme.primaryColor===p.token ? 'border-gray-900' : 'border-gray-200'} bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:shadow`}
+                                        title={p.name}
+                                    >
+                                        {p.name}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 

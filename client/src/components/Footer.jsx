@@ -37,7 +37,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-[var(--primary-color)] text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
+    <footer className="bg-primary-surface text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Brand Section */}
         <div>
