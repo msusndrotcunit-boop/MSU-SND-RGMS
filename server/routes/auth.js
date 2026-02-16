@@ -4,6 +4,7 @@ const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken, setSession, clearSession } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
+const dayjs = require('dayjs');
 
 // In-memory settings store (ephemeral on server restarts)
 let currentSettings = {
@@ -30,6 +31,48 @@ router.post('/heartbeat', (req, res) => {
     status: 'ok',
     method: 'POST',
     timestamp: Date.now()
+  });
+});
+
+// Save user location (used by WeatherAdvisory)
+router.post('/location', authenticateToken, (req, res) => {
+  try {
+    const { latitude, longitude, accuracy, provider } = req.body || {};
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ message: 'latitude and longitude are required numbers' });
+    }
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const ts = dayjs().toISOString();
+    const sql = `
+      UPDATE users
+      SET last_latitude = ?, last_longitude = ?, last_location_at = ?, last_location_accuracy = ?, last_location_provider = ?
+      WHERE id = ?
+    `;
+    db.run(sql, [latitude, longitude, ts, accuracy || null, provider || 'gps', userId], function (err) {
+      if (err) return res.status(500).json({ message: err.message });
+      if (this.changes === 0) return res.status(404).json({ message: 'User not found' });
+      res.json({ ok: true, latitude, longitude, at: ts });
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// Read last saved user location
+router.get('/location', authenticateToken, (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+  const sql = `
+    SELECT last_latitude as latitude, last_longitude as longitude, last_location_at as at, last_location_accuracy as accuracy, last_location_provider as provider
+    FROM users
+    WHERE id = ?
+  `;
+  db.get(sql, [userId], (err, row) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json(row || {});
   });
 });
 

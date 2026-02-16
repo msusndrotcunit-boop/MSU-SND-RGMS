@@ -1491,13 +1491,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
         ORDER BY count DESC
     `;
     
-    db.all(religionSql, [], (err, religionRows) => {
-        if (err) {
-            console.error('Religion analytics error:', err);
-            return res.status(500).json({ message: err.message });
+    db.all(religionSql, [], (relErr, religionRows) => {
+        if (relErr) {
+            console.error('Religion analytics error:', relErr.message);
+            demographics.religion = [];
+        } else {
+            demographics.religion = religionRows || [];
         }
-        
-        demographics.religion = religionRows || [];
         
         // Get age distribution (calculate from birthdate)
         const ageSql = db.pool ? `
@@ -1550,13 +1550,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 END
         `;
         
-        db.all(ageSql, [], (err, ageRows) => {
-            if (err) {
-                console.error('Age analytics error:', err);
-                return res.status(500).json({ message: err.message });
+        db.all(ageSql, [], (ageErr, ageRows) => {
+            if (ageErr) {
+                console.error('Age analytics error:', ageErr.message);
+                demographics.age = [];
+            } else {
+                demographics.age = ageRows || [];
             }
-            
-            demographics.age = ageRows || [];
             
             // Get course distribution
             const courseSql = `
@@ -1567,13 +1567,14 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 ORDER BY count DESC
             `;
             
-            db.all(courseSql, [], (err, courseRows) => {
-                if (err) {
-                    console.error('Course analytics error:', err);
-                    return res.status(500).json({ message: err.message });
+            db.all(courseSql, [], (courseErr, courseRows) => {
+                if (courseErr) {
+                    console.error('Course analytics error:', courseErr.message);
+                    demographics.courses = [];
+                } else {
+                    demographics.courses = courseRows || [];
                 }
                 
-                demographics.courses = courseRows || [];
                 res.json(demographics);
             });
         });
