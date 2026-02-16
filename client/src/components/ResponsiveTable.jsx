@@ -204,7 +204,7 @@ const ResponsiveTable = ({
           key={column.key}
           className={clsx(
             column.cellClassName || "px-4 py-3",
-            "text-sm text-gray-900 dark:text-gray-100",
+            "text-sm text-gray-900 dark:text-gray-100 align-baseline min-h-[44px]",
             column.align === 'center' && "text-center",
             column.align === 'right' && "text-right",
             column.cellClassName && column.cellClassName
