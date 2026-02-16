@@ -339,7 +339,7 @@ const CadetLayout = () => {
                     id="cadet-sidebar"
                     aria-hidden={!isSidebarOpen}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transform-gpu transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-y-auto md:overflow-visible overscroll-contain",
+                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transform-gpu transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden md:overflow-visible overscroll-contain",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -430,16 +430,18 @@ const CadetLayout = () => {
                         <Settings size={20} />
                         <span>Settings</span>
                     </Link>
+                </nav>
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)]">
                     <button
                         onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
-                        className="nav-link space-x-3 transition hover-highlight text-green-200 hover:bg-green-800 hover:text-white"
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white hover:opacity-95 transition"
                         type="button"
                         aria-label="Logout"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
                     </button>
-                </nav>
+                </div>
                 
             </FixedElement>
 

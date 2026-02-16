@@ -286,7 +286,7 @@ const AdminLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-y-auto md:overflow-visible",
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden md:overflow-visible",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -369,7 +369,6 @@ const AdminLayout = () => {
                         }
 
                         const isActive = location.pathname === item.path;
-                        const isSettings = item.path === '/admin/settings';
                         return (
                             <React.Fragment key={item.path}>
                                 <Link
@@ -383,22 +382,23 @@ const AdminLayout = () => {
                                     <Icon size={20} />
                                     <span>{item.label}</span>
                                 </Link>
-                                {isSettings && (
-                                    <button
-                                        type="button"
-                                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
-                                        className="nav-link space-x-3 transition hover-highlight text-white/80 hover:bg-black/20 hover:text-white"
-                                    >
-                                        <LogOut size={20} />
-                                        <span>Logout</span>
-                                    </button>
-                                )}
                             </React.Fragment>
                         );
                     })}
                 </nav>
-                
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)]">
+                    <button
+                        type="button"
+                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white hover:opacity-95 transition"
+                        aria-label="Logout"
+                    >
+                        <LogOut size={20} />
+                        <span>Logout</span>
+                    </button>
+                </div>
                 </FixedElement>
+
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative z-20 w-full md:overflow-visible">
