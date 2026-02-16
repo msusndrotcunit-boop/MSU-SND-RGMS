@@ -472,6 +472,7 @@ export const MemoryManager = {
  * Platform detection and cross-platform utilities
  */
 export const PlatformDetector = {
+  _webglSupported: undefined,
   /**
    * Detect the current platform
    * @returns {Object} Platform information
@@ -566,19 +567,23 @@ export const PlatformDetector = {
       
       // Display and graphics
       webGL: (() => {
+        if (typeof PlatformDetector._webglSupported !== 'undefined') {
+          return PlatformDetector._webglSupported;
+        }
         try {
           const canvas = document.createElement('canvas');
-          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+          const gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
                  || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
-          const supported = !!gl;
+          PlatformDetector._webglSupported = !!gl;
           if (gl) {
-            const lose = gl.getExtension('WEBGL_lose_context');
-            if (lose && lose.loseContext) lose.loseContext();
-            gl = null;
+            try {
+              const lose = gl.getExtension('WEBGL_lose_context');
+              if (lose && lose.loseContext) lose.loseContext();
+            } catch {}
           }
-          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-          return supported;
+          return PlatformDetector._webglSupported;
         } catch {
+          PlatformDetector._webglSupported = false;
           return false;
         }
       })(),

@@ -270,45 +270,7 @@ const StaffLayout = () => {
                         </div>
                     )}
                 </div>
-                <div className="relative md:hidden border-b border-white/10">
-                    <div className="scroll-fade left"></div>
-                    <div className="scroll-fade right"></div>
-                    <div className="mobile-scroll-nav">
-                        {[
-                            { path: "/staff/home", label: "Home" },
-                            { path: "/staff/dashboard", label: "My Portal" },
-                            ...(isPrivilegedStaff ? [
-                                { path: "/staff/unit-dashboard", label: "Unit Dashboard" },
-                                { path: "/staff/data-analysis", label: "Data Analysis" },
-                                { path: "/staff/activities", label: "Activities" },
-                                { path: "/staff/achievements", label: "Achievements" },
-                            ] : []),
-                            { path: "/staff/communication", label: "Communication" },
-                            { path: "/staff/ask-admin", label: "Ask Admin" },
-                            { path: "/staff/my-qr", label: "My QR" },
-                            { path: "/staff/settings", label: "Settings" },
-                        ].map(it => (
-                            <Link
-                                key={`m-${it.path}`}
-                                to={it.path}
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={clsx(
-                                    "pill bg-white/10 text-white/90 hover:bg-white/20",
-                                    location.pathname === it.path && "bg-black/30 text-white"
-                                )}
-                            >
-                                {it.label}
-                            </Link>
-                        ))}
-                        <button
-                            onClick={handleLogout}
-                            className="pill bg-red-600 text-white hover:opacity-90"
-                            type="button"
-                        >
-                            Logout
-                        </button>
-                    </div>
-                </div>
+                {/* Mobile horizontal pill nav removed per request */}
                 <nav className="flex-1 p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto text-sm md:text-base">
                     {/* Home - Locked if profile incomplete */}
                     <Link

@@ -1,7 +1,7 @@
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
-import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { registerRoute, setCatchHandler } from 'workbox-routing';
+import { StaleWhileRevalidate, CacheFirst, NetworkFirst, NetworkOnly } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 cleanupOutdatedCaches();
@@ -12,11 +12,16 @@ clientsClaim();
 
 // Enhanced caching strategies for mobile performance
 
-// Cache API responses with network-first strategy
+// Cache API responses with safer, same-origin-only network-first strategy
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
+  ({ url, request }) => (
+    url.origin === self.location.origin &&
+    request.method === 'GET' &&
+    url.pathname.startsWith('/api/')
+  ),
   new NetworkFirst({
     cacheName: 'api-cache',
+    networkTimeoutSeconds: 8,
     plugins: [
       new ExpirationPlugin({
         maxEntries: 100,
@@ -89,6 +94,30 @@ self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
     event.waitUntil(doBackgroundSync());
   }
+});
+
+// Global catch handler to avoid "no-response" unhandled promise rejections
+setCatchHandler(async ({ event }) => {
+  const req = event.request;
+  try {
+    // For navigation requests, return a simple offline notice
+    if (req.mode === 'navigate') {
+      return new Response('You appear to be offline. Please check your connection.', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
+      });
+    }
+    // For API GET requests, return a graceful 503 JSON
+    const url = new URL(req.url);
+    if (req.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ ok: false, offline: true, message: 'Service unavailable (offline or server unreachable)' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch {}
+  // Default: empty error response to suppress noisy console errors
+  return Response.error();
 });
 
 async function doBackgroundSync() {

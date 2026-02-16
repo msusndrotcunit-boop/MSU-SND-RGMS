@@ -91,19 +91,20 @@ export const BrowserCompatibility = {
       // Media APIs
       webGL: (() => {
         try {
+          if (window.__rgms_webgl_supported !== undefined) return window.__rgms_webgl_supported;
           const canvas = document.createElement('canvas');
-          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+          const gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
                  || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
-          const supported = !!gl;
-          if (gl) {
-            const lose = gl.getExtension('WEBGL_lose_context');
-            if (lose && lose.loseContext) lose.loseContext();
-            gl = null;
-          }
-          // Detach canvas to allow GC
-          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-          return supported;
+          window.__rgms_webgl_supported = !!gl;
+          try {
+            if (gl) {
+              const lose = gl.getExtension('WEBGL_lose_context');
+              if (lose && lose.loseContext) lose.loseContext();
+            }
+          } catch {}
+          return window.__rgms_webgl_supported;
         } catch (e) {
+          window.__rgms_webgl_supported = false;
           return false;
         }
       })(),
@@ -411,40 +412,8 @@ export const CrossBrowserTestSuite = {
     // Test WebGL
     tests.push({
       name: 'WebGL',
-      status: (() => {
-        try {
-          const canvas = document.createElement('canvas');
-          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
-                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
-          const ok = !!gl;
-          if (gl) {
-            const lose = gl.getExtension('WEBGL_lose_context');
-            if (lose && lose.loseContext) lose.loseContext();
-            gl = null;
-          }
-          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-          return ok ? 'passed' : 'warning';
-        } catch (e) {
-          return 'warning';
-        }
-      })(),
-      message: (() => {
-        try {
-          const canvas = document.createElement('canvas');
-          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
-                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
-          const msg = gl ? 'WebGL is supported' : 'WebGL not supported';
-          if (gl) {
-            const lose = gl.getExtension('WEBGL_lose_context');
-            if (lose && lose.loseContext) lose.loseContext();
-            gl = null;
-          }
-          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-          return msg;
-        } catch (e) {
-          return 'WebGL not supported';
-        }
-      })()
+      status: (() => (window.__rgms_webgl_supported ? 'passed' : 'warning'))(),
+      message: (() => (window.__rgms_webgl_supported ? 'WebGL is supported' : 'WebGL not supported'))()
     });
 
     return {

@@ -2377,15 +2377,16 @@ router.post('/activities', upload.array('images', 10), async (req, res) => {
         console.log('[POST /activities] Validation passed, inserting into database...');
 
         // Insert into database immediately (fast response)
-        db.get(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+        db.run(
+            `INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?)`,
             [title, description, date, primaryImage, imagesJson, activityType],
-            (err, row) => {
+            function(err) {
                 if (err) {
                     console.error('[POST /activities] Database error:', err);
                     return res.status(500).json({ message: err.message });
                 }
                 
-                const activityId = row ? row.id : null;
+                const activityId = this && typeof this.lastID !== 'undefined' ? this.lastID : null;
                 console.log('[POST /activities] Insert successful, ID:', activityId);
                 
                 // Create notification for the new activity
