@@ -287,7 +287,7 @@ const AdminLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden md:overflow-visible",
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -402,7 +402,7 @@ const AdminLayout = () => {
 
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative z-20 w-full md:overflow-visible">
+            <div className="flex-1 flex flex-col overflow-hidden relative z-20 w-full md:ml-64 md:overflow-visible">
                 <FixedElement 
                     position="top" 
                     respectSafeArea={true}
