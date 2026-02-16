@@ -4,8 +4,10 @@ import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Sav
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Attendance = () => {
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
     const [attendanceType, setAttendanceType] = useState('cadet'); // 'cadet' | 'staff'
     const [days, setDays] = useState([]);
@@ -843,12 +845,11 @@ const Attendance = () => {
                                             }}
                                         />
                                         <button 
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition disabled:opacity-50"
-                                            disabled={!selectedDay || isImporting}
-                                            title="Import ROTCMIS PDF or scanned photo"
+                                            onClick={() => navigate('/admin/import-rotcmis')}
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition"
+                                            title="Import ROTCMIS"
                                         >
-                                            <FileText size={16} className="mr-2" /> {isImporting ? 'Importing...' : 'Import'}
+                                            <FileText size={16} className="mr-2" /> Import ROTCMIS
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}

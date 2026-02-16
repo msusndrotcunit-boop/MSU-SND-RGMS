@@ -36,6 +36,23 @@ const CadetLayout = () => {
         } catch {}
     }, []);
 
+    React.useEffect(() => {
+        try {
+            if (isSidebarOpen) {
+                document.body.style.overflow = 'hidden';
+                document.body.style.touchAction = 'none';
+            } else {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            }
+        } catch {}
+        return () => {
+            try {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            } catch {}
+        };
+    }, [isSidebarOpen]);
     // Welcome & Guide States
     const [profile, setProfile] = useState(null);
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -319,8 +336,10 @@ const CadetLayout = () => {
                  <FixedElement 
                     position="left" 
                     respectSafeArea={true}
+                    id="cadet-sidebar"
+                    aria-hidden={!isSidebarOpen}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto",
+                        "w-[85vw] max-w-sm md:w-64 bg-[var(--primary-color)] text-white flex flex-col transform transform-gpu transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-screen overflow-y-auto overscroll-contain",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -342,39 +361,7 @@ const CadetLayout = () => {
                     {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
                 </div>
                 
-                <div className="relative md:hidden border-b border-white/10">
-                    <div className="scroll-fade left"></div>
-                    <div className="scroll-fade right"></div>
-                    <div className="mobile-scroll-nav">
-                        {[
-                            { path: "/cadet/home", label: "Home" },
-                            { path: "/cadet/dashboard", label: "My Portal" },
-                            { path: "/cadet/achievements", label: "Achievements" },
-                            { path: "/cadet/ask-admin", label: "Ask Admin" },
-                            { path: "/cadet/about", label: "About" },
-                            { path: "/cadet/settings", label: "Settings" },
-                        ].map(it => (
-                            <Link
-                                key={`m-${it.path}`}
-                                to={it.path}
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={clsx(
-                                    "pill bg-white/10 text-white/90 hover:bg-white/20",
-                                    location.pathname === it.path && "bg-black/30 text-white"
-                                )}
-                            >
-                                {it.label}
-                            </Link>
-                        ))}
-                        <button
-                            onClick={handleLogout}
-                            className="pill bg-red-600 text-white hover:opacity-90"
-                            type="button"
-                        >
-                            Logout
-                        </button>
-                    </div>
-                </div>
+                
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <Link
@@ -443,16 +430,17 @@ const CadetLayout = () => {
                         <Settings size={20} />
                         <span>Settings</span>
                     </Link>
-                </nav>
-                <div className="p-4 border-t border-green-800">
                     <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-green-200 hover:text-white hover:bg-green-800 rounded transition hover-highlight"
+                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                        className="nav-link space-x-3 transition hover-highlight text-green-200 hover:bg-green-800 hover:text-white"
+                        type="button"
+                        aria-label="Logout"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
                     </button>
-                </div>
+                </nav>
+                
             </FixedElement>
 
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -464,6 +452,8 @@ const CadetLayout = () => {
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar} 
+                            aria-controls="cadet-sidebar"
+                            aria-expanded={isSidebarOpen}
                             className="mr-4 text-gray-600 hover:text-gray-900 md:hidden touch-target p-2"
                             style={{ minHeight: '48px', minWidth: '48px' }}
                         >

@@ -126,6 +126,14 @@ body {
       min-height: 40px;
     }
   }
+  @media (max-width: 480px) {
+    .btn {
+      min-height: 48px;
+      font-size: clamp(0.875rem, 3.5vw, 1rem);
+      padding: 0.5rem 0.75rem;
+      max-width: 100%;
+    }
+  }
   .btn--sm { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
   .btn--md { padding: 0.625rem 1rem; font-size: 1rem; }
   .btn--lg { padding: 0.75rem 1.25rem; font-size: 1.125rem; }

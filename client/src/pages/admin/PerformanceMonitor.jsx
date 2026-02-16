@@ -102,11 +102,11 @@ function PerformanceMonitor() {
                     <h1 className="text-3xl font-bold text-gray-900">Performance Monitor</h1>
                     <p className="text-gray-600 mt-1">Real-time system performance metrics</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                     <button
                         onClick={optimizeDatabase}
                         disabled={optimizing}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                     >
                         <Zap className={`w-4 h-4 ${optimizing ? 'animate-pulse' : ''}`} />
                         {optimizing ? 'Optimizing...' : 'Optimize DB'}
@@ -114,7 +114,7 @@ function PerformanceMonitor() {
                     <button
                         onClick={fetchMetrics}
                         disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -122,7 +122,7 @@ function PerformanceMonitor() {
                     <button
                         onClick={clearCache}
                         disabled={clearing}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                     >
                         <Trash2 className="w-4 h-4" />
                         Clear Cache

@@ -876,7 +876,7 @@ const Grading = () => {
                             
                             {/* TAB 1: Subject Proficiency */}
                             {activeTab === 'proficiency' && (
-                                <div className="max-w-xl mx-auto">
+                                <div className="max-w-none mx-0 w-full">
                                     <div className="bg-white p-6 rounded shadow-sm border mb-6">
                                         <h3 className="font-bold text-lg mb-4 flex items-center text-gray-800">
                                             <BookOpen className="mr-2 text-green-600" size={20} />
@@ -926,7 +926,7 @@ const Grading = () => {
 
                             {/* TAB 2: Merit/Demerit */}
                             {activeTab === 'merit' && (
-                                <div className="max-w-4xl mx-auto">
+                                <div className="max-w-none mx-0 w-full">
                                     <div className="flex flex-col md:flex-row gap-6">
                                         <div className="w-full md:w-1/3">
                                             <div className="bg-white p-4 rounded shadow-sm border mb-4">

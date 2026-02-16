@@ -827,16 +827,16 @@ const Cadets = () => {
                     {
                         key: 'username',
                         label: 'Username',
-                        headerClassName: 'px-3',
-                        cellClassName: 'px-3 whitespace-nowrap',
+                        headerClassName: 'px-2',
+                        cellClassName: 'px-2 whitespace-nowrap',
                         render: (_, cadet) => cadet.username || cadet.student_id
                     },
                     {
                         key: 'unit',
                         label: 'Unit (Coy/Plt)',
                         align: 'center',
-                        headerClassName: 'px-2',
-                        cellClassName: 'px-2 whitespace-nowrap',
+                        headerClassName: 'px-1',
+                        cellClassName: 'px-1 whitespace-nowrap',
                         render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
                     },
                     {

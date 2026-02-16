@@ -92,7 +92,17 @@ export const BrowserCompatibility = {
       webGL: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          const supported = !!gl;
+          if (gl) {
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (lose && lose.loseContext) lose.loseContext();
+            gl = null;
+          }
+          // Detach canvas to allow GC
+          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+          return supported;
         } catch (e) {
           return false;
         }
@@ -404,8 +414,16 @@ export const CrossBrowserTestSuite = {
       status: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
-            'passed' : 'warning';
+          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          const ok = !!gl;
+          if (gl) {
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (lose && lose.loseContext) lose.loseContext();
+            gl = null;
+          }
+          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+          return ok ? 'passed' : 'warning';
         } catch (e) {
           return 'warning';
         }
@@ -413,8 +431,16 @@ export const CrossBrowserTestSuite = {
       message: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
-            'WebGL is supported' : 'WebGL not supported';
+          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          const msg = gl ? 'WebGL is supported' : 'WebGL not supported';
+          if (gl) {
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (lose && lose.loseContext) lose.loseContext();
+            gl = null;
+          }
+          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+          return msg;
         } catch (e) {
           return 'WebGL not supported';
         }

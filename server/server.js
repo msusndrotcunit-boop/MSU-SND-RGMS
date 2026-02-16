@@ -184,7 +184,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api/recognition', recognitionRoutes);
 
 // Performance monitoring routes (Validates Requirements: 9.5, 8.5)
-const { router: metricsRouter } = require('./routes/metrics');
+const { router: metricsRouter, getMetricsSnapshot, evaluateAlerts } = require('./routes/metrics');
 app.use('/api/admin', metricsRouter);
 
 // DEBUG: Print all registered routes
@@ -217,6 +217,22 @@ function printRoutes() {
     console.log('[Router] End of Routes\n');
 }
 setTimeout(printRoutes, 1000); // Print after brief delay to ensure mounting
+
+// Lightweight alerting loop (console + DB notification)
+setInterval(() => {
+    try {
+        const snap = getMetricsSnapshot();
+        const alerts = evaluateAlerts(snap);
+        if (alerts.length > 0) {
+            console.warn('[Perf Alerts]', alerts.join(' | '));
+            // Persist a single aggregated notification (optional)
+            const msg = `Performance alerts: ${alerts.join('; ')}`;
+            db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [null, msg, 'perf_alert']);
+        }
+    } catch (e) {
+        // Silent fail to avoid crashing
+    }
+}, 30000); // every 30s
 
 
 // Create uploads directory if not exists

@@ -29,7 +29,6 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
-const AdminDemographicsAnalytics = lazy(() => import('./pages/admin/DemographicsAnalytics'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 const BroadcastMessages = lazy(() => import('./pages/BroadcastMessages'));
 
@@ -87,7 +86,6 @@ function App() {
                 <Route path="import-rotcmis" element={<AdminImportRotcmis />} />
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
-                <Route path="demographics-analytics" element={<AdminDemographicsAnalytics />} />
                 <Route path="activities" element={<AdminActivities />} />
                 <Route path="achievements" element={<AdminAchievements />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />

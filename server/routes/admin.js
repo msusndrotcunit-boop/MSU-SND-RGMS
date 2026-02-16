@@ -3647,8 +3647,16 @@ router.post('/force-optimize-db', authenticateToken, isAdmin, async (req, res) =
         const results = {
             indexesCreated: 0,
             migrationsRun: 0,
-            errors: []
+            errors: [],
+            before: null,
+            after: null
         };
+
+        // Capture metrics before
+        try {
+            const { getMetricsSnapshot } = require('./metrics');
+            results.before = getMetricsSnapshot();
+        } catch (_) {}
 
         // Create performance indexes
         try {
@@ -3682,6 +3690,12 @@ router.post('/force-optimize-db', authenticateToken, isAdmin, async (req, res) =
         // Clear cache
         clearCache();
         results.cacheCleared = true;
+
+        // Capture metrics after
+        try {
+            const { getMetricsSnapshot } = require('./metrics');
+            results.after = getMetricsSnapshot();
+        } catch (_) {}
 
         console.log('[Force Optimize] Database optimization complete');
 

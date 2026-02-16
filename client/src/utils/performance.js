@@ -568,7 +568,16 @@ export const PlatformDetector = {
       webGL: (() => {
         try {
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+          let gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          const supported = !!gl;
+          if (gl) {
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (lose && lose.loseContext) lose.loseContext();
+            gl = null;
+          }
+          if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+          return supported;
         } catch {
           return false;
         }
