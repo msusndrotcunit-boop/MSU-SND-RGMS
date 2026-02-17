@@ -10,6 +10,7 @@ const sessions = new Map();
 
 function authenticateToken(req, res, next) {
   if (bypass) {
+    console.warn('[Auth] BYPASS_AUTH is enabled - this should only be used in development!');
     const user = { id: 1, role: defaultRole };
     if (defaultRole === 'cadet' && db) {
       try {
@@ -44,12 +45,14 @@ function authenticateToken(req, res, next) {
     // For simple token auth, we need to get user info from session or default
     const session = sessions.get(token);
     if (session) {
+      console.log('[Auth] Session found for token:', { userId: session.id, role: session.role, cadetId: session.cadetId });
       req.user = session;
       return next();
     }
-    // Fallback to default user if no session found
-    req.user = { id: 1, role: defaultRole };
-    return next();
+    // Fallback: No session found, but token is valid
+    // This shouldn't happen in normal operation
+    console.warn('[Auth] Valid token but no session found - user may need to log in again');
+    return res.status(401).json({ message: 'Session expired. Please log in again.' });
   }
   
   res.status(401).json({ message: 'Invalid token' });
