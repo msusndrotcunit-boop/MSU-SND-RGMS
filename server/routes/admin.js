@@ -2268,6 +2268,8 @@ router.put('/grades/:cadetId', authenticateToken, isAdmin, async (req, res) => {
             await ensureAttendanceRecord();
             // Use updateTotalAttendance helper to ensure consistency
             await updateTotalAttendance(cadetId);
+            // Invalidate cadet-related caches so /api/cadet/my-grades reflects changes immediately
+            try { invalidateCadet(cadetId); } catch (_) {}
             broadcastEvent({ type: 'grade_updated', cadetId });
             res.json({ message: 'Grades updated' });
         };
