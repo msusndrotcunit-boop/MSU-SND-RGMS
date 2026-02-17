@@ -393,6 +393,8 @@ async function initPgDb() {
             semester TEXT,
             corp_position TEXT,
             gender TEXT,
+            religion TEXT,
+            birthdate TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -400,6 +402,8 @@ async function initPgDb() {
             is_archived BOOLEAN DEFAULT FALSE
         )`,
         `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS gender TEXT`,
+        `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS religion TEXT`,
+        `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS birthdate TEXT`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -853,6 +857,8 @@ function initSqliteDb() {
             semester TEXT,
             corp_position TEXT,
             gender TEXT,
+            religion TEXT,
+            birthdate TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -865,9 +871,22 @@ function initSqliteDb() {
         db.all(`PRAGMA table_info(cadets)`, [], (err, rows) => {
             if (!err) {
                 const hasGender = rows.some(r => (r.name || '').toLowerCase() === 'gender');
+                const hasReligion = rows.some(r => (r.name || '').toLowerCase() === 'religion');
+                const hasBirthdate = rows.some(r => (r.name || '').toLowerCase() === 'birthdate');
+                
                 if (!hasGender) {
                     db.run(`ALTER TABLE cadets ADD COLUMN gender TEXT`, (e) => {
                         if (e) console.error('Error adding gender column to cadets:', e.message);
+                    });
+                }
+                if (!hasReligion) {
+                    db.run(`ALTER TABLE cadets ADD COLUMN religion TEXT`, (e) => {
+                        if (e) console.error('Error adding religion column to cadets:', e.message);
+                    });
+                }
+                if (!hasBirthdate) {
+                    db.run(`ALTER TABLE cadets ADD COLUMN birthdate TEXT`, (e) => {
+                        if (e) console.error('Error adding birthdate column to cadets:', e.message);
                     });
                 }
             }
