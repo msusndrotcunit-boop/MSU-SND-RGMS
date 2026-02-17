@@ -303,12 +303,19 @@ const CadetLayout = () => {
         return getProfilePicFallback(user?.cadetId, 'cadets');
     }, [profile?.profile_pic, user?.cadetId]);
 
+    const rankText = useMemo(() => (profile?.rank || 'Cadet').toString().trim(), [profile?.rank]);
+    const nameText = useMemo(() => {
+        const parts = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix_name].filter(Boolean);
+        return parts.length ? parts.join(' ') : (user?.username || '');
+    }, [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix_name, user?.username]);
+
     const renderProfileImage = () => {
         return (
             <img
                 key={profilePicSrc}
                 src={profilePicSrc}
-                alt="Profile"
+                alt={nameText ? `${rankText} ${nameText}` : 'Cadet profile photo'}
+                aria-label={nameText ? `${rankText} ${nameText}` : 'Cadet profile photo'}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                     e.target.src = getProfilePicFallback(user?.cadetId, 'cadets');
@@ -350,18 +357,39 @@ const CadetLayout = () => {
                     </button>
                 </div>
                 
-                {/* User Info Section */}
+                {/* User Info Section with accessible visual hierarchy */}
                 <div className="px-6 py-4 border-b border-white/10 flex flex-col items-center text-center">
-                    <Link to="/cadet/profile" className="w-20 h-20 rounded-full bg-white mb-3 overflow-hidden border-2 border-yellow-400 shadow-md">
-                        {renderProfileImage()}
-                    </Link>
-                    <div className="font-semibold text-sm text-yellow-400">
-                        {profile ? `${profile.rank || ''} ${profile.first_name || ''} ${profile.last_name || ''}`.trim() : (user?.username || 'Cadet')}
-                    </div>
-                    {profile && (
-                        <>
-                            <div className="text-xs text-green-200">{profile.email || user?.username}</div>
-                        </>
+                    <figure className="w-full flex flex-col items-center">
+                        <Link 
+                            to="/cadet/profile" 
+                            className="w-24 h-24 md:w-20 md:h-20 rounded-full bg-white mb-2 overflow-hidden ring-2 ring-yellow-400 shadow-md"
+                            aria-label="View profile"
+                        >
+                            {renderProfileImage()}
+                        </Link>
+                        <figcaption className="w-full">
+                            <div 
+                                id="cadet-rank" 
+                                className="text-[11px] md:text-xs tracking-wide uppercase text-yellow-300 font-extrabold"
+                                aria-live="polite"
+                            >
+                                {rankText || 'Cadet'}
+                            </div>
+                            <div 
+                                id="cadet-name" 
+                                className="text-sm md:text-base font-semibold text-white leading-tight break-words"
+                            >
+                                {nameText || 'Profile Incomplete'}
+                            </div>
+                            {profile?.email && (
+                                <div className="text-[11px] text-green-200 mt-1 truncate max-w-[14rem]" title={profile.email}>
+                                    {profile.email}
+                                </div>
+                            )}
+                        </figcaption>
+                    </figure>
+                    {!profile && (
+                        <div className="sr-only" role="status" aria-live="polite">Loading profile information</div>
                     )}
                 </div>
                 
