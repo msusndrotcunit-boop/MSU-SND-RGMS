@@ -320,7 +320,7 @@ const CadetLayout = () => {
     return (
         <SafeAreaProvider>
             <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
+                <AnimationOptimizer preserveFixed>
                     <CrossPlatformStandardizer>
                             <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden readable-text text-balance">
                  <Toaster position="top-center" reverseOrder={false} />

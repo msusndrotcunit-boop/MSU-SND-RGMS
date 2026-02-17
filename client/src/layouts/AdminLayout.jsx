@@ -289,7 +289,7 @@ const AdminLayout = () => {
     return (
         <SafeAreaProvider>
             <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
+                <AnimationOptimizer preserveFixed>
                     <CrossPlatformStandardizer>
                         <SafeAreaManager className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full overflow-hidden readable-text text-balance">
             <Toaster position="top-right" reverseOrder={false} />

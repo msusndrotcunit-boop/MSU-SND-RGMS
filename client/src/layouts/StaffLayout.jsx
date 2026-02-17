@@ -217,7 +217,7 @@ const StaffLayout = () => {
     return (
         <SafeAreaProvider>
             <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
+                <AnimationOptimizer preserveFixed>
                     <CrossPlatformStandardizer>
                         <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
