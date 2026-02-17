@@ -1205,22 +1205,7 @@ const Attendance = () => {
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
-                                {attendanceType === 'cadet' && (
-                                    <>
-                                        <input 
-                                            placeholder="Company (A/B/C)" 
-                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                            value={filterCompany}
-                                            onChange={e => setFilterCompany(e.target.value)}
-                                        />
-                                        <input 
-                                            placeholder="Platoon (1/2/3)" 
-                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                            value={filterPlatoon}
-                                            onChange={e => setFilterPlatoon(e.target.value)}
-                                        />
-                                    </>
-                                )}
+                                {/* Removed company/platoon boxes per request */}
                             </div>
                         </div>
 
