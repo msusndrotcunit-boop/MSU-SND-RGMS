@@ -22,7 +22,14 @@ const CadetLayout = () => {
 
     // Redirect to profile if not completed
     React.useEffect(() => {
+        console.log('[CadetLayout] Checking profile completion:', { 
+            user: !!user, 
+            role: user?.role, 
+            isProfileCompleted: user?.isProfileCompleted,
+            pathname: location.pathname 
+        });
         if (user && user.role === 'cadet' && !user.isProfileCompleted && location.pathname !== '/cadet/profile') {
+            console.log('[CadetLayout] Redirecting to profile completion');
             navigate('/cadet/profile', { replace: true });
         }
     }, [user, location.pathname, navigate]);
