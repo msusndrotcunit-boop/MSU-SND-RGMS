@@ -389,7 +389,10 @@ const CadetLayout = () => {
                                 {nameText || 'Profile Incomplete'}
                             </div>
                             {profile?.email && (
-                                <div className="text-[11px] text-green-200 mt-1 truncate max-w-[14rem]" title={profile.email}>
+                                <div
+                                    className="text-[11px] text-green-200 mt-1 w-full text-center overflow-hidden whitespace-nowrap truncate max-w-[16rem] mx-auto"
+                                    title={profile.email}
+                                >
                                     {profile.email}
                                 </div>
                             )}
