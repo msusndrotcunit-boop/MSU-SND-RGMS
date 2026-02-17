@@ -41,13 +41,13 @@ const Footer = () => {
     <footer className="bg-primary-surface text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Brand Section */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
             <div className="bg-yellow-500 p-2 rounded-lg shadow-lg shadow-yellow-500/20">
                <Shield className="w-6 h-6 text-gray-900" />
             </div>
-            <div>
-              <h3 className="font-bold text-lg tracking-wide">
+            <div className="text-center md:text-left">
+              <h3 className="font-bold text-lg tracking-wide leading-tight">
                 MSU-SND{' '}
                 <button 
                   type="button"
@@ -61,7 +61,7 @@ const Footer = () => {
               <p className="text-[10px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
             </div>
           </div>
-          <p className="text-green-100/80 text-sm mb-4 leading-relaxed">
+          <p className="text-green-100/80 text-sm mb-4 leading-relaxed max-w-xs md:max-w-none">
             MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
           </p>
           <p className="text-yellow-500 font-mono text-sm font-semibold">
@@ -70,14 +70,14 @@ const Footer = () => {
         </div>
 
         {/* Information */}
-        <div>
+        <div className="text-center md:text-left">
           <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Information</h4>
            <ul className="space-y-3 text-green-50 text-sm">
             <li>
                 <button
                   type="button"
                   onClick={() => setModal('about')}
-                  className="hover:text-yellow-500 transition-colors flex items-center gap-2 group"
+                  className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
                 >
                   <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About the App
                 </button>
@@ -86,7 +86,7 @@ const Footer = () => {
                 <button
                     type="button"
                     onClick={() => setModal('docs')}
-                    className="hover:text-yellow-500 transition-colors flex items-center gap-2 group"
+                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
                 >
                     <span className="group-hover:translate-x-1 transition-transform">📄</span> Documentation
                 </button>
@@ -95,7 +95,7 @@ const Footer = () => {
                 <button
                     type="button"
                     onClick={handleSupport}
-                    className="hover:text-yellow-500 transition-colors flex items-center gap-2 group"
+                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
                 >
                     <span className="group-hover:translate-x-1 transition-transform">🎧</span> Support
                 </button>
