@@ -93,6 +93,7 @@ const Cadets = () => {
     const [addForm, setAddForm] = useState({
         rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
         studentId: '', email: '', contactNumber: '', address: '',
+        gender: '', religion: '', birthdate: '',
         course: '', yearLevel: '', schoolYear: '',
         battalion: '', company: '', platoon: '',
         cadetCourse: '', semester: '', status: 'Ongoing'
@@ -515,6 +516,7 @@ const Cadets = () => {
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',
+                gender: '', religion: '', birthdate: '',
                 course: '', yearLevel: '', schoolYear: '',
                 battalion: '', company: '', platoon: '',
                 cadetCourse: '', semester: '', status: 'Ongoing'
@@ -1072,6 +1074,24 @@ const Cadets = () => {
                             </div>
 
                             <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <select className="border p-2 rounded" value={addForm.gender} onChange={e => setAddForm({...addForm, gender: e.target.value})}>
+                                    <option value="">Select Gender</option>
+                                    {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.religion} onChange={e => setAddForm({...addForm, religion: e.target.value})}>
+                                    <option value="">Select Religion</option>
+                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <input 
+                                    type="date" 
+                                    className="border p-2 rounded" 
+                                    value={addForm.birthdate} 
+                                    onChange={e => setAddForm({...addForm, birthdate: e.target.value})} 
+                                    placeholder="Birthdate" 
+                                />
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})}>
