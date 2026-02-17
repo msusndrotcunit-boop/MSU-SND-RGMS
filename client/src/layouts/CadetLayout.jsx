@@ -435,7 +435,7 @@ const CadetLayout = () => {
                         <span>Settings</span>
                     </Link>
                 </nav>
-                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)]">
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)] sticky bottom-0">
                     <button
                         onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white hover:opacity-95 transition"

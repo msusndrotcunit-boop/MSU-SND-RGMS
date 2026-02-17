@@ -231,6 +231,25 @@ const AdminLayout = () => {
     // Filter logic for Footer
     const shouldShowFooter = location.pathname === '/admin/dashboard';
 
+    // Lock body scroll when sidebar is open (mobile)
+    useEffect(() => {
+        try {
+            if (isSidebarOpen) {
+                document.body.style.overflow = 'hidden';
+                document.body.style.touchAction = 'none';
+            } else {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            }
+        } catch {}
+        return () => {
+            try {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            } catch {}
+        };
+    }, [isSidebarOpen]);
+
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
@@ -387,7 +406,7 @@ const AdminLayout = () => {
                         );
                     })}
                 </nav>
-                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)]">
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)] sticky bottom-0">
                     <button
                         type="button"
                         onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
