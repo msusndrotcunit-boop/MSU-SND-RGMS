@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "test:rotcmis": "node tests/rotcmis.test.js",
-    "test:staff": "node tests/staff_endpoints.test.js"
+    "test:staff": "node tests/staff_endpoints.test.js",
+    "test:cadet": "node tests/cadet_grades.test.js"
   },
   "engines": {
     "node": ">=18"

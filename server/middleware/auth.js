@@ -2,13 +2,33 @@ const allowed = new Set(['admin', 'cadet', 'training_staff']);
 const bypass = ((process.env.BYPASS_AUTH || 'true') + '').toLowerCase() === 'true';
 const defaultRole = process.env.DEFAULT_ROLE || 'admin';
 const expectedToken = process.env.API_TOKEN || 'dev-token';
+let db = null;
+try { db = require('../database'); } catch (_) {}
 
 // In-memory session store (for development - use Redis/JWT in production)
 const sessions = new Map();
 
 function authenticateToken(req, res, next) {
   if (bypass) {
-    req.user = { id: 1, role: defaultRole };
+    const user = { id: 1, role: defaultRole };
+    if (defaultRole === 'cadet' && db) {
+      try {
+        db.get(`SELECT cadet_id FROM users WHERE id = ?`, [user.id], (err, row) => {
+          if (!err && row && row.cadet_id) {
+            req.user = { ...user, cadetId: row.cadet_id };
+            return next();
+          }
+          db.get(`SELECT id FROM cadets ORDER BY id ASC LIMIT 1`, [], (e2, r2) => {
+            req.user = { ...user, cadetId: r2 && r2.id ? r2.id : undefined };
+            return next();
+          });
+        });
+        return;
+      } catch (_) {
+        // fall-through
+      }
+    }
+    req.user = user;
     return next();
   }
   
