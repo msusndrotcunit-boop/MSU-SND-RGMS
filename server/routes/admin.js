@@ -1607,15 +1607,16 @@ router.post('/cadets', async (req, res) => {
                 student_id, email, contact_number, address, 
                 course, year_level, school_year, 
                 battalion, company, platoon, 
-                cadet_course, semester, corp_position, status, is_profile_completed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
+                cadet_course, semester, corp_position, gender, religion, birthdate, status, is_profile_completed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
 
             const params = [
                 cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
                 cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', cadet.status || 'Ongoing', FALSE
+                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', 
+                cadet.gender || '', cadet.religion || '', cadet.birthdate || '', cadet.status || 'Ongoing', FALSE
             ];
 
             db.get(insertSql, params, (err, row) => {
