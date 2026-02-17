@@ -1084,90 +1084,128 @@ const Attendance = () => {
                             </div>
                         </div>
 
-                        {/* List */}
                         <div className="flex-1 overflow-y-auto p-4">
                             {filteredRecords.length === 0 ? (
                                 <div className="text-center text-gray-500 dark:text-gray-400 py-10">
                                     No records found matching filters.
                                 </div>
                             ) : (
-                                <div className="space-y-2">
-                                    {filteredRecords.map(record => (
-                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition border-gray-200 dark:border-gray-700">
-                                            <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
-                                                <div className="flex items-center">
-                                                    <span className="font-bold text-gray-800 dark:text-gray-100 mr-2">
-                                                        {record.last_name}, {record.first_name}
-                                                    </span>
-                                                    {attendanceType === 'cadet' && (
-                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
-                                                            {record.company}/{record.platoon}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-300 flex flex-wrap gap-4 mt-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs uppercase">In:</span>
-                                                        <input 
-                                                            type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                                            value={record.time_in || ''}
-                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
-                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs uppercase">Out:</span>
-                                                        <input 
-                                                            type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                                            value={record.time_out || ''}
-                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
-                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <input 
-                                                        className="border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs w-32 bg-transparent dark:text-gray-100"
-                                                        placeholder="Remarks..."
-                                                        value={record.remarks || ''}
-                                                        onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
-                                                        onBlur={(e) => saveRemark(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value, record.status)}
-                                                    />
-                                                </div>
-                                            </div>
-                                            
-                                        <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
-                                                    title="Present"
-                                                >
-                                                    <CheckCircle size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'late')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'late' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'}`}
-                                                    title="Late"
-                                                >
-                                                    <Clock size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'absent')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'absent' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`}
-                                                    title="Absent"
-                                                >
-                                                    <XCircle size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'excused')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'excused' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'}`}
-                                                    title="Excused"
-                                                >
-                                                    <AlertTriangle size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="overflow-auto border rounded">
+                                    <table className="w-full min-w-[900px]">
+                                        <thead className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            <tr className="bg-gradient-to-r from-black/10 to-black/5 dark:from-white/5 dark:to-white/10 border-b border-gray-200 dark:border-gray-800">
+                                                <th className="p-3 text-left font-semibold">Name</th>
+                                                {attendanceType === 'cadet' && <th className="p-3 text-left font-semibold">Company/Platoon</th>}
+                                                <th className="p-3 text-left font-semibold">Status</th>
+                                                <th className="p-3 text-left font-semibold">Time</th>
+                                                <th className="p-3 text-left font-semibold">Remarks</th>
+                                                <th className="p-3 text-right font-semibold">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                                            {filteredRecords.map(record => {
+                                                const id = attendanceType === 'cadet' ? record.cadet_id : record.staff_id;
+                                                const active = record.status;
+                                                const pill = (label, tone) => {
+                                                    const tones = {
+                                                        present: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                                                        absent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                                                        excused: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                                                        late: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                                                    };
+                                                    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${tones[tone]}`}>{label}</span>;
+                                                };
+                                                return (
+                                                    <tr key={id} className="bg-white dark:bg-gray-900 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                                        <td className="p-3 align-middle">
+                                                            <div className="font-semibold text-gray-800 dark:text-gray-100">{record.last_name}, {record.first_name}</div>
+                                                            {attendanceType === 'staff' && <div className="text-xs text-gray-500">{record.role || 'Instructor'}</div>}
+                                                        </td>
+                                                        {attendanceType === 'cadet' && (
+                                                            <td className="p-3 align-middle">
+                                                                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
+                                                                    {record.company}/{record.platoon}
+                                                                </span>
+                                                            </td>
+                                                        )}
+                                                        <td className="p-3 align-middle">
+                                                            {active === 'present' && pill('Present', 'present')}
+                                                            {active === 'absent' && pill('Absent', 'absent')}
+                                                            {active === 'excused' && pill('Excused', 'excused')}
+                                                            {active === 'late' && pill('Late', 'late')}
+                                                            {!active && <span className="text-xs text-gray-500">—</span>}
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="sr-only" htmlFor={`in-${id}`}>Time In</label>
+                                                                <input
+                                                                    id={`in-${id}`}
+                                                                    type="time"
+                                                                    className="border rounded px-2 py-1 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none transition-shadow"
+                                                                    value={record.time_in || ''}
+                                                                    onChange={(e) => handleTimeChange(id, 'time_in', e.target.value)}
+                                                                    onBlur={(e) => saveTime(id, 'time_in', e.target.value)}
+                                                                />
+                                                                <span className="text-xs text-gray-400">–</span>
+                                                                <label className="sr-only" htmlFor={`out-${id}`}>Time Out</label>
+                                                                <input
+                                                                    id={`out-${id}`}
+                                                                    type="time"
+                                                                    className="border rounded px-2 py-1 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none transition-shadow"
+                                                                    value={record.time_out || ''}
+                                                                    onChange={(e) => handleTimeChange(id, 'time_out', e.target.value)}
+                                                                    onBlur={(e) => saveTime(id, 'time_out', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <label className="sr-only" htmlFor={`remarks-${id}`}>Remarks</label>
+                                                            <input
+                                                                id={`remarks-${id}`}
+                                                                className="w-full border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs bg-transparent dark:text-gray-100"
+                                                                placeholder="Remarks…"
+                                                                value={record.remarks || ''}
+                                                                onChange={(e) => handleRemarkChange(id, e.target.value)}
+                                                                onBlur={(e) => saveRemark(id, e.target.value, record.status)}
+                                                            />
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'present')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'present' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
+                                                                    aria-pressed={active === 'present'}
+                                                                >
+                                                                    Present
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'absent')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'absent' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+                                                                    aria-pressed={active === 'absent'}
+                                                                >
+                                                                    Absent
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'excused')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'excused' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                                                                    aria-pressed={active === 'excused'}
+                                                                >
+                                                                    Excused
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'late')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'late' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'}`}
+                                                                    aria-pressed={active === 'late'}
+                                                                >
+                                                                    Late
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </div>
