@@ -29,17 +29,20 @@ const StaffHome = () => {
         imgs = (imgs || []).filter(Boolean);
 
         if (imgs.length === 0 && activity.image_path) {
-            const src = activity.image_path.startsWith('data:')
+            const src = activity.image_path.startsWith('data:') || activity.image_path.startsWith('http')
                 ? activity.image_path
-                : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
+                : activity.image_path;  // Return as-is, let browser resolve
             return [src];
         }
 
-        return imgs.map((src) =>
-            src.startsWith('data:') || src.startsWith('http')
-                ? src
-                : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
-        );
+        return imgs.map((src) => {
+            // If it's a data URL or full HTTP URL, return as-is
+            if (src.startsWith('data:') || src.startsWith('http')) {
+                return src;
+            }
+            // Otherwise, it's a relative path - return as-is
+            return src;
+        });
     };
 
     useEffect(() => {

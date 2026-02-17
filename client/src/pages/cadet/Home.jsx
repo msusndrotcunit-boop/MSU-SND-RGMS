@@ -29,24 +29,20 @@ const CadetHome = () => {
 
         imgs = (imgs || []).filter(Boolean);
 
-        const baseA = (axios && axios.defaults && axios.defaults.baseURL) || '';
-        const baseB = (import.meta && import.meta.env && import.meta.env.VITE_API_URL) || '';
-        const baseC = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
-        let selectedBase = [baseA, baseB, baseC].find(b => b && /^https?:/.test(String(b))) || '';
-        selectedBase = String(selectedBase).replace(/\/+$/, '');
-
         if (imgs.length === 0 && activity.image_path) {
-            const norm = String(activity.image_path).replace(/\\/g, '/');
-            const src = activity.image_path.startsWith('data:')
+            const src = activity.image_path.startsWith('data:') || activity.image_path.startsWith('http')
                 ? activity.image_path
-                : `${selectedBase}${norm.startsWith('/') ? '' : '/'}${norm}`;
+                : activity.image_path;  // Return as-is, let browser resolve
             return [src];
         }
 
         return imgs.map((src) => {
-            if (src.startsWith('data:') || src.startsWith('http')) return src;
-            const norm = String(src).replace(/\\/g, '/');
-            return `${selectedBase}${norm.startsWith('/') ? '' : '/'}${norm}`;
+            // If it's a data URL or full HTTP URL, return as-is
+            if (src.startsWith('data:') || src.startsWith('http')) {
+                return src;
+            }
+            // Otherwise, it's a relative path - return as-is
+            return src;
         });
     };
 
