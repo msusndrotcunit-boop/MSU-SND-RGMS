@@ -39,7 +39,7 @@ router.post('/access', (req, res) => {
 });
  
 
-router.get('/my-grades', cacheMiddleware(180), async (req, res) => { // Cache for 3 minutes
+router.get('/my-grades', async (req, res) => {
     let cadetId = req.user.cadetId;
     
     // JWT Consistency fallback: If cadetId is missing in JWT, try to fetch it from DB using user.id

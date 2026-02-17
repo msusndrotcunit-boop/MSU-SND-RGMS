@@ -12,6 +12,16 @@ clientsClaim();
 
 // Enhanced caching strategies for mobile performance
 
+// Always fetch fresh for critical real-time endpoints
+registerRoute(
+  ({ url, request }) => (
+    url.origin === self.location.origin &&
+    request.method === 'GET' &&
+    (url.pathname === '/api/cadet/my-grades' || url.pathname === '/api/cadet/my-merit-logs')
+  ),
+  new NetworkOnly()
+);
+
 // Cache API responses with safer, same-origin-only network-first strategy
 registerRoute(
   ({ url, request }) => (

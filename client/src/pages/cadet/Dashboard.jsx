@@ -41,7 +41,7 @@ const CadetDashboard = () => {
         await cacheSingleton('dashboard', 'cadet_attendance', { data: shaped, timestamp: Date.now() });
     };
     const fetchLogs = async () => {
-        const res = await axios.get('/api/cadet/my-merit-logs').catch(() => ({ data: [] }));
+        const res = await axios.get(`/api/cadet/my-merit-logs?t=${Date.now()}`).catch(() => ({ data: [] }));
         const data = Array.isArray(res.data) ? res.data : [];
         setLogs(data);
         await cacheSingleton('dashboard', 'cadet_logs', { data, timestamp: Date.now() });
@@ -49,7 +49,7 @@ const CadetDashboard = () => {
     const refreshAll = async () => {
         try {
             const now = Date.now();
-            const g = await axios.get('/api/cadet/my-grades');
+            const g = await axios.get(`/api/cadet/my-grades?t=${Date.now()}`);
             setGrades(g.data);
             await cacheSingleton('dashboard', 'cadet_grades', { data: g.data, timestamp: now });
             await fetchLogs({ ...logFilters, page: 1 });
@@ -67,7 +67,7 @@ const CadetDashboard = () => {
                 // Always fetch latest grades first for real-time sync
                 let hasCachedData = false;
                 try {
-                    const fresh = await axios.get('/api/cadet/my-grades');
+                    const fresh = await axios.get(`/api/cadet/my-grades?t=${Date.now()}`);
                     setGrades(fresh.data);
                     await cacheSingleton('dashboard', 'cadet_grades', { data: fresh.data, timestamp: Date.now() });
                 } catch (e) {
@@ -132,7 +132,7 @@ const CadetDashboard = () => {
         if (!user || user.role !== 'cadet') return;
         const refresh = async () => {
             try {
-                const res = await axios.get('/api/cadet/my-grades');
+                const res = await axios.get(`/api/cadet/my-grades?t=${Date.now()}`);
                 setGrades(res.data);
                 await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
             } catch {}
@@ -159,7 +159,7 @@ const CadetDashboard = () => {
                     try {
                         const data = JSON.parse(e.data || '{}');
                         if (data.type === 'grade_updated') {
-                            const res = await axios.get('/api/cadet/my-grades');
+                            const res = await axios.get(`/api/cadet/my-grades?t=${Date.now()}`);
                             setGrades(res.data);
                             await cacheSingleton('dashboard', 'cadet_grades', { data: res.data, timestamp: Date.now() });
                             
