@@ -1215,8 +1215,8 @@ const Attendance = () => {
                                     No records found matching filters.
                                 </div>
                             ) : (
-                                <div className="overflow-auto border rounded">
-                                    <table className="w-full min-w-[900px]">
+                                <div className="overflow-auto max-h-[70vh] overscroll-contain border rounded">
+                                    <table className="w-full min-w-[1200px]">
                                         <thead className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                             <tr className="bg-gradient-to-r from-black/10 to-black/5 dark:from-white/5 dark:to-white/10 border-b border-gray-200 dark:border-gray-800">
                                                 <th className="p-3 text-left font-semibold">Name</th>
