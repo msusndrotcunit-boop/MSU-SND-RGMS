@@ -298,7 +298,7 @@ router.delete('/notifications/delete-all', (req, res) => {
     });
 });
 
-router.get('/profile', cacheMiddleware(300), (req, res) => {
+router.get('/profile', (req, res) => {
     const tryFetch = (id) => {
         const sql = `
             SELECT c.*, u.username 
@@ -315,6 +315,7 @@ router.get('/profile', cacheMiddleware(300), (req, res) => {
             console.log('[Profile GET] profile_pic field:', row.profile_pic);
             console.log('[Profile GET] profile_pic type:', typeof row.profile_pic);
             
+            try { res.setHeader('Cache-Control', 'no-store'); } catch {}
             res.json(row);
         });
     };
@@ -573,8 +574,13 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
             }
         );
 
-        // 7. Broadcast event
+        // 7. Invalidate profile cache and broadcast event
         try {
+            try {
+                const { invalidateCadet } = require('../middleware/performance');
+                invalidateCadet(cadetId);
+            } catch (_) {}
+            try { db.run(`INSERT INTO sync_events (event_type, payload) VALUES (?, json(?))`, ['cadet_profile_updated', JSON.stringify({ cadetId, isComplete })]); } catch {}
             broadcastEvent({ type: 'cadet_profile_updated', cadetId });
         } catch (e) {
             console.error('[Profile Update] Broadcast error:', e);

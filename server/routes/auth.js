@@ -186,22 +186,50 @@ router.post('/cadet-login', async (req, res) => {
       }
     }
     
+    // Ensure user is linked to a cadet if possible
+    try {
+      if (!user.cadet_id) {
+        const linkRow = await new Promise((resolve) => {
+          db.get(
+            `SELECT id FROM cadets WHERE student_id = ? OR email = ? LIMIT 1`,
+            [user.username || identifier, user.email || identifier],
+            (e, r) => resolve(r)
+          );
+        });
+        if (linkRow && linkRow.id) {
+          await new Promise((resolve) => {
+            db.run(`UPDATE users SET cadet_id = ? WHERE id = ?`, [linkRow.id, user.id], () => resolve());
+          });
+          user.cadet_id = linkRow.id;
+          db.run(
+            `INSERT INTO sync_events (event_type, payload) VALUES (?, json(?))`,
+            ['login_autolink_cadet', JSON.stringify({ userId: user.id, cadetId: linkRow.id })]
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('[Cadet Login] Autolink attempt failed:', e.message);
+    }
+
+    // Re-fetch profile completion if cadet_id exists
+    let isCompleted = !!user.is_profile_completed;
+    if (user.cadet_id) {
+      const comp = await new Promise((resolve) => {
+        db.get(`SELECT is_profile_completed FROM cadets WHERE id = ?`, [user.cadet_id], (e, r) => resolve(r));
+      });
+      if (comp && (comp.is_profile_completed === 1 || comp.is_profile_completed === true || comp.is_profile_completed === '1')) {
+        isCompleted = true;
+      }
+    }
+
     const token = process.env.API_TOKEN || 'dev-token';
-    
-    // Store session
-    setSession(token, {
-      id: user.id,
-      role: 'cadet',
-      cadetId: user.cadet_id,
-      staffId: null
-    });
-    
+    setSession(token, { id: user.id, role: 'cadet', cadetId: user.cadet_id || null, staffId: null });
     res.json({
       token,
       role: 'cadet',
-      cadetId: user.cadet_id,
+      cadetId: user.cadet_id || null,
       staffId: null,
-      isProfileCompleted: user.is_profile_completed || false,
+      isProfileCompleted: isCompleted,
       identifier: user.username,
       userId: user.id
     });

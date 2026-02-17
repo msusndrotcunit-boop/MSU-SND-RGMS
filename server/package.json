@@ -9,7 +9,8 @@
     "test:rotcmis": "node tests/rotcmis.test.js",
     "test:staff": "node tests/staff_endpoints.test.js",
     "test:cadet": "node tests/cadet_grades.test.js",
-    "test:adminGrades": "node tests/admin_grade_update.test.js"
+    "test:adminGrades": "node tests/admin_grade_update.test.js",
+    "test:profileComplete": "node tests/cadet_profile_completion.test.js"
   },
   "engines": {
     "node": ">=18"
