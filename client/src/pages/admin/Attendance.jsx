@@ -1033,63 +1033,63 @@ const Attendance = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                                 {/* Left Side - Day Details */}
                                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4">
                                         {/* Date */}
-                                        <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                            <div className="bg-blue-500 p-2 rounded-lg">
-                                                <Calendar size={24} className="text-white" />
+                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:-rotate-1">
+                                            <div className="bg-blue-500 p-1.5 md:p-2 rounded-lg">
+                                                <Calendar size={18} className="md:w-6 md:h-6 text-white" />
                                             </div>
                                             <div>
-                                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Date</div>
-                                                <div className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-1">
+                                                <div className="text-[10px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Date</div>
+                                                <div className="text-xs md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1">
                                                     {new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Location */}
-                                        <div className="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                                            <div className="bg-orange-500 p-2 rounded-lg">
-                                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:rotate-1">
+                                            <div className="bg-orange-500 p-1.5 md:p-2 rounded-lg">
+                                                <svg className="w-[18px] h-[18px] md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 </svg>
                                             </div>
                                             <div>
-                                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Location</div>
-                                                <div className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-1">
+                                                <div className="text-[10px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Location</div>
+                                                <div className="text-xs md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1">
                                                     {selectedDay.location || 'Not specified'}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Time */}
-                                        <div className="flex items-start gap-3 p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
-                                            <div className="bg-cyan-500 p-2 rounded-lg">
-                                                <Clock size={24} className="text-white" />
+                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 hover:-rotate-1">
+                                            <div className="bg-cyan-500 p-1.5 md:p-2 rounded-lg">
+                                                <Clock size={18} className="md:w-6 md:h-6 text-white" />
                                             </div>
                                             <div>
-                                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Time</div>
-                                                <div className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-1">
+                                                <div className="text-[10px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Time</div>
+                                                <div className="text-xs md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1">
                                                     {selectedDay.time || '7:30 AM - 12:30 PM'}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Enrollment */}
-                                        <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                                            <div className="bg-green-500 p-2 rounded-lg">
-                                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className="flex items-start gap-2 md:gap-3 p-2 md:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-green-100 dark:hover:bg-green-900/30 hover:rotate-1">
+                                            <div className="bg-green-500 p-1.5 md:p-2 rounded-lg">
+                                                <svg className="w-[18px] h-[18px] md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                                 </svg>
                                             </div>
                                             <div>
-                                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Enrollment</div>
-                                                <div className="flex gap-2 mt-1">
-                                                    <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                                <div className="text-[10px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Enrollment</div>
+                                                <div className="flex gap-1 md:gap-2 mt-0.5 md:mt-1">
+                                                    <span className="bg-blue-500 text-white text-[9px] md:text-xs font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded">
                                                         {attendanceRecords.length} ENROLLED
                                                     </span>
-                                                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                                    <span className="bg-green-500 text-white text-[9px] md:text-xs font-bold px-1.5 md:px-2 py-0.5 md:py-1 rounded">
                                                         {stats.present || 0} PRESENT
                                                     </span>
                                                 </div>
@@ -1099,10 +1099,31 @@ const Attendance = () => {
                                 </div>
 
                                 {/* Right Side - Attendance Percentage */}
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
                                     {/* Circular Progress */}
-                                    <div className="relative w-40 h-40 mb-4">
+                                    <div className="relative w-32 h-32 md:w-40 md:h-40 mb-3 md:mb-4">
                                         <svg className="w-full h-full transform -rotate-90">
+                                            <circle
+                                                cx="64"
+                                                cy="64"
+                                                r="56"
+                                                stroke="currentColor"
+                                                strokeWidth="10"
+                                                fill="none"
+                                                className="text-gray-200 dark:text-gray-700 md:hidden"
+                                            />
+                                            <circle
+                                                cx="64"
+                                                cy="64"
+                                                r="56"
+                                                stroke="currentColor"
+                                                strokeWidth="10"
+                                                fill="none"
+                                                strokeDasharray={`${2 * Math.PI * 56}`}
+                                                strokeDashoffset={`${2 * Math.PI * 56 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
+                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 md:hidden"
+                                                strokeLinecap="round"
+                                            />
                                             <circle
                                                 cx="80"
                                                 cy="80"
@@ -1110,7 +1131,7 @@ const Attendance = () => {
                                                 stroke="currentColor"
                                                 strokeWidth="12"
                                                 fill="none"
-                                                className="text-gray-200 dark:text-gray-700"
+                                                className="text-gray-200 dark:text-gray-700 hidden md:block"
                                             />
                                             <circle
                                                 cx="80"
@@ -1121,48 +1142,48 @@ const Attendance = () => {
                                                 fill="none"
                                                 strokeDasharray={`${2 * Math.PI * 70}`}
                                                 strokeDashoffset={`${2 * Math.PI * 70 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
-                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000"
+                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 hidden md:block"
                                                 strokeLinecap="round"
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-4xl font-bold text-gray-800 dark:text-gray-100">
+                                            <span className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100">
                                                 {attendanceRecords.length > 0 ? Math.round((stats.present || 0) / attendanceRecords.length * 100) : 0}%
                                             </span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Attendance</span>
+                                            <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Attendance</span>
                                         </div>
                                     </div>
 
                                     {/* Progress Bar */}
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 md:h-3 mb-3 md:mb-4">
                                         <div 
-                                            className="bg-gradient-to-r from-blue-600 to-blue-400 h-3 rounded-full transition-all duration-1000"
+                                            className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 md:h-3 rounded-full transition-all duration-1000"
                                             style={{ width: `${attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length * 100 : 0}%` }}
                                         ></div>
                                     </div>
 
                                     {/* Status Badges */}
-                                    <div className="flex gap-4 justify-center">
-                                        <div className="text-center">
-                                            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg mb-1">
-                                                <CheckCircle size={24} className="text-green-600 dark:text-green-400 mx-auto" />
+                                    <div className="flex gap-3 md:gap-4 justify-center">
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
+                                            <div className="bg-green-100 dark:bg-green-900/30 p-2 md:p-3 rounded-lg mb-1">
+                                                <CheckCircle size={20} className="md:w-6 md:h-6 text-green-600 dark:text-green-400 mx-auto" />
                                             </div>
-                                            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.present || 0}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Present</div>
+                                            <div className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.present || 0}</div>
+                                            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Present</div>
                                         </div>
-                                        <div className="text-center">
-                                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg mb-1">
-                                                <AlertTriangle size={24} className="text-yellow-600 dark:text-yellow-400 mx-auto" />
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 md:p-3 rounded-lg mb-1">
+                                                <AlertTriangle size={20} className="md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400 mx-auto" />
                                             </div>
-                                            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.excused || 0}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Excused</div>
+                                            <div className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.excused || 0}</div>
+                                            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Excused</div>
                                         </div>
-                                        <div className="text-center">
-                                            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg mb-1">
-                                                <XCircle size={24} className="text-red-600 dark:text-red-400 mx-auto" />
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
+                                            <div className="bg-red-100 dark:bg-red-900/30 p-2 md:p-3 rounded-lg mb-1">
+                                                <XCircle size={20} className="md:w-6 md:h-6 text-red-600 dark:text-red-400 mx-auto" />
                                             </div>
-                                            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.absent || 0}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Absent</div>
+                                            <div className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.absent || 0}</div>
+                                            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Absent</div>
                                         </div>
                                     </div>
                                 </div>

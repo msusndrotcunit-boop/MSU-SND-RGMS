@@ -380,6 +380,12 @@ const Settings = ({ role }) => {
                                         </span>
                                     </div>
                                 </div>
+                                {systemStatus?.database?.error && (
+                                    <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                                        <div className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1">Error Details:</div>
+                                        <div className="text-xs text-red-700 dark:text-red-400 font-mono">{systemStatus.database.error}</div>
+                                    </div>
+                                )}
                                 <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
                                     <div className="flex flex-col">
                                         <span className="text-xs text-gray-500 dark:text-gray-400">Cadets</span>

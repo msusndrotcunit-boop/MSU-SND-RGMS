@@ -99,6 +99,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         const latencyMs = Date.now() - start;
         
         if (err) {
+            console.error('[System Status] Database error:', err);
             return res.status(500).json({
                 app: {
                     status: 'error',
@@ -107,6 +108,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
                 },
                 database: {
                     status: 'error',
+                    type: (db && db.pool) ? 'postgres' : 'sqlite',
                     error: err.message,
                     latencyMs
                 }
