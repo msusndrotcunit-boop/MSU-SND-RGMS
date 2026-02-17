@@ -51,6 +51,21 @@ export const AuthProvider = ({ children }) => {
         initAuth();
     }, []);
 
+    useEffect(() => {
+        const syncProfileCompletion = async () => {
+            if (!user || user.role !== 'cadet') return;
+            try {
+                const res = await axios.get('/api/cadet/profile', { headers: { 'Cache-Control': 'no-store' } });
+                const completed = res?.data && (res.data.is_profile_completed === 1 || res.data.is_profile_completed === true || res.data.is_profile_completed === '1');
+                if (completed !== user.isProfileCompleted) {
+                    localStorage.setItem('isProfileCompleted', completed ? 'true' : 'false');
+                    setUser(prev => ({ ...prev, isProfileCompleted: completed }));
+                }
+            } catch {}
+        };
+        syncProfileCompletion();
+    }, [user]);
+
     // Heartbeat mechanism
     useEffect(() => {
         if (!user) return;
