@@ -63,6 +63,12 @@ const Grading = () => {
         finalScore: 0
     });
 
+    const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
+    const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
+    const [scoresFiles, setScoresFiles] = useState([]);
+    const [ledgerFiles, setLedgerFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
+
     useEffect(() => {
         fetchCadets();
     }, []);
@@ -576,12 +582,6 @@ const Grading = () => {
         a.click();
         window.URL.revokeObjectURL(url);
     };
-
-    const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
-    const [isLedgerModalOpen, setIsLedgerModalOpen] = useState(false);
-    const [scoresFiles, setScoresFiles] = useState([]);
-    const [ledgerFiles, setLedgerFiles] = useState([]);
-    const [uploading, setUploading] = useState(false);
 
     const handlePickScores = (e) => setScoresFiles(Array.from(e.target.files || []));
     const handlePickLedger = (e) => setLedgerFiles(Array.from(e.target.files || []));
