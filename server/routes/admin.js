@@ -1616,7 +1616,7 @@ router.post('/cadets', async (req, res) => {
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
                 cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', 
-                cadet.gender || '', cadet.religion || '', cadet.birthdate || '', cadet.status || 'Ongoing', FALSE
+                cadet.gender || '', cadet.religion || '', cadet.birthdate || null, cadet.status || 'Ongoing', FALSE
             ];
 
             db.get(insertSql, params, (err, row) => {
@@ -1916,7 +1916,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         studentId || '', email || '', contactNumber || '', address || '', 
         course || '', yearLevel || '', schoolYear || '', 
         battalion || '', company || '', platoon || '', 
-        cadetCourse || '', semester || '', req.body.corpPosition || '', gender || '', religion || '', birthdate || '', status || ''
+        cadetCourse || '', semester || '', req.body.corpPosition || '', gender || '', religion || '', birthdate || null, status || ''
     ];
 
     if (profilePic) {
