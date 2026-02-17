@@ -430,8 +430,9 @@ const Cadets = () => {
             setIsEditModalOpen(false);
             toast.success('Cadet updated successfully');
         } catch (err) {
-            console.error(err);
-            toast.error('Error updating cadet');
+            console.error('Cadet update error:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Error updating cadet';
+            toast.error(errorMsg);
         }
     };
 
