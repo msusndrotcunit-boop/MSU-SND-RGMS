@@ -247,7 +247,12 @@ if (isPostgres) {
         else {
             console.log('Connected to SQLite database.');
             // Enable Foreign Keys for ON DELETE CASCADE
-            db.run("PRAGMA foreign_keys = ON");
+            db.serialize(() => {
+                db.run("PRAGMA foreign_keys = ON");
+                db.run("PRAGMA journal_mode = WAL");
+                db.run("PRAGMA synchronous = NORMAL");
+                db.run("PRAGMA busy_timeout = 5000");
+            });
             
             initSqliteDb();
         }

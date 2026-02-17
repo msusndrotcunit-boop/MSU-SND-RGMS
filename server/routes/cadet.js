@@ -524,46 +524,48 @@ router.put('/profile', uploadProfilePic, async (req, res) => {
 
         console.log('[Profile Update] Executing SQL update...');
 
-        // 4. Execute UPDATE
+        // 4. Execute UPDATE atomically
         await new Promise((resolve, reject) => {
-            db.run(sql, params, (err) => {
-                if (err) {
-                    console.error("[Profile Update] DB Update Error:", err);
-                    reject(err);
-                } else {
-                    console.log('[Profile Update] SQL update successful');
-                    resolve();
-                }
+            db.serialize(() => {
+                db.run('BEGIN IMMEDIATE TRANSACTION', [], (beginErr) => {
+                    if (beginErr) return reject(beginErr);
+                    db.run(sql, params, (err) => {
+                        if (err) {
+                            console.error("[Profile Update] DB Update Error:", err);
+                            return db.run('ROLLBACK', [], () => reject(err));
+                        }
+                        console.log('[Profile Update] SQL update successful');
+                        // 5. Update Users Table inside same TX if needed
+                        const doUserUpdate = async () => {
+                            if (username && email) {
+                                console.log('[Profile Update] Updating users table...');
+                                let userSql = `UPDATE users SET username=?, email=?, is_approved=TRUE`;
+                                let userParams = [username, email];
+                                
+                                if (imageUrl) {
+                                    userSql += `, profile_pic=?`;
+                                    userParams.push(imageUrl);
+                                }
+                                
+                                userSql += ` WHERE cadet_id=?`;
+                                userParams.push(cadetId);
+                                return new Promise((res, rej) => db.run(userSql, userParams, (e2) => e2 ? rej(e2) : res()));
+                            }
+                        };
+                        doUserUpdate().then(() => {
+                            db.run('COMMIT', [], (commitErr) => {
+                                if (commitErr) return reject(commitErr);
+                                resolve();
+                            });
+                        }).catch((e) => {
+                            db.run('ROLLBACK', [], () => reject(e));
+                        });
+                    });
+                });
             });
         });
 
-        // 5. Update Users Table
-        if (username && email) {
-            console.log('[Profile Update] Updating users table...');
-            let userSql = `UPDATE users SET username=?, email=?, is_approved=TRUE`;
-            let userParams = [username, email];
-            
-            if (imageUrl) {
-                userSql += `, profile_pic=?`;
-                userParams.push(imageUrl);
-            }
-            
-            userSql += ` WHERE cadet_id=?`;
-            userParams.push(cadetId);
-
-            await new Promise((resolve, reject) => {
-                db.run(userSql, userParams, (err) => {
-                        if (err) {
-                            console.error("[Profile Update] Error updating user credentials:", err);
-                            reject(err);
-                        } else {
-                            console.log('[Profile Update] Users table updated');
-                            resolve();
-                        }
-                    }
-                );
-            });
-        }
+        // Users table update handled in transaction above when needed
 
         // 6. Notify Admin
         const notifMsg = `${firstName} ${lastName} has updated their profile.`;
