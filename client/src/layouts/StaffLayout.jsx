@@ -6,10 +6,6 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
-import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
-import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
-import AnimationOptimizer from '../components/AnimationOptimizer';
-import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
@@ -214,11 +210,7 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <SafeAreaProvider>
-            <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
-                    <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+        <div className="flex h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -229,9 +221,7 @@ const StaffLayout = () => {
                 )}
 
                  {/* Sidebar */}
-                 <FixedElement 
-                    position="left" 
-                    respectSafeArea={true}
+                 <aside 
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                         isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -462,12 +452,10 @@ const StaffLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </FixedElement>
+            </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <FixedElement 
-                    position="top" 
-                    respectSafeArea={true}
+                <header 
                     className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
                 >
                     <div className="flex items-center">
@@ -492,15 +480,13 @@ const StaffLayout = () => {
                             onClear={handleClearMessages}
                         />
                     </div>
-                </FixedElement>
+                </header>
 
-                <SafeAreaManager 
+                <main 
                     className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8"
-                    enableKeyboardAdjustment={true}
-                    enableScrollAdjustment={true}
                 >
                     <Outlet />
-                </SafeAreaManager>
+                </main>
 
                 
             </div>
@@ -534,11 +520,7 @@ const StaffLayout = () => {
                     </div>
                 </div>
               )}
-                        </SafeAreaManager>
-                    </CrossPlatformStandardizer>
-                </AnimationOptimizer>
-            </MobilePerformanceOptimizer>
-        </SafeAreaProvider>
+        </div>
     );
 };
 

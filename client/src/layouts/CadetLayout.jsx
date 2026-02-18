@@ -8,10 +8,6 @@ import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 import NotificationDropdown from '../components/NotificationDropdown';
-import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
-import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
-import AnimationOptimizer from '../components/AnimationOptimizer';
-import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -301,11 +297,7 @@ const CadetLayout = () => {
     };
 
     return (
-        <SafeAreaProvider>
-            <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
-                    <CrossPlatformStandardizer>
-                            <SafeAreaManager className="flex h-screen app-bg overflow-hidden">
+        <div className="flex h-screen app-bg overflow-hidden">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -316,9 +308,7 @@ const CadetLayout = () => {
                 )}
 
                  {/* Sidebar - simplified for Cadet */}
-                 <FixedElement 
-                    position="left" 
-                    respectSafeArea={true}
+                 <aside 
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
                         isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -419,12 +409,10 @@ const CadetLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </FixedElement>
+            </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <FixedElement 
-                    position="top" 
-                    respectSafeArea={true}
+                <header 
                     className="bg-white shadow p-4 flex items-center justify-between"
                 >
                     <div className="flex items-center">
@@ -453,21 +441,19 @@ const CadetLayout = () => {
                             onClear={handleClearMessages}
                         />
                     </div>
-                </FixedElement>
+                </header>
                 {(health && health.db === 'disconnected') && (
                     <div className="bg-yellow-600 text-white text-sm p-2 text-center">
                         Degraded mode: Database disconnected. Your changes will be limited until service restores.
                     </div>
                 )}
-                <SafeAreaManager 
+                <main 
                     className="flex-1 overflow-auto p-6"
-                    enableKeyboardAdjustment={true}
-                    enableScrollAdjustment={true}
                 >
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
                     </Suspense>
-                </SafeAreaManager>
+                </main>
             </div>
 
             
@@ -582,11 +568,7 @@ const CadetLayout = () => {
                     </div>
                 </div>
             )}
-                            </SafeAreaManager>
-                        </CrossPlatformStandardizer>
-                    </AnimationOptimizer>
-                </MobilePerformanceOptimizer>
-            </SafeAreaProvider>
+        </div>
     );
 };
 

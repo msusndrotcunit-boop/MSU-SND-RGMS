@@ -7,10 +7,6 @@ import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
-import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
-import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
-import AnimationOptimizer from '../components/AnimationOptimizer';
-import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
@@ -268,11 +264,7 @@ const AdminLayout = () => {
     };
 
     return (
-        <SafeAreaProvider>
-            <MobilePerformanceOptimizer>
-                <AnimationOptimizer>
-                    <CrossPlatformStandardizer>
-                        <SafeAreaManager className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
+        <div className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
@@ -283,9 +275,7 @@ const AdminLayout = () => {
                 )}
 
                 {/* Sidebar */}
-                <FixedElement 
-                    position="left" 
-                    respectSafeArea={true}
+                <aside 
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
                         isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
@@ -394,13 +384,11 @@ const AdminLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-                </FixedElement>
+                </aside>
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
-                <FixedElement 
-                    position="top" 
-                    respectSafeArea={true}
+                <header 
                     className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
                 >
                     <div className="flex items-center flex-1 min-w-0">
@@ -471,7 +459,7 @@ const AdminLayout = () => {
 
                         <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
                     </div>
-                </FixedElement>
+                </header>
 
                 {/* System Status Bar */}
                 {(() => {
@@ -546,11 +534,7 @@ const AdminLayout = () => {
                     </div>
                 </div>
             )}
-                        </SafeAreaManager>
-                    </CrossPlatformStandardizer>
-                </AnimationOptimizer>
-            </MobilePerformanceOptimizer>
-        </SafeAreaProvider>
+        </div>
     );
 };
 
