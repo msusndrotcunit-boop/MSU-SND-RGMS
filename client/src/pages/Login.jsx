@@ -88,7 +88,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-start md:items-center justify-center bg-green-900 relative overflow-hidden px-4 py-6 overflow-auto">
+        <div className="min-h-screen flex items-start md:items-center justify-center bg-green-900 relative px-4 py-2 md:py-6 overflow-y-auto">
             {/* Background Overlay - desktop only */}
             <div 
                 className="hidden md:block absolute inset-0 z-0 opacity-20"
@@ -100,23 +100,23 @@ const Login = () => {
                 }}
             ></div>
 
-            <div className="w-full max-w-md md:max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden z-10">
+            <div className="w-full max-w-md md:max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden z-10 my-2 md:my-0">
                 {/* Header Section - No border, green covers all corners */}
-                <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
-                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                <div className="bg-green-900 p-3 md:p-8 text-center flex flex-col items-center rounded-t-lg">
+                    <div className="w-14 h-14 md:w-24 md:h-24 mb-1 md:mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
                         <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
-                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
-                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
+                    <h2 className="text-lg md:text-4xl font-extrabold text-white tracking-widest mb-0.5 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-[9px] md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[8px] md:text-xs mt-0.5 md:mt-1 uppercase tracking-wide font-medium">
                         integrated with Training Staff Attendance System
                     </p>
                 </div>
 
                 {/* Body Section */}
-                <div className="p-8 pt-6">
+                <div className="p-3 md:p-8 pt-3 md:pt-6">
                     {/* Role Selector */}
-                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
+                    <div className="flex justify-center mb-3 md:mb-6 bg-gray-100 p-1 rounded-lg">
                         <button
                             onClick={() => { setLoginType('cadet'); setError(''); }}
                             className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
@@ -144,12 +144,12 @@ const Login = () => {
                     </div>
 
                     {error && (
-                        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded">
+                        <div className="mb-3 md:mb-4 bg-red-50 border-l-4 border-red-500 p-2 md:p-3 text-red-700 text-xs md:text-sm rounded">
                             {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-2.5 md:space-y-5">
                         {/* Input Fields */}
                         {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>
@@ -225,7 +225,7 @@ const Login = () => {
                         )}
 
                         {/* Extras: Remember Me / Forgot Password */}
-                        <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center justify-between text-[10px] md:text-xs">
                             <label className="flex items-center text-gray-600 cursor-pointer">
                                 <input type="checkbox" className="form-checkbox h-3 w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
                                 <span className="ml-1.5">Remember me</span>
@@ -243,7 +243,7 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-75 cursor-wait' : ''}`}
+                            className={`w-full py-2.5 md:py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 text-sm md:text-base ${loading ? 'opacity-75 cursor-wait' : ''}`}
                         >
                             {loading ? (
                                 <span>Authenticating...</span>
@@ -256,22 +256,22 @@ const Login = () => {
                     </form>
 
                     {/* New Footer Links */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
+                    <div className="mt-3 md:mt-6 pt-2.5 md:pt-4 border-t border-gray-100 space-y-1.5 md:space-y-3">
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('access')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 transition-colors group p-1.5 md:p-2 rounded hover:bg-green-50"
                         >
-                            <HelpCircle size={16} className="text-gray-400 group-hover:text-green-600" />
+                            <HelpCircle size={14} className="text-gray-400 group-hover:text-green-600" />
                             How to access the app
                         </button>
                         
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('mobile')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 transition-colors group p-1.5 md:p-2 rounded hover:bg-green-50"
                         >
-                            <Download size={16} className="text-gray-400 group-hover:text-green-600" />
+                            <Download size={14} className="text-gray-400 group-hover:text-green-600" />
                             Download Mobile App
                         </button>
                     </div>

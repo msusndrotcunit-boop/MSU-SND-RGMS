@@ -234,7 +234,7 @@ const StaffLayout = () => {
                     position="left" 
                     respectSafeArea={true}
                     className={clsx(
-                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden",
+                        "w-[85vw] max-w-sm md:w-72 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden",
                         isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
@@ -468,7 +468,7 @@ const StaffLayout = () => {
                 </div>
             </FixedElement>
 
-            <div className="flex-1 flex flex-col overflow-hidden md:ml-64">
+            <div className="flex-1 flex flex-col overflow-hidden md:ml-72">
                 <FixedElement 
                     position="top" 
                     respectSafeArea={true}
