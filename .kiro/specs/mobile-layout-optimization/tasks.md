@@ -86,7 +86,7 @@ This implementation plan breaks down the mobile layout optimization into discret
     - **Property 4: Grid Column Collapse**
     - **Validates: Requirements 4.2, 5.1**
   
-  - [ ] 5.3 Update `client/src/pages/cadet/Profile.jsx`
+  - [x] 5.3 Update `client/src/pages/cadet/Profile.jsx`
     - Apply mobile-optimized form layout
     - Stack profile sections vertically
     - _Requirements: 4.2, 8.1, 8.2, 8.3_
