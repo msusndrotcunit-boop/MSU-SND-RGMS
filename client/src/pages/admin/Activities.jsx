@@ -85,9 +85,18 @@ const Activities = () => {
         }
         try {
             const res = await axios.get('/api/cadet/activities');
+            console.log('[Activities] Fetched activities:', res.data);
+            // Log first activity's images for debugging
+            if (res.data && res.data.length > 0) {
+                console.log('[Activities] First activity images:', {
+                    image_path: res.data[0].image_path,
+                    images: res.data[0].images,
+                    parsed: getImages(res.data[0])
+                });
+            }
             setActivities(res.data);
             await cacheSingleton('admin', 'activities_list', { data: res.data, timestamp: Date.now() });
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('[Activities] Fetch error:', err); }
     };
 
     const [showUploadConsent, setShowUploadConsent] = useState(false);
