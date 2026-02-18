@@ -2,14 +2,20 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trophy, Award, TrendingUp, Users } from 'lucide-react';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import { useAuth } from '../../context/AuthContext';
 
 const Achievements = () => {
+    const { user } = useAuth();
     const [achievements, setAchievements] = useState(null);
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user || user.role !== 'cadet') {
+                setLoading(false);
+                return;
+            }
             try {
                 // Get current user's cadet ID
                 const profileRes = await axios.get('/api/cadet/profile');
@@ -31,7 +37,7 @@ const Achievements = () => {
         };
 
         fetchData();
-    }, []);
+    }, [user]);
 
     if (loading) return <div className="text-center p-10">Loading achievements...</div>;
 

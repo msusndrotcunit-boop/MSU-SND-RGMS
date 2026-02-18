@@ -4,7 +4,8 @@ const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../mid
 const path = require('path');
 const fs = require('fs');
 const db = require('../database');
-const xlsx = require('xlsx');
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
 const { sendEmail } = require('../utils/emailService');
@@ -98,6 +99,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
         const latencyMs = Date.now() - start;
         
         if (err) {
+            console.error('[System Status] Database error:', err);
             return res.status(500).json({
                 app: {
                     status: 'error',
@@ -106,6 +108,7 @@ router.get('/system-status', authenticateToken, isAdmin, (req, res) => {
                 },
                 database: {
                     status: 'error',
+                    type: (db && db.pool) ? 'postgres' : 'sqlite',
                     error: err.message,
                     latencyMs
                 }
@@ -749,22 +752,35 @@ router.post('/import-staff', upload.single('file'), async (req, res) => {
 
     try {
         let data = [];
+        async function excelAllSheetsToJson(buf) {
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.load(buf);
+            const out = [];
+            wb.worksheets.forEach(ws => {
+                const headers = [];
+                ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                const max = Math.min(ws.rowCount, 10000 + 1);
+                for (let r = 2; r <= max; r++) {
+                    const row = ws.getRow(r);
+                    if (!row || row.cellCount === 0) continue;
+                    const obj = {};
+                    headers.forEach((h, idx) => {
+                        const cell = row.getCell(idx + 1);
+                        let v = cell?.value;
+                        if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                        obj[h] = v ?? '';
+                    });
+                    out.push(obj);
+                }
+            });
+            return out;
+        }
         
         // Only Excel for now
         if (req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf')) {
             return res.status(400).json({ message: 'PDF import not supported for staff. Please use Excel.' });
         } else {
-            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-            if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                return res.status(400).json({ message: 'Excel file has no sheets' });
-            }
-            let aggregated = [];
-            workbook.SheetNames.forEach(name => {
-                const sheet = workbook.Sheets[name];
-                const sheetData = xlsx.utils.sheet_to_json(sheet);
-                aggregated = aggregated.concat(sheetData);
-            });
-            data = aggregated;
+            data = await excelAllSheetsToJson(req.file.buffer);
         }
 
         const result = await processStaffData(data);
@@ -794,17 +810,29 @@ router.post('/import-cadets', upload.single('file'), async (req, res) => {
                 return res.status(400).json({ message: 'Failed to parse PDF: ' + err.message });
             }
         } else {
-            const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-            if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                return res.status(400).json({ message: 'Excel file has no sheets' });
-            }
-            let aggregated = [];
-            workbook.SheetNames.forEach(name => {
-                const sheet = workbook.Sheets[name];
-                const sheetData = xlsx.utils.sheet_to_json(sheet);
-                aggregated = aggregated.concat(sheetData);
-            });
-            data = aggregated;
+            data = await (async () => {
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(req.file.buffer);
+                const merged = [];
+                wb.worksheets.forEach(ws => {
+                    const headers = [];
+                    ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                    const max = Math.min(ws.rowCount, 10000 + 1);
+                    for (let r = 2; r <= max; r++) {
+                        const row = ws.getRow(r);
+                        if (!row || row.cellCount === 0) continue;
+                        const obj = {};
+                        headers.forEach((h, idx) => {
+                            const cell = row.getCell(idx + 1);
+                            let v = cell?.value;
+                            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                            obj[h] = v ?? '';
+                        });
+                        merged.push(obj);
+                    }
+                });
+                return merged;
+            })();
         }
 
         const result = await processCadetData(data);
@@ -938,14 +966,25 @@ const processUrlImport = async (url) => {
         } else {
             // Assume Excel
             try {
-                const workbook = xlsx.read(buffer, { type: 'buffer' });
-                if (workbook.SheetNames.length === 0) throw new Error("Excel file is empty");
-                
-                // Read all sheets
-                workbook.SheetNames.forEach(sheetName => {
-                    const sheet = workbook.Sheets[sheetName];
-                    const sheetData = xlsx.utils.sheet_to_json(sheet);
-                    data = data.concat(sheetData);
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(buffer);
+                if (!wb.worksheets || wb.worksheets.length === 0) throw new Error("Excel file is empty");
+                wb.worksheets.forEach(ws => {
+                    const headers = [];
+                    ws.getRow(1).eachCell((cell, col) => { headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim(); });
+                    const max = Math.min(ws.rowCount, 10000 + 1);
+                    for (let r = 2; r <= max; r++) {
+                        const row = ws.getRow(r);
+                        if (!row || row.cellCount === 0) continue;
+                        const obj = {};
+                        headers.forEach((h, idx) => {
+                            const cell = row.getCell(idx + 1);
+                            let v = cell?.value;
+                            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+                            obj[h] = v ?? '';
+                        });
+                        data.push(obj);
+                    }
                 });
             } catch (err) {
                  console.error("Excel Parse Error:", err);
@@ -1454,13 +1493,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
         ORDER BY count DESC
     `;
     
-    db.all(religionSql, [], (err, religionRows) => {
-        if (err) {
-            console.error('Religion analytics error:', err);
-            return res.status(500).json({ message: err.message });
+    db.all(religionSql, [], (relErr, religionRows) => {
+        if (relErr) {
+            console.error('Religion analytics error:', relErr.message);
+            demographics.religion = [];
+        } else {
+            demographics.religion = religionRows || [];
         }
-        
-        demographics.religion = religionRows || [];
         
         // Get age distribution (calculate from birthdate)
         const ageSql = db.pool ? `
@@ -1513,13 +1552,13 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 END
         `;
         
-        db.all(ageSql, [], (err, ageRows) => {
-            if (err) {
-                console.error('Age analytics error:', err);
-                return res.status(500).json({ message: err.message });
+        db.all(ageSql, [], (ageErr, ageRows) => {
+            if (ageErr) {
+                console.error('Age analytics error:', ageErr.message);
+                demographics.age = [];
+            } else {
+                demographics.age = ageRows || [];
             }
-            
-            demographics.age = ageRows || [];
             
             // Get course distribution
             const courseSql = `
@@ -1530,13 +1569,14 @@ router.get('/analytics/demographics', authenticateToken, isAdmin, cacheMiddlewar
                 ORDER BY count DESC
             `;
             
-            db.all(courseSql, [], (err, courseRows) => {
-                if (err) {
-                    console.error('Course analytics error:', err);
-                    return res.status(500).json({ message: err.message });
+            db.all(courseSql, [], (courseErr, courseRows) => {
+                if (courseErr) {
+                    console.error('Course analytics error:', courseErr.message);
+                    demographics.courses = [];
+                } else {
+                    demographics.courses = courseRows || [];
                 }
                 
-                demographics.courses = courseRows || [];
                 res.json(demographics);
             });
         });
@@ -1567,15 +1607,16 @@ router.post('/cadets', async (req, res) => {
                 student_id, email, contact_number, address, 
                 course, year_level, school_year, 
                 battalion, company, platoon, 
-                cadet_course, semester, corp_position, status, is_profile_completed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
+                cadet_course, semester, corp_position, gender, religion, birthdate, status, is_profile_completed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`;
 
             const params = [
                 cadet.rank || '', cadet.firstName || '', cadet.middleName || '', cadet.lastName || '', cadet.suffixName || '',
                 cadet.studentId, cadet.email || '', cadet.contactNumber || '', cadet.address || '',
                 cadet.course || '', cadet.yearLevel || '', cadet.schoolYear || '',
                 cadet.battalion || '', cadet.company || '', cadet.platoon || '',
-                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', cadet.status || 'Ongoing', FALSE
+                cadet.cadetCourse || '', cadet.semester || '', cadet.corpPosition || '', 
+                cadet.gender || '', cadet.religion || '', cadet.birthdate || null, cadet.status || 'Ongoing', FALSE
             ];
 
             db.get(insertSql, params, (err, row) => {
@@ -1875,7 +1916,7 @@ router.put('/cadets/:id', authenticateToken, isAdmin, uploadCadetProfilePic, (re
         studentId || '', email || '', contactNumber || '', address || '', 
         course || '', yearLevel || '', schoolYear || '', 
         battalion || '', company || '', platoon || '', 
-        cadetCourse || '', semester || '', req.body.corpPosition || '', gender || '', religion || '', birthdate || '', status || ''
+        cadetCourse || '', semester || '', req.body.corpPosition || '', gender || '', religion || '', birthdate || null, status || ''
     ];
 
     if (profilePic) {
@@ -2230,6 +2271,8 @@ router.put('/grades/:cadetId', authenticateToken, isAdmin, async (req, res) => {
             await ensureAttendanceRecord();
             // Use updateTotalAttendance helper to ensure consistency
             await updateTotalAttendance(cadetId);
+            // Invalidate cadet-related caches so /api/cadet/my-grades reflects changes immediately
+            try { invalidateCadet(cadetId); } catch (_) {}
             broadcastEvent({ type: 'grade_updated', cadetId });
             res.json({ message: 'Grades updated' });
         };
@@ -2280,8 +2323,33 @@ router.delete('/notifications/delete-all', authenticateToken, isAdmin, (req, res
 
 // --- Activity Management ---
 
+// Use disk storage for activity images to avoid synchronous Cloudinary latency on uploads
+const ensureUploadsDir = () => {
+    try {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        return uploadDir;
+    } catch (_) {
+        return path.join(process.cwd(), 'uploads');
+    }
+};
+const activityStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, ensureUploadsDir());
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname || '');
+        cb(null, (file.fieldname || 'image') + '-' + uniqueSuffix + ext);
+    }
+});
+const activityUpload = multer({
+    storage: activityStorage,
+    limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+});
+
 // Upload Activity
-router.post('/activities', upload.array('images', 10), async (req, res) => {
+router.post('/activities', activityUpload.array('images', 10), async (req, res) => {
     try {
         const { title, description, date, type } = req.body;
         
@@ -2341,15 +2409,16 @@ router.post('/activities', upload.array('images', 10), async (req, res) => {
         console.log('[POST /activities] Validation passed, inserting into database...');
 
         // Insert into database immediately (fast response)
-        db.get(`INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+        db.run(
+            `INSERT INTO activities (title, description, date, image_path, images, type) VALUES (?, ?, ?, ?, ?, ?)`,
             [title, description, date, primaryImage, imagesJson, activityType],
-            (err, row) => {
+            function(err) {
                 if (err) {
                     console.error('[POST /activities] Database error:', err);
                     return res.status(500).json({ message: err.message });
                 }
                 
-                const activityId = row ? row.id : null;
+                const activityId = this && typeof this.lastID !== 'undefined' ? this.lastID : null;
                 console.log('[POST /activities] Insert successful, ID:', activityId);
                 
                 // Create notification for the new activity
@@ -2442,7 +2511,7 @@ router.delete('/activities/:id', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Update Activity
-router.put('/activities/:id', upload.array('images', 10), async (req, res) => {
+router.put('/activities/:id', activityUpload.array('images', 10), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, date, type, existingImages } = req.body;
@@ -3611,8 +3680,16 @@ router.post('/force-optimize-db', authenticateToken, isAdmin, async (req, res) =
         const results = {
             indexesCreated: 0,
             migrationsRun: 0,
-            errors: []
+            errors: [],
+            before: null,
+            after: null
         };
+
+        // Capture metrics before
+        try {
+            const { getMetricsSnapshot } = require('./metrics');
+            results.before = getMetricsSnapshot();
+        } catch (_) {}
 
         // Create performance indexes
         try {
@@ -3646,6 +3723,12 @@ router.post('/force-optimize-db', authenticateToken, isAdmin, async (req, res) =
         // Clear cache
         clearCache();
         results.cacheCleared = true;
+
+        // Capture metrics after
+        try {
+            const { getMetricsSnapshot } = require('./metrics');
+            results.after = getMetricsSnapshot();
+        } catch (_) {}
 
         console.log('[Force Optimize] Database optimization complete');
 

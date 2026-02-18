@@ -4,8 +4,10 @@ import { Calendar, Plus, Trash2, CheckCircle, XCircle, Clock, AlertTriangle, Sav
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import { cacheData, getCachedData, cacheSingleton, getSingleton } from '../../utils/db';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Attendance = () => {
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState('attendance'); // 'attendance' | 'excuse'
     const [attendanceType, setAttendanceType] = useState('cadet'); // 'cadet' | 'staff'
     const [days, setDays] = useState([]);
@@ -32,6 +34,59 @@ const Attendance = () => {
     const [filterCompany, setFilterCompany] = useState('');
     const [filterPlatoon, setFilterPlatoon] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [controlsOpen, setControlsOpen] = useState(true);
+
+    // ROTCMIS Import (inline)
+    const [rotcModalOpen, setRotcModalOpen] = useState(false);
+    const [rotcFiles, setRotcFiles] = useState([]);
+    const [rotcParsing, setRotcParsing] = useState(false);
+    const [rotcRecords, setRotcRecords] = useState([]);
+    const [rotcSummary, setRotcSummary] = useState(null);
+    const [rotcSelected, setRotcSelected] = useState(new Set());
+    const [rotcStrategy, setRotcStrategy] = useState('skip-duplicates');
+
+    const handleRotcPick = (e) => {
+        const picked = Array.from(e.target.files || []);
+        setRotcFiles(prev => [...prev, ...picked]);
+    };
+    const handleRotcRemove = (idx) => {
+        setRotcFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+    const handleRotcValidate = async () => {
+        if (rotcFiles.length === 0) { toast.error('Select at least one file'); return; }
+        try {
+            setRotcParsing(true);
+            const fd = new FormData();
+            rotcFiles.forEach(f => fd.append('files', f));
+            const { data } = await axios.post('/api/integration/rotcmis/validate', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            setRotcRecords(data.records || []);
+            setRotcSummary(data.summary || null);
+            setRotcSelected(new Set((data.records || []).map((_, i) => i)));
+            toast.success('Parsed ROTCMIS export');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Validation failed');
+        } finally {
+            setRotcParsing(false);
+        }
+    };
+    const toggleRotcRow = (i) => {
+        const copy = new Set(rotcSelected);
+        if (copy.has(i)) copy.delete(i); else copy.add(i);
+        setRotcSelected(copy);
+    };
+    const handleRotcImport = async () => {
+        try {
+            const chosen = rotcRecords.filter((_, i) => rotcSelected.has(i));
+            if (chosen.length === 0) { toast.error('No records selected'); return; }
+            const payload = { strategy: rotcStrategy, records: chosen };
+            const { data } = await axios.post('/api/integration/rotcmis/import', payload);
+            toast.success(`Import done: ${data?.result?.inserted || 0} inserted, ${data?.result?.updated || 0} updated, ${data?.result?.skipped || 0} skipped`);
+            setRotcModalOpen(false);
+            if (selectedDay) selectDay(selectedDay, true);
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Import failed');
+        }
+    };
 
     useEffect(() => {
         fetchDays();
@@ -729,6 +784,116 @@ const Attendance = () => {
                 </div>
             )}
 
+            {rotcModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-5xl shadow-lg overflow-hidden">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                            <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">Import ROTCMIS Export</h3>
+                            <button onClick={() => setRotcModalOpen(false)} className="text-gray-500 hover:text-gray-800">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="bg-white dark:bg-gray-900 border rounded p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-sm text-gray-600 dark:text-gray-300">Select ROTCMIS files</div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs">Strategy</label>
+                                        <select value={rotcStrategy} onChange={e => setRotcStrategy(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                                            <option value="skip-duplicates">Skip duplicates</option>
+                                            <option value="overwrite">Overwrite existing</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <input type="file" multiple accept=".csv,.xlsx,.xls,.json,.pdf" onChange={handleRotcPick} />
+                                {rotcFiles.length > 0 && (
+                                    <div className="mt-3 grid md:grid-cols-3 gap-2">
+                                        {rotcFiles.map((f, i) => (
+                                            <div key={i} className="flex items-center justify-between p-2 border rounded bg-gray-50 dark:bg-gray-800">
+                                                <div className="text-sm">{f.name}</div>
+                                                <button onClick={() => handleRotcRemove(i)} className="text-xs text-red-600 hover:underline">Remove</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button onClick={handleRotcValidate} disabled={rotcParsing} className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-black disabled:opacity-50">
+                                        {rotcParsing ? 'Validating…' : 'Validate Files'}
+                                    </button>
+                                </div>
+                            </div>
+                            {rotcSummary && (
+                                <div className="bg-white dark:bg-gray-900 border rounded p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="font-bold">Summary</div>
+                                        <div className="text-sm text-gray-500">Total: {rotcSummary.total || 0} • Valid: {rotcSummary.valid || 0} • Invalid: {rotcSummary.invalid || 0} • Duplicates: {rotcSummary.duplicates || 0}</div>
+                                    </div>
+                                </div>
+                            )}
+                            {rotcRecords.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">Select records to import</div>
+                                        <button
+                                            onClick={() => {
+                                                if (rotcSelected.size === rotcRecords.length) {
+                                                    setRotcSelected(new Set());
+                                                } else {
+                                                    setRotcSelected(new Set(rotcRecords.map((_, i) => i)));
+                                                }
+                                            }}
+                                            className="text-sm text-green-700 hover:underline"
+                                        >
+                                            {rotcSelected.size === rotcRecords.length ? 'Deselect all' : 'Select all'}
+                                        </button>
+                                    </div>
+                                    <div className="overflow-auto border rounded">
+                                        <table className="min-w-full">
+                                            <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
+                                                <tr>
+                                                    <th className="p-2 text-left">Pick</th>
+                                                    <th className="p-2 text-left">Student ID</th>
+                                                    <th className="p-2 text-left">Name</th>
+                                                    <th className="p-2 text-left">Date</th>
+                                                    <th className="p-2 text-left">Status</th>
+                                                    <th className="p-2 text-left">Duplicate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {rotcRecords.map((r, i) => {
+                                                    const err = r.errors?.length > 0;
+                                                    return (
+                                                        <tr key={i} className={err ? 'bg-red-50 dark:bg-red-900/20' : (r.isDuplicateInBatch ? 'bg-yellow-50 dark:bg-yellow-900/20' : '')}>
+                                                            <td className="p-2">
+                                                                <input type="checkbox" className="h-3 w-3" checked={rotcSelected.has(i)} onChange={() => toggleRotcRow(i)} />
+                                                            </td>
+                                                            <td className="p-2 font-mono text-sm">{r.student_id || '—'}</td>
+                                                            <td className="p-2 text-sm">{r.name || '—'}</td>
+                                                            <td className="p-2 text-sm">{r.date ? new Date(r.date).toLocaleString() : '—'}</td>
+                                                            <td className="p-2 text-sm capitalize">
+                                                                {r.status || '—'}
+                                                            </td>
+                                                            <td className="p-2 text-sm">
+                                                                {r.isDuplicateInBatch ? 'Possible duplicate' : '—'}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button onClick={handleRotcImport} className="px-4 py-2 rounded bg-green-700 text-white hover:bg-green-800">
+                                            Confirm Import
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {viewMode === 'excuse' ? (
                 <ExcuseLetterManager />
             ) : (
@@ -782,12 +947,24 @@ const Attendance = () => {
                         {selectedDay ? (
                             <>
                         <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
-                            <div className="flex flex-col md:flex-row justify-between items-start mb-4">
+                            <div className="flex flex-col md:flex-row justify-between items-start gap-2 mb-2">
                                 <div>
                                     <button onClick={() => setSelectedDay(null)} className="md:hidden text-gray-500 dark:text-gray-400 mb-2 flex items-center text-sm">
                                         <ChevronRight className="rotate-180 mr-1" size={16} /> Back to List
                                     </button>
-                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedDay.title}</h2>
+                                        <button
+                                            type="button"
+                                            onClick={() => setControlsOpen(o => !o)}
+                                            className="touch-target px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300 hover:bg-white/10 hover-highlight"
+                                            aria-expanded={controlsOpen}
+                                            aria-controls="attendance-controls"
+                                            title={controlsOpen ? 'Collapse controls' : 'Expand controls'}
+                                        >
+                                            {controlsOpen ? 'Hide Controls' : 'Show Controls'}
+                                        </button>
+                                    </div>
                                     <p className="text-gray-600 dark:text-gray-300 mt-1">{selectedDay.description || 'No description'}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2 mt-2 md:mt-0">
@@ -830,12 +1007,11 @@ const Attendance = () => {
                                             }}
                                         />
                                         <button 
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition disabled:opacity-50"
-                                            disabled={!selectedDay || isImporting}
-                                            title="Import ROTCMIS PDF or scanned photo"
+                                            onClick={() => setRotcModalOpen(true)}
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition"
+                                            title="Import ROTCMIS"
                                         >
-                                            <FileText size={16} className="mr-2" /> {isImporting ? 'Importing...' : 'Import'}
+                                            <FileText size={16} className="mr-2" /> Import ROTCMIS
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}
@@ -852,9 +1028,173 @@ const Attendance = () => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            {/* Filters */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+                            {/* Enhanced Attendance Summary Card */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                                {/* Left Side - Day Details */}
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+                                    <div className="grid grid-cols-2 gap-2 md:gap-4">
+                                        {/* Date */}
+                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:-rotate-1">
+                                            <div className="bg-blue-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
+                                                <Calendar className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Date</div>
+                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight">
+                                                    {new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Location */}
+                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:rotate-1">
+                                            <div className="bg-orange-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
+                                                <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Location</div>
+                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight truncate">
+                                                    {selectedDay.location || 'Not specified'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Time */}
+                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 hover:-rotate-1">
+                                            <div className="bg-cyan-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
+                                                <Clock className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Time</div>
+                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight">
+                                                    {selectedDay.time || '7:30 AM - 12:30 PM'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Enrollment */}
+                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-green-100 dark:hover:bg-green-900/30 hover:rotate-1">
+                                            <div className="bg-green-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
+                                                <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Enrollment</div>
+                                                <div className="flex flex-wrap gap-1 md:gap-2 mt-0.5 md:mt-1">
+                                                    <span className="bg-blue-500 text-white text-[8px] md:text-xs font-bold px-1 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
+                                                        {attendanceRecords.length} ENROLLED
+                                                    </span>
+                                                    <span className="bg-green-500 text-white text-[8px] md:text-xs font-bold px-1 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
+                                                        {stats.present || 0} PRESENT
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Side - Attendance Percentage */}
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 md:p-6 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+                                    {/* Circular Progress */}
+                                    <div className="relative w-28 h-28 md:w-40 md:h-40 mb-2 md:mb-4">
+                                        <svg className="w-full h-full transform -rotate-90">
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="48"
+                                                stroke="currentColor"
+                                                strokeWidth="8"
+                                                fill="none"
+                                                className="text-gray-200 dark:text-gray-700 md:hidden"
+                                            />
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="48"
+                                                stroke="currentColor"
+                                                strokeWidth="8"
+                                                fill="none"
+                                                strokeDasharray={`${2 * Math.PI * 48}`}
+                                                strokeDashoffset={`${2 * Math.PI * 48 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
+                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 md:hidden"
+                                                strokeLinecap="round"
+                                            />
+                                            <circle
+                                                cx="80"
+                                                cy="80"
+                                                r="70"
+                                                stroke="currentColor"
+                                                strokeWidth="12"
+                                                fill="none"
+                                                className="text-gray-200 dark:text-gray-700 hidden md:block"
+                                            />
+                                            <circle
+                                                cx="80"
+                                                cy="80"
+                                                r="70"
+                                                stroke="currentColor"
+                                                strokeWidth="12"
+                                                fill="none"
+                                                strokeDasharray={`${2 * Math.PI * 70}`}
+                                                strokeDashoffset={`${2 * Math.PI * 70 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
+                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 hidden md:block"
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <span className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-100">
+                                                {attendanceRecords.length > 0 ? Math.round((stats.present || 0) / attendanceRecords.length * 100) : 0}%
+                                            </span>
+                                            <span className="text-[9px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Attendance</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 md:h-3 mb-2 md:mb-4">
+                                        <div 
+                                            className="bg-gradient-to-r from-blue-600 to-blue-400 h-1.5 md:h-3 rounded-full transition-all duration-1000"
+                                            style={{ width: `${attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length * 100 : 0}%` }}
+                                        ></div>
+                                    </div>
+
+                                    {/* Status Badges */}
+                                    <div className="flex gap-2 md:gap-4 justify-center">
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
+                                            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 md:p-3 rounded-lg mb-1">
+                                                <CheckCircle className="w-4 h-4 md:w-6 md:h-6 text-green-600 dark:text-green-400 mx-auto" />
+                                            </div>
+                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.present || 0}</div>
+                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Present</div>
+                                        </div>
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-3">
+                                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-1.5 md:p-3 rounded-lg mb-1">
+                                                <AlertTriangle className="w-4 h-4 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400 mx-auto" />
+                                            </div>
+                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.excused || 0}</div>
+                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Excused</div>
+                                        </div>
+                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
+                                            <div className="bg-red-100 dark:bg-red-900/30 p-1.5 md:p-3 rounded-lg mb-1">
+                                                <XCircle className="w-4 h-4 md:w-6 md:h-6 text-red-600 dark:text-red-400 mx-auto" />
+                                            </div>
+                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.absent || 0}</div>
+                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Absent</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                id="attendance-controls"
+                                className={`grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 transition-all duration-300 ease-in-out overflow-hidden ${controlsOpen ? 'opacity-100 max-h-[800px]' : 'opacity-0 max-h-0 pointer-events-none'}`}
+                                aria-hidden={!controlsOpen}
+                            >
+                                {/* Tabs */}
                                 <div className="md:col-span-3 flex justify-center mb-2">
                                     <div className="bg-gray-200 dark:bg-gray-800 rounded p-1 flex">
                                         <button
@@ -886,109 +1226,132 @@ const Attendance = () => {
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
-                                {attendanceType === 'cadet' && (
-                                    <>
-                                        <input 
-                                            placeholder="Company (A/B/C)" 
-                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                            value={filterCompany}
-                                            onChange={e => setFilterCompany(e.target.value)}
-                                        />
-                                        <input 
-                                            placeholder="Platoon (1/2/3)" 
-                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                            value={filterPlatoon}
-                                            onChange={e => setFilterPlatoon(e.target.value)}
-                                        />
-                                    </>
-                                )}
+                                {/* Removed company/platoon boxes per request */}
                             </div>
                         </div>
 
-                        {/* List */}
                         <div className="flex-1 overflow-y-auto p-4">
                             {filteredRecords.length === 0 ? (
                                 <div className="text-center text-gray-500 dark:text-gray-400 py-10">
                                     No records found matching filters.
                                 </div>
                             ) : (
-                                <div className="space-y-2">
-                                    {filteredRecords.map(record => (
-                                        <div key={attendanceType === 'cadet' ? record.cadet_id : record.staff_id} className="border rounded p-3 flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition border-gray-200 dark:border-gray-700">
-                                            <div className="flex-1 w-full md:w-auto mb-2 md:mb-0">
-                                                <div className="flex items-center">
-                                                    <span className="font-bold text-gray-800 dark:text-gray-100 mr-2">
-                                                        {record.last_name}, {record.first_name}
-                                                    </span>
-                                                    {attendanceType === 'cadet' && (
-                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
-                                                            {record.company}/{record.platoon}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-300 flex flex-wrap gap-4 mt-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs uppercase">In:</span>
-                                                        <input 
-                                                            type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                                            value={record.time_in || ''}
-                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
-                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_in', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs uppercase">Out:</span>
-                                                        <input 
-                                                            type="time" 
-                                                            className="border rounded px-1 py-0.5 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                                                            value={record.time_out || ''}
-                                                            onChange={(e) => handleTimeChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
-                                                            onBlur={(e) => saveTime(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'time_out', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <input 
-                                                        className="border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs w-32 bg-transparent dark:text-gray-100"
-                                                        placeholder="Remarks..."
-                                                        value={record.remarks || ''}
-                                                        onChange={(e) => handleRemarkChange(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value)}
-                                                        onBlur={(e) => saveRemark(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, e.target.value, record.status)}
-                                                    />
-                                                </div>
-                                            </div>
-                                            
-                                        <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'present')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'present' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'}`}
-                                                    title="Present"
-                                                >
-                                                    <CheckCircle size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'late')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'late' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-yellow-100 hover:text-yellow-600'}`}
-                                                    title="Late"
-                                                >
-                                                    <Clock size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'absent')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'absent' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`}
-                                                    title="Absent"
-                                                >
-                                                    <XCircle size={20} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleMarkAttendance(attendanceType === 'cadet' ? record.cadet_id : record.staff_id, 'excused')}
-                                                    className={`p-2 rounded-full transition ${record.status === 'excused' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-blue-100 hover:text-blue-600'}`}
-                                                    title="Excused"
-                                                >
-                                                    <AlertTriangle size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="overflow-auto max-h-[70vh] overscroll-contain border rounded">
+                                    <table className="w-full min-w-[1200px]">
+                                        <thead className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            <tr className="bg-gradient-to-r from-black/10 to-black/5 dark:from-white/5 dark:to-white/10 border-b border-gray-200 dark:border-gray-800">
+                                                <th className="p-3 text-left font-semibold">Name</th>
+                                                {attendanceType === 'cadet' && <th className="p-3 text-left font-semibold">Company/Platoon</th>}
+                                                <th className="p-3 text-left font-semibold">Status</th>
+                                                <th className="p-3 text-left font-semibold">Time</th>
+                                                <th className="p-3 text-left font-semibold">Remarks</th>
+                                                <th className="p-3 text-right font-semibold">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                                            {filteredRecords.map(record => {
+                                                const id = attendanceType === 'cadet' ? record.cadet_id : record.staff_id;
+                                                const active = record.status;
+                                                const pill = (label, tone) => {
+                                                    const tones = {
+                                                        present: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                                                        absent: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                                                        excused: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                                                        late: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                                                    };
+                                                    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${tones[tone]}`}>{label}</span>;
+                                                };
+                                                return (
+                                                    <tr key={id} className="bg-white dark:bg-gray-900 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                                        <td className="p-3 align-middle">
+                                                            <div className="font-semibold text-gray-800 dark:text-gray-100">{record.last_name}, {record.first_name}</div>
+                                                            {attendanceType === 'staff' && <div className="text-xs text-gray-500">{record.role || 'Instructor'}</div>}
+                                                        </td>
+                                                        {attendanceType === 'cadet' && (
+                                                            <td className="p-3 align-middle">
+                                                                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
+                                                                    {record.company}/{record.platoon}
+                                                                </span>
+                                                            </td>
+                                                        )}
+                                                        <td className="p-3 align-middle">
+                                                            {active === 'present' && pill('Present', 'present')}
+                                                            {active === 'absent' && pill('Absent', 'absent')}
+                                                            {active === 'excused' && pill('Excused', 'excused')}
+                                                            {active === 'late' && pill('Late', 'late')}
+                                                            {!active && <span className="text-xs text-gray-500">—</span>}
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="sr-only" htmlFor={`in-${id}`}>Time In</label>
+                                                                <input
+                                                                    id={`in-${id}`}
+                                                                    type="time"
+                                                                    className="border rounded px-2 py-1 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none transition-shadow"
+                                                                    value={record.time_in || ''}
+                                                                    onChange={(e) => handleTimeChange(id, 'time_in', e.target.value)}
+                                                                    onBlur={(e) => saveTime(id, 'time_in', e.target.value)}
+                                                                />
+                                                                <span className="text-xs text-gray-400">–</span>
+                                                                <label className="sr-only" htmlFor={`out-${id}`}>Time Out</label>
+                                                                <input
+                                                                    id={`out-${id}`}
+                                                                    type="time"
+                                                                    className="border rounded px-2 py-1 text-xs bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 focus:ring-2 focus:ring-[var(--primary-color)] focus:outline-none transition-shadow"
+                                                                    value={record.time_out || ''}
+                                                                    onChange={(e) => handleTimeChange(id, 'time_out', e.target.value)}
+                                                                    onBlur={(e) => saveTime(id, 'time_out', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <label className="sr-only" htmlFor={`remarks-${id}`}>Remarks</label>
+                                                            <input
+                                                                id={`remarks-${id}`}
+                                                                className="w-full border-b border-gray-300 dark:border-gray-600 focus:border-[var(--primary-color)] outline-none text-xs bg-transparent dark:text-gray-100"
+                                                                placeholder="Remarks…"
+                                                                value={record.remarks || ''}
+                                                                onChange={(e) => handleRemarkChange(id, e.target.value)}
+                                                                onBlur={(e) => saveRemark(id, e.target.value, record.status)}
+                                                            />
+                                                        </td>
+                                                        <td className="p-3 align-middle">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'present')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'present' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
+                                                                    aria-pressed={active === 'present'}
+                                                                >
+                                                                    Present
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'absent')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'absent' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+                                                                    aria-pressed={active === 'absent'}
+                                                                >
+                                                                    Absent
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'excused')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'excused' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                                                                    aria-pressed={active === 'excused'}
+                                                                >
+                                                                    Excused
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMarkAttendance(id, 'late')}
+                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'late' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'}`}
+                                                                    aria-pressed={active === 'late'}
+                                                                >
+                                                                    Late
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </div>

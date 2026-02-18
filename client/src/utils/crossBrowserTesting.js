@@ -91,9 +91,20 @@ export const BrowserCompatibility = {
       // Media APIs
       webGL: (() => {
         try {
+          if (window.__rgms_webgl_supported !== undefined) return window.__rgms_webgl_supported;
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+          const gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          window.__rgms_webgl_supported = !!gl;
+          try {
+            if (gl) {
+              const lose = gl.getExtension('WEBGL_lose_context');
+              if (lose && lose.loseContext) lose.loseContext();
+            }
+          } catch {}
+          return window.__rgms_webgl_supported;
         } catch (e) {
+          window.__rgms_webgl_supported = false;
           return false;
         }
       })(),
@@ -401,24 +412,8 @@ export const CrossBrowserTestSuite = {
     // Test WebGL
     tests.push({
       name: 'WebGL',
-      status: (() => {
-        try {
-          const canvas = document.createElement('canvas');
-          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
-            'passed' : 'warning';
-        } catch (e) {
-          return 'warning';
-        }
-      })(),
-      message: (() => {
-        try {
-          const canvas = document.createElement('canvas');
-          return (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) ? 
-            'WebGL is supported' : 'WebGL not supported';
-        } catch (e) {
-          return 'WebGL not supported';
-        }
-      })()
+      status: (() => (window.__rgms_webgl_supported ? 'passed' : 'warning'))(),
+      message: (() => (window.__rgms_webgl_supported ? 'WebGL is supported' : 'WebGL not supported'))()
     });
 
     return {

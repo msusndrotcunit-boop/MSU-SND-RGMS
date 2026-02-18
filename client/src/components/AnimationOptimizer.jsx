@@ -6,7 +6,7 @@ import { getDeviceCapabilities, throttle } from '../utils/responsive';
  * AnimationOptimizer - Optimizes animations and transitions for mobile performance
  * Provides smooth page transitions without layout shifts and efficient rendering
  */
-const AnimationOptimizer = ({ children, className = '', ...props }) => {
+const AnimationOptimizer = ({ children, className = '', preserveFixed = false, ...props }) => {
   const { isMobile, deviceCapabilities } = useMobile();
   const [isLowEndDevice, setIsLowEndDevice] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -38,7 +38,9 @@ const AnimationOptimizer = ({ children, className = '', ...props }) => {
     container.style.setProperty('--transition-duration', reducedMotion || isLowEndDevice ? '0.1s' : '0.2s');
     
     // Enable hardware acceleration for smooth animations
-    if (!isLowEndDevice) {
+    // IMPORTANT: Avoid applying transform on containers that include position: fixed elements
+    // Setting transform on an ancestor creates a containing block and breaks viewport-fixed positioning.
+    if (!isLowEndDevice && !preserveFixed) {
       container.style.transform = 'translateZ(0)';
       container.style.willChange = 'transform, opacity';
     }
@@ -48,11 +50,13 @@ const AnimationOptimizer = ({ children, className = '', ...props }) => {
         container.style.removeProperty('--animation-enabled');
         container.style.removeProperty('--animation-duration');
         container.style.removeProperty('--transition-duration');
-        container.style.transform = '';
-        container.style.willChange = '';
+        if (!preserveFixed) {
+          container.style.transform = '';
+          container.style.willChange = '';
+        }
       }
     };
-  }, [isLowEndDevice, reducedMotion]);
+  }, [isLowEndDevice, reducedMotion, preserveFixed]);
 
   return (
     <div

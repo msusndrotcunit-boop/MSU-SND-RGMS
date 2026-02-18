@@ -93,6 +93,7 @@ const Cadets = () => {
     const [addForm, setAddForm] = useState({
         rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
         studentId: '', email: '', contactNumber: '', address: '',
+        gender: '', religion: '', birthdate: '',
         course: '', yearLevel: '', schoolYear: '',
         battalion: '', company: '', platoon: '',
         cadetCourse: '', semester: '', status: 'Ongoing'
@@ -430,8 +431,9 @@ const Cadets = () => {
             setIsEditModalOpen(false);
             toast.success('Cadet updated successfully');
         } catch (err) {
-            console.error(err);
-            toast.error('Error updating cadet');
+            console.error('Cadet update error:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Error updating cadet';
+            toast.error(errorMsg);
         }
     };
 
@@ -514,6 +516,7 @@ const Cadets = () => {
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',
+                gender: '', religion: '', birthdate: '',
                 course: '', yearLevel: '', schoolYear: '',
                 battalion: '', company: '', platoon: '',
                 cadetCourse: '', semester: '', status: 'Ongoing'
@@ -827,18 +830,24 @@ const Cadets = () => {
                     {
                         key: 'username',
                         label: 'Username',
+                        headerClassName: 'px-1 pr-1',
+                        cellClassName: 'px-1 pr-1 whitespace-nowrap',
                         render: (_, cadet) => cadet.username || cadet.student_id
                     },
                     {
                         key: 'unit',
                         label: 'Unit (Coy/Plt)',
                         align: 'center',
+                        headerClassName: 'px-1 pl-1',
+                        cellClassName: 'px-1 pl-1 whitespace-nowrap',
                         render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
                     },
                     {
                         key: 'status',
                         label: 'Status',
                         align: 'center',
+                        headerClassName: 'px-2',
+                        cellClassName: 'px-2',
                         render: (_, cadet) => (
                             !cadet.is_profile_completed ? (
                                 <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
@@ -865,6 +874,7 @@ const Cadets = () => {
                 filterable={true}
                 pagination={true}
                 itemsPerPage={20}
+                cardLayout="never"
                 actions={[
                     ...(filteredCadets.some(c => c.is_profile_completed) ? [{
                         icon: Unlock,
@@ -1064,6 +1074,24 @@ const Cadets = () => {
                             </div>
 
                             <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <select className="border p-2 rounded" value={addForm.gender} onChange={e => setAddForm({...addForm, gender: e.target.value})}>
+                                    <option value="">Select Gender</option>
+                                    {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.religion} onChange={e => setAddForm({...addForm, religion: e.target.value})}>
+                                    <option value="">Select Religion</option>
+                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <input 
+                                    type="date" 
+                                    className="border p-2 rounded" 
+                                    value={addForm.birthdate} 
+                                    onChange={e => setAddForm({...addForm, birthdate: e.target.value})} 
+                                    placeholder="Birthdate" 
+                                />
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})}>

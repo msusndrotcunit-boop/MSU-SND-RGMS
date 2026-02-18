@@ -2,13 +2,34 @@ const allowed = new Set(['admin', 'cadet', 'training_staff']);
 const bypass = ((process.env.BYPASS_AUTH || 'true') + '').toLowerCase() === 'true';
 const defaultRole = process.env.DEFAULT_ROLE || 'admin';
 const expectedToken = process.env.API_TOKEN || 'dev-token';
+let db = null;
+try { db = require('../database'); } catch (_) {}
 
 // In-memory session store (for development - use Redis/JWT in production)
 const sessions = new Map();
 
 function authenticateToken(req, res, next) {
   if (bypass) {
-    req.user = { id: 1, role: defaultRole };
+    console.warn('[Auth] BYPASS_AUTH is enabled - this should only be used in development!');
+    const user = { id: 1, role: defaultRole };
+    if (defaultRole === 'cadet' && db) {
+      try {
+        db.get(`SELECT cadet_id FROM users WHERE id = ?`, [user.id], (err, row) => {
+          if (!err && row && row.cadet_id) {
+            req.user = { ...user, cadetId: row.cadet_id };
+            return next();
+          }
+          db.get(`SELECT id FROM cadets ORDER BY id ASC LIMIT 1`, [], (e2, r2) => {
+            req.user = { ...user, cadetId: r2 && r2.id ? r2.id : undefined };
+            return next();
+          });
+        });
+        return;
+      } catch (_) {
+        // fall-through
+      }
+    }
+    req.user = user;
     return next();
   }
   
@@ -24,12 +45,14 @@ function authenticateToken(req, res, next) {
     // For simple token auth, we need to get user info from session or default
     const session = sessions.get(token);
     if (session) {
+      console.log('[Auth] Session found for token:', { userId: session.id, role: session.role, cadetId: session.cadetId });
       req.user = session;
       return next();
     }
-    // Fallback to default user if no session found
-    req.user = { id: 1, role: defaultRole };
-    return next();
+    // Fallback: No session found, but token is valid
+    // This shouldn't happen in normal operation
+    console.warn('[Auth] Valid token but no session found - user may need to log in again');
+    return res.status(401).json({ message: 'Session expired. Please log in again.' });
   }
   
   res.status(401).json({ message: 'Invalid token' });

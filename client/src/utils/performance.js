@@ -472,6 +472,7 @@ export const MemoryManager = {
  * Platform detection and cross-platform utilities
  */
 export const PlatformDetector = {
+  _webglSupported: undefined,
   /**
    * Detect the current platform
    * @returns {Object} Platform information
@@ -566,10 +567,23 @@ export const PlatformDetector = {
       
       // Display and graphics
       webGL: (() => {
+        if (typeof PlatformDetector._webglSupported !== 'undefined') {
+          return PlatformDetector._webglSupported;
+        }
         try {
           const canvas = document.createElement('canvas');
-          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+          const gl = canvas.getContext('webgl', { preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }) 
+                 || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: false });
+          PlatformDetector._webglSupported = !!gl;
+          if (gl) {
+            try {
+              const lose = gl.getExtension('WEBGL_lose_context');
+              if (lose && lose.loseContext) lose.loseContext();
+            } catch {}
+          }
+          return PlatformDetector._webglSupported;
         } catch {
+          PlatformDetector._webglSupported = false;
           return false;
         }
       })(),

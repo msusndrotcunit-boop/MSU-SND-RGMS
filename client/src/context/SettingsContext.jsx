@@ -123,13 +123,25 @@ export const SettingsProvider = ({ children }) => {
                 main: '#2563eb',
                 soft: 'rgba(37, 99, 235, 0.18)'
             },
+            indigo: {
+                main: '#4f46e5',
+                soft: 'rgba(79, 70, 229, 0.18)'
+            },
             green: {
                 main: '#16a34a',
                 soft: 'rgba(22, 163, 74, 0.18)'
             },
+            emerald: {
+                main: '#059669',
+                soft: 'rgba(5, 150, 105, 0.18)'
+            },
             red: {
                 main: '#dc2626',
                 soft: 'rgba(220, 38, 38, 0.18)'
+            },
+            pink: {
+                main: '#db2777',
+                soft: 'rgba(219, 39, 119, 0.18)'
             },
             purple: {
                 main: '#7c3aed',
@@ -139,14 +151,46 @@ export const SettingsProvider = ({ children }) => {
                 main: '#ea580c',
                 soft: 'rgba(234, 88, 12, 0.18)'
             },
+            amber: {
+                main: '#d97706',
+                soft: 'rgba(217, 119, 6, 0.18)'
+            },
+            cyan: {
+                main: '#06b6d4',
+                soft: 'rgba(6, 182, 212, 0.18)'
+            },
+            slate: {
+                main: '#334155',
+                soft: 'rgba(51, 65, 85, 0.18)'
+            },
             teal: {
                 main: '#0f766e',
                 soft: 'rgba(15, 118, 110, 0.22)'
+            },
+            'gradient-emerald': {
+                main: '#059669',
+                soft: 'rgba(5, 150, 105, 0.18)',
+                gradient: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)'
+            },
+            'gradient-sunset': {
+                main: '#ea580c',
+                soft: 'rgba(234, 88, 12, 0.18)',
+                gradient: 'linear-gradient(135deg, #fb7185 0%, #f59e0b 50%, #ea580c 100%)'
+            },
+            'gradient-ocean': {
+                main: '#2563eb',
+                soft: 'rgba(37, 99, 235, 0.18)',
+                gradient: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #1d4ed8 100%)'
             }
         };
         const palette = palettes[settings.theme.primaryColor] || palettes.blue;
         document.documentElement.style.setProperty('--primary-color', palette.main);
         document.documentElement.style.setProperty('--primary-color-soft', palette.soft);
+        if (palette.gradient) {
+            document.documentElement.style.setProperty('--primary-gradient', palette.gradient);
+        } else {
+            document.documentElement.style.removeProperty('--primary-gradient');
+        }
 
         // Persist to local storage for instant application on next load
         try {

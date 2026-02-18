@@ -7,8 +7,10 @@ import {
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import ExcuseLetterManager from '../../components/ExcuseLetterManager';
 import WeatherAdvisory from '../../components/WeatherAdvisory';
+import { useAuth } from '../../context/AuthContext';
 
 const StaffDashboard = () => {
+    const { user } = useAuth();
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [staffRole, setStaffRole] = useState(null);
@@ -17,6 +19,10 @@ const StaffDashboard = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user || user.role !== 'training_staff') {
+                setLoading(false);
+                return;
+            }
             try {
                 // Try cache first
                 const cached = await getSingleton('dashboard', 'staff_history');
@@ -52,17 +58,18 @@ const StaffDashboard = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         const fetchStaffRole = async () => {
+            if (!user || user.role !== 'training_staff') return;
             try {
                 const res = await axios.get('/api/staff/me');
                 setStaffRole(res.data?.role || null);
             } catch {}
         };
         fetchStaffRole();
-    }, []);
+    }, [user]);
 
     const canReviewExcuses =
         staffRole === 'Commandant' ||

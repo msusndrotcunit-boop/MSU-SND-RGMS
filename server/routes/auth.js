@@ -4,9 +4,10 @@ const db = require('../database');
 const bcrypt = require('bcryptjs');
 const { authenticateToken, setSession, clearSession } = require('../middleware/auth');
 const { upload } = require('../utils/cloudinary');
+const dayjs = require('dayjs');
 
-// In-memory settings store (ephemeral on server restarts)
-let currentSettings = {
+// User-specific settings helpers
+const defaultSettings = () => ({
   email_alerts: true,
   push_notifications: true,
   activity_updates: true,
@@ -14,7 +15,36 @@ let currentSettings = {
   compact_mode: false,
   primary_color: 'default',
   custom_bg: null
-};
+});
+function upsertUserSettings(userId, payload, cb) {
+  const sqlUpdate = `
+    UPDATE user_settings
+    SET email_alerts = COALESCE(?, email_alerts),
+        push_notifications = COALESCE(?, push_notifications),
+        activity_updates = COALESCE(?, activity_updates),
+        dark_mode = COALESCE(?, dark_mode),
+        compact_mode = COALESCE(?, compact_mode),
+        primary_color = COALESCE(?, primary_color),
+        custom_bg = COALESCE(?, custom_bg)
+    WHERE user_id = ?
+  `;
+  const params = [
+    payload.email_alerts, payload.push_notifications, payload.activity_updates,
+    payload.dark_mode, payload.compact_mode, payload.primary_color, payload.custom_bg, userId
+  ];
+  db.run(sqlUpdate, params, function(err) {
+    if (err) return cb(err);
+    if (this && this.changes > 0) return cb(null);
+    const d = { ...defaultSettings(), ...payload };
+    const sqlInsert = `
+      INSERT INTO user_settings (user_id, email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color, custom_bg)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.run(sqlInsert, [
+      userId, d.email_alerts, d.push_notifications, d.activity_updates, d.dark_mode, d.compact_mode, d.primary_color, d.custom_bg
+    ], (e) => cb(e));
+  });
+}
 
 // Heartbeat: accepts GET or POST for flexibility
 router.get('/heartbeat', (req, res) => {
@@ -30,6 +60,48 @@ router.post('/heartbeat', (req, res) => {
     status: 'ok',
     method: 'POST',
     timestamp: Date.now()
+  });
+});
+
+// Save user location (used by WeatherAdvisory)
+router.post('/location', authenticateToken, (req, res) => {
+  try {
+    const { latitude, longitude, accuracy, provider } = req.body || {};
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ message: 'latitude and longitude are required numbers' });
+    }
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const ts = dayjs().toISOString();
+    const sql = `
+      UPDATE users
+      SET last_latitude = ?, last_longitude = ?, last_location_at = ?, last_location_accuracy = ?, last_location_provider = ?
+      WHERE id = ?
+    `;
+    db.run(sql, [latitude, longitude, ts, accuracy || null, provider || 'gps', userId], function (err) {
+      if (err) return res.status(500).json({ message: err.message });
+      if (this.changes === 0) return res.status(404).json({ message: 'User not found' });
+      res.json({ ok: true, latitude, longitude, at: ts });
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// Read last saved user location
+router.get('/location', authenticateToken, (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+  const sql = `
+    SELECT last_latitude as latitude, last_longitude as longitude, last_location_at as at, last_location_accuracy as accuracy, last_location_provider as provider
+    FROM users
+    WHERE id = ?
+  `;
+  db.get(sql, [userId], (err, row) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json(row || {});
   });
 });
 
@@ -114,22 +186,50 @@ router.post('/cadet-login', async (req, res) => {
       }
     }
     
+    // Ensure user is linked to a cadet if possible
+    try {
+      if (!user.cadet_id) {
+        const linkRow = await new Promise((resolve) => {
+          db.get(
+            `SELECT id FROM cadets WHERE student_id = ? OR email = ? LIMIT 1`,
+            [user.username || identifier, user.email || identifier],
+            (e, r) => resolve(r)
+          );
+        });
+        if (linkRow && linkRow.id) {
+          await new Promise((resolve) => {
+            db.run(`UPDATE users SET cadet_id = ? WHERE id = ?`, [linkRow.id, user.id], () => resolve());
+          });
+          user.cadet_id = linkRow.id;
+          db.run(
+            `INSERT INTO sync_events (event_type, payload) VALUES (?, json(?))`,
+            ['login_autolink_cadet', JSON.stringify({ userId: user.id, cadetId: linkRow.id })]
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('[Cadet Login] Autolink attempt failed:', e.message);
+    }
+
+    // Re-fetch profile completion if cadet_id exists
+    let isCompleted = !!user.is_profile_completed;
+    if (user.cadet_id) {
+      const comp = await new Promise((resolve) => {
+        db.get(`SELECT is_profile_completed FROM cadets WHERE id = ?`, [user.cadet_id], (e, r) => resolve(r));
+      });
+      if (comp && (comp.is_profile_completed === 1 || comp.is_profile_completed === true || comp.is_profile_completed === '1')) {
+        isCompleted = true;
+      }
+    }
+
     const token = process.env.API_TOKEN || 'dev-token';
-    
-    // Store session
-    setSession(token, {
-      id: user.id,
-      role: 'cadet',
-      cadetId: user.cadet_id,
-      staffId: null
-    });
-    
+    setSession(token, { id: user.id, role: 'cadet', cadetId: user.cadet_id || null, staffId: null });
     res.json({
       token,
       role: 'cadet',
-      cadetId: user.cadet_id,
+      cadetId: user.cadet_id || null,
       staffId: null,
-      isProfileCompleted: user.is_profile_completed || false,
+      isProfileCompleted: isCompleted,
       identifier: user.username,
       userId: user.id
     });
@@ -201,13 +301,28 @@ router.post('/logout', authenticateToken, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
-// Read settings
+// Read settings (user-specific)
 router.get('/settings', authenticateToken, (req, res) => {
-  res.json(currentSettings);
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+  db.get(`SELECT email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color, custom_bg 
+          FROM user_settings WHERE user_id = ?`, [userId], (err, row) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!row) {
+      upsertUserSettings(userId, defaultSettings(), (e) => {
+        if (e) return res.status(500).json({ message: e.message });
+        res.json(defaultSettings());
+      });
+      return;
+    }
+    res.json(row);
+  });
 });
 
-// Update settings
+// Update settings (user-specific)
 router.put('/settings', authenticateToken, (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
   const {
     email_alerts,
     push_notifications,
@@ -218,23 +333,30 @@ router.put('/settings', authenticateToken, (req, res) => {
     custom_bg
   } = req.body || {};
 
-  currentSettings = {
-    ...currentSettings,
-    ...(typeof email_alerts === 'boolean' ? { email_alerts } : {}),
-    ...(typeof push_notifications === 'boolean' ? { push_notifications } : {}),
-    ...(typeof activity_updates === 'boolean' ? { activity_updates } : {}),
-    ...(typeof dark_mode === 'boolean' ? { dark_mode } : {}),
-    ...(typeof compact_mode === 'boolean' ? { compact_mode } : {}),
-    ...(primary_color ? { primary_color } : {}),
-    ...(custom_bg !== undefined ? { custom_bg } : {})
+  const payload = {
+    email_alerts: typeof email_alerts === 'boolean' ? email_alerts : undefined,
+    push_notifications: typeof push_notifications === 'boolean' ? push_notifications : undefined,
+    activity_updates: typeof activity_updates === 'boolean' ? activity_updates : undefined,
+    dark_mode: typeof dark_mode === 'boolean' ? dark_mode : undefined,
+    compact_mode: typeof compact_mode === 'boolean' ? compact_mode : undefined,
+    primary_color: primary_color || undefined,
+    custom_bg: custom_bg !== undefined ? custom_bg : undefined
   };
-
-  res.json({ success: true, settings: currentSettings });
+  upsertUserSettings(userId, payload, (err) => {
+    if (err) return res.status(500).json({ message: err.message });
+    db.get(`SELECT email_alerts, push_notifications, activity_updates, dark_mode, compact_mode, primary_color, custom_bg 
+            FROM user_settings WHERE user_id = ?`, [userId], (gErr, row) => {
+      if (gErr) return res.status(500).json({ message: gErr.message });
+      res.json({ success: true, settings: row || defaultSettings() });
+    });
+  });
 });
 
-// Upload background image
+// Upload background image (user-specific)
 router.post('/settings/background', authenticateToken, upload.single('image'), (req, res) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     if (!req.file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
@@ -243,8 +365,10 @@ router.post('/settings/background', authenticateToken, upload.single('image'), (
     if (!url) {
       return res.status(500).json({ message: 'Upload failed' });
     }
-    currentSettings.custom_bg = url;
-    res.json({ success: true, url });
+    upsertUserSettings(userId, { custom_bg: url }, (e) => {
+      if (e) return res.status(500).json({ message: e.message });
+      res.json({ success: true, url });
+    });
   } catch (err) {
     res.status(500).json({ message: err.message || 'Upload error' });
   }

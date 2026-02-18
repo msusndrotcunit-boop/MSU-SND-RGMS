@@ -3,12 +3,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import packageJson from './package.json'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version)
   },
-  base: '/',
+  base: './',
   plugins: [
     react(),
     VitePWA({
@@ -18,7 +17,7 @@ export default defineConfig({
       filename: 'sw.js',
       manifestFilename: 'manifest.json',
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: 'module',
       },
       manifest: {
@@ -29,20 +28,10 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: './',
         icons: [
-          {
-            src: 'pwa-192x192.webp',
-            sizes: '192x192',
-            type: 'image/webp',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'pwa-512x512.webp',
-            sizes: '512x512',
-            type: 'image/webp',
-            purpose: 'any maskable'
-          }
+          { src: 'pwa-192x192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
+          { src: 'pwa-512x512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' }
         ]
       },
       workbox: {
@@ -83,7 +72,6 @@ export default defineConfig({
     // Source maps for debugging (disable in production for smaller builds)
     sourcemap: false,
   },
-  // Optimize dependency pre-bundling
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'axios'],
   },
@@ -101,5 +89,5 @@ export default defineConfig({
         secure: false,
       }
     }
-  },
+  }
 })

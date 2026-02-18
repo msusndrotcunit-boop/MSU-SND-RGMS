@@ -211,18 +211,24 @@ const ArchivedCadets = () => {
           {
             key: 'username',
             label: 'Username',
+            headerClassName: 'px-3',
+            cellClassName: 'px-3 whitespace-nowrap',
             render: (_, cadet) => cadet.username || cadet.student_id
           },
           {
             key: 'unit',
             label: 'Unit (Coy/Plt)',
             align: 'center',
+            headerClassName: 'px-2',
+            cellClassName: 'px-2 whitespace-nowrap',
             render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
           },
           {
             key: 'status',
             label: 'Status',
             align: 'center',
+            headerClassName: 'px-2',
+            cellClassName: 'px-2',
             render: () => (
               <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-800 border border-gray-200">
                 Archived
@@ -239,6 +245,7 @@ const ArchivedCadets = () => {
         filterable={true}
         pagination={true}
         itemsPerPage={20}
+        cardLayout="never"
         className="bg-white rounded shadow"
       />
     </div>

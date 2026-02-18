@@ -28,6 +28,7 @@ const webpush = require('web-push');
 const { processUrlImport } = require('./utils/importCadets');
 const dbSettingsKey = 'cadet_list_source_url';
 const { broadcastEvent } = require('./utils/sseHelper');
+const os = require('os');
 
 console.log('[Startup] Initializing Server...');
 
@@ -184,7 +185,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api/recognition', recognitionRoutes);
 
 // Performance monitoring routes (Validates Requirements: 9.5, 8.5)
-const { router: metricsRouter } = require('./routes/metrics');
+const { router: metricsRouter, getMetricsSnapshot, evaluateAlerts } = require('./routes/metrics');
 app.use('/api/admin', metricsRouter);
 
 // DEBUG: Print all registered routes
@@ -218,11 +219,60 @@ function printRoutes() {
 }
 setTimeout(printRoutes, 1000); // Print after brief delay to ensure mounting
 
+// Lightweight alerting loop (console + DB notification)
+setInterval(() => {
+    try {
+        const snap = getMetricsSnapshot();
+        const alerts = evaluateAlerts(snap);
+        if (alerts.length > 0) {
+            console.warn('[Perf Alerts]', alerts.join(' | '));
+            // Persist a single aggregated notification (optional)
+            const msg = `Performance alerts: ${alerts.join('; ')}`;
+            db.run('INSERT INTO notifications (user_id, message, type) VALUES (?, ?, ?)', [null, msg, 'perf_alert']);
+        }
+    } catch (e) {
+        // Silent fail to avoid crashing
+    }
+}, 30000); // every 30s
+
 
 // Create uploads directory if not exists
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
+}
+
+// --- DAILY SQLITE BACKUP (if using SQLite) ---
+function startDailySqliteBackups() {
+    const isPostgres = !!process.env.DATABASE_URL || !!process.env.SUPABASE_URL;
+    if (isPostgres) return;
+    const dbPath = path.join(__dirname, 'rotc.db');
+    const backupsDir = path.join(__dirname, 'backups');
+    try { if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir); } catch {}
+    function timestamp() {
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+    }
+    function doBackup() {
+        try {
+            if (!fs.existsSync(dbPath)) return;
+            const dest = path.join(backupsDir, `rotc_${timestamp()}.db`);
+            fs.copyFileSync(dbPath, dest);
+            // Retention: keep last 14 files
+            const files = (fs.readdirSync(backupsDir) || []).filter(f => f.startsWith('rotc_') && f.endsWith('.db')).sort();
+            if (files.length > 14) {
+                const toDelete = files.slice(0, files.length - 14);
+                toDelete.forEach(f => { try { fs.unlinkSync(path.join(backupsDir, f)); } catch {} });
+            }
+            console.log(`[Backup] SQLite DB snapshot created at ${dest}`);
+        } catch (e) {
+            console.error('[Backup] Failed to create SQLite backup:', e.message);
+        }
+    }
+    // Immediate backup on startup and then every 24 hours
+    setTimeout(doBackup, 10000);
+    setInterval(doBackup, 24 * 60 * 60 * 1000);
 }
 
 // DETERMINING CLIENT BUILD PATH DYNAMICALLY
@@ -447,6 +497,7 @@ async function startServer() {
         // We enable it by default here since the user requested to prevent sleep
         startKeepAlive();
         startSyncEventBroadcaster();
+        startDailySqliteBackups();
     });
 
     // Initialize Database (Migrations & Tables)

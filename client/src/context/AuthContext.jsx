@@ -22,12 +22,15 @@ export const AuthProvider = ({ children }) => {
 
     const login = useCallback(async (userData) => {
         const normalizedRole = (userData.role || '').toLowerCase();
+        // Convert isProfileCompleted to boolean and store as string
+        const isCompleted = userData.isProfileCompleted === true || userData.isProfileCompleted === 1 || userData.isProfileCompleted === '1' || userData.isProfileCompleted === 'true';
+        
         localStorage.setItem('token', userData.token);
         localStorage.setItem('role', normalizedRole);
         if (userData.cadetId) localStorage.setItem('cadetId', userData.cadetId);
-        if (userData.isProfileCompleted !== undefined) localStorage.setItem('isProfileCompleted', userData.isProfileCompleted);
+        localStorage.setItem('isProfileCompleted', isCompleted ? 'true' : 'false');
         
-        setUser({ ...userData, role: normalizedRole });
+        setUser({ ...userData, role: normalizedRole, isProfileCompleted: isCompleted });
         axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
         try { await clearCache('profiles'); } catch {}
     }, []);
@@ -40,9 +43,12 @@ export const AuthProvider = ({ children }) => {
             const cadetId = localStorage.getItem('cadetId');
             const isProfileCompleted = localStorage.getItem('isProfileCompleted');
             
+            console.log('[AuthContext] Initializing auth:', { token: !!token, role, cadetId, isProfileCompleted });
+            
             if (token) {
                 // Convert 'true'/'false' string back to boolean or null if undefined
                 const isCompleted = isProfileCompleted === 'true' || isProfileCompleted === '1';
+                console.log('[AuthContext] Setting user with isProfileCompleted:', isCompleted);
                 setUser({ token, role, cadetId, isProfileCompleted: isCompleted });
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             }
@@ -50,6 +56,25 @@ export const AuthProvider = ({ children }) => {
         };
         initAuth();
     }, []);
+
+    useEffect(() => {
+        const syncProfileCompletion = async () => {
+            if (!user || user.role !== 'cadet') return;
+            try {
+                const res = await axios.get('/api/cadet/profile', { headers: { 'Cache-Control': 'no-store' } });
+                const completed = res?.data && (res.data.is_profile_completed === 1 || res.data.is_profile_completed === true || res.data.is_profile_completed === '1');
+                console.log('[AuthContext] Profile sync - DB value:', res?.data?.is_profile_completed, 'Computed:', completed, 'Current:', user.isProfileCompleted);
+                if (completed !== user.isProfileCompleted) {
+                    console.log('[AuthContext] Updating isProfileCompleted from', user.isProfileCompleted, 'to', completed);
+                    localStorage.setItem('isProfileCompleted', completed ? 'true' : 'false');
+                    setUser(prev => ({ ...prev, isProfileCompleted: completed }));
+                }
+            } catch (err) {
+                console.error('[AuthContext] Profile sync failed:', err);
+            }
+        };
+        syncProfileCompletion();
+    }, [user]);
 
     // Heartbeat mechanism
     useEffect(() => {
