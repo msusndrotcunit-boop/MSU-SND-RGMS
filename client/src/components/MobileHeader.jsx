@@ -18,9 +18,8 @@ const MobileHeader = ({ onMenuClick, title, actions = [] }) => {
           onClick={onMenuClick}
           className="touch-target p-2 -ml-2 text-gray-600 hover:text-gray-900"
           aria-label="Open menu"
-          style={{ minHeight: '48px', minWidth: '48px' }}
         >
-          <Menu size={28} />
+          <Menu size={24} />
         </button>
 
         {/* Title */}

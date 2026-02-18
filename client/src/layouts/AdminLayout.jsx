@@ -429,10 +429,9 @@ const AdminLayout = () => {
                     <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target p-2"
-                            style={{ minHeight: '48px', minWidth: '48px' }}
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0"
                         >
-                            <Menu size={28} />
+                            <Menu size={24} />
                         </button>
                         
                         {/* Mobile Title */}

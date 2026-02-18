@@ -498,10 +498,9 @@ const CadetLayout = () => {
                             onClick={toggleSidebar} 
                             aria-controls="cadet-sidebar"
                             aria-expanded={isSidebarOpen}
-                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden touch-target p-2"
-                            style={{ minHeight: '48px', minWidth: '48px' }}
+                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
                         >
-                            <Menu size={28} />
+                            <Menu size={24} />
                         </button>
                         <h1 className="text-xl font-semibold text-gray-800">
                             {location.pathname.includes('/cadet/home') && 'Home'}
