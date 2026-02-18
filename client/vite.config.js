@@ -7,7 +7,7 @@ export default defineConfig({
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version)
   },
-  base: './',
+  base: '/',
   plugins: [
     react(),
     VitePWA({
@@ -28,7 +28,7 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: './',
+        start_url: '/',
         icons: [
           { src: 'pwa-192x192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
           { src: 'pwa-512x512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' }
