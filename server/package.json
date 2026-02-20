@@ -6,6 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
+    "check:db": "node check_db.js",
+    "sync": "node check_db.js && git add -A && git commit -m \"chore: sync\" && git push",
     "test:rotcmis": "node tests/rotcmis.test.js",
     "test:staff": "node tests/staff_endpoints.test.js",
     "test:cadet": "node tests/cadet_grades.test.js",

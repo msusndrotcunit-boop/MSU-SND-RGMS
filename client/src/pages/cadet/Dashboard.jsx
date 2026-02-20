@@ -150,10 +150,18 @@ const CadetDashboard = () => {
 
     useEffect(() => {
         if (!user || user.role !== 'cadet') return;
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
+
         let es;
         const connectSSE = () => {
             try {
-                es = new EventSource('/api/attendance/events');
+                es = new EventSource(getSseUrl());
                 es.onopen = () => setEsConnected(true);
                 es.onmessage = async (e) => {
                     try {

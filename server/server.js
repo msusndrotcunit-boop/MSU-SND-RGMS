@@ -37,6 +37,9 @@ const app = express();
 const PORT = parseInt(process.env.PORT) || 5000;
 console.log(`[Startup] Configured to listen on port: ${PORT}`);
 
+// Global CORS and logging middleware must be registered before routes
+app.use(cors());
+
 // LOGGING MIDDLEWARE
 app.use((req, res, next) => {
     console.log(`[Request] ${req.method} ${req.url}`);
@@ -157,7 +160,6 @@ app.use(compression({
         return compression.filter(req, res);
     }
 }));
-app.use(cors());
 app.use(express.json());
 app.use(responseTime); // Add response time tracking
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
