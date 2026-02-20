@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'MSU-SND-RGMS/client/**'
+      - 'MSU-SND-RGMS-clean/client/**'
       - '!**.md'
   workflow_dispatch: {}
 
@@ -13,14 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: MSU-SND-RGMS/client
+        working-directory: MSU-SND-RGMS-clean/client
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'npm'
-          cache-dependency-path: MSU-SND-RGMS/client/package-lock.json
+          cache-dependency-path: MSU-SND-RGMS-clean/client/package-lock.json
       - run: npm ci
       - run: npm run build
       - name: FTP Deploy
@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: MSU-SND-RGMS/client/dist/
+          local-dir: MSU-SND-RGMS-clean/client/dist/
           server-dir: /htdocs/
           dangerous-clean-slate: true
           exclude: |
