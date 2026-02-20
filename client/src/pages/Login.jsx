@@ -117,10 +117,10 @@ const Login = () => {
                 <div className="p-3 md:p-8 pt-3 md:pt-6">
                     {/* Role Selector */}
                     <div className="mb-3 md:mb-6 bg-gray-100 p-1 rounded-lg">
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="flex items-stretch gap-1">
                             <button
                                 onClick={() => { setLoginType('cadet'); setError(''); }}
-                                className={`w-full py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
                                     loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -128,7 +128,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('staff'); setError(''); }}
-                                className={`w-full py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
                                     loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -136,7 +136,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('admin'); setError(''); }}
-                                className={`w-full py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
                                     loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
