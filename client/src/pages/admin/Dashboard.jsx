@@ -299,7 +299,8 @@ const Dashboard = () => {
                                             : u.role === 'training_staff'
                                             ? `${u.staff_rank || ''} ${u.staff_last_name || ''}`.trim()
                                             : u.username;
-                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
+                                    const hasCoords = Number.isFinite(u.last_latitude) && Number.isFinite(u.last_longitude);
+                                    const url = hasCoords ? `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}` : null;
                                     const when = u.last_location_at
                                         ? new Date(u.last_location_at).toLocaleString()
                                         : '';
@@ -308,14 +309,20 @@ const Dashboard = () => {
                                             <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{name || u.username}</td>
                                             <td className="px-4 py-2 capitalize text-gray-600 dark:text-gray-300">{u.role}</td>
                                             <td className="px-4 py-2">
-                                                <a
-                                                    href={url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-[var(--primary-color)] hover:underline"
-                                                >
-                                                    {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
-                                                </a>
+                                                {hasCoords ? (
+                                                    <a
+                                                        href={url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-[var(--primary-color)] hover:underline"
+                                                    >
+                                                        {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-gray-500 dark:text-gray-400">
+                                                        No coordinates
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{when}</td>
                                         </tr>

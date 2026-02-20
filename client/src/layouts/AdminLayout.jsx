@@ -284,8 +284,8 @@ const AdminLayout = () => {
                 {/* Sidebar */}
                 <aside 
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
-                        isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
+                        isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">

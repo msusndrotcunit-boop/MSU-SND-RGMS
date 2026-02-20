@@ -217,7 +217,7 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex min-h-screen app-bg overflow-hidden w-full">
+        <div className="flex min-h-screen app-bg w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -230,8 +230,8 @@ const StaffLayout = () => {
                  {/* Sidebar */}
                  <aside 
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
+                        isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">

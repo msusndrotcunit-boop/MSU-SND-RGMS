@@ -92,6 +92,11 @@ export const getProfilePicUrl = (rawPath, id, type = 'cadets') => {
  * @returns {string} - The fallback URL with cache buster
  */
 export const getProfilePicFallback = (id, type = 'cadets') => {
+    // Admin uses a static brand avatar instead of hitting a non-existent API
+    if (type === 'admin') {
+        return '/assets/msu_rotc_logo.webp';
+    }
+
     if (!id) {
         console.log('[getProfilePicFallback] No ID provided');
         return '';

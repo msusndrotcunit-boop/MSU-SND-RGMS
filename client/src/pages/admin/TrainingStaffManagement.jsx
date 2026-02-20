@@ -560,7 +560,7 @@ const TrainingStaffManagement = () => {
                                             No location data yet for this staff account.
                                         </div>
                                     )}
-                                    {!locationLoading && locationInfo && (
+                                    {!locationLoading && locationInfo && Number.isFinite(locationInfo.last_latitude) && Number.isFinite(locationInfo.last_longitude) && (
                                         <div className="space-y-2">
                                             <div className="text-gray-800 dark:text-gray-100">
                                                 {locationInfo.last_latitude.toFixed(4)}, {locationInfo.last_longitude.toFixed(4)}
