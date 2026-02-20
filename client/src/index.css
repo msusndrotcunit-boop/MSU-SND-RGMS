@@ -326,8 +326,8 @@ body {
     gap: 1rem;
   }
 
-  /* Flex column stacking */
-  .flex:not(.flex-col):not(.flex-row) {
+  /* Flex column stacking - avoid full-screen layout containers */
+  .flex:not(.flex-col):not(.flex-row):not(.h-screen):not(.min-h-screen):not(.app-bg) {
     flex-direction: column;
     gap: 0.75rem;
   }
