@@ -353,16 +353,20 @@ async function initPgDb() {
     }
 
     let connected = false;
+    let lastError = null;
     for (let i = 0; i < 3; i++) {
         try {
             await db.pool.query('SELECT 1');
             connected = true;
             break;
         } catch (e) {
+            lastError = e;
+            console.error('[Database] Postgres connection test failed:', e && e.message ? e.message : e);
             await new Promise(r => setTimeout(r, 1000 * (i + 1)));
         }
     }
     if (!connected) {
+        console.error('[Database] Postgres connection failed after retries.', lastError);
         const isProd = (process.env.NODE_ENV || '').toLowerCase() === 'production';
         if (isProd) {
             throw new Error('Postgres connection failed');

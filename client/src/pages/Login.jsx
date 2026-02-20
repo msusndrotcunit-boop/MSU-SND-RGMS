@@ -117,10 +117,10 @@ const Login = () => {
                 <div className="p-3 md:p-8 pt-3 md:pt-6">
                     {/* Role Selector */}
                     <div className="mb-3 md:mb-6 bg-gray-100 px-2 py-1 rounded-lg">
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex flex-nowrap items-center justify-between gap-2">
                             <button
                                 onClick={() => { setLoginType('cadet'); setError(''); }}
-                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2.5 md:px-4 py-1.5 text-[11px] md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'cadet'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
@@ -130,7 +130,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('staff'); setError(''); }}
-                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2.5 md:px-4 py-1.5 text-[11px] md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'staff'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
@@ -140,7 +140,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('admin'); setError(''); }}
-                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2.5 md:px-4 py-1.5 text-[11px] md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'admin'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
