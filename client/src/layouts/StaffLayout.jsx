@@ -7,7 +7,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { cacheSingleton } from '../utils/db';
-import { getProfilePicUrl } from '../utils/image';
+import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -168,11 +168,18 @@ const StaffLayout = () => {
     
 
     React.useEffect(() => {
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
 
         let es;
         const connect = () => {
             try {
-                es = new EventSource('/api/attendance/events');
+                es = new EventSource(getSseUrl());
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -210,21 +217,23 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
-            <Toaster position="top-right" reverseOrder={false} />
-             {/* Mobile Sidebar Overlay */}
-             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="flex min-h-screen app-bg overflow-hidden w-full">
+                <Toaster position="top-right" reverseOrder={false} />
+                 {/* Mobile Sidebar Overlay */}
+                 {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-             {/* Sidebar */}
-             <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                 {/* Sidebar */}
+                 <aside 
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                    )}
+                >
                 <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center mb-4">
                         <span className="text-xl font-bold">
@@ -450,14 +459,16 @@ const StaffLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+            </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between">
+                <header 
+                    className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
+                >
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4"
+                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target"
                         >
                             <Menu size={24} />
                         </button>
@@ -478,7 +489,9 @@ const StaffLayout = () => {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8">
+                <main 
+                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8"
+                >
                     <Outlet />
                 </main>
 
@@ -513,7 +526,7 @@ const StaffLayout = () => {
                         </div>
                     </div>
                 </div>
-            )}
+              )}
         </div>
     );
 };

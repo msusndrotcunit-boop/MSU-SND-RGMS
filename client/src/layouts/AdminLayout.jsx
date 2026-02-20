@@ -145,10 +145,18 @@ const AdminLayout = () => {
     }, []);
 
     useEffect(() => {
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
+
         let es;
         const connect = () => {
             try {
-                es = new EventSource('/api/attendance/events');
+                es = new EventSource(getSseUrl());
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -230,6 +238,7 @@ const AdminLayout = () => {
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
+        { path: '/admin/demographics-analytics', label: 'Demographics Analytics', icon: Users },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { path: '/admin/archived-cadets', label: 'Archived Cadets', icon: UserCheck },
         { 
@@ -258,26 +267,27 @@ const AdminLayout = () => {
 
     const getAvatarSrc = () => {
         if (!adminProfile) return null;
-        // The admin profile might have a profile_pic or just use the username
-        return getProfilePicUrl(adminProfile.profile_pic, 'admin', 'admin');
+        return getProfilePicUrl(adminProfile.profile_pic, adminProfile.id || 1, 'admin');
     };
 
     return (
-        <div className="flex h-screen app-bg overflow-hidden dark:bg-gray-900 dark:text-gray-100">
-            <Toaster position="top-right" reverseOrder={false} />
-            {/* Mobile Sidebar Overlay */}
-            {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
+                <Toaster position="top-right" reverseOrder={false} />
+                {/* Mobile Sidebar Overlay */}
+                {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-            {/* Sidebar */}
-            <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                {/* Sidebar */}
+                <aside 
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+                        isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
+                    )}
+                >
                 <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center">
                         <button
@@ -298,7 +308,11 @@ const AdminLayout = () => {
                                 alt="Profile" 
                                 className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                 onError={(e) => { 
-                                    e.target.src = getProfilePicFallback('admin', 'admin');
+                                    try {
+                                        e.target.src = getProfilePicFallback(adminProfile?.id || 1, 'admin');
+                                    } catch {
+                                        e.target.src = '';
+                                    }
                                 }}
                             />
                         </Link>
@@ -381,21 +395,28 @@ const AdminLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+                </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="bg-white dark:bg-gray-800 shadow p-4 flex items-center justify-between z-10">
-                    <div className="flex items-center flex-1">
+            <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
+                <header 
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
+                >
+                    <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target"
                         >
                             <Menu size={24} />
                         </button>
                         
+                        {/* Mobile Title */}
+                        <h1 className="md:hidden text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
+                            ROTC Admin
+                        </h1>
+                        
                         {/* Search Bar */}
-                        <div className="relative hidden md:flex items-center w-96 ml-4">
+                        <div className="relative hidden md:flex items-center w-96 ml-4 flex-shrink-0">
                             <Search className="absolute left-3 text-gray-400 dark:text-gray-300" size={18} />
                             <input
                                 value={searchQuery}
@@ -426,7 +447,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-5 mr-2">
+                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -485,8 +506,8 @@ const AdminLayout = () => {
                     );
                 })()}
 
-                <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
-                    <div className="flex-grow">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full max-w-5xl mx-auto">
+                    <div className="flex-grow w-full max-w-full">
                         <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                             <Outlet />
                         </Suspense>

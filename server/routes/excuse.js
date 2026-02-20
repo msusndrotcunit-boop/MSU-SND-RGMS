@@ -1,160 +1,150 @@
 const express = require('express');
-const router = express.Router();
+const { upload, isCloudinaryConfigured } = require('../utils/cloudinary');
 const db = require('../database');
 const { authenticateToken, isAdminOrPrivilegedStaff } = require('../middleware/auth');
-const { upload } = require('../utils/cloudinary');
-const { updateTotalAttendance } = require('../utils/gradesHelper');
-const { broadcastEvent } = require('../utils/sseHelper');
 const path = require('path');
 const fs = require('fs');
 
-// Submit Excuse Letter (Cadet)
-router.post('/', authenticateToken, upload.single('file'), (req, res) => {
-    const { date_absent, reason } = req.body;
-    const cadet_id = req.user.cadetId;
+const router = express.Router();
 
-    if (!cadet_id) return res.status(403).json({ message: 'Only cadets can submit excuse letters.' });
+// Ensure table exists (works for SQLite and Postgres)
+const ensureTable = () => {
+  const sql = db.pool
+    ? `
+      CREATE TABLE IF NOT EXISTS excuse_letters (
+        id SERIAL PRIMARY KEY,
+        cadet_id INTEGER,
+        date_absent DATE,
+        reason TEXT,
+        file_url TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    : `
+      CREATE TABLE IF NOT EXISTS excuse_letters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cadet_id INTEGER,
+        date_absent TEXT,
+        reason TEXT,
+        file_url TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now'))
+      )`;
+  db.run(sql, [], (err) => {
+    if (err) console.error('[excuse] ensureTable error:', err.message);
+  });
+};
+ensureTable();
 
-    let file_url = '';
-    if (req.file) {
-        // Use Cloudinary URL if available, otherwise fall back to local path or filename
-        file_url = req.file.path || req.file.secure_url || (`/uploads/${req.file.filename}`);
-        
-        // Normalize local paths if needed (though cloudinary utils handles this logic mostly)
-        if (!file_url.startsWith('http') && !file_url.startsWith('/')) {
-             file_url = '/uploads/' + req.file.filename;
-        }
-    }
+router.get('/status', (req, res) => res.json({ status: 'ok' }));
 
-    const sql = `INSERT INTO excuse_letters (cadet_id, date_absent, reason, file_url) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [cadet_id, date_absent, reason, file_url], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json({ id: this.lastID, message: 'Excuse letter submitted successfully.' });
+router.use(authenticateToken);
+
+// List excuse letters
+router.get('/', (req, res) => {
+  // Cadet sees their own; admin/staff see all with join
+  const isStaff = req.user && (req.user.role === 'admin' || req.user.role === 'training_staff');
+  const isCadet = req.user && req.user.role === 'cadet';
+  if (isCadet && req.user.cadetId) {
+    const sql = `SELECT id, cadet_id, date_absent, reason, file_url, status, created_at
+                 FROM excuse_letters
+                 WHERE cadet_id = ?
+                 ORDER BY created_at DESC`;
+    db.all(sql, [req.user.cadetId], (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows || []);
     });
+  } else if (isStaff) {
+    const sql = `
+      SELECT e.id, e.cadet_id, e.date_absent, e.reason, e.file_url, e.status, e.created_at,
+             c.first_name, c.last_name
+      FROM excuse_letters e
+      LEFT JOIN cadets c ON c.id = e.cadet_id
+      ORDER BY e.created_at DESC
+      LIMIT 500
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows || []);
+    });
+  } else {
+    res.json([]);
+  }
 });
 
-// Get Excuse Letters (Admin/Privileged Staff: All, Cadet: Own)
-router.get('/', authenticateToken, (req, res) => {
-    if (req.user.role === 'admin') {
-        const sql = `
-            SELECT el.*, c.first_name, c.last_name, c.company, c.platoon
-            FROM excuse_letters el
-            JOIN cadets c ON el.cadet_id = c.id
-            ORDER BY el.created_at DESC
-        `;
-        db.all(sql, [], (err, rows) => {
-            if (err) return res.status(500).json({ message: err.message });
-            return res.json(rows);
-        });
+// Submit new excuse letter (cadet)
+router.post('/', upload.single('file'), (req, res) => {
+  if (!req.user || !req.user.cadetId) {
+    return res.status(403).json({ message: 'Cadet access required' });
+  }
+  const { date_absent, reason } = req.body || {};
+  if (!date_absent || !reason) {
+    return res.status(400).json({ message: 'date_absent and reason are required' });
+  }
+  if (!req.file) {
+    return res.status(400).json({ message: 'File is required' });
+  }
+  // Normalize path: Cloudinary gives URL; local storage gives filesystem path
+  let fileUrl = req.file.path;
+  if (fileUrl && fileUrl.includes('uploads') && !fileUrl.startsWith('http')) {
+    const parts = fileUrl.split(/[\\/]/);
+    const idx = parts.indexOf('uploads');
+    if (idx !== -1) {
+      fileUrl = '/' + parts.slice(idx).join('/');
     }
-
-    if (req.user.role === 'training_staff' && req.user.staffId) {
-        const sql = `
-            SELECT el.*, c.first_name, c.last_name, c.company, c.platoon
-            FROM excuse_letters el
-            JOIN cadets c ON el.cadet_id = c.id
-            ORDER BY el.created_at DESC
-        `;
-        return db.all(sql, [], (err, rows) => {
-            if (err) return res.status(500).json({ message: err.message });
-            return res.json(rows);
-        });
-    }
-
-    if (req.user.cadetId) {
-        const sql = `SELECT * FROM excuse_letters WHERE cadet_id = ? ORDER BY created_at DESC`;
-        db.all(sql, [req.user.cadetId], (err, rows) => {
-            if (err) return res.status(500).json({ message: err.message });
-            res.json(rows);
-        });
-    }
-    else {
-        res.status(403).json({ message: 'Access denied' });
-    }
+  }
+  const sql = db.pool
+    ? `INSERT INTO excuse_letters (cadet_id, date_absent, reason, file_url, status) 
+       VALUES ($1, $2, $3, $4, 'pending') RETURNING id`
+    : `INSERT INTO excuse_letters (cadet_id, date_absent, reason, file_url, status) 
+       VALUES (?, ?, ?, ?, 'pending')`;
+  const params = db.pool
+    ? [req.user.cadetId, date_absent, reason, fileUrl]
+    : [req.user.cadetId, date_absent, reason, fileUrl];
+  if (db.pool) {
+    db.pool.query(sql, params, (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      const id = result.rows?.[0]?.id;
+      res.json({ id, message: 'Excuse letter submitted' });
+    });
+  } else {
+    db.run(sql, params, function(err) {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json({ id: this.lastID, message: 'Excuse letter submitted' });
+    });
+  }
 });
 
-// Update Excuse Status (Admin/Privileged Staff)
-router.put('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
-    const { status } = req.body; // 'approved' or 'rejected'
-    const id = req.params.id;
-
-    if (!['approved', 'rejected', 'pending'].includes(status)) {
-        return res.status(400).json({ message: 'Invalid status' });
-    }
-
-    db.run(`UPDATE excuse_letters SET status = ? WHERE id = ?`, [status, id], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        
-        if (status === 'approved') {
-            // Find the letter details
-            db.get(`SELECT cadet_id, date_absent FROM excuse_letters WHERE id = ?`, [id], async (err, letter) => {
-                if (err || !letter) return;
-
-                // Find the training day
-                db.get(`SELECT id FROM training_days WHERE date = ?`, [letter.date_absent], (err, day) => {
-                    if (err || !day) return; // No training day matches
-
-                    const newStatus = 'excused';
-                    const remarks = 'Approved Excuse Letter';
-
-                    // Check if attendance record exists
-                    db.get(`SELECT id FROM attendance_records WHERE training_day_id = ? AND cadet_id = ?`, [day.id, letter.cadet_id], (err, record) => {
-                        if (err) {
-                            console.error('Error checking attendance_records:', err);
-                            return;
-                        }
-
-                        if (record) {
-                             db.run('UPDATE attendance_records SET status = ?, remarks = ? WHERE id = ?', [newStatus, remarks, record.id], async (err) => {
-                                 if (err) {
-                                     console.error('Error updating attendance_records:', err);
-                                     return;
-                                 }
-                                 try {
-                                     await updateTotalAttendance(letter.cadet_id);
-                                     // broadcastEvent is handled inside updateTotalAttendance for grade updates
-                                     // but we still want an attendance-specific update event for the UI
-                                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(letter.cadet_id) });
-                                 } catch (e) {
-                                     console.error('Error in updateTotalAttendance:', e);
-                                 }
-                             });
-                        } else {
-                             db.run('INSERT INTO attendance_records (training_day_id, cadet_id, status, remarks) VALUES (?, ?, ?, ?)', [day.id, letter.cadet_id, newStatus, remarks], async (err) => {
-                                 if (err) {
-                                     console.error('Error inserting into attendance_records:', err);
-                                     return;
-                                 }
-                                 try {
-                                     await updateTotalAttendance(letter.cadet_id);
-                                     broadcastEvent({ type: 'attendance_updated', cadetId: Number(letter.cadet_id) });
-                                 } catch (e) {
-                                     console.error('Error in updateTotalAttendance:', e);
-                                 }
-                             });
-                        }
-                    });
-                });
-            });
-        }
-        
-        res.json({ message: `Excuse letter ${status}` });
-    });
+// Update status (staff/admin)
+router.put('/:id', isAdminOrPrivilegedStaff, (req, res) => {
+  const { status } = req.body || {};
+  if (!['approved', 'rejected', 'pending'].includes(String(status || '').toLowerCase())) {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
+  const newStatus = String(status).toLowerCase();
+  const sql = `UPDATE excuse_letters SET status = ? WHERE id = ?`;
+  db.run(sql, [newStatus, req.params.id], function(err) {
+    if (err) return res.status(500).json({ message: err.message });
+    if (this.changes === 0) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Status updated' });
+  });
 });
 
-// Delete Excuse Letter (Admin/Privileged Staff)
-router.delete('/:id', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
-    const id = req.params.id;
-    
-    // Optional: Delete the file from filesystem/cloudinary if needed. 
-    // For now, we just remove the database record.
-    
-    db.run(`DELETE FROM excuse_letters WHERE id = ?`, [id], function(err) {
-        if (err) return res.status(500).json({ message: err.message });
-        if (this.changes === 0) return res.status(404).json({ message: 'Excuse letter not found' });
-        
-        res.json({ message: 'Excuse letter deleted successfully' });
+// Delete letter (staff/admin)
+router.delete('/:id', isAdminOrPrivilegedStaff, (req, res) => {
+  // Optionally delete local file if not cloud URL
+  db.get('SELECT file_url FROM excuse_letters WHERE id = ?', [req.params.id], (selErr, row) => {
+    if (selErr) return res.status(500).json({ message: selErr.message });
+    const fileUrl = row?.file_url || '';
+    db.run('DELETE FROM excuse_letters WHERE id = ?', [req.params.id], function(err) {
+      if (err) return res.status(500).json({ message: err.message });
+      if (fileUrl && !fileUrl.startsWith('http') && fileUrl.includes('/uploads/')) {
+        const localPath = path.join(__dirname, '..', fileUrl);
+        fs.unlink(localPath, () => {});
+      }
+      res.json({ message: 'Deleted' });
     });
+  });
 });
 
 module.exports = router;

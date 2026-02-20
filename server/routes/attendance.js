@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
-const xlsx = require('xlsx');
+const ExcelJS = require('exceljs');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Tesseract = require('tesseract.js');
@@ -18,6 +18,47 @@ const { updateTotalAttendance } = require('../utils/gradesHelper');
 
 // Simple SSE clients registry (shared via global)
 // Removed local definition as it's now in sseHelper.js
+
+async function excelBufferToJson(buf) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws = wb.worksheets[0];
+    if (!ws) return [];
+    const headers = [];
+    ws.getRow(1).eachCell((cell, col) => {
+        headers[col - 1] = String(cell?.value?.text || cell?.value || '').trim();
+    });
+    const out = [];
+    const max = Math.min(ws.rowCount, 10000 + 1);
+    for (let r = 2; r <= max; r++) {
+        const row = ws.getRow(r);
+        if (!row || row.cellCount === 0) continue;
+        const obj = {};
+        headers.forEach((h, idx) => {
+            const cell = row.getCell(idx + 1);
+            let v = cell?.value;
+            if (v && typeof v === 'object') v = v.text || v.result || String(v);
+            obj[h] = v ?? '';
+        });
+        out.push(obj);
+    }
+    return out;
+}
+
+function parseCSVBuffer(buf) {
+    const text = buf.toString('utf8');
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = [];
+    for (let i = 1; i < lines.length && rows.length < 10000; i++) {
+        const parts = lines[i].split(',');
+        const row = {};
+        headers.forEach((h, idx) => row[h] = (parts[idx] || '').trim());
+        rows.push(row);
+    }
+    return rows;
+}
 
 router.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -402,10 +443,11 @@ router.post('/import-local', authenticateToken, isAdmin, async (req, res) => {
             const rawRows = await parseImage(buffer);
             data = rawRows.map(r => extractFromRaw(r.raw));
         } else if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
+            if (ext === '.csv') {
+                data = parseCSVBuffer(buffer);
+            } else {
+                data = await excelBufferToJson(buffer);
+            }
         } else {
             return res.status(400).json({ message: 'Unsupported file format for local import' });
         }
@@ -612,6 +654,7 @@ const extractFromRaw = (line) => {
         const postProgram = strictMatch[5].trim();
 
         row['Name'] = nameCandidate;
+        row['Username'] = strictMatch[3].trim();
 
         const lowerPost = postProgram.toLowerCase();
         if (lowerPost.includes('present')) row['Status'] = 'present';
@@ -625,6 +668,9 @@ const extractFromRaw = (line) => {
             row['Time In'] = timeMatches[0];
             if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
         }
+
+        const emailMatch = rawLine.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+        if (emailMatch) row['Email'] = emailMatch[0];
 
         return row;
     }
@@ -649,6 +695,7 @@ const extractFromRaw = (line) => {
         const nameCandidate = preProgram.substring(0, lastSpaceIndex).trim();
         if (!nameCandidate || nameCandidate.length < 3) return {};
         row['Name'] = nameCandidate;
+        row['Username'] = usernameCandidate;
 
         const postProgram = rawLine.substring(programIndex + programStr.length).trim();
         const lowerPost = postProgram.toLowerCase();
@@ -663,6 +710,9 @@ const extractFromRaw = (line) => {
             row['Time In'] = timeMatches[0];
             if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
         }
+
+        const emailMatch = rawLine.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+        if (emailMatch) row['Email'] = emailMatch[0];
 
         return row;
     }
@@ -689,6 +739,10 @@ const extractFromRaw = (line) => {
             row['Time In'] = timeMatches[0];
             if (timeMatches.length > 1) row['Time Out'] = timeMatches[1];
         }
+        const userMatch = rawLine.match(/\s([A-Za-z0-9._-]{3,})\s/);
+        if (userMatch) row['Username'] = userMatch[1];
+        const emailMatch = rawLine.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+        if (emailMatch) row['Email'] = emailMatch[0];
         return row;
     }
 
@@ -725,6 +779,23 @@ const getCadetByEmail = (email) => {
               AND (c.is_archived IS FALSE OR c.is_archived IS NULL) 
         `;
         db.get(sql, [email], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+};
+
+const getCadetByUsername = (username) => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT c.id
+            FROM users u
+            JOIN cadets c ON u.cadet_id = c.id
+            WHERE lower(u.username) = lower(?)
+              AND u.is_approved = 1
+              AND (c.is_archived IS FALSE OR c.is_archived IS NULL)
+        `;
+        db.get(sql, [username], (err, row) => {
             if (err) reject(err);
             else resolve(row);
         });
@@ -793,7 +864,16 @@ const findCadet = async (row, allCadets = []) => {
         }
     }
 
-    // 2. Try Student ID (Fallback if extractFromRaw was modified to allow it, or manually passed)
+    // 2. Try Username
+    const username = row['Username'] || row['username'] || row['USER'] || row['user'];
+    if (username) {
+        try {
+            const cadet = await getCadetByUsername(username);
+            if (cadet) return cadet;
+        } catch (e) {}
+    }
+
+    // 3. Try Student ID
     const studentId = row['Student ID'] || row['ID'] || row['Student Number'] || row['student_id'];
     if (studentId) {
         try {
@@ -802,7 +882,7 @@ const findCadet = async (row, allCadets = []) => {
         } catch (e) {}
     }
 
-    // 3. Try Email (Fallback)
+    // 4. Try Email
     const email = row['Email'] || row['email'] || row['EMAIL'];
     if (email) {
         try {
@@ -811,7 +891,7 @@ const findCadet = async (row, allCadets = []) => {
         } catch (e) {}
     }
 
-    // 4. Try Exact Name (Fallback)
+    // 5. Try Exact Name
     let lastName = row['Last Name'] || row['last_name'] || row['Surname'];
     let firstName = row['First Name'] || row['first_name'];
     const fullName = row['Name'] || row['name'] || row['Student Name'] || row['Student'] || row['Name of Cadet'] || row['Full Name'];
@@ -886,11 +966,38 @@ const upsertAttendance = (dayId, cadetId, status, remarks, time_in, time_out) =>
     });
 };
 
-const processAttendanceData = async (data, dayId) => {
+const processAttendanceData = async (data, dayId, options = {}) => {
     let successCount = 0;
     let failCount = 0;
     let skippedCount = 0;
     const errors = [];
+    const matched = [];
+    const unmatched = [];
+    const duplicates = [];
+    const seenCadets = new Map();
+    const anomalies = [];
+
+    const dayDate = await new Promise((resolve) => {
+        db.get('SELECT date FROM training_days WHERE id = ?', [dayId], (err, row) => {
+            if (err || !row) resolve(null);
+            else resolve(row.date);
+        });
+    });
+
+    const parseTime = (t) => {
+        if (!t) return null;
+        const m = String(t).trim().match(/^(\d{1,2}):(\d{2})\s*([APap][Mm])$/);
+        if (!m) return null;
+        let h = Number(m[1]);
+        const min = Number(m[2]);
+        const ap = m[3].toUpperCase();
+        if (ap === 'PM' && h < 12) h += 12;
+        if (ap === 'AM' && h === 12) h = 0;
+        const hh = String(h).padStart(2, '0');
+        const mm = String(min).padStart(2, '0');
+        const iso = dayDate ? `${dayDate}T${hh}:${mm}:00` : null;
+        return { text: `${hh}:${mm}`, iso, minutes: h * 60 + min };
+    };
 
     // Pre-fetch all cadets for fuzzy matching
     let allCadets = [];
@@ -956,30 +1063,65 @@ const processAttendanceData = async (data, dayId) => {
         const remarks = row['Remarks'] || row['remarks'] || '';
 
         try {
-            // Pass allCadets to findCadet
             const cadet = await findCadet(row, allCadets);
             
             if (cadet) {
-                const time_in =
+                const time_in_raw =
                     row['Time In'] ||
                     row['time_in'] ||
                     row['TimeIn'] ||
                     row['IN'] ||
                     row['in'];
-                const time_out =
+                const time_out_raw =
                     row['Time Out'] ||
                     row['time_out'] ||
                     row['TimeOut'] ||
                     row['OUT'] ||
                     row['out'];
-                await upsertAttendance(dayId, cadet.id, status, remarks, time_in, time_out);
+                const tin = parseTime(time_in_raw);
+                const tout = parseTime(time_out_raw);
+                let durationMin = null;
+                if (tin && tout) {
+                    durationMin = Math.max(0, tout.minutes - tin.minutes);
+                    if (durationMin === 0 && tin.minutes !== tout.minutes) {
+                        anomalies.push({ cadet_id: cadet.id, reason: 'invalid_time_order', row });
+                    }
+                } else if (tin && !tout) {
+                    anomalies.push({ cadet_id: cadet.id, reason: 'missing_time_out', row });
+                } else if (!tin && tout) {
+                    anomalies.push({ cadet_id: cadet.id, reason: 'missing_time_in', row });
+                }
+                const matchEntry = {
+                    cadet_id: cadet.id,
+                    pdf_name: row['Name'] || null,
+                    pdf_username: row['Username'] || null,
+                    pdf_email: row['Email'] || null,
+                    status,
+                    time_in: tin ? tin.text : time_in_raw || null,
+                    time_out: tout ? tout.text : time_out_raw || null,
+                    duration_min: durationMin
+                };
+                const seen = seenCadets.get(cadet.id);
+                if (seen) {
+                    if (seen.status !== status || seen.time_in !== matchEntry.time_in || seen.time_out !== matchEntry.time_out) {
+                        duplicates.push({ previous: seen, current: matchEntry });
+                    }
+                } else {
+                    seenCadets.set(cadet.id, matchEntry);
+                }
+                if (!options.dryRun) {
+                    await upsertAttendance(dayId, cadet.id, status, remarks, matchEntry.time_in, matchEntry.time_out);
+                }
+                matched.push(matchEntry);
                 successCount++;
             } else {
-                // User Request: "The names that are not in the system will not be included."
-                // We strictly ignore them. No error reporting for "Unknown" names to avoid cluttering with headers/noise.
                 skippedCount++;
-                // Optional: Log to console for debug but don't return as error
-                // console.log(`Skipped unknown name: ${row['Name']}`);
+                unmatched.push({
+                    pdf_name: row['Name'] || null,
+                    pdf_username: row['Username'] || null,
+                    pdf_email: row['Email'] || null,
+                    status
+                });
             }
         } catch (err) {
             console.error(err);
@@ -988,7 +1130,15 @@ const processAttendanceData = async (data, dayId) => {
         }
     }
 
-    return { successCount, failCount, skippedCount, errors };
+    const stats = {
+        totalParsed: matched.length + unmatched.length + failCount,
+        matched: matched.length,
+        unmatched: unmatched.length,
+        duplicates: duplicates.length,
+        successRate: (matched.length ? Math.round((matched.length / (matched.length + unmatched.length + failCount)) * 100) : 0)
+    };
+
+    return { successCount, failCount, skippedCount, errors, matched, unmatched, duplicates, anomalies, stats };
 };
 
 // Import Attendance from File
@@ -1028,10 +1178,11 @@ router.post('/import', authenticateToken, isAdmin, upload.single('file'), async 
 
         if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
             if (!buffer) throw new Error('File buffer missing for spreadsheet import');
-            const workbook = xlsx.read(buffer, { type: 'buffer' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            data = xlsx.utils.sheet_to_json(sheet);
+            if (filename.endsWith('.csv')) {
+                data = parseCSVBuffer(buffer);
+            } else {
+                data = await excelBufferToJson(buffer);
+            }
         } else if (filename.endsWith('.pdf')) {
             if (!buffer) throw new Error('File buffer missing for PDF import');
             const rawRows = await parsePdf(buffer);
@@ -1108,6 +1259,37 @@ router.post('/import-url', authenticateToken, isAdmin, async (req, res) => {
     } catch (err) {
         console.error("Import URL Error:", err);
         res.status(500).json({ message: 'Failed to process URL: ' + err.message });
+    }
+});
+
+router.post('/reconcile', authenticateToken, isAdmin, upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    const { dayId } = req.body;
+    if (!dayId) return res.status(400).json({ message: 'Day ID is required' });
+    try {
+        let data = [];
+        const filename = (req.file.originalname || '').toLowerCase();
+        const buffer = req.file.buffer;
+        if (!buffer) return res.status(400).json({ message: 'File buffer missing' });
+        if (filename.endsWith('.pdf')) {
+            const rawRows = await parsePdf(buffer);
+            data = rawRows.map(r => extractFromRaw(r.raw));
+        } else if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
+            data = await excelBufferToJson(buffer);
+        } else {
+            return res.status(400).json({ message: 'Only PDF or Excel accepted for reconciliation' });
+        }
+        const result = await processAttendanceData(data, dayId, { dryRun: true });
+        const ts = Date.now();
+        try {
+            const dir = path.join(__dirname, '..', 'logs');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            const p = path.join(dir, `attendance-reconcile-${ts}.json`);
+            fs.writeFileSync(p, JSON.stringify(result, null, 2));
+        } catch (_) {}
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to reconcile' });
     }
 });
 
@@ -1300,26 +1482,46 @@ router.post('/mark/staff', authenticateToken, isAdmin, (req, res) => {
 
 // Get Staff My History
 router.get('/my-history/staff', authenticateToken, (req, res) => {
-    const staffId = req.user.staffId;
-    if (!staffId) return res.status(403).json({ message: 'Not a staff member' });
+    const respond = (sid) => {
+        const sql = `
+            SELECT 
+                td.date,
+                td.title,
+                sar.status,
+                sar.remarks,
+                sar.time_in,
+                sar.time_out
+            FROM training_days td
+            LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
+            ORDER BY td.date DESC
+        `;
+    
+        db.all(sql, [sid], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows || []);
+        });
+    };
 
-    const sql = `
-        SELECT 
-            td.date,
-            td.title,
-            sar.status,
-            sar.remarks,
-            sar.time_in,
-            sar.time_out
-        FROM training_days td
-        LEFT JOIN staff_attendance_records sar ON td.id = sar.training_day_id AND sar.staff_id = ?
-        ORDER BY td.date DESC
-    `;
+    let staffId = req.user.staffId;
+    if (staffId) {
+        return respond(staffId);
+    }
 
-    db.all(sql, [staffId], (err, rows) => {
-        if (err) return res.status(500).json({ message: err.message });
-        res.json(rows);
-    });
+    // Fallback: resolve staff_id from users if role is staff
+    if (req.user && req.user.role === 'training_staff') {
+        db.get('SELECT staff_id FROM users WHERE id = ?', [req.user.id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row && row.staff_id) {
+                return respond(row.staff_id);
+            }
+            // Non-throwing response for staff without mapping yet
+            return res.json([]);
+        });
+        return;
+    }
+
+    // Not a staff session
+    return res.status(403).json({ message: 'Not a staff member' });
 });
 
 // Scan Staff QR Code

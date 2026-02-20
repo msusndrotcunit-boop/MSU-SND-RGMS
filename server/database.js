@@ -247,7 +247,12 @@ if (isPostgres) {
         else {
             console.log('Connected to SQLite database.');
             // Enable Foreign Keys for ON DELETE CASCADE
-            db.run("PRAGMA foreign_keys = ON");
+            db.serialize(() => {
+                db.run("PRAGMA foreign_keys = ON");
+                db.run("PRAGMA journal_mode = WAL");
+                db.run("PRAGMA synchronous = NORMAL");
+                db.run("PRAGMA busy_timeout = 5000");
+            });
             
             initSqliteDb();
         }
@@ -388,6 +393,8 @@ async function initPgDb() {
             semester TEXT,
             corp_position TEXT,
             gender TEXT,
+            religion TEXT,
+            birthdate TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -395,6 +402,42 @@ async function initPgDb() {
             is_archived BOOLEAN DEFAULT FALSE
         )`,
         `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS gender TEXT`,
+        `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS religion TEXT`,
+        `ALTER TABLE cadets ADD COLUMN IF NOT EXISTS birthdate TEXT`,
+        `CREATE TABLE IF NOT EXISTS training_staff (
+            id SERIAL PRIMARY KEY,
+            rank TEXT,
+            first_name TEXT NOT NULL,
+            middle_name TEXT,
+            last_name TEXT NOT NULL,
+            suffix_name TEXT,
+            email TEXT UNIQUE,
+            contact_number TEXT,
+            role TEXT DEFAULT 'Instructor',
+            profile_pic TEXT,
+            afpsn TEXT,
+            birthdate TEXT,
+            birthplace TEXT,
+            age INTEGER,
+            height TEXT,
+            weight TEXT,
+            blood_type TEXT,
+            address TEXT,
+            civil_status TEXT,
+            nationality TEXT,
+            gender TEXT,
+            language_spoken TEXT,
+            combat_boots_size TEXT,
+            uniform_size TEXT,
+            bullcap_size TEXT,
+            facebook_link TEXT,
+            rotc_unit TEXT,
+            mobilization_center TEXT,
+            is_profile_completed BOOLEAN DEFAULT FALSE,
+            has_seen_guide BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_archived BOOLEAN DEFAULT FALSE
+        )`,
         `CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -472,40 +515,6 @@ async function initPgDb() {
             id SERIAL PRIMARY KEY,
             key TEXT UNIQUE NOT NULL,
             value TEXT
-        )`,
-        `CREATE TABLE IF NOT EXISTS training_staff (
-            id SERIAL PRIMARY KEY,
-            rank TEXT,
-            first_name TEXT NOT NULL,
-            middle_name TEXT,
-            last_name TEXT NOT NULL,
-            suffix_name TEXT,
-            email TEXT UNIQUE,
-            contact_number TEXT,
-            role TEXT DEFAULT 'Instructor',
-            profile_pic TEXT,
-            afpsn TEXT,
-            birthdate TEXT,
-            birthplace TEXT,
-            age INTEGER,
-            height TEXT,
-            weight TEXT,
-            blood_type TEXT,
-            address TEXT,
-            civil_status TEXT,
-            nationality TEXT,
-            gender TEXT,
-            language_spoken TEXT,
-            combat_boots_size TEXT,
-            uniform_size TEXT,
-            bullcap_size TEXT,
-            facebook_link TEXT,
-            rotc_unit TEXT,
-            mobilization_center TEXT,
-            is_profile_completed BOOLEAN DEFAULT FALSE,
-            has_seen_guide BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_archived BOOLEAN DEFAULT FALSE
         )`,
         `CREATE TABLE IF NOT EXISTS staff_attendance_records (
             id SERIAL PRIMARY KEY,
@@ -771,6 +780,28 @@ async function initPgDb() {
             // Non-critical, continue
         }
         
+        // Run religion field migration
+        console.log('Adding religion column to cadets...');
+        try {
+            const { addReligionToCadets } = require('./migrations/add_religion_to_cadets');
+            await addReligionToCadets(db);
+            console.log('Religion column migration completed.');
+        } catch (religionErr) {
+            console.warn('Religion column migration warning:', religionErr.message);
+            // Non-critical, continue
+        }
+        
+        // Run birthdate field migration
+        console.log('Adding birthdate column to cadets...');
+        try {
+            const { addBirthdateToCadets } = require('./migrations/add_birthdate_to_cadets');
+            await addBirthdateToCadets(db);
+            console.log('Birthdate column migration completed.');
+        } catch (birthdateErr) {
+            console.warn('Birthdate column migration warning:', birthdateErr.message);
+            // Non-critical, continue
+        }
+        
         console.log('Seeding admin...');
         seedAdmin();
         console.log('PostgreSQL initialized successfully.');
@@ -826,6 +857,8 @@ function initSqliteDb() {
             semester TEXT,
             corp_position TEXT,
             gender TEXT,
+            religion TEXT,
+            birthdate TEXT,
             status TEXT DEFAULT 'Ongoing',
             student_id TEXT UNIQUE NOT NULL,
             profile_pic TEXT,
@@ -838,9 +871,22 @@ function initSqliteDb() {
         db.all(`PRAGMA table_info(cadets)`, [], (err, rows) => {
             if (!err) {
                 const hasGender = rows.some(r => (r.name || '').toLowerCase() === 'gender');
+                const hasReligion = rows.some(r => (r.name || '').toLowerCase() === 'religion');
+                const hasBirthdate = rows.some(r => (r.name || '').toLowerCase() === 'birthdate');
+                
                 if (!hasGender) {
                     db.run(`ALTER TABLE cadets ADD COLUMN gender TEXT`, (e) => {
                         if (e) console.error('Error adding gender column to cadets:', e.message);
+                    });
+                }
+                if (!hasReligion) {
+                    db.run(`ALTER TABLE cadets ADD COLUMN religion TEXT`, (e) => {
+                        if (e) console.error('Error adding religion column to cadets:', e.message);
+                    });
+                }
+                if (!hasBirthdate) {
+                    db.run(`ALTER TABLE cadets ADD COLUMN birthdate TEXT`, (e) => {
+                        if (e) console.error('Error adding birthdate column to cadets:', e.message);
                     });
                 }
             }
@@ -1026,6 +1072,13 @@ function initSqliteDb() {
             FOREIGN KEY(sender_staff_id) REFERENCES training_staff(id) ON DELETE CASCADE
         )`);
 
+        // Migration: Add is_archived to training_staff if missing
+        db.all(`PRAGMA table_info('training_staff')`, [], (err, cols) => {
+            if (!err && Array.isArray(cols) && !cols.find(c => String(c.name).toLowerCase() === 'is_archived')) {
+                db.run(`ALTER TABLE training_staff ADD COLUMN is_archived INTEGER DEFAULT 0`, () => {});
+            }
+        });
+
         // Migration for SQLite: Add staff_id to users
         db.run(`PRAGMA foreign_keys=OFF;`);
         db.run(`ALTER TABLE users ADD COLUMN staff_id INTEGER REFERENCES training_staff(id) ON DELETE CASCADE`, (err) => {
@@ -1047,6 +1100,10 @@ function initSqliteDb() {
         db.run(`ALTER TABLE cadets ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP`, (err) => {});
         // Migration: Add corp_position to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN corp_position TEXT`, (err) => {});
+        // Migration: Add religion to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN religion TEXT`, (err) => {});
+        // Migration: Add birthdate to cadets
+        db.run(`ALTER TABLE cadets ADD COLUMN birthdate TEXT`, (err) => {});
         // Migration: Add gender to cadets
         db.run(`ALTER TABLE cadets ADD COLUMN gender TEXT`, (err) => {});
 

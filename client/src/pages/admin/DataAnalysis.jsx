@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
+import ChartWrapper from '../../components/ChartWrapper';
 
 // Refined Color Scheme
 const COLORS = {
@@ -63,6 +64,8 @@ const DataAnalysis = () => {
     });
     const [genderByCourse, setGenderByCourse] = useState([]);
     const [courseTotals, setCourseTotals] = useState([]);
+    const [religionData, setReligionData] = useState([]);
+    const [ageData, setAgeData] = useState([]);
 
     const normalizeStatus = (status) => {
         if (!status) return 'Unknown';
@@ -182,8 +185,27 @@ const DataAnalysis = () => {
         setCourseTotals(courseData);
     };
 
+    const fetchDemographics = async () => {
+        try {
+            const res = await axios.get('/api/admin/analytics/demographics');
+            const religion = (res.data?.religion || []).map(item => ({
+                name: item.religion,
+                value: item.count
+            }));
+            const ages = (res.data?.age || []).map(item => ({
+                name: item.age_range,
+                value: item.count
+            }));
+            setReligionData(religion);
+            setAgeData(ages);
+        } catch (err) {
+            console.error('Failed to load demographics:', err);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        fetchDemographics();
     }, []);
 
     useEffect(() => {
@@ -657,6 +679,44 @@ const DataAnalysis = () => {
                                 <Tooltip />
                                 <Legend />
                                 <Bar dataKey="value" fill="#16a34a" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Religion Distribution (Bar Graph) */}
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Religion Distribution</h3>
+                    </div>
+                    <div className="p-4 h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={religionData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="value" fill="#06b6d4" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Age Distribution (Bar Graph) */}
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Age Distribution</h3>
+                    </div>
+                    <div className="p-4 h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={ageData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="value" fill="#a855f7" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

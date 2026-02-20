@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Search, ChevronLeft, Trash2, RefreshCw, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cacheSingleton, clearCache } from '../../utils/db';
+import ResponsiveTable from '../../components/ResponsiveTable';
 
 const ArchivedCadets = () => {
   const [cadets, setCadets] = useState([]);
@@ -72,20 +73,6 @@ const ArchivedCadets = () => {
       (c.company && c.company.toLowerCase().includes(q))
     );
   });
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedCadets(filteredCadets.map(c => c.id));
-    } else {
-      setSelectedCadets([]);
-    }
-  };
-
-  const handleSelectCadet = (id) => {
-    setSelectedCadets(prev =>
-      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
-    );
-  };
 
   const handleRestore = async () => {
     if (selectedCadets.length === 0) return;
@@ -204,60 +191,63 @@ const ArchivedCadets = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-100 sticky top-0 z-10">
-            <tr className="border-b shadow-sm">
-              <th className="p-4 bg-gray-100 text-center w-12">
-                <input
-                  type="checkbox"
-                  onChange={handleSelectAll}
-                  checked={filteredCadets.length > 0 && selectedCadets.length === filteredCadets.length}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-              </th>
-              <th className="p-4 bg-gray-100">Name & Rank</th>
-              <th className="p-4 bg-gray-100">Username</th>
-              <th className="p-4 text-center bg-gray-100">Unit (Coy/Plt)</th>
-              <th className="p-4 text-center bg-gray-100">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCadets.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="p-4 text-center text-gray-500">No archived cadets found.</td>
-              </tr>
-            ) : (
-              filteredCadets.map(cadet => (
-                <tr key={cadet.id} className="border-b hover:bg-gray-50">
-                  <td className="p-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCadets.includes(cadet.id)}
-                      onChange={() => handleSelectCadet(cadet.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <div className="font-medium">
-                      <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
-                      {cadet.last_name}, {cadet.first_name}
-                    </div>
-                    <div className="text-xs text-gray-500">{cadet.email}</div>
-                  </td>
-                  <td className="p-4">{cadet.username || cadet.student_id}</td>
-                  <td className="p-4 text-center">{cadet.company || '-'}/{cadet.platoon || '-'}</td>
-                  <td className="p-4 text-center">
-                    <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-800 border border-gray-200">
-                      Archived
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Responsive Table */}
+      <ResponsiveTable
+        data={filteredCadets}
+        columns={[
+          {
+            key: 'name',
+            label: 'Name & Rank',
+            render: (_, cadet) => (
+              <div>
+                <div className="font-medium">
+                  <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
+                  {cadet.last_name}, {cadet.first_name}
+                </div>
+                <div className="text-xs text-gray-500">{cadet.email}</div>
+              </div>
+            )
+          },
+          {
+            key: 'username',
+            label: 'Username',
+            headerClassName: 'px-3',
+            cellClassName: 'px-3 whitespace-nowrap',
+            render: (_, cadet) => cadet.username || cadet.student_id
+          },
+          {
+            key: 'unit',
+            label: 'Unit (Coy/Plt)',
+            align: 'center',
+            headerClassName: 'px-2',
+            cellClassName: 'px-2 whitespace-nowrap',
+            render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            align: 'center',
+            headerClassName: 'px-2',
+            cellClassName: 'px-2',
+            render: () => (
+              <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-800 border border-gray-200">
+                Archived
+              </span>
+            )
+          }
+        ]}
+        loading={loading}
+        emptyMessage="No archived cadets found."
+        selectable={true}
+        selectedItems={selectedCadets}
+        onSelectionChange={setSelectedCadets}
+        sortable={true}
+        filterable={true}
+        pagination={true}
+        itemsPerPage={20}
+        cardLayout="never"
+        className="bg-white rounded shadow"
+      />
     </div>
   );
 };

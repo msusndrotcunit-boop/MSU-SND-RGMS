@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import WeatherAdvisory from '../../components/WeatherAdvisory';
+import ChartWrapper from '../../components/ChartWrapper';
 
 const STATUS_COLORS = {
     Ongoing: '#06b6d4', // cyan-500
@@ -61,10 +62,18 @@ const Dashboard = () => {
             }
         };
         fetchData();
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
+
         let es;
         const connect = () => {
             try {
-                es = new EventSource('/api/attendance/events');
+                es = new EventSource(getSseUrl());
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -235,7 +244,7 @@ const Dashboard = () => {
                 <div className="flex items-center mb-4">
                     <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status Distribution by Course (Verified Only)</h3>
                 </div>
-                <div className="h-80">
+                <ChartWrapper className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={courseData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -246,7 +255,7 @@ const Dashboard = () => {
                             <Bar dataKey="total" fill="#2563eb" />
                         </BarChart>
                     </ResponsiveContainer>
-                </div>
+                </ChartWrapper>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

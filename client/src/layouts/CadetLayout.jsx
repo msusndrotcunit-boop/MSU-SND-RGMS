@@ -151,10 +151,18 @@ const CadetLayout = () => {
     }, [user]);
 
     React.useEffect(() => {
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
+
         let es;
         const connect = () => {
             try {
-                es = new EventSource('/api/attendance/events');
+                es = new EventSource(getSseUrl());
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -277,7 +285,9 @@ const CadetLayout = () => {
 
     // Memoize the profile picture URL to avoid recalculation
     const profilePicSrc = useMemo(() => {
-        return getProfilePicUrl(profile?.profile_pic, user?.cadetId);
+        const primary = getProfilePicUrl(profile?.profile_pic, user?.cadetId, 'cadets');
+        if (primary) return primary;
+        return getProfilePicFallback(user?.cadetId, 'cadets');
     }, [profile?.profile_pic, user?.cadetId]);
 
     const renderProfileImage = () => {
@@ -296,20 +306,22 @@ const CadetLayout = () => {
 
     return (
         <div className="flex h-screen app-bg overflow-hidden">
-             <Toaster position="top-center" reverseOrder={false} />
-             {/* Mobile Sidebar Overlay */}
-             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                ></div>
-            )}
+                 <Toaster position="top-center" reverseOrder={false} />
+                 {/* Mobile Sidebar Overlay */}
+                 {isSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                        onClick={() => setIsSidebarOpen(false)}
+                    ></div>
+                )}
 
-             {/* Sidebar - simplified for Cadet */}
-             <div className={clsx(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+                 {/* Sidebar - simplified for Cadet */}
+                 <aside 
+                    className={clsx(
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                    )}
+                >
                 <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
                     <span>ROTC Cadet</span>
                     <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
@@ -328,7 +340,7 @@ const CadetLayout = () => {
                     {profile && <div className="text-xs text-green-200">{profile.first_name}</div>}
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <Link
                         to="/cadet/home"
                         onClick={() => setIsSidebarOpen(false)}
@@ -405,10 +417,12 @@ const CadetLayout = () => {
                         <span>Logout</span>
                     </button>
                 </div>
-            </div>
+            </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <header className="bg-white shadow p-4 flex items-center justify-between">
+                <header 
+                    className="bg-white shadow p-4 flex items-center justify-between"
+                >
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar} 
@@ -441,7 +455,9 @@ const CadetLayout = () => {
                         Degraded mode: Database disconnected. Your changes will be limited until service restores.
                     </div>
                 )}
-                <main className="flex-1 overflow-auto p-6">
+                <main 
+                    className="flex-1 overflow-auto p-6"
+                >
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />
                     </Suspense>

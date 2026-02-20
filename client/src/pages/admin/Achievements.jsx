@@ -117,68 +117,47 @@ const AdminAchievements = () => {
                     <Users className="text-green-600" />
                     Top 20 Performers
                 </h2>
-                
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="p-3 text-left font-semibold text-gray-600">Rank</th>
-                                <th className="p-3 text-left font-semibold text-gray-600">Name</th>
-                                <th className="p-3 text-left font-semibold text-gray-600">Unit</th>
-                                <th className="p-3 text-right font-semibold text-gray-600">Current Merit</th>
-                                <th className="p-3 text-right font-semibold text-gray-600">Demerits</th>
-                                <th className="p-3 text-right font-semibold text-gray-600">Lifetime Merits</th>
-                                <th className="p-3 text-center font-semibold text-gray-600">Badge</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {leaderboard.map((entry, index) => (
-                                <tr 
-                                    key={entry.cadetId} 
-                                    className={`border-b hover:bg-gray-50 ${
-                                        index < 3 ? 'bg-yellow-50' : ''
-                                    }`}
-                                >
-                                    <td className="p-3">
-                                        <span className={`font-bold ${
-                                            index === 0 ? 'text-yellow-600 text-xl' :
-                                            index === 1 ? 'text-gray-500 text-lg' :
-                                            index === 2 ? 'text-orange-600 text-lg' :
-                                            'text-gray-700'
-                                        }`}>
-                                            {index < 3 ? ['🥇', '🥈', '🥉'][index] : `#${entry.rank}`}
+                <ul role="list" className="divide-y divide-gray-200">
+                    {leaderboard && leaderboard.length > 0 ? (
+                        leaderboard.map((entry, index) => {
+                            const rankEl = index < 3 
+                                ? ['🥇', '🥈', '🥉'][index] 
+                                : `#${entry.rank || index + 1}`;
+                            const rankColor = index === 0
+                                ? 'text-yellow-600'
+                                : index === 1
+                                ? 'text-gray-500'
+                                : index === 2
+                                ? 'text-orange-600'
+                                : 'text-gray-700';
+                            return (
+                                <li key={`${entry.id || entry.name}-${index}`} className="py-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <span className={`font-bold ${rankColor} ${index < 3 ? 'text-xl' : ''}`}>
+                                            {rankEl}
                                         </span>
-                                    </td>
-                                    <td className="p-3 font-medium">{entry.name}</td>
-                                    <td className="p-3 text-sm text-gray-600">
-                                        {entry.company} / {entry.platoon}
-                                    </td>
-                                    <td className="p-3 text-right font-semibold text-blue-600">
-                                        {entry.currentMerit}
-                                    </td>
-                                    <td className="p-3 text-right font-semibold text-red-600">
-                                        {entry.demerits}
-                                    </td>
-                                    <td className="p-3 text-right">
-                                        <span className="font-bold text-lg text-purple-600">
+                                        <div className="min-w-0">
+                                            <div className="font-medium text-gray-900 truncate">{entry.name}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {entry.company} / {entry.platoon}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <span className="font-semibold text-purple-600">
                                             {entry.lifetimeMerit}
                                         </span>
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <span className="font-bold text-sm text-purple-700">
-                                                {entry.lifetimeMerit}
-                                            </span>
-                                            <span className="text-2xl">
-                                                {entry.badge?.icon || '-'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        <span className="text-lg leading-none">
+                                            {entry.badge?.icon || ''}
+                                        </span>
+                                    </div>
+                                </li>
+                            );
+                        })
+                    ) : (
+                        <li className="py-6 text-center text-gray-500">No achievement data available.</li>
+                    )}
+                </ul>
             </div>
 
             {/* Insights */}

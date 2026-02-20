@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin, ChevronLeft, Sun, Moon, User } from 'lucide-react';
+import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin, ChevronLeft, Sun, Moon, User, MoreVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { getProfilePicUrl } from '../../utils/image';
 import { STAFF_RANK_OPTIONS } from '../../constants/options';
+ 
 
 const TrainingStaffManagement = () => {
     const [staffList, setStaffList] = useState([]);
@@ -28,6 +29,9 @@ const TrainingStaffManagement = () => {
     const [locationLoading, setLocationLoading] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [preview, setPreview] = useState(null);
+    const [sortBy, setSortBy] = useState('name');
+    const [sortDir, setSortDir] = useState('asc');
+    const [openActionsId, setOpenActionsId] = useState(null);
 
     useEffect(() => {
         fetchStaff();
@@ -180,12 +184,33 @@ const TrainingStaffManagement = () => {
 
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
-    const sortedStaffList = [...staffList].sort((a, b) => {
+    const statusOf = (s) => {
+        if (s.is_archived) return 'completed';
+        if (s.is_profile_completed) return 'active';
+        return 'pending';
+    };
+
+    const compareBy = (a, b) => {
+        if (sortBy === 'name') {
+            const na = `${a.last_name || ''}, ${a.first_name || ''}`.toLowerCase();
+            const nb = `${b.last_name || ''}, ${b.first_name || ''}`.toLowerCase();
+            return na.localeCompare(nb);
+        }
+        if (sortBy === 'role') {
+            return (a.role || '').localeCompare(b.role || '');
+        }
+        if (sortBy === 'status') {
+            const order = { active: 0, pending: 1, completed: 2 };
+            return (order[statusOf(a)] ?? 3) - (order[statusOf(b)] ?? 3);
+        }
         const rankA = STAFF_RANK_OPTIONS.indexOf(a.rank);
         const rankB = STAFF_RANK_OPTIONS.indexOf(b.rank);
-        const valA = rankA === -1 ? -1 : rankA;
-        const valB = rankB === -1 ? -1 : rankB;
-        return valB - valA;
+        return (rankA === -1 ? 99 : rankA) - (rankB === -1 ? 99 : rankB);
+    };
+
+    const sortedStaffList = [...staffList].sort((a, b) => {
+        const res = compareBy(a, b);
+        return sortDir === 'asc' ? res : -res;
     });
 
     return (
@@ -212,63 +237,140 @@ const TrainingStaffManagement = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded shadow overflow-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-100">
-                        <tr className="border-b shadow-sm">
-                            <th className="p-4 bg-gray-100">Name & Rank</th>
-                            <th className="p-4 bg-gray-100">Role</th>
-                            <th className="p-4 bg-gray-100">Contact</th>
-                            <th className="p-4 text-right bg-gray-100">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedStaffList.length === 0 ? (
-                            <tr>
-                                <td colSpan="4" className="p-8 text-center text-gray-500">
-                                    No training staff found. Import or add one.
-                                </td>
-                            </tr>
-                        ) : (
-                            sortedStaffList.map(staff => (
-                                <tr key={staff.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <div className="font-medium">
-                                            <span className="font-bold text-blue-900 mr-1">{staff.rank}</span>
-                                            {staff.last_name}, {staff.first_name} {staff.middle_name} {staff.suffix_name}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
-                                            {staff.role}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-sm">
-                                        <div className="text-gray-900">{staff.email || '-'}</div>
-                                        <div className="text-gray-500">{staff.contact_number || '-'}</div>
-                                    </td>
-                                    <td className="p-4 text-right space-x-2">
-                                        <button 
-                                            onClick={() => openEditModal(staff)}
-                                            className="text-gray-600 hover:bg-gray-100 p-2 rounded"
-                                            title="Edit Info"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(staff.id)}
-                                            className="text-red-600 hover:bg-red-50 p-2 rounded"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+            <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-gray-600">Sort by</div>
+                <div className="flex items-center space-x-2">
+                    <select
+                        aria-label="Sort by"
+                        className="border rounded px-2 py-1 text-sm"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                    >
+                        <option value="name">Name</option>
+                        <option value="role">Role</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <button
+                        type="button"
+                        aria-label="Toggle sort direction"
+                        onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
+                        className="inline-flex items-center px-2 py-1 border rounded text-sm hover:bg-gray-50"
+                    >
+                        {sortDir === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                </div>
             </div>
+
+            {sortedStaffList.length === 0 ? (
+                <div className="bg-white rounded border border-dashed p-8 text-center text-gray-600">
+                    <div className="mb-2 font-semibold">No training staff found.</div>
+                    <div className="text-sm mb-4">Import a list or add staff to get started.</div>
+                    <div className="flex items-center justify-center space-x-2">
+                        <button onClick={() => setIsImportModalOpen(true)} className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
+                            Import List
+                        </button>
+                        <button onClick={() => setIsAddModalOpen(true)} className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700">
+                            Add Staff
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <ul role="list" className="bg-white rounded shadow divide-y">
+                    {sortedStaffList.map((s) => {
+                        const status = statusOf(s);
+                        const badge =
+                            status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-700';
+                        return (
+                            <li key={s.id} className="flex items-center justify-between px-4 py-4 focus-within:bg-gray-50">
+                                <div className="min-w-0 pr-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditModal(s)}
+                                        className="text-left font-semibold text-gray-900 hover:underline focus:outline-none focus:ring-2 focus:ring-green-600 rounded"
+                                        aria-label={`Open details for ${s.last_name}, ${s.first_name}`}
+                                    >
+                                        <span className="mr-2 text-blue-900">{s.rank}</span>
+                                        {s.last_name}, {s.first_name} {s.middle_name} {s.suffix_name}
+                                    </button>
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                                        <span className="text-gray-600">{s.role || 'Instructor'}</span>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${badge}`} aria-label={`Status: ${status}`}>
+                                            {status}
+                                        </span>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="text-gray-500 break-all">{s.email || '-'}</span>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="text-gray-500">{s.contact_number || '-'}</span>
+                                    </div>
+                                </div>
+                                <div className="hidden md:flex items-center space-x-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditModal(s)}
+                                        className="px-3 py-1.5 rounded border text-sm hover:bg-gray-50"
+                                        aria-label="View details"
+                                    >
+                                        View
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditModal(s)}
+                                        className="px-3 py-1.5 rounded border text-sm hover:bg-gray-50 inline-flex items-center"
+                                        aria-label="Edit"
+                                    >
+                                        <Pencil size={16} className="mr-1" /> Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDelete(s.id)}
+                                        className="px-3 py-1.5 rounded border text-sm text-red-700 hover:bg-red-50 inline-flex items-center"
+                                        aria-label="Remove"
+                                    >
+                                        <Trash2 size={16} className="mr-1" /> Remove
+                                    </button>
+                                </div>
+                                <div className="md:hidden relative">
+                                    <button
+                                        type="button"
+                                        aria-haspopup="true"
+                                        aria-expanded={openActionsId === s.id}
+                                        onClick={() => setOpenActionsId(openActionsId === s.id ? null : s.id)}
+                                        className="p-2 rounded border hover:bg-gray-50"
+                                    >
+                                        <MoreVertical size={18} />
+                                    </button>
+                                    {openActionsId === s.id && (
+                                        <div className="absolute right-0 mt-2 w-36 bg-white border rounded shadow-lg z-50">
+                                            <button
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                                onClick={() => { setOpenActionsId(null); openEditModal(s); }}
+                                            >
+                                                View
+                                            </button>
+                                            <button
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                                onClick={() => { setOpenActionsId(null); openEditModal(s); }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="w-full text-left px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                                                onClick={() => { setOpenActionsId(null); handleDelete(s.id); }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
 
             {/* Import Modal */}
             {isImportModalOpen && (

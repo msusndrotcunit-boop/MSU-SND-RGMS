@@ -349,7 +349,7 @@ const Onboarding = () => {
                         <div className="pt-6">
                             <button 
                                 type="submit" 
-                                className="w-full bg-green-800 text-white py-3 rounded-lg font-bold hover:bg-green-900 transition flex justify-center items-center"
+                                className="w-full bg-green-800 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-900 transition flex justify-center items-center text-sm"
                                 disabled={loading}
                             >
                                 {loading ? 'Submitting...' : 'Complete Registration'}

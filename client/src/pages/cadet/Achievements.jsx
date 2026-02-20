@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trophy, Award, TrendingUp, Users } from 'lucide-react';
+import ResponsiveTable from '../../components/ResponsiveTable';
+import { useAuth } from '../../context/AuthContext';
 
 const Achievements = () => {
+    const { user } = useAuth();
     const [achievements, setAchievements] = useState(null);
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user || user.role !== 'cadet') {
+                setLoading(false);
+                return;
+            }
             try {
                 // Get current user's cadet ID
                 const profileRes = await axios.get('/api/cadet/profile');
@@ -30,7 +37,7 @@ const Achievements = () => {
         };
 
         fetchData();
-    }, []);
+    }, [user]);
 
     if (loading) return <div className="text-center p-10">Loading achievements...</div>;
 
@@ -165,59 +172,71 @@ const Achievements = () => {
                     Top Performers
                 </h2>
                 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="p-3 text-left font-semibold text-gray-600">Rank</th>
-                                <th className="p-3 text-left font-semibold text-gray-600">Name</th>
-                                <th className="p-3 text-left font-semibold text-gray-600">Unit</th>
-                                <th className="p-3 text-right font-semibold text-gray-600">Lifetime Merits</th>
-                                <th className="p-3 text-center font-semibold text-gray-600">Badge</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {leaderboard.map((entry, index) => (
-                                <tr 
-                                    key={entry.cadetId} 
-                                    className={`border-b hover:bg-gray-50 ${
-                                        index < 3 ? 'bg-yellow-50' : ''
-                                    }`}
-                                >
-                                    <td className="p-3">
-                                        <span className={`font-bold ${
-                                            index === 0 ? 'text-yellow-600 text-xl' :
-                                            index === 1 ? 'text-gray-500 text-lg' :
-                                            index === 2 ? 'text-orange-600 text-lg' :
-                                            'text-gray-700'
-                                        }`}>
-                                            {index < 3 ? ['🥇', '🥈', '🥉'][index] : `#${entry.rank}`}
-                                        </span>
-                                    </td>
-                                    <td className="p-3 font-medium">{entry.name}</td>
-                                    <td className="p-3 text-sm text-gray-600">
-                                        {entry.company} / {entry.platoon}
-                                    </td>
-                                    <td className="p-3 text-right">
-                                        <span className="font-bold text-lg text-purple-600">
-                                            {entry.lifetimeMerit}
-                                        </span>
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <span className="font-bold text-sm text-purple-700">
-                                                {entry.lifetimeMerit}
-                                            </span>
-                                            <span className="text-2xl">
-                                                {entry.badge?.icon || '-'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <ResponsiveTable
+                    data={leaderboard}
+                    columns={[
+                        {
+                            key: 'rank',
+                            label: 'Rank',
+                            render: (_, entry, index) => (
+                                <span className={`font-bold ${
+                                    index === 0 ? 'text-yellow-600 text-xl' :
+                                    index === 1 ? 'text-gray-500 text-lg' :
+                                    index === 2 ? 'text-orange-600 text-lg' :
+                                    'text-gray-700'
+                                }`}>
+                                    {index < 3 ? ['🥇', '🥈', '🥉'][index] : `#${entry.rank}`}
+                                </span>
+                            )
+                        },
+                        {
+                            key: 'name',
+                            label: 'Name',
+                            render: (_, entry) => (
+                                <span className="font-medium">{entry.name}</span>
+                            )
+                        },
+                        {
+                            key: 'unit',
+                            label: 'Unit',
+                            render: (_, entry) => (
+                                <span className="text-sm text-gray-600">
+                                    {entry.company} / {entry.platoon}
+                                </span>
+                            )
+                        },
+                        {
+                            key: 'lifetimeMerit',
+                            label: 'Lifetime Merits',
+                            align: 'right',
+                            render: (_, entry) => (
+                                <span className="font-bold text-lg text-purple-600">
+                                    {entry.lifetimeMerit}
+                                </span>
+                            )
+                        },
+                        {
+                            key: 'badge',
+                            label: 'Badge',
+                            align: 'center',
+                            render: (_, entry) => (
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="font-bold text-sm text-purple-700">
+                                        {entry.lifetimeMerit}
+                                    </span>
+                                    <span className="text-2xl">
+                                        {entry.badge?.icon || '-'}
+                                    </span>
+                                </div>
+                            )
+                        }
+                    ]}
+                    loading={loading}
+                    emptyMessage="No achievement data available."
+                    pagination={true}
+                    itemsPerPage={10}
+                    className="bg-white"
+                />
             </div>
 
             {/* Motivational Message */}

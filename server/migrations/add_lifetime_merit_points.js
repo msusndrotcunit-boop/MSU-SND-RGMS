@@ -1,74 +1,58 @@
+// Migration: add_lifetime_merit_points
+// Adds grades.lifetime_merit_points and backfills from merit_demerit_logs
 const db = require('../database');
 
-/**
- * Migration: Add lifetime_merit_points to grades table
- * 
- * This tracks the total merit points earned by a cadet across their entire ROTC career,
- * regardless of the 100-point ceiling. This allows recognition of achievement even when
- * the active merit score is capped at 100.
- */
+async function addLifetimeMeritPoints() {
+  if (!db || (!db.pool && !db.run)) {
+    throw new Error('Database not initialized');
+  }
 
-const addLifetimeMeritPoints = () => {
-    return new Promise((resolve, reject) => {
-        // Check if column already exists
-        const checkSql = db.pool 
-            ? `SELECT column_name FROM information_schema.columns WHERE table_name = 'grades' AND column_name = 'lifetime_merit_points'`
-            : `PRAGMA table_info(grades)`;
-
-        db.all(checkSql, [], (err, rows) => {
-            if (err) {
-                console.error('Error checking for lifetime_merit_points column:', err);
-                return reject(err);
-            }
-
-            const columnExists = db.pool 
-                ? rows.length > 0
-                : rows.some(row => row.name === 'lifetime_merit_points');
-
-            if (columnExists) {
-                console.log('✓ lifetime_merit_points column already exists');
-                return resolve();
-            }
-
-            // Add the column
-            const alterSql = `ALTER TABLE grades ADD COLUMN lifetime_merit_points INTEGER DEFAULT 0`;
-            
-            db.run(alterSql, [], (err) => {
-                if (err) {
-                    console.error('Error adding lifetime_merit_points column:', err);
-                    return reject(err);
-                }
-
-                console.log('✓ Added lifetime_merit_points column to grades table');
-
-                // Initialize lifetime_merit_points with current merit_points for existing records
-                const initSql = `UPDATE grades SET lifetime_merit_points = merit_points WHERE lifetime_merit_points = 0 OR lifetime_merit_points IS NULL`;
-                
-                db.run(initSql, [], (err) => {
-                    if (err) {
-                        console.error('Error initializing lifetime_merit_points:', err);
-                        return reject(err);
-                    }
-
-                    console.log('✓ Initialized lifetime_merit_points for existing cadets');
-                    resolve();
-                });
-            });
-        });
+  if (db.pool) {
+    // PostgreSQL
+    // 1) Add column if not exists
+    await db.pool.query(`ALTER TABLE grades ADD COLUMN IF NOT EXISTS lifetime_merit_points INTEGER DEFAULT 0`);
+    // 2) Backfill from ledger
+    await db.pool.query(`
+      UPDATE grades g
+      SET lifetime_merit_points = COALESCE(sub.total_merit, 0)
+      FROM (
+        SELECT cadet_id, COALESCE(SUM(points), 0) AS total_merit
+        FROM merit_demerit_logs
+        WHERE type = 'merit'
+        GROUP BY cadet_id
+      ) sub
+      WHERE g.cadet_id = sub.cadet_id
+    `);
+  } else {
+    // SQLite
+    // 1) Try to add column
+    await new Promise((resolve) => {
+      db.run(`ALTER TABLE grades ADD COLUMN lifetime_merit_points INTEGER DEFAULT 0`, [], () => resolve());
     });
-};
+    // 2) Backfill
+    const rows = await new Promise((resolve) => {
+      db.all(
+        `SELECT cadet_id, COALESCE(SUM(points),0) AS total_merit
+         FROM merit_demerit_logs
+         WHERE type = 'merit'
+         GROUP BY cadet_id`,
+        [],
+        (_, r) => resolve(r || [])
+      );
+    });
+    for (const r of rows) {
+      await new Promise((resolve) => {
+        db.run(
+          `UPDATE grades SET lifetime_merit_points = ? WHERE cadet_id = ?`,
+          [Number(r.total_merit || 0), r.cadet_id],
+          () => resolve()
+        );
+      });
+    }
+  }
 
-// Run migration if called directly
-if (require.main === module) {
-    addLifetimeMeritPoints()
-        .then(() => {
-            console.log('\n✓ Migration completed successfully');
-            process.exit(0);
-        })
-        .catch((err) => {
-            console.error('\n✗ Migration failed:', err);
-            process.exit(1);
-        });
+  return { message: 'lifetime_merit_points ensured and backfilled' };
 }
 
 module.exports = { addLifetimeMeritPoints };
+

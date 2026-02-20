@@ -200,19 +200,58 @@ router.post('/profile/photo', authenticateToken, uploadProfilePic, (req, res) =>
 
 // GET Current Staff Profile (Me)
 router.get('/me', authenticateToken, (req, res) => {
-    if (!req.user.staffId) return res.status(404).json({ message: 'Not logged in as staff' });
-    
-    // Join with users table to get username
-    const sql = `SELECT s.*, u.username 
-                 FROM training_staff s 
-                 LEFT JOIN users u ON u.staff_id = s.id 
-                 WHERE s.id = ?`;
+    // Resolve staffId from session or users table
+    const resolveAndRespond = (staffId) => {
+        // Join with users table to get username
+        const sql = `SELECT s.*, u.username 
+                     FROM training_staff s 
+                     LEFT JOIN users u ON u.staff_id = s.id 
+                     WHERE s.id = ?`;
+        db.get(sql, [staffId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!row) {
+                // Non-throwing response for missing record (placeholder)
+                return res.json({
+                    id: null,
+                    first_name: '',
+                    last_name: '',
+                    rank: '',
+                    role: 'training_staff',
+                    profile_pic: null,
+                    username: null
+                });
+            }
+            res.json(row);
+        });
+    };
 
-    db.get(sql, [req.user.staffId], (err, row) => {
-        if (err) return res.status(500).json({ message: err.message });
-        if (!row) return res.status(404).json({ message: 'Staff profile not found' });
-        res.json(row);
-    });
+    if (req.user && req.user.staffId) {
+        return resolveAndRespond(req.user.staffId);
+    }
+
+    // Fallback: if the role is training_staff, try to resolve staff_id from users table
+    if (req.user && req.user.role === 'training_staff') {
+        db.get('SELECT staff_id FROM users WHERE id = ?', [req.user.id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row && row.staff_id) {
+                return resolveAndRespond(row.staff_id);
+            }
+            // No mapping yet; return safe placeholder instead of 404
+            return res.json({
+                id: null,
+                first_name: '',
+                last_name: '',
+                rank: '',
+                role: 'training_staff',
+                profile_pic: null,
+                username: null
+            });
+        });
+        return;
+    }
+
+    // Not a staff session
+    return res.status(404).json({ message: 'Not logged in as staff' });
 });
 
 // Save QR Code Data
@@ -569,20 +608,58 @@ router.put('/:id', authenticateToken, isAdmin, (req, res) => {
 // DELETE Staff
 router.delete('/:id', authenticateToken, isAdmin, (req, res) => {
     const staffId = req.params.id;
-    
-    // First delete the user account associated with this staff
-    db.run("DELETE FROM users WHERE staff_id = ?", [staffId], (err) => {
-        if (err) {
-            console.error('Error deleting user account for staff:', err);
-            // Proceed to delete staff profile anyway? Or fail?
-            // Better to proceed so we don't get stuck with undeletable staff.
-        }
-        
-        // Then delete the staff profile
-        db.run("DELETE FROM training_staff WHERE id = ?", [staffId], function(err) {
-            if (err) return res.status(500).json({ message: err.message });
-            res.json({ message: 'Staff deleted successfully' });
+    // Create audit table if missing
+    db.run(`CREATE TABLE IF NOT EXISTS staff_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        staff_id INTEGER,
+        before_json TEXT,
+        after_json TEXT,
+        user_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`, [], () => {
+        db.get(`SELECT * FROM training_staff WHERE id = ?`, [staffId], (selErr, beforeRow) => {
+            // Write audit entry (best-effort)
+            try {
+                const beforeJson = beforeRow ? JSON.stringify(beforeRow) : null;
+                db.run(`INSERT INTO staff_audit (action, staff_id, before_json, user_id) VALUES (?, ?, ?, ?)`,
+                    ['delete', staffId, beforeJson, req.user.id || null], () => {});
+            } catch (_) {}
+            // Try soft-delete first: archive records if column exists
+            db.run(`UPDATE users SET is_archived = 1, is_approved = 0 WHERE staff_id = ?`, [staffId], () => {
+                db.run(`UPDATE training_staff SET is_archived = 1 WHERE id = ?`, [staffId], function(updErr) {
+                    if (!updErr && this && this.changes > 0) {
+                        return res.json({ message: 'Staff archived successfully' });
+                    }
+                    // Fallback: hard delete if archive column not present
+                    db.run("DELETE FROM users WHERE staff_id = ?", [staffId], (uDelErr) => {
+                        // Proceed regardless of user deletion error
+                        db.run("DELETE FROM training_staff WHERE id = ?", [staffId], function(err) {
+                            if (err) return res.status(500).json({ message: err.message });
+                            res.json({ message: 'Staff deleted successfully' });
+                        });
+                    });
+                });
+            });
         });
+    });
+});
+
+// RESTORE archived Staff
+router.post('/:id/restore', authenticateToken, isAdmin, (req, res) => {
+    const staffId = req.params.id;
+    db.run(`UPDATE training_staff SET is_archived = 0 WHERE id = ?`, [staffId], function(err) {
+        if (err) {
+            // If column missing, return bad request
+            return res.status(400).json({ message: 'Archive feature not available on this database.' });
+        }
+        if (this.changes === 0) return res.status(404).json({ message: 'Staff not found or not archived' });
+        // Also un-archive related user if exists
+        db.run(`UPDATE users SET is_archived = 0, is_approved = 1 WHERE staff_id = ?`, [staffId], () => {});
+        // Audit
+        db.run(`INSERT INTO staff_audit (action, staff_id, before_json, after_json, user_id) VALUES (?, ?, ?, ?, ?)`,
+            ['restore', staffId, null, null, req.user.id || null], () => {});
+        res.json({ message: 'Staff restored' });
     });
 });
 

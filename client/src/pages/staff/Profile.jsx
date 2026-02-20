@@ -514,7 +514,7 @@ const StaffProfile = () => {
                     <div className="flex justify-end mt-6">
                         <button 
                             onClick={handleSubmit}
-                            className="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-lg shadow-lg flex items-center text-lg font-bold transition-transform transform hover:scale-105"
+                            className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-md shadow flex items-center text-sm font-semibold transition-transform transform hover:scale-105"
                             title="Save Changes"
                         >
                             <Save size={24} className="mr-2" />

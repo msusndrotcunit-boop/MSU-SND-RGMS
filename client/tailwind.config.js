@@ -7,6 +7,33 @@ export default {
   darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
+      fontSize: {
+        'xs': '0.6875rem',    // 11px - very compact
+        'sm': '0.8125rem',    // 13px - compact
+        'base': '0.875rem',   // 14px - standard
+        'lg': '0.9375rem',    // 15px - slightly larger
+        'xl': '1rem',         // 16px - compact title
+        '2xl': '1.125rem',    // 18px - compact subheading
+        '3xl': '1.375rem',    // 22px - compact heading
+        '4xl': '1.75rem',     // 28px - large heading
+        '5xl': '2rem',        // 32px - extra large
+      },
+      spacing: {
+        '0.5': '0.125rem',
+        '1': '0.25rem',
+        '1.5': '0.375rem',
+        '2': '0.5rem',
+        '2.5': '0.625rem',
+        '3': '0.75rem',
+        '3.5': '0.875rem',
+        '4': '1rem',
+        '5': '1.25rem',
+        '6': '1.5rem',
+        '7': '1.75rem',
+        '8': '2rem',
+        '9': '2.25rem',
+        '10': '2.5rem',
+      },
       colors: {
         primary: {
           50: '#f0fdf4',

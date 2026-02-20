@@ -21,6 +21,10 @@ import {
     STATUS_OPTIONS,
     GENDER_OPTIONS
 } from '../../constants/options';
+import { PHILIPPINE_RELIGIONS } from '../../constants/religions';
+import ResponsiveTable from '../../components/ResponsiveTable';
+import MobileModalManager from '../../components/MobileModalManager';
+import { MobileFormLayout, FormField, MobileInput, MobileSelect, FormActions } from '../../components/MobileFormLayout';
 
 const Cadets = () => {
     const [cadets, setCadets] = useState([]);
@@ -89,6 +93,7 @@ const Cadets = () => {
     const [addForm, setAddForm] = useState({
         rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
         studentId: '', email: '', contactNumber: '', address: '',
+        gender: '', religion: '', birthdate: '',
         course: '', yearLevel: '', schoolYear: '',
         battalion: '', company: '', platoon: '',
         cadetCourse: '', semester: '', status: 'Ongoing'
@@ -381,6 +386,8 @@ const Cadets = () => {
             contactNumber: cadet.contact_number || '',
             address: cadet.address || '',
             gender: cadet.gender || '',
+            religion: cadet.religion || '',
+            birthdate: cadet.birthdate || '',
             course: cadet.course || '',
             yearLevel: cadet.year_level || '',
             schoolYear: cadet.school_year || '',
@@ -389,6 +396,7 @@ const Cadets = () => {
             platoon: cadet.platoon || '',
             cadetCourse: cadet.cadet_course || '',
             semester: cadet.semester || '',
+            corpPosition: cadet.corp_position || '',
             status: cadet.status || 'Ongoing'
         });
         setIsEditModalOpen(true);
@@ -423,8 +431,9 @@ const Cadets = () => {
             setIsEditModalOpen(false);
             toast.success('Cadet updated successfully');
         } catch (err) {
-            console.error(err);
-            toast.error('Error updating cadet');
+            console.error('Cadet update error:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Error updating cadet';
+            toast.error(errorMsg);
         }
     };
 
@@ -507,6 +516,7 @@ const Cadets = () => {
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',
+                gender: '', religion: '', birthdate: '',
                 course: '', yearLevel: '', schoolYear: '',
                 battalion: '', company: '', platoon: '',
                 cadetCourse: '', semester: '', status: 'Ongoing'
@@ -547,23 +557,7 @@ const Cadets = () => {
         return valB - valA;
     });
 
-    // Bulk Selection Handlers
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelectedCadets(filteredCadets.map(c => c.id));
-        } else {
-            setSelectedCadets([]);
-        }
-    };
-
-    const handleSelectCadet = (id) => {
-        setSelectedCadets(prev => 
-            prev.includes(id) 
-                ? prev.filter(cId => cId !== id) 
-                : [...prev, id]
-        );
-    };
-
+    // Bulk Selection Handlers - now handled by ResponsiveTable
     const handleBulkDelete = async () => {
         if (!window.confirm(`Are you sure you want to delete ${selectedCadets.length} cadets? This action cannot be undone.`)) return;
 
@@ -816,169 +810,156 @@ const Cadets = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded shadow overflow-auto max-h-[calc(100vh-200px)] relative">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-100 sticky top-0 z-10">
-                        <tr className="border-b shadow-sm">
-                            <th className="p-4 bg-gray-100 text-center w-12">
-                                <input
-                                    type="checkbox"
-                                    onChange={handleSelectAll}
-                                    checked={filteredCadets.length > 0 && selectedCadets.length === filteredCadets.length}
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                            </th>
-                            <th className="p-4 bg-gray-100">Name & Rank</th>
-                            <th className="p-4 bg-gray-100">Username</th>
-                            <th className="p-4 text-center bg-gray-100">Unit (Coy/Plt)</th>
-                            <th className="p-4 text-center bg-gray-100">Status</th>
-                            <th className="p-4 text-right bg-gray-100">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredCadets.length === 0 ? (
-                             <tr>
-                                <td colSpan="6" className="p-4 text-center text-gray-500">No cadets found.</td>
-                             </tr>
-                        ) : (
-                            filteredCadets.map(cadet => (
-                                <tr key={cadet.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 text-center">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={selectedCadets.includes(cadet.id)}
-                                            onChange={() => handleSelectCadet(cadet.id)}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                        />
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-medium">
-                                            <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
-                                            {cadet.last_name}, {cadet.first_name}
-                                        </div>
-                                        <div className="text-xs text-gray-500">{cadet.email}</div>
-                                    </td>
-                                    <td className="p-4">{cadet.username || cadet.student_id}</td>
-                                    <td className="p-4 text-center">{cadet.company || '-'}/{cadet.platoon || '-'}</td>
-                                    <td className="p-4 text-center">
-                                        {!cadet.is_profile_completed ? (
-                                            <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                                Unverified
-                                            </span>
-                                        ) : (
-                                            <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
-                                                cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {cadet.status}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-4 text-right space-x-2">
-                                        {cadet.is_profile_completed ? (
-                                            <button 
-                                                onClick={() => handleSingleUnlock(cadet.id)}
-                                                className="text-yellow-600 hover:bg-yellow-50 p-2 rounded"
-                                                title="Unlock Profile"
-                                            >
-                                                <Unlock size={18} />
-                                            </button>
-                                        ) : null}
-                                        <button 
-                                            onClick={() => openViewModal(cadet)}
-                                            className="text-blue-600 hover:bg-blue-50 p-2 rounded"
-                                            title="View Profile"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => openEditModal(cadet)}
-                                            className="text-gray-600 hover:bg-gray-50 p-2 rounded"
-                                            title="Edit Info"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Export Modal */}
-            {isExportModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg w-full max-w-md p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Export Settings</h3>
-                            <button onClick={() => setIsExportModalOpen(false)}><X size={20} /></button>
-                        </div>
-                        <div className="space-y-4">
+            {/* Responsive Table */}
+            <ResponsiveTable
+                data={filteredCadets}
+                columns={[
+                    {
+                        key: 'name',
+                        label: 'Name & Rank',
+                        render: (_, cadet) => (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Document Title</label>
-                                <input 
-                                    className="w-full border p-2 rounded" 
-                                    value={exportOptions.title} 
-                                    onChange={e => setExportOptions({...exportOptions, title: e.target.value})} 
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Company</label>
-                                <select 
-                                    className="w-full border p-2 rounded"
-                                    value={exportOptions.company}
-                                    onChange={e => setExportOptions({...exportOptions, company: e.target.value})}
-                                >
-                                    <option value="All">All Companies</option>
-                                    {companies.map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Prepared By</label>
-                                    <input 
-                                        className="w-full border p-2 rounded" 
-                                        value={exportOptions.preparedBy} 
-                                        onChange={e => setExportOptions({...exportOptions, preparedBy: e.target.value})} 
-                                        placeholder="Name"
-                                    />
+                                <div className="font-medium">
+                                    <span className="font-bold text-blue-900 mr-1">{cadet.rank}</span>
+                                    {cadet.last_name}, {cadet.first_name}
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Noted By</label>
-                                    <input 
-                                        className="w-full border p-2 rounded" 
-                                        value={exportOptions.notedBy} 
-                                        onChange={e => setExportOptions({...exportOptions, notedBy: e.target.value})} 
-                                        placeholder="Commandant"
-                                    />
-                                </div>
+                                <div className="text-xs text-gray-500">{cadet.email}</div>
                             </div>
+                        )
+                    },
+                    {
+                        key: 'username',
+                        label: 'Username',
+                        headerClassName: 'px-1 pr-1',
+                        cellClassName: 'px-1 pr-1 whitespace-nowrap',
+                        render: (_, cadet) => cadet.username || cadet.student_id
+                    },
+                    {
+                        key: 'unit',
+                        label: 'Unit (Coy/Plt)',
+                        align: 'center',
+                        headerClassName: 'px-1 pl-1',
+                        cellClassName: 'px-1 pl-1 whitespace-nowrap',
+                        render: (_, cadet) => `${cadet.company || '-'}/${cadet.platoon || '-'}`
+                    },
+                    {
+                        key: 'status',
+                        label: 'Status',
+                        align: 'center',
+                        headerClassName: 'px-2',
+                        cellClassName: 'px-2',
+                        render: (_, cadet) => (
+                            !cadet.is_profile_completed ? (
+                                <span className="text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                    Unverified
+                                </span>
+                            ) : (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                    cadet.status === 'Ongoing' ? 'bg-blue-100 text-blue-800' :
+                                    cadet.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {cadet.status}
+                                </span>
+                            )
+                        )
+                    }
+                ]}
+                loading={loading}
+                emptyMessage="No cadets found."
+                selectable={true}
+                selectedItems={selectedCadets}
+                onSelectionChange={setSelectedCadets}
+                sortable={true}
+                filterable={true}
+                pagination={true}
+                itemsPerPage={20}
+                cardLayout="never"
+                actions={[
+                    ...(filteredCadets.some(c => c.is_profile_completed) ? [{
+                        icon: Unlock,
+                        label: 'Unlock Profile',
+                        onClick: (cadet) => handleSingleUnlock(cadet.id),
+                        className: 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50'
+                    }] : []),
+                    {
+                        icon: Eye,
+                        label: 'View Profile',
+                        onClick: openViewModal,
+                        className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                    },
+                    {
+                        icon: Pencil,
+                        label: 'Edit Info',
+                        onClick: openEditModal,
+                        className: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    }
+                ]}
+                className="bg-white rounded shadow"
+            />
 
-                            <div className="pt-4 flex space-x-3">
-                                <button 
-                                    onClick={() => setIsExportModalOpen(false)}
-                                    className="flex-1 px-4 py-2 border rounded text-gray-600 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={handleExportPDF}
-                                    className="flex-1 px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 flex justify-center items-center"
-                                >
-                                    <FileDown size={18} className="mr-2" />
-                                    Generate PDF
-                                </button>
-                            </div>
-                        </div>
+            {/* Export Modal - Mobile Optimized */}
+            <MobileModalManager
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                title="Export Settings"
+                size="default"
+                footerActions={
+                    <>
+                        <button 
+                            onClick={() => setIsExportModalOpen(false)}
+                            className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors touch-target"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={handleExportPDF}
+                            className="w-full sm:w-auto px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 flex justify-center items-center transition-colors touch-target"
+                        >
+                            <FileDown size={18} className="mr-2" />
+                            Generate PDF
+                        </button>
+                    </>
+                }
+            >
+                <MobileFormLayout className="space-y-4">
+                    <FormField label="Document Title" required>
+                        <MobileInput 
+                            value={exportOptions.title} 
+                            onChange={e => setExportOptions({...exportOptions, title: e.target.value})}
+                            placeholder="Enter document title"
+                        />
+                    </FormField>
+                    
+                    <FormField label="Filter by Company">
+                        <MobileSelect
+                            value={exportOptions.company}
+                            onChange={e => setExportOptions({...exportOptions, company: e.target.value})}
+                            options={[
+                                { value: 'All', label: 'All Companies' },
+                                ...companies.map(c => ({ value: c, label: c }))
+                            ]}
+                        />
+                    </FormField>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField label="Prepared By">
+                            <MobileInput 
+                                value={exportOptions.preparedBy} 
+                                onChange={e => setExportOptions({...exportOptions, preparedBy: e.target.value})}
+                                placeholder="Name"
+                            />
+                        </FormField>
+                        <FormField label="Noted By">
+                            <MobileInput 
+                                value={exportOptions.notedBy} 
+                                onChange={e => setExportOptions({...exportOptions, notedBy: e.target.value})}
+                                placeholder="Commandant"
+                            />
+                        </FormField>
                     </div>
-                </div>
-            )}
+                </MobileFormLayout>
+            </MobileModalManager>
 
             {/* Import Modal */}
             {isImportModalOpen && (
@@ -1093,6 +1074,24 @@ const Cadets = () => {
                             </div>
 
                             <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <select className="border p-2 rounded" value={addForm.gender} onChange={e => setAddForm({...addForm, gender: e.target.value})}>
+                                    <option value="">Select Gender</option>
+                                    {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <select className="border p-2 rounded" value={addForm.religion} onChange={e => setAddForm({...addForm, religion: e.target.value})}>
+                                    <option value="">Select Religion</option>
+                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                                <input 
+                                    type="date" 
+                                    className="border p-2 rounded" 
+                                    value={addForm.birthdate} 
+                                    onChange={e => setAddForm({...addForm, birthdate: e.target.value})} 
+                                    placeholder="Birthdate" 
+                                />
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})}>
@@ -1344,12 +1343,12 @@ const Cadets = () => {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
-                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} />
-                                            </div>
-                                            <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID</label>
                                                 <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.studentId} onChange={e => setEditForm({...editForm, studentId: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                                                <input disabled={isViewMode} type="email" className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
                                             </div>
                                         </div>
 
@@ -1365,6 +1364,35 @@ const Cadets = () => {
                                                     <option value="">Select Gender</option>
                                                     {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                                 </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Birthdate</label>
+                                                <input
+                                                    type="date"
+                                                    disabled={isViewMode}
+                                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60"
+                                                    value={editForm.birthdate || ''}
+                                                    onChange={e => setEditForm({ ...editForm, birthdate: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Religion</label>
+                                                <select
+                                                    disabled={isViewMode}
+                                                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60"
+                                                    value={editForm.religion || ''}
+                                                    onChange={e => setEditForm({ ...editForm, religion: e.target.value })}
+                                                >
+                                                    <option value="">Select Religion</option>
+                                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
+                                                <input disabled={isViewMode} className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded disabled:opacity-60" value={editForm.contactNumber} onChange={e => setEditForm({...editForm, contactNumber: e.target.value})} />
                                             </div>
                                         </div>
 

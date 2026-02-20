@@ -3,11 +3,14 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { Send, MessageSquare, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
+import { ContactForm } from '../components/StandardMobileForms';
 
 const AskAdmin = () => {
     const [messages, setMessages] = useState([]);
-    const [subject, setSubject] = useState('');
-    const [message, setMessage] = useState('');
+    const [formData, setFormData] = useState({
+        subject: '',
+        message: ''
+    });
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
@@ -30,14 +33,16 @@ const AskAdmin = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!subject.trim() || !message.trim()) return;
+        if (!formData.subject.trim() || !formData.message.trim()) return;
 
         try {
             setSubmitting(true);
-            await axios.post('/api/messages', { subject, message });
+            await axios.post('/api/messages', { 
+                subject: formData.subject, 
+                message: formData.message 
+            });
             toast.success('Message sent successfully');
-            setSubject('');
-            setMessage('');
+            setFormData({ subject: '', message: '' });
             fetchMessages();
         } catch (err) {
             console.error('Error sending message:', err);
@@ -53,51 +58,24 @@ const AskAdmin = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <MessageSquare className="text-blue-600" />
-                Ask the Admin
-            </h1>
+            <div className="max-w-4xl mx-auto space-y-6 p-4">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <MessageSquare className="text-blue-600" />
+                    Ask the Admin
+                </h1>
 
-            {/* Message Form */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-lg font-semibold mb-4">Submit a Report or Question</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                        <input
-                            type="text"
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Brief subject of your concern..."
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                        <textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none h-32"
-                            placeholder="Describe your issue or question in detail..."
-                            required
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={submitting}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {submitting ? 'Sending...' : (
-                            <>
-                                <Send size={18} />
-                                Send Message
-                            </>
-                        )}
-                    </button>
-                </form>
-            </div>
+                {/* Mobile-Optimized Message Form */}
+                <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+                    <h2 className="text-lg font-semibold mb-4 dark:text-gray-100">Submit a Report or Question</h2>
+                    <ContactForm
+                        formData={formData}
+                        onChange={setFormData}
+                        onSubmit={handleSubmit}
+                        loading={submitting}
+                        showSubject={true}
+                        showCategory={false}
+                    />
+                </div>
 
             {/* Message History */}
             <div className="bg-white p-6 rounded-lg shadow-md">
@@ -140,7 +118,7 @@ const AskAdmin = () => {
                     </div>
                 )}
             </div>
-        </div>
+            </div>
     );
 };
 

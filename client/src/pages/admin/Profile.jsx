@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Camera, User, Mail, Shield, Info } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
-import { getProfilePicUrl } from '../../utils/image';
+import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
 
 const AdminProfile = () => {
     const { user } = useAuth();
@@ -81,7 +81,7 @@ const AdminProfile = () => {
     if (!profile) return <div className="p-8 text-center text-red-500">Profile not found.</div>;
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">My Profile</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -94,7 +94,12 @@ const AdminProfile = () => {
                                 alt="Profile" 
                                 className="w-full h-full object-cover rounded-full border-4 border-gray-200 shadow-sm"
                                 onError={(e) => {
-                                    e.target.src = '/api/admin/profile/image';
+                                    try {
+                                        const fallback = getProfilePicFallback(profile?.id || 1, 'admin');
+                                        e.target.src = fallback;
+                                    } catch {
+                                        e.target.src = '';
+                                    }
                                 }}
                             />
                             
