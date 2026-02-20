@@ -32,7 +32,7 @@ const ResponsiveTable = ({
   const [showFilters, setShowFilters] = useState(false);
 
   // Determine if we should use card layout
-  const useCardLayout = cardLayout === 'always' || (cardLayout === 'auto' && isMobile);
+  const useCardLayout = cardLayout === 'always';
 
   // Sort data
   const sortedData = React.useMemo(() => {
