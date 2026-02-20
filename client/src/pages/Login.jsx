@@ -116,28 +116,34 @@ const Login = () => {
                 {/* Body Section */}
                 <div className="p-3 md:p-8 pt-3 md:pt-6">
                     {/* Role Selector */}
-                    <div className="mb-3 md:mb-6 bg-gray-100 p-1 rounded-lg">
-                        <div className="flex items-stretch gap-1">
+                    <div className="mb-3 md:mb-6 bg-gray-100 px-2 py-1 rounded-lg">
+                        <div className="flex items-center justify-center gap-4">
                             <button
                                 onClick={() => { setLoginType('cadet'); setError(''); }}
-                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                                    loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                    loginType === 'cadet'
+                                        ? 'bg-white text-green-900 shadow-sm border border-green-300'
+                                        : 'bg-transparent text-gray-600 hover:text-green-900'
                                 }`}
                             >
                                 <User size={14} /> Cadet
                             </button>
                             <button
                                 onClick={() => { setLoginType('staff'); setError(''); }}
-                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                                    loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                    loginType === 'staff'
+                                        ? 'bg-white text-green-900 shadow-sm border border-green-300'
+                                        : 'bg-transparent text-gray-600 hover:text-green-900'
                                 }`}
                             >
                                 <Briefcase size={14} /> Staff
                             </button>
                             <button
                                 onClick={() => { setLoginType('admin'); setError(''); }}
-                                className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                                    loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
+                                    loginType === 'admin'
+                                        ? 'bg-white text-green-900 shadow-sm border border-green-300'
+                                        : 'bg-transparent text-gray-600 hover:text-green-900'
                                 }`}
                             >
                                 <ShieldCheck size={14} /> Admin
