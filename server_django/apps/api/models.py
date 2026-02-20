@@ -29,6 +29,8 @@ class Attendance(models.Model):
     day = models.IntegerField()
     status = models.CharField(max_length=32)
     created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        unique_together = ('user_id', 'role', 'day')
 
 class Grade(models.Model):
     cadet_id = models.IntegerField()
@@ -37,3 +39,5 @@ class Grade(models.Model):
     passed = models.BooleanField()
     status = models.CharField(max_length=16, default='Completed')  # Ongoing/Completed/Incomplete/Failed/Drop
     updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        unique_together = ('cadet_id',)

@@ -46,7 +46,7 @@ def admin_login(request):
     refresh = RefreshToken.for_user(user)
     refresh['role'] = 'admin'
     access = str(refresh.access_token)
-    return JsonResponse({'token': access, 'role': 'admin', 'staffId': None, 'cadetId': None, 'isProfileCompleted': True})
+    return JsonResponse({'token': access, 'refresh': str(refresh), 'role': 'admin', 'staffId': None, 'cadetId': None, 'isProfileCompleted': True})
 
 @csrf_exempt
 def cadet_login(request):
@@ -59,7 +59,13 @@ def cadet_login(request):
     refresh = RefreshToken.for_user(u)
     refresh['role'] = 'cadet'
     access = str(refresh.access_token)
-    return JsonResponse({'token': access, 'role': 'cadet', 'cadetId': 1, 'staffId': None, 'isProfileCompleted': False})
+    # Ensure cadet record exists
+    try:
+        from .models import Cadet
+        Cadet.objects.get_or_create(student_id=identifier, defaults={'first_name': 'Cadet', 'last_name': identifier[:16], 'course': 'MS1', 'is_profile_completed': False})
+    except Exception:
+        pass
+    return JsonResponse({'token': access, 'refresh': str(refresh), 'role': 'cadet', 'cadetId': 1, 'staffId': None, 'isProfileCompleted': False})
 
 @csrf_exempt
 def staff_login(request):
@@ -72,13 +78,29 @@ def staff_login(request):
     refresh = RefreshToken.for_user(u)
     refresh['role'] = 'training_staff'
     access = str(refresh.access_token)
-    return JsonResponse({'token': access, 'role': 'training_staff', 'staffId': 1, 'cadetId': None, 'isProfileCompleted': True})
+    try:
+        from .models import Staff
+        Staff.objects.get_or_create(username=identifier, defaults={'rank': '', 'first_name': 'Staff', 'last_name': identifier[:16]})
+    except Exception:
+        pass
+    return JsonResponse({'token': access, 'refresh': str(refresh), 'role': 'training_staff', 'staffId': 1, 'cadetId': None, 'isProfileCompleted': True})
 
 @csrf_exempt
 def heartbeat(request):
     return JsonResponse({'ok': True, 'time': datetime.utcnow().isoformat()})
 
 def cadet_profile(request):
+    try:
+        u = getattr(request, 'user', None)
+        uname = getattr(u, 'username', '') or ''
+        if uname.startswith('cadet:'):
+            ident = uname.split(':', 1)[1]
+            from .models import Cadet
+            c = Cadet.objects.filter(student_id=ident).first()
+            if c:
+                return JsonResponse({'is_profile_completed': 1 if c.is_profile_completed else 0})
+    except Exception:
+        pass
     return JsonResponse({'is_profile_completed': 0})
 
 def admin_analytics(request):
@@ -178,12 +200,22 @@ def compute_grade(request, cadet_id):
     return JsonResponse(result)
 
 def admin_locations(request):
-    data = [
+    try:
+        from .models import Cadet, Staff
+        items = []
+        for s in Staff.objects.all():
+            items.append({'id': s.id, 'role': 'training_staff', 'staff_rank': s.rank, 'staff_last_name': s.last_name, 'last_latitude': None, 'last_longitude': None, 'last_location_at': None})
+        for c in Cadet.objects.all():
+            items.append({'id': c.id, 'role': 'cadet', 'cadet_last_name': c.last_name, 'cadet_first_name': c.first_name, 'last_latitude': None, 'last_longitude': None, 'last_location_at': None})
+        if items:
+            return JsonResponse(items, safe=False)
+    except Exception:
+        pass
+    return JsonResponse([
         {'id': 1, 'role': 'admin', 'username': 'admin', 'last_latitude': 7.225, 'last_longitude': 124.245, 'last_location_at': datetime.utcnow().isoformat()},
         {'id': 2, 'role': 'cadet', 'cadet_last_name': 'Doe', 'cadet_first_name': 'Juan', 'last_latitude': None, 'last_longitude': None, 'last_location_at': None},
         {'id': 3, 'role': 'training_staff', 'staff_rank': 'TSgt', 'staff_last_name': 'Santos', 'last_latitude': 7.2301, 'last_longitude': 124.2429, 'last_location_at': datetime.utcnow().isoformat()}
-    ]
-    return JsonResponse(data, safe=False)
+    ], safe=False)
 
 def attendance_events(request):
     response = StreamingHttpResponse(sse_stream(), content_type='text/event-stream')
