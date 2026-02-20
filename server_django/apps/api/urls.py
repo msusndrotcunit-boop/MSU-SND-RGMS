@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/cadets/archived', views.admin_cadets_archived),
     path('admin/locations', views.admin_locations),
     path('admin/settings/cadet-source', views.admin_settings_cadet_source),
+    path('admin/settings/cadet-source/update', views.admin_update_cadet_source),
     path('admin/import-cadets', views.admin_import_cadets_file),
     path('admin/import-cadets-url', views.admin_import_cadets_url),
     path('admin/sync-cadets', views.admin_sync_cadets),

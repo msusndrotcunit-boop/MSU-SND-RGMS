@@ -81,4 +81,4 @@ REST_FRAMEWORK = {
     ),
 }
 
-CADET_SOURCE_URL = os.environ.get('CADET_SOURCE_URL')
+CADET_SOURCE_URL = os.environ.get('CADET_SOURCE_URL', 'https://msu-snd-rgms.wuaze.com')

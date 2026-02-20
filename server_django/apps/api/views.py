@@ -17,6 +17,7 @@ import requests
 
 EVENT_QUEUE = deque(maxlen=1000)
 STOP_EVENT = Event()
+CADET_SOURCE_URL_OVERRIDE = None
 
 def add_event(payload):
     EVENT_QUEUE.append({'time': time.time(), **payload})
@@ -371,7 +372,19 @@ def _role(request):
         return ''
 
 def admin_settings_cadet_source(request):
-    return JsonResponse({'url': settings.CADET_SOURCE_URL or ''})
+    return JsonResponse({'url': (CADET_SOURCE_URL_OVERRIDE or settings.CADET_SOURCE_URL or '')})
+
+@csrf_exempt
+def admin_update_cadet_source(request):
+    if _role(request) != 'admin':
+        return JsonResponse({'message': 'Forbidden'}, status=403)
+    data = json.loads(request.body.decode() or '{}')
+    url = (data.get('url') or '').strip()
+    if not url:
+        return JsonResponse({'message': 'URL required'}, status=400)
+    global CADET_SOURCE_URL_OVERRIDE
+    CADET_SOURCE_URL_OVERRIDE = url
+    return JsonResponse({'message': 'Updated', 'url': CADET_SOURCE_URL_OVERRIDE})
 
 @csrf_exempt
 def admin_import_cadets_file(request):
@@ -456,7 +469,7 @@ def admin_import_cadets_url(request):
 
 @csrf_exempt
 def admin_sync_cadets(request):
-    url = settings.CADET_SOURCE_URL or ''
+    url = (CADET_SOURCE_URL_OVERRIDE or settings.CADET_SOURCE_URL or '')
     if not url:
         return JsonResponse({'message': 'No source configured'}, status=400)
     return admin_import_cadets_url(type('obj', (), {'body': json.dumps({'url': url})})())
