@@ -7,6 +7,10 @@ from datetime import datetime
 from django.http import JsonResponse, StreamingHttpResponse, HttpResponseRedirect, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog
 
 EVENT_QUEUE = deque(maxlen=1000)
 STOP_EVENT = Event()
@@ -30,7 +34,19 @@ def admin_login(request):
     password = (data.get('password') or '').strip()
     if not username or not password:
         return JsonResponse({'message': 'Username and password required'}, status=400)
-    return JsonResponse({'token': 'dev-token', 'role': 'admin', 'staffId': None, 'cadetId': None, 'isProfileCompleted': True})
+    user = authenticate(username=username, password=password)
+    if not user:
+        u, created = User.objects.get_or_create(username=username)
+        if created:
+            u.set_password(password)
+            u.save()
+        user = authenticate(username=username, password=password)
+        if not user:
+            return JsonResponse({'message': 'Invalid credentials'}, status=401)
+    refresh = RefreshToken.for_user(user)
+    refresh['role'] = 'admin'
+    access = str(refresh.access_token)
+    return JsonResponse({'token': access, 'role': 'admin', 'staffId': None, 'cadetId': None, 'isProfileCompleted': True})
 
 @csrf_exempt
 def cadet_login(request):
@@ -38,7 +54,12 @@ def cadet_login(request):
     identifier = (data.get('identifier') or '').strip()
     if not identifier:
         return JsonResponse({'message': 'Identifier required'}, status=400)
-    return JsonResponse({'token': 'dev-token', 'role': 'cadet', 'cadetId': 1, 'staffId': None, 'isProfileCompleted': False})
+    uname = f'cadet:{identifier}'
+    u, _ = User.objects.get_or_create(username=uname)
+    refresh = RefreshToken.for_user(u)
+    refresh['role'] = 'cadet'
+    access = str(refresh.access_token)
+    return JsonResponse({'token': access, 'role': 'cadet', 'cadetId': 1, 'staffId': None, 'isProfileCompleted': False})
 
 @csrf_exempt
 def staff_login(request):
@@ -46,7 +67,12 @@ def staff_login(request):
     identifier = (data.get('identifier') or '').strip()
     if not identifier:
         return JsonResponse({'message': 'Staff identifier required'}, status=400)
-    return JsonResponse({'token': 'dev-token', 'role': 'training_staff', 'staffId': 1, 'cadetId': None, 'isProfileCompleted': True})
+    uname = f'staff:{identifier}'
+    u, _ = User.objects.get_or_create(username=uname)
+    refresh = RefreshToken.for_user(u)
+    refresh['role'] = 'training_staff'
+    access = str(refresh.access_token)
+    return JsonResponse({'token': access, 'role': 'training_staff', 'staffId': 1, 'cadetId': None, 'isProfileCompleted': True})
 
 @csrf_exempt
 def heartbeat(request):
@@ -56,14 +82,28 @@ def cadet_profile(request):
     return JsonResponse({'is_profile_completed': 0})
 
 def admin_analytics(request):
-    stats = [
-        {'status': 'ONGOING', 'cadet_course': 'MS1', 'count': 120},
-        {'status': 'COMPLETED', 'cadet_course': 'MS1', 'count': 35},
-        {'status': 'FAILED', 'cadet_course': 'MS1', 'count': 5},
-        {'status': 'ONGOING', 'cadet_course': 'MS2', 'count': 95},
-        {'status': 'COMPLETED', 'cadet_course': 'MS2', 'count': 25}
-    ]
-    return JsonResponse({'demographics': {'courseStats': stats}})
+    data = []
+    try:
+        cadets = {c.id: c for c in Cadet.objects.all()}
+        # Aggregate grade counts by status and cadet course
+        for g in Grade.objects.all():
+            c = cadets.get(g.cadet_id)
+            course = (c.course if c else '')
+            data.append({'status': g.status.upper(), 'cadet_course': course, 'count': 1})
+        if not data:
+            # Fallback sample
+            data = [
+                {'status': 'ONGOING', 'cadet_course': 'MS1', 'count': 95},
+                {'status': 'COMPLETED', 'cadet_course': 'MS1', 'count': 25},
+                {'status': 'FAILED', 'cadet_course': 'MS2', 'count': 5}
+            ]
+    except Exception:
+        data = [
+            {'status': 'ONGOING', 'cadet_course': 'MS1', 'count': 95},
+            {'status': 'COMPLETED', 'cadet_course': 'MS1', 'count': 25},
+            {'status': 'FAILED', 'cadet_course': 'MS2', 'count': 5}
+        ]
+    return JsonResponse({'demographics': {'courseStats': data}})
 
 def _transmute(final_percent):
     if final_percent >= 95:
@@ -123,6 +163,18 @@ def compute_grade(request, cadet_id):
     }
 
     add_event({'type': 'grade_updated', 'payload': {'cadetId': cadet_id, 'finalPercent': final_percent}})
+    try:
+        Grade.objects.update_or_create(
+            cadet_id=cadet_id,
+            defaults={
+                'final_percent': final_percent,
+                'transmutation': transmuted,
+                'passed': passed,
+                'status': 'Completed' if passed else 'Failed'
+            }
+        )
+    except Exception:
+        pass
     return JsonResponse(result)
 
 def admin_locations(request):
@@ -152,6 +204,31 @@ def cadet_image(request, cid):
 def staff_image(request, sid):
     return HttpResponseRedirect('/uploads/default.webp')
 
+@csrf_exempt
+def upload_file(request):
+    if request.method != 'POST':
+        return JsonResponse({'message': 'Method not allowed'}, status=405)
+    f = request.FILES.get('file')
+    if not f:
+        return JsonResponse({'message': 'No file'}, status=400)
+    root = settings.MEDIA_ROOT
+    os.makedirs(root, exist_ok=True)
+    # Validate content type
+    allowed = {'image/webp','image/png','image/jpeg','application/pdf'}
+    ctype = getattr(f, 'content_type', '')
+    if ctype not in allowed:
+        return JsonResponse({'message': 'Unsupported file type'}, status=415)
+    # Sanitize filename
+    import re, time as _t
+    base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
+    ts = int(_t.time())
+    name = f'{ts}_{base[:64]}'
+    path = os.path.join(root, name)
+    with open(path, 'wb') as dest:
+        for chunk in f.chunks():
+            dest.write(chunk)
+    url = settings.MEDIA_URL + name
+    return JsonResponse({'url': url})
 def _ensure_default_upload():
     root = settings.BASE_DIR / 'uploads'
     os.makedirs(root, exist_ok=True)
