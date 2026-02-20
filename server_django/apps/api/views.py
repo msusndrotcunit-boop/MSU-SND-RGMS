@@ -11,6 +11,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog
+import csv
+import io
+import requests
 
 EVENT_QUEUE = deque(maxlen=1000)
 STOP_EVENT = Event()
@@ -350,6 +353,113 @@ def staff_list(request):
         return JsonResponse(rows, safe=False)
     except Exception:
         return JsonResponse([], safe=False)
+
+def _role(request):
+    try:
+        if isinstance(getattr(request, 'auth', None), dict):
+            r = (request.auth.get('role') or '').lower()
+            if r:
+                return r
+        u = getattr(request, 'user', None)
+        uname = getattr(u, 'username', '') or ''
+        if uname.startswith('staff:'):
+            return 'training_staff'
+        if uname.startswith('cadet:'):
+            return 'cadet'
+        return 'admin'
+    except Exception:
+        return ''
+
+def admin_settings_cadet_source(request):
+    return JsonResponse({'url': settings.CADET_SOURCE_URL or ''})
+
+@csrf_exempt
+def admin_import_cadets_file(request):
+    if _role(request) != 'admin':
+        return JsonResponse({'message': 'Forbidden'}, status=403)
+    f = request.FILES.get('file')
+    if not f:
+        return JsonResponse({'message': 'No file'}, status=400)
+    created = 0
+    updated = 0
+    try:
+        buf = f.read()
+        text = buf.decode(errors='ignore')
+        rows = []
+        try:
+            data = json.loads(text)
+            rows = data if isinstance(data, list) else (data.get('data') or [])
+        except Exception:
+            try:
+                reader = csv.DictReader(io.StringIO(text))
+                rows = list(reader)
+            except Exception:
+                rows = []
+        for row in rows:
+            sid = (row.get('student_id') or row.get('studentId') or '').strip()
+            if not sid:
+                continue
+            first = (row.get('first_name') or row.get('firstName') or '').strip() or 'Cadet'
+            last = (row.get('last_name') or row.get('lastName') or '').strip() or sid[:16]
+            course = (row.get('course') or row.get('cadet_course') or '').strip()
+            completed = bool(row.get('is_profile_completed')) or str(row.get('is_profile_completed')).lower() in {'1','true','yes'}
+            obj, was_created = Cadet.objects.update_or_create(
+                student_id=sid,
+                defaults={'first_name': first, 'last_name': last, 'course': course, 'is_profile_completed': completed}
+            )
+            if was_created:
+                created += 1
+                add_event({'type': 'cadet_created', 'payload': {'cadetId': obj.id}})
+            else:
+                updated += 1
+                add_event({'type': 'cadet_updated', 'payload': {'cadetId': obj.id}})
+        return JsonResponse({'message': f'Imported {created} new, {updated} updated'})
+    except Exception as e:
+        return JsonResponse({'message': 'Import failed'}, status=500)
+
+@csrf_exempt
+def admin_import_cadets_url(request):
+    if _role(request) != 'admin':
+        return JsonResponse({'message': 'Forbidden'}, status=403)
+    payload = json.loads(request.body.decode() or '{}')
+    base = (payload.get('url') or '').strip()
+    if not base:
+        return JsonResponse({'message': 'No URL'}, status=400)
+    target = base if '/api/admin/cadets' in base else f'{base.rstrip("/")}/api/admin/cadets'
+    try:
+        r = requests.get(target, timeout=20)
+        data = r.json()
+        rows = data if isinstance(data, list) else (data.get('data') or [])
+        created = 0
+        updated = 0
+        for row in rows:
+            sid = (row.get('student_id') or row.get('studentId') or '').strip()
+            if not sid:
+                continue
+            first = (row.get('first_name') or row.get('firstName') or '').strip() or 'Cadet'
+            last = (row.get('last_name') or row.get('lastName') or '').strip() or sid[:16]
+            course = (row.get('course') or row.get('cadet_course') or '').strip()
+            completed = bool(row.get('is_profile_completed')) or str(row.get('is_profile_completed')).lower() in {'1','true','yes'}
+            obj, was_created = Cadet.objects.update_or_create(
+                student_id=sid,
+                defaults={'first_name': first, 'last_name': last, 'course': course, 'is_profile_completed': completed}
+            )
+            if was_created:
+                created += 1
+                add_event({'type': 'cadet_created', 'payload': {'cadetId': obj.id}})
+            else:
+                updated += 1
+                add_event({'type': 'cadet_updated', 'payload': {'cadetId': obj.id}})
+        return JsonResponse({'message': f'Imported {created} new, {updated} updated'})
+    except Exception:
+        return JsonResponse({'message': 'Import failed'}, status=500)
+
+@csrf_exempt
+def admin_sync_cadets(request):
+    url = settings.CADET_SOURCE_URL or ''
+    if not url:
+        return JsonResponse({'message': 'No source configured'}, status=400)
+    return admin_import_cadets_url(type('obj', (), {'body': json.dumps({'url': url})})())
 def _ensure_default_upload():
     root = settings.BASE_DIR / 'uploads'
     os.makedirs(root, exist_ok=True)

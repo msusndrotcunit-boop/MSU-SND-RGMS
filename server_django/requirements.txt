@@ -3,3 +3,4 @@ django-cors-headers>=4.3
 djangorestframework>=3.14
 djangorestframework-simplejwt>=5.3
 daphne>=4.0
+requests>=2.31

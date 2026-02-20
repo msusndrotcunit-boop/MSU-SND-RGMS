@@ -80,3 +80,5 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+CADET_SOURCE_URL = os.environ.get('CADET_SOURCE_URL')
