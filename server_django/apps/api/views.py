@@ -127,6 +127,31 @@ def admin_analytics(request):
         ]
     return JsonResponse({'demographics': {'courseStats': data}})
 
+def admin_system_status(request):
+    try:
+        cadets_count = Cadet.objects.count()
+        users_count = User.objects.count()
+        training_days = Attendance.objects.values('day').distinct().count()
+        activities = 2
+        unread = 0
+        return JsonResponse({
+            'app': {'status': 'ok', 'time': datetime.utcnow().isoformat()},
+            'database': {'status': 'ok'},
+            'metrics': {
+                'cadets': cadets_count,
+                'users': users_count,
+                'trainingDays': training_days,
+                'activities': activities,
+                'unreadNotifications': unread
+            }
+        })
+    except Exception:
+        return JsonResponse({
+            'app': {'status': 'degraded', 'time': datetime.utcnow().isoformat()},
+            'database': {'status': 'error'},
+            'metrics': {}
+        }, status=500)
+
 def _transmute(final_percent):
     if final_percent >= 95:
         return '1.00'
@@ -261,6 +286,70 @@ def upload_file(request):
             dest.write(chunk)
     url = settings.MEDIA_URL + name
     return JsonResponse({'url': url})
+
+def admin_cadets(request):
+    try:
+        q = (request.GET.get('search') or '').strip().lower()
+        course = (request.GET.get('course') or '').strip().upper()
+        rows = []
+        for c in Cadet.objects.all().order_by('-created_at'):
+            if q and not (c.first_name.lower().find(q) >= 0 or c.last_name.lower().find(q) >= 0 or (c.student_id or '').lower().find(q) >= 0):
+                continue
+            if course and course != 'ALL' and (c.course or '').upper() != course:
+                continue
+            rows.append({
+                'id': c.id,
+                'rank': '',
+                'first_name': c.first_name,
+                'middle_name': '',
+                'last_name': c.last_name,
+                'suffix_name': '',
+                'student_id': c.student_id,
+                'email': '',
+                'username': '',
+                'contact_number': '',
+                'address': '',
+                'gender': '',
+                'religion': '',
+                'birthdate': '',
+                'course': c.course or '',
+                'year_level': '',
+                'school_year': '',
+                'battalion': '',
+                'company': '',
+                'platoon': '',
+                'cadet_course': c.course or '',
+                'semester': '',
+                'corp_position': '',
+                'status': 'Ongoing',
+                'is_profile_completed': bool(c.is_profile_completed),
+                'profile_pic': None
+            })
+        return JsonResponse(rows, safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
+
+def admin_cadets_archived(request):
+    return JsonResponse([], safe=False)
+
+def staff_list(request):
+    try:
+        q = (request.GET.get('search') or '').strip().lower()
+        rows = []
+        for s in Staff.objects.all().order_by('-created_at'):
+            if q and not (s.first_name.lower().find(q) >= 0 or s.last_name.lower().find(q) >= 0 or (s.username or '').lower().find(q) >= 0):
+                continue
+            rows.append({
+                'id': s.id,
+                'rank': s.rank or '',
+                'first_name': s.first_name or '',
+                'last_name': s.last_name or '',
+                'afpsn': '',
+                'username': s.username or ''
+            })
+        return JsonResponse(rows, safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
 def _ensure_default_upload():
     root = settings.BASE_DIR / 'uploads'
     os.makedirs(root, exist_ok=True)

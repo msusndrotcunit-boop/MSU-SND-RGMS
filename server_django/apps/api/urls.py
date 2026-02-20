@@ -20,6 +20,9 @@ urlpatterns = [
     path('auth/token/refresh', TokenRefreshView.as_view()),
     path('cadet/profile', views.cadet_profile),
     path('admin/analytics', views.admin_analytics),
+    path('admin/system-status', views.admin_system_status),
+    path('admin/cadets', views.admin_cadets),
+    path('admin/cadets/archived', views.admin_cadets_archived),
     path('admin/locations', views.admin_locations),
     path('attendance/events', views.attendance_events),
     path('admin/sync/publish', views.publish_event),
@@ -27,5 +30,6 @@ urlpatterns = [
     path('images/cadets/<int:cid>', views.cadet_image),
     path('images/staff/<int:sid>', views.staff_image),
     path('uploads', views.upload_file),
+    path('staff', views.staff_list),
     path('', include(router.urls)),
 ]
