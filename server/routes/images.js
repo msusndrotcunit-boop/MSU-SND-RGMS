@@ -63,9 +63,55 @@ router.get('/cadets/:id', (req, res) => {
   });
 });
 
-// Keep staff endpoint simple placeholder for now
 router.get('/staff/:id', (req, res) => {
   return sendPlaceholder(res, 'Staff');
+});
+
+router.get('/admin/:id', (req, res) => {
+  const adminId = Number(req.params.id);
+  if (!adminId || Number.isNaN(adminId)) {
+    return sendPlaceholder(res, 'Admin');
+  }
+
+  db.get('SELECT profile_pic FROM users WHERE id = ? AND role = ?', [adminId, 'admin'], (err, row) => {
+    if (err) {
+      return sendPlaceholder(res, 'Admin');
+    }
+    const raw = row && row.profile_pic ? String(row.profile_pic) : '';
+    if (!raw) {
+      return sendPlaceholder(res, 'Admin');
+    }
+
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.redirect(raw);
+    }
+
+    if (raw.startsWith('data:')) {
+      const m = raw.match(/^data:(.*?);base64,(.*)$/);
+      if (!m) return sendPlaceholder(res, 'Admin');
+      try {
+        const mime = m[1] || 'image/png';
+        const data = Buffer.from(m[2], 'base64');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.end(data);
+      } catch {
+        return sendPlaceholder(res, 'Admin');
+      }
+    }
+
+    let p = raw.replace(/\\/g, '/').replace(/\/+/g, '/');
+    const idx = p.indexOf('/uploads/');
+    if (idx !== -1) p = p.substring(idx);
+    if (!p.startsWith('/')) p = '/' + p;
+    const abs = path.join(__dirname, '..', p);
+    if (!fs.existsSync(abs)) {
+      return sendPlaceholder(res, 'Admin');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.sendFile(abs);
+  });
 });
 
 module.exports = router;

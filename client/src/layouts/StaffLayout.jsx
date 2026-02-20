@@ -217,7 +217,7 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex h-screen app-bg overflow-hidden">
+        <div className="flex min-h-screen app-bg overflow-hidden w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -468,7 +468,7 @@ const StaffLayout = () => {
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4"
+                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target"
                         >
                             <Menu size={24} />
                         </button>

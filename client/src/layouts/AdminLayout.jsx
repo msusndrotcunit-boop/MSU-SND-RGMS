@@ -267,12 +267,11 @@ const AdminLayout = () => {
 
     const getAvatarSrc = () => {
         if (!adminProfile) return null;
-        // The admin profile might have a profile_pic or just use the username
-        return getProfilePicUrl(adminProfile.profile_pic, 'admin', 'admin');
+        return getProfilePicUrl(adminProfile.profile_pic, adminProfile.id || 1, 'admin');
     };
 
     return (
-        <div className="flex h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
+        <div className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
@@ -309,7 +308,11 @@ const AdminLayout = () => {
                                 alt="Profile" 
                                 className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                 onError={(e) => { 
-                                    e.target.src = getProfilePicFallback('admin', 'admin');
+                                    try {
+                                        e.target.src = getProfilePicFallback(adminProfile?.id || 1, 'admin');
+                                    } catch {
+                                        e.target.src = '';
+                                    }
                                 }}
                             />
                         </Link>
@@ -402,7 +405,7 @@ const AdminLayout = () => {
                     <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target"
                         >
                             <Menu size={24} />
                         </button>
@@ -503,7 +506,7 @@ const AdminLayout = () => {
                     );
                 })()}
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full max-w-full">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full max-w-5xl mx-auto">
                     <div className="flex-grow w-full max-w-full">
                         <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                             <Outlet />
