@@ -229,6 +229,7 @@ const StaffLayout = () => {
 
                  {/* Sidebar */}
                  <aside 
+                    id="staff-sidebar"
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
                         isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -468,6 +469,9 @@ const StaffLayout = () => {
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
+                            aria-label="Toggle navigation menu"
+                            aria-controls="staff-sidebar"
+                            aria-expanded={isSidebarOpen}
                             className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target"
                         >
                             <Menu size={24} />

@@ -283,6 +283,7 @@ const AdminLayout = () => {
 
                 {/* Sidebar */}
                 <aside 
+                    id="admin-sidebar"
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
                         isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -405,6 +406,9 @@ const AdminLayout = () => {
                     <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
+                            aria-label="Toggle navigation menu"
+                            aria-controls="admin-sidebar"
+                            aria-expanded={isSidebarOpen}
                             className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target"
                         >
                             <Menu size={24} />

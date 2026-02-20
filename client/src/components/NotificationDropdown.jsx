@@ -38,6 +38,9 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative p-2 text-gray-600 hover:text-green-700 transition-colors rounded-full hover:bg-gray-100 hover-highlight hover-icon-highlight" 
                 title={type}
+                aria-label={type}
+                aria-haspopup="true"
+                aria-expanded={isOpen}
             >
                 <Icon size={22} />
                 {count > 0 && (

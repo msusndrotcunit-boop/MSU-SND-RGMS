@@ -315,8 +315,9 @@ const CadetLayout = () => {
                     ></div>
                 )}
 
-                {/* Sidebar - simplified for Cadet */}
+                 {/* Sidebar - simplified for Cadet */}
                  <aside 
+                    id="cadet-sidebar"
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
                         isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -426,7 +427,10 @@ const CadetLayout = () => {
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
+                            aria-label="Toggle navigation menu"
+                            aria-controls="cadet-sidebar"
+                            aria-expanded={isSidebarOpen}
+                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden touch-target"
                         >
                             <Menu size={24} />
                         </button>
