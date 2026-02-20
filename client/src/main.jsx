@@ -7,9 +7,17 @@ import './index.css'
 // DEBUG: Log API URL to help troubleshoot connection issues
 console.log('App Initializing...');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('Axios Base URL:', import.meta.env.VITE_API_URL || '(relative)');
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
+// In development, allow explicit API URL (e.g., http://localhost:5000).
+// In production builds, always use same-origin to avoid CORS issues
+// between different Render services or domains.
+let apiBaseURL = '';
+if (import.meta.env.DEV) {
+  apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+}
+
+axios.defaults.baseURL = apiBaseURL;
+console.log('Axios Base URL:', apiBaseURL || '(relative same-origin)');
 
 // Global Axios interceptors for graceful 404/403 handling on staff/cadet endpoints
 axios.interceptors.response.use(
