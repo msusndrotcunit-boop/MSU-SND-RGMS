@@ -492,3 +492,69 @@ header img {
   right: 0;
   background: linear-gradient(270deg, rgba(0,0,0,0.25), rgba(0,0,0,0));
 }
+
+:root {
+  --sidebar-font-size: 0.875rem;
+  --sidebar-line-height: 1.3;
+  --sidebar-icon-size: 18px;
+  --sidebar-icon-stroke: 1.75;
+  --sidebar-item-py: 0.5rem;
+  --sidebar-item-px: 0.75rem;
+  --sidebar-item-radius: 0.5rem;
+  --sidebar-gap: 0.5rem;
+}
+
+#admin-sidebar,
+#staff-sidebar,
+#cadet-sidebar {
+  font-size: var(--sidebar-font-size);
+  line-height: var(--sidebar-line-height);
+}
+
+#admin-sidebar nav,
+#staff-sidebar nav,
+#cadet-sidebar nav {
+  padding: 0.75rem;
+}
+
+#admin-sidebar nav a,
+#admin-sidebar nav button,
+#staff-sidebar nav a,
+#staff-sidebar nav button,
+#cadet-sidebar nav a,
+#cadet-sidebar nav button {
+  padding: var(--sidebar-item-py) var(--sidebar-item-px);
+  border-radius: var(--sidebar-item-radius);
+  min-height: 40px;
+}
+
+#admin-sidebar .space-x-3 > :not([hidden]) ~ :not([hidden]),
+#staff-sidebar .space-x-3 > :not([hidden]) ~ :not([hidden]),
+#cadet-sidebar .space-x-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-left: var(--sidebar-gap);
+}
+
+#admin-sidebar svg,
+#staff-sidebar svg,
+#cadet-sidebar svg {
+  width: var(--sidebar-icon-size);
+  height: var(--sidebar-icon-size);
+}
+
+#admin-sidebar .text-xl,
+#staff-sidebar .text-xl,
+#cadet-sidebar .text-xl {
+  font-size: 1rem;
+}
+
+#admin-sidebar .text-lg,
+#staff-sidebar .text-lg,
+#cadet-sidebar .text-lg {
+  font-size: 0.9375rem;
+}
+
+#admin-sidebar .text-base,
+#staff-sidebar .text-base,
+#cadet-sidebar .text-base {
+  font-size: var(--sidebar-font-size);
+}

@@ -93,6 +93,13 @@ def staff_login(request):
 def heartbeat(request):
     return JsonResponse({'ok': True, 'time': datetime.utcnow().isoformat()})
 
+def health(request):
+    try:
+        _ = Cadet.objects.exists()
+        return JsonResponse({'status': 'ok', 'time': datetime.utcnow().isoformat(), 'db': 'connected'})
+    except Exception:
+        return JsonResponse({'status': 'degraded', 'time': datetime.utcnow().isoformat(), 'db': 'error'}, status=500)
+
 def cadet_profile(request):
     try:
         u = getattr(request, 'user', None)

@@ -16,6 +16,7 @@ urlpatterns = [
     path('auth/cadet-login', views.cadet_login),
     path('auth/staff-login-no-pass', views.staff_login),
     path('auth/heartbeat', views.heartbeat),
+    path('health', views.health),
     path('auth/token', TokenObtainPairView.as_view()),
     path('auth/token/refresh', TokenRefreshView.as_view()),
     path('cadet/profile', views.cadet_profile),
