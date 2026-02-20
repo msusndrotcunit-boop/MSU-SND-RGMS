@@ -401,9 +401,9 @@ const AdminLayout = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
                 <header 
-                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex flex-row items-center justify-between z-10 w-full"
                 >
-                    <div className="flex items-center flex-1 min-w-0">
+                    <div className="flex flex-row items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
                             aria-label="Toggle navigation menu"
@@ -451,7 +451,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
+                    <div className="flex flex-row items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 

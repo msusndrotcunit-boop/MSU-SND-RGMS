@@ -464,9 +464,9 @@ const StaffLayout = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header 
-                    className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
+                    className="bg-white dark:bg-gray-900 shadow p-4 flex flex-row items-center justify-between"
                 >
-                    <div className="flex items-center">
+                    <div className="flex flex-row items-center">
                         <button 
                             onClick={toggleSidebar}
                             aria-label="Toggle navigation menu"
@@ -479,7 +479,7 @@ const StaffLayout = () => {
                         <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-row items-center space-x-4">
                         <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 

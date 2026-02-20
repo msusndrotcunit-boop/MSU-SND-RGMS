@@ -11,7 +11,7 @@ const LandingPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-gray-900 text-white font-sans">
             {/* Navigation Bar */}
-            <nav className="flex justify-between items-center p-4 md:p-6 max-w-7xl mx-auto">
+            <nav className="flex flex-row justify-between items-center p-4 md:p-6 max-w-7xl mx-auto">
                 <div className="flex items-center space-x-2 md:space-x-3">
                     {/* Logos can be added here if available, using placeholders for now or just text */}
                     <div className="font-bold text-xl md:text-2xl tracking-wider text-green-100">ROTC<span className="text-yellow-500">GMS</span></div>
