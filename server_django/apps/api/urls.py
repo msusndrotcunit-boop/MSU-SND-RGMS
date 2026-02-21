@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
 from . import views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.routers import DefaultRouter
@@ -17,6 +17,7 @@ urlpatterns = [
     path('auth/staff-login-no-pass', views.staff_login),
     path('auth/heartbeat', views.heartbeat),
     path('health', views.health),
+    re_path(r'^health\.?$', views.health),
     path('auth/token', TokenObtainPairView.as_view()),
     path('auth/token/refresh', TokenRefreshView.as_view()),
     path('cadet/profile', views.cadet_profile),
