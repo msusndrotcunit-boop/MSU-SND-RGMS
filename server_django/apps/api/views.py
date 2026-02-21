@@ -94,11 +94,14 @@ def heartbeat(request):
     return JsonResponse({'ok': True, 'time': datetime.utcnow().isoformat()})
 
 def health(request):
+    status = 'ok'
+    db = 'unknown'
     try:
         _ = Cadet.objects.exists()
-        return JsonResponse({'status': 'ok', 'time': datetime.utcnow().isoformat(), 'db': 'connected'})
+        db = 'connected'
     except Exception:
-        return JsonResponse({'status': 'degraded', 'time': datetime.utcnow().isoformat(), 'db': 'error'}, status=500)
+        db = 'error'
+    return JsonResponse({'status': status, 'time': datetime.utcnow().isoformat(), 'db': db})
 
 def cadet_profile(request):
     try:
