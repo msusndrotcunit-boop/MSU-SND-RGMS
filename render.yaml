@@ -1,11 +1,10 @@
 services:
   - type: web
-    name: rotc-django-backend
-    env: python
-    rootDir: server_django
+    name: rotc-rgms
+    env: docker
     plan: free
-    buildCommand: "pip install -r requirements.txt && cd ../client && npm ci && npm run build && cd ../server_django && python manage.py migrate --noinput && python manage.py collectstatic --noinput"
-    startCommand: "gunicorn rotc_backend.wsgi:application --bind 0.0.0.0:$PORT"
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -13,10 +12,3 @@ services:
         value: "False"
       - key: ALLOWED_HOSTS
         value: "*"
-  - type: web
-    name: rotc-spa-client
-    env: static
-    rootDir: client
-    plan: free
-    buildCommand: "npm ci && npm run build"
-    publishDir: "dist"
