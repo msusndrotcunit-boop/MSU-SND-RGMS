@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.shortcuts import render
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog
 import csv
@@ -300,6 +301,18 @@ def upload_file(request):
             dest.write(chunk)
     url = settings.MEDIA_URL + name
     return JsonResponse({'url': url})
+
+def spa_index(request):
+    try:
+        return render(request, 'index.html')
+    except Exception:
+        try:
+            path = (settings.BASE_DIR.parent / 'client' / 'dist' / 'index.html')
+            if os.path.exists(path):
+                return FileResponse(open(path, 'rb'), content_type='text/html')
+        except Exception:
+            pass
+    return JsonResponse({'message': 'Not found'}, status=404)
 
 def admin_cadets(request):
     try:
