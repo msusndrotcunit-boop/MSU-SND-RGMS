@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class MeritDemeritLog(models.Model):
     cadet_id = models.IntegerField()
@@ -14,6 +15,7 @@ class Cadet(models.Model):
     last_name = models.CharField(max_length=128)
     course = models.CharField(max_length=16, blank=True)
     is_profile_completed = models.BooleanField(default=False)
+    profile_pic = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Staff(models.Model):
@@ -41,3 +43,20 @@ class Grade(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         unique_together = ('cadet_id',)
+
+class UserSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    email_alerts = models.BooleanField(default=True)
+    push_notifications = models.BooleanField(default=True)
+    activity_updates = models.BooleanField(default=True)
+    dark_mode = models.BooleanField(default=False)
+    compact_mode = models.BooleanField(default=False)
+    primary_color = models.CharField(max_length=32, default='default')
+    custom_bg = models.URLField(blank=True, null=True)
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=64, blank=True)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)

@@ -4,7 +4,7 @@ services:
     env: python
     rootDir: server_django
     plan: free
-    buildCommand: "pip install -r requirements.txt && apt-get update && apt-get install -y nodejs npm && cd ../client && npm ci && npm run build && cd - && python manage.py migrate && python manage.py collectstatic --noinput"
+    buildCommand: "pip install -r requirements.txt && cd ../client && npm ci && npm run build && cd ../server_django && python manage.py migrate --noinput && python manage.py collectstatic --noinput"
     startCommand: "gunicorn rotc_backend.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: DJANGO_SECRET_KEY

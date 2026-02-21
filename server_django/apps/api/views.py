@@ -11,7 +11,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.shortcuts import render
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
-from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog
+from rest_framework.request import Request
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog, UserSettings, Notification
 import csv
 import io
 import requests
@@ -166,6 +168,166 @@ def admin_system_status(request):
             'database': {'status': 'error'},
             'metrics': {}
         }, status=500)
+
+@csrf_exempt
+def auth_settings(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    defaults = {
+        'email_alerts': True,
+        'push_notifications': True,
+        'activity_updates': True,
+        'dark_mode': False,
+        'compact_mode': False,
+        'primary_color': 'default',
+        'custom_bg': None,
+    }
+    if request.method == 'GET':
+        obj, _ = UserSettings.objects.get_or_create(user=u, defaults=defaults)
+        data = {
+            'email_alerts': obj.email_alerts,
+            'push_notifications': obj.push_notifications,
+            'activity_updates': obj.activity_updates,
+            'dark_mode': obj.dark_mode,
+            'compact_mode': obj.compact_mode,
+            'primary_color': obj.primary_color,
+            'custom_bg': obj.custom_bg,
+        }
+        return JsonResponse(data)
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body.decode() or '{}')
+        except Exception:
+            data = {}
+        obj, _ = UserSettings.objects.get_or_create(user=u, defaults=defaults)
+        for field in ['email_alerts','push_notifications','activity_updates','dark_mode','compact_mode','primary_color','custom_bg']:
+            if field in data:
+                setattr(obj, field, data[field])
+        obj.save()
+        out = {
+            'email_alerts': obj.email_alerts,
+            'push_notifications': obj.push_notifications,
+            'activity_updates': obj.activity_updates,
+            'dark_mode': obj.dark_mode,
+            'compact_mode': obj.compact_mode,
+            'primary_color': obj.primary_color,
+            'custom_bg': obj.custom_bg,
+        }
+        return JsonResponse(out)
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def admin_profile(request):
+    u = getattr(request, 'user', None)
+    uid = getattr(u, 'id', 1) or 1
+    uname = getattr(u, 'username', '') or 'Admin'
+    email = getattr(u, 'email', '') or ''
+    if request.method in ('GET', 'HEAD'):
+        return JsonResponse({'id': uid, 'username': uname, 'email': email, 'profile_pic': None})
+    if request.method in ('PUT', 'POST'):
+        f = request.FILES.get('profilePic') or request.FILES.get('file')
+        if not f:
+            return JsonResponse({'message': 'No file'}, status=400)
+        root = settings.MEDIA_ROOT
+        os.makedirs(root, exist_ok=True)
+        import re, time as _t
+        base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
+        ts = int(_t.time())
+        name = f'{ts}_{base[:64]}'
+        path = os.path.join(root, name)
+        with open(path, 'wb') as dest:
+            for chunk in f.chunks():
+                dest.write(chunk)
+        url = settings.MEDIA_URL + name
+        return JsonResponse({'id': uid, 'username': uname, 'email': email, 'profile_pic': url})
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def admin_notifications(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'GET':
+        items = Notification.objects.filter(user=u).order_by('-created_at')[:100]
+        data = []
+        for n in items:
+            data.append({
+                'id': n.id,
+                'type': n.type,
+                'message': n.message,
+                'created_at': n.created_at.isoformat(),
+            })
+        return JsonResponse(data, safe=False)
+    if request.method == 'DELETE':
+        Notification.objects.filter(user=u).delete()
+        return JsonResponse({'message': 'Notifications cleared'})
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def notifications_detail(request, nid):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'DELETE':
+        Notification.objects.filter(user=u, id=nid).delete()
+        return JsonResponse({'message': 'Deleted'})
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def messages_root(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'GET':
+        return JsonResponse([], safe=False)
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def messages_detail(request, mid):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'DELETE':
+        return JsonResponse({'message': 'Deleted'})
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def messages_my(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'GET':
+        return JsonResponse([], safe=False)
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def staff_notifications(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'GET':
+        items = Notification.objects.filter(user=u).order_by('-created_at')[:100]
+        data = []
+        for n in items:
+            data.append({
+                'id': n.id,
+                'type': n.type,
+                'message': n.message,
+                'created_at': n.created_at.isoformat(),
+            })
+        return JsonResponse(data, safe=False)
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def staff_notifications_clear(request):
+    u = getattr(request, 'user', None)
+    if not isinstance(u, User):
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    if request.method == 'DELETE':
+        Notification.objects.filter(user=u).delete()
+        return JsonResponse({'message': 'Notifications cleared'})
+    return JsonResponse({'message': 'Method not allowed'}, status=405)
 
 def _transmute(final_percent):
     if final_percent >= 95:
@@ -350,11 +512,69 @@ def admin_cadets(request):
                 'corp_position': '',
                 'status': 'Ongoing',
                 'is_profile_completed': bool(c.is_profile_completed),
-                'profile_pic': None
+                'profile_pic': c.profile_pic or None
             })
         return JsonResponse(rows, safe=False)
     except Exception:
         return JsonResponse([], safe=False)
+
+@csrf_exempt
+def admin_update_cadet(request, cid):
+    if request.method not in ('PUT', 'PATCH', 'POST'):
+        return JsonResponse({'message': 'Method not allowed'}, status=405)
+    try:
+        from .models import Cadet
+        c = Cadet.objects.filter(id=cid).first()
+        if not c:
+            return JsonResponse({'message': 'Cadet not found'}, status=404)
+
+        if _role(request) != 'admin':
+            return JsonResponse({'message': 'Forbidden'}, status=403)
+
+        drf_request = Request(request, parsers=[MultiPartParser(), FormParser()])
+        data = drf_request.data or {}
+        f = drf_request.FILES.get('profilePic')
+
+        first = data.get('firstName')
+        last = data.get('lastName')
+        sid = data.get('studentId')
+        course = data.get('course') or data.get('cadetCourse')
+        completed_flag = str(data.get('is_profile_completed') or '').strip().lower()
+
+        if first is not None:
+            c.first_name = first or c.first_name
+        if last is not None:
+            c.last_name = last or c.last_name
+        if sid:
+            c.student_id = sid
+        if course is not None:
+            c.course = course or ''
+        if completed_flag in ('1', 'true', 'yes', 'on'):
+            c.is_profile_completed = True
+
+        if f:
+            root = settings.MEDIA_ROOT
+            os.makedirs(root, exist_ok=True)
+            allowed = {'image/webp', 'image/png', 'image/jpeg'}
+            ctype = getattr(f, 'content_type', '')
+            if ctype not in allowed:
+                return JsonResponse({'message': 'Unsupported file type'}, status=415)
+            import re, time as _t
+            base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
+            ts = int(_t.time())
+            name = f'{ts}_{base[:64]}'
+            path = os.path.join(root, name)
+            with open(path, 'wb') as dest:
+                for chunk in f.chunks():
+                    dest.write(chunk)
+            url = settings.MEDIA_URL + name
+            c.profile_pic = url
+
+        c.save()
+        add_event({'type': 'cadet_profile_updated', 'payload': {'cadetId': cid}})
+        return JsonResponse({'message': 'Updated', 'profile_pic': c.profile_pic or None})
+    except Exception:
+        return JsonResponse({'message': 'Error updating cadet'}, status=500)
 
 def admin_cadets_archived(request):
     return JsonResponse([], safe=False)
