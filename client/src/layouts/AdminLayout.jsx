@@ -483,7 +483,7 @@ const AdminLayout = () => {
                     const appStatus = systemStatus && systemStatus.app ? systemStatus.app.status : 'unknown';
                     const dbStatus = systemStatus && systemStatus.database ? systemStatus.database.status : 'unknown';
                     const metrics = systemStatus && systemStatus.metrics ? systemStatus.metrics : {};
-                    const hasIssue = statusError || appStatus === 'error' || dbStatus === 'error' || appStatus === 'degraded';
+                    const hasIssue = (!systemStatus && statusError) || appStatus === 'error' || dbStatus === 'error' || appStatus === 'degraded';
                     const bgClass = hasIssue ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800';
                     const iconClass = hasIssue ? 'text-red-600' : 'text-green-600';
                     const label = hasIssue ? 'System alerts detected' : 'System operating normally';
@@ -504,7 +504,7 @@ const AdminLayout = () => {
                                 {typeof metrics.activities === 'number' && <span>Activities: <span className="font-semibold">{metrics.activities}</span></span>}
                                 {typeof metrics.unreadNotifications === 'number' && <span>Unread notif: <span className="font-semibold">{metrics.unreadNotifications}</span></span>}
                                 {updated && <span>Updated: <span className="font-mono">{updated.toLocaleTimeString()}</span></span>}
-                                {statusError && <span className="font-semibold">Status API unreachable</span>}
+                                {statusError && !systemStatus && <span className="font-semibold">Status API unreachable</span>}
                             </div>
                         </div>
                     );
