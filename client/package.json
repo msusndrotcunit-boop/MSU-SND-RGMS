@@ -8,6 +8,7 @@
     "build": "npx vite build",
     "build:zip": "npm run build && node scripts/zip-dist.js",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "test": "npm run lint && node -e \"const fs=require('fs');const html=fs.readFileSync('dist/index.html','utf8');if(!html.includes('/static/assets/')){throw new Error('dist/index.html must reference /static/assets/');}\"",
     "preview": "vite preview",
     "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",

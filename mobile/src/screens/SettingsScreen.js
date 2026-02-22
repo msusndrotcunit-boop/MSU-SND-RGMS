@@ -23,7 +23,7 @@ const SettingsScreen = () => {
   };
 
   const openWebApp = () => {
-    Linking.openURL('https://msu-snd-rgms-jcsg.onrender.com');
+    Linking.openURL('http://localhost:8000');
   };
 
   return (

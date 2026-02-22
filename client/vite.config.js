@@ -7,7 +7,9 @@ export default defineConfig({
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version)
   },
-  base: '/',
+  // In production, assets are served by Django/Whitenoise under /static/.
+  // Using /static/ here ensures built JS/CSS paths match Django STATIC_URL.
+  base: '/static/',
   plugins: [
     react(),
     VitePWA({

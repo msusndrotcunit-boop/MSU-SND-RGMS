@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'https://msu-snd-rgms-jcsg.onrender.com';
+const API_URL = 'http://localhost:8000';
 
 const client = axios.create({
   baseURL: API_URL,

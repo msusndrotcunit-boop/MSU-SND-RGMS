@@ -6,8 +6,8 @@ const config: CapacitorConfig = {
   appName: 'ROTC Grading System',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    url: process.env.MOBILE_SERVER_URL || process.env.CAPACITOR_SERVER_URL || 'https://msu-snd-rgms-jcsg.onrender.com'
+    androidScheme: 'http',
+    url: process.env.MOBILE_SERVER_URL || process.env.CAPACITOR_SERVER_URL || 'http://localhost:5173'
   },
   android: {
     allowMixedContent: true
