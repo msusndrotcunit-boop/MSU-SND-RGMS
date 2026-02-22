@@ -70,7 +70,7 @@ function App() {
               <Toaster position="top-center" />
               <ReloadPrompt />
               <KeepAlive />
-              <SafeAreaManager className="min-h-screen bg-gradient-to-b from-emerald-900/90 via-emerald-900/95 to-emerald-950">
+              <SafeAreaManager className="min-h-screen">
                 <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes */}
