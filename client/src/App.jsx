@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ReloadPrompt from './components/ReloadPrompt';
 import KeepAlive from './components/KeepAlive';
 import { Toaster } from 'react-hot-toast';
+import SafeAreaManager, { SafeAreaProvider } from './components/SafeAreaManager';
 
 // Lazy Load Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -62,13 +63,15 @@ function App() {
   console.log(`App Version: ${import.meta.env.PACKAGE_VERSION} (Deploy 2026-02-10 Cache Bust)`);
   return (
     <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <SettingsProvider>
-            <Toaster position="top-center" />
-            <ReloadPrompt />
-            <KeepAlive />
-            <Suspense fallback={<LoadingSpinner />}>
+      <SafeAreaProvider>
+        <Router>
+          <AuthProvider>
+            <SettingsProvider>
+              <Toaster position="top-center" />
+              <ReloadPrompt />
+              <KeepAlive />
+              <SafeAreaManager className="min-h-screen bg-gradient-to-b from-emerald-900/90 via-emerald-900/95 to-emerald-950">
+                <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
@@ -136,10 +139,12 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
-            </Suspense>
-          </SettingsProvider>
-        </AuthProvider>
-      </Router>
+                </Suspense>
+              </SafeAreaManager>
+            </SettingsProvider>
+          </AuthProvider>
+        </Router>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
