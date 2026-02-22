@@ -17,6 +17,8 @@ from .models import Cadet, Staff, Attendance, Grade, MeritDemeritLog, UserSettin
 import csv
 import io
 import requests
+import cloudinary
+import cloudinary.uploader
 
 EVENT_QUEUE = deque(maxlen=1000)
 STOP_EVENT = Event()
@@ -229,17 +231,43 @@ def admin_profile(request):
         f = request.FILES.get('profilePic') or request.FILES.get('file')
         if not f:
             return JsonResponse({'message': 'No file'}, status=400)
-        root = settings.MEDIA_ROOT
-        os.makedirs(root, exist_ok=True)
-        import re, time as _t
-        base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
-        ts = int(_t.time())
-        name = f'{ts}_{base[:64]}'
-        path = os.path.join(root, name)
-        with open(path, 'wb') as dest:
-            for chunk in f.chunks():
-                dest.write(chunk)
-        url = settings.MEDIA_URL + name
+        cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME') or ''
+        api_key = os.environ.get('CLOUDINARY_API_KEY') or ''
+        api_secret = os.environ.get('CLOUDINARY_API_SECRET') or ''
+        cloudinary_url = os.environ.get('CLOUDINARY_URL') or ''
+        use_cloudinary = bool(cloudinary_url or (cloud_name and api_key and api_secret))
+        url = None
+        if use_cloudinary:
+            try:
+                if cloudinary_url:
+                    cloudinary.config(cloudinary_url=cloudinary_url)
+                else:
+                    cloudinary.config(
+                        cloud_name=cloud_name,
+                        api_key=api_key,
+                        api_secret=api_secret,
+                    )
+                folder = os.environ.get('CLOUDINARY_FOLDER', 'rotc-grading-system/profiles')
+                result = cloudinary.uploader.upload(
+                    f,
+                    folder=folder,
+                    resource_type='image',
+                )
+                url = result.get('secure_url') or result.get('url')
+            except Exception:
+                url = None
+        if not url:
+            root = settings.MEDIA_ROOT
+            os.makedirs(root, exist_ok=True)
+            import re, time as _t
+            base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
+            ts = int(_t.time())
+            name = f'{ts}_{base[:64]}'
+            path = os.path.join(root, name)
+            with open(path, 'wb') as dest:
+                for chunk in f.chunks():
+                    dest.write(chunk)
+            url = settings.MEDIA_URL + name
         return JsonResponse({'id': uid, 'username': uname, 'email': email, 'profile_pic': url})
     return JsonResponse({'message': 'Method not allowed'}, status=405)
 
@@ -445,23 +473,48 @@ def upload_file(request):
     f = request.FILES.get('file')
     if not f:
         return JsonResponse({'message': 'No file'}, status=400)
-    root = settings.MEDIA_ROOT
-    os.makedirs(root, exist_ok=True)
-    # Validate content type
     allowed = {'image/webp','image/png','image/jpeg','application/pdf'}
     ctype = getattr(f, 'content_type', '')
     if ctype not in allowed:
         return JsonResponse({'message': 'Unsupported file type'}, status=415)
-    # Sanitize filename
-    import re, time as _t
-    base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
-    ts = int(_t.time())
-    name = f'{ts}_{base[:64]}'
-    path = os.path.join(root, name)
-    with open(path, 'wb') as dest:
-        for chunk in f.chunks():
-            dest.write(chunk)
-    url = settings.MEDIA_URL + name
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME') or ''
+    api_key = os.environ.get('CLOUDINARY_API_KEY') or ''
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET') or ''
+    cloudinary_url = os.environ.get('CLOUDINARY_URL') or ''
+    use_cloudinary = bool(cloudinary_url or (cloud_name and api_key and api_secret))
+    url = None
+    if use_cloudinary:
+        try:
+            if cloudinary_url:
+                cloudinary.config(cloudinary_url=cloudinary_url)
+            else:
+                cloudinary.config(
+                    cloud_name=cloud_name,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                )
+            folder = os.environ.get('CLOUDINARY_FOLDER', 'rotc-grading-system/uploads')
+            resource_type = 'image' if ctype.startswith('image/') else 'raw'
+            result = cloudinary.uploader.upload(
+                f,
+                folder=folder,
+                resource_type=resource_type,
+            )
+            url = result.get('secure_url') or result.get('url')
+        except Exception:
+            url = None
+    if not url:
+        root = settings.MEDIA_ROOT
+        os.makedirs(root, exist_ok=True)
+        import re, time as _t
+        base = re.sub(r'[^A-Za-z0-9._-]', '_', f.name)
+        ts = int(_t.time())
+        name = f'{ts}_{base[:64]}'
+        path = os.path.join(root, name)
+        with open(path, 'wb') as dest:
+            for chunk in f.chunks():
+                dest.write(chunk)
+        url = settings.MEDIA_URL + name
     return JsonResponse({'url': url})
 
 def spa_index(request):

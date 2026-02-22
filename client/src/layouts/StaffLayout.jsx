@@ -168,13 +168,7 @@ const StaffLayout = () => {
     
 
     React.useEffect(() => {
-        const getSseUrl = () => {
-            const base = import.meta.env.VITE_API_URL || '';
-            if (base && /^https?:/.test(String(base))) {
-                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
-            }
-            return '/api/attendance/events';
-        };
+        const getSseUrl = () => '/api/attendance/events';
 
         let es;
         const connect = () => {

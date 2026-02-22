@@ -9,13 +9,11 @@ console.log('App Initializing...');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 // Resolve API base URL
-// Prefer explicit VITE_API_URL when provided; fallback to localhost in dev,
-// and relative same-origin when no explicit URL exists.
+// In development, allow explicit VITE_API_URL or default to localhost:5000.
+// In production, always use same-origin (relative) to avoid CORS issues.
 let apiBaseURL = '';
-if (import.meta.env.VITE_API_URL) {
-  apiBaseURL = import.meta.env.VITE_API_URL;
-} else if (import.meta.env.DEV) {
-  apiBaseURL = 'http://localhost:5000';
+if (import.meta.env.DEV) {
+  apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 } else {
   apiBaseURL = '';
 }

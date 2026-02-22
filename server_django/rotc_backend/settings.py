@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret')
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = os.environ.get('DEBUG', 'False').lower() in {'1', 'true', 'yes'}
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -55,12 +56,30 @@ TEMPLATES = [
 WSGI_APPLICATION = 'rotc_backend.wsgi.application'
 ASGI_APPLICATION = 'rotc_backend.asgi.application'
 
-DATABASES = {
-    'default': {
+DATABASES = {}
+db_url = os.environ.get('DATABASE_URL') or ''
+if db_url:
+    parsed = urlparse(db_url)
+    ENGINE = 'django.db.backends.postgresql'
+    NAME = parsed.path.lstrip('/') or ''
+    USER = parsed.username or ''
+    PASSWORD = parsed.password or ''
+    HOST = parsed.hostname or ''
+    PORT = str(parsed.port or '') or ''
+    DATABASES['default'] = {
+        'ENGINE': ENGINE,
+        'NAME': NAME,
+        'USER': USER,
+        'PASSWORD': PASSWORD,
+        'HOST': HOST,
+        'PORT': PORT,
+        'CONN_MAX_AGE': 60,
+    }
+else:
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
