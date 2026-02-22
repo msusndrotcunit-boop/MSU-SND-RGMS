@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/auth/login", auth_views.admin_login_view),
     path("api/auth/heartbeat", auth_views.heartbeat_view),
     path("api/auth/settings", auth_views.settings_view),
+    path("api/admin/system-status", auth_views.system_status_view),
     re_path(
         r"^(?!api/|dj-admin/|static/|media/).*$",
         TemplateView.as_view(template_name="index.html"),

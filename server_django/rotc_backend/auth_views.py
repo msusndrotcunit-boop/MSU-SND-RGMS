@@ -1,7 +1,10 @@
 import json
 import os
 import secrets
+import time
 
+from django.db import connections
+from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
@@ -64,4 +67,44 @@ def settings_view(request):
             "custom_bg": None,
         }
     )
+
+
+@require_http_methods(["GET"])
+def system_status_view(request):
+    started = time.monotonic()
+    db_info = {
+        "type": "Unknown",
+        "status": "error",
+        "latencyMs": None,
+        "error": None,
+    }
+    metrics = {
+        "cadets": None,
+        "users": None,
+        "trainingDays": None,
+        "activities": None,
+        "unreadNotifications": None,
+    }
+
+    conn = connections["default"]
+    engine = conn.settings_dict.get("ENGINE", "")
+    if "postgresql" in engine:
+        db_info["type"] = "PostgreSQL"
+    elif "sqlite" in engine:
+        db_info["type"] = "SQLite"
+    elif engine:
+        db_info["type"] = engine
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        latency_ms = (time.monotonic() - started) * 1000
+        db_info["status"] = "ok"
+        db_info["latencyMs"] = round(latency_ms, 2)
+    except OperationalError as exc:
+        db_info["status"] = "error"
+        db_info["error"] = str(exc)
+
+    return JsonResponse({"database": db_info, "metrics": metrics})
 
