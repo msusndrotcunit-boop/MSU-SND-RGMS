@@ -4,7 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { 
-    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, Calendar, Mail, Zap, ClipboardCheck, Calculator, MapPin
+    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, Calendar, Mail, Zap, ClipboardCheck, Calculator, MapPin, Download
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -62,7 +62,13 @@ const Dashboard = () => {
             }
         };
         fetchData();
-        const getSseUrl = () => '/api/attendance/events';
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
 
         let es;
         const connect = () => {
@@ -119,6 +125,29 @@ const Dashboard = () => {
         const id = setInterval(fetchLocations, 60000);
         return () => clearInterval(id);
     }, [role, showLocations, fetchLocations]);
+
+    const handleExport = async (type, format) => {
+        if (!window.confirm(`Export all ${type} data as ${format.toUpperCase()}? This may include sensitive information. Only download on secure, trusted devices.`)) {
+            return;
+        }
+        try {
+            const url = `/api/admin/export/${type}?format=${format}`;
+            const res = await axios.get(url, { responseType: 'blob' });
+            const contentType = res.headers['content-type'] || (format === 'json' ? 'application/json' : 'text/csv');
+            const blob = new Blob([res.data], { type: contentType });
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `${type}_export.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            console.error(err);
+            alert('Export failed: ' + (err.response?.data?.message || err.message));
+        }
+    };
 
     const processData = (data) => {
         const rawStats =
@@ -191,10 +220,28 @@ const Dashboard = () => {
         <div className="space-y-8 p-2">
             
             {/* Header */}
-            <div>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
                     <span className="border-l-4 border-[var(--primary-color)] pl-3">ROTC Unit Dashboard</span>
                 </h2>
+                {role === 'admin' && (
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleExport('cadets', 'csv')}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                        >
+                            <Download size={16} />
+                            <span>Export Cadets (CSV)</span>
+                        </button>
+                        <button
+                            onClick={() => handleExport('users', 'csv')}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500"
+                        >
+                            <Download size={16} />
+                            <span>Export Users (CSV)</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             <WeatherAdvisory />
@@ -293,8 +340,7 @@ const Dashboard = () => {
                                             : u.role === 'training_staff'
                                             ? `${u.staff_rank || ''} ${u.staff_last_name || ''}`.trim()
                                             : u.username;
-                                    const hasCoords = Number.isFinite(u.last_latitude) && Number.isFinite(u.last_longitude);
-                                    const url = hasCoords ? `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}` : null;
+                                    const url = `https://www.google.com/maps?q=${u.last_latitude},${u.last_longitude}`;
                                     const when = u.last_location_at
                                         ? new Date(u.last_location_at).toLocaleString()
                                         : '';
@@ -303,20 +349,14 @@ const Dashboard = () => {
                                             <td className="px-4 py-2 text-gray-800 dark:text-gray-100">{name || u.username}</td>
                                             <td className="px-4 py-2 capitalize text-gray-600 dark:text-gray-300">{u.role}</td>
                                             <td className="px-4 py-2">
-                                                {hasCoords ? (
-                                                    <a
-                                                        href={url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-[var(--primary-color)] hover:underline"
-                                                    >
-                                                        {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-gray-500 dark:text-gray-400">
-                                                        No coordinates
-                                                    </span>
-                                                )}
+                                                <a
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[var(--primary-color)] hover:underline"
+                                                >
+                                                    {u.last_latitude.toFixed(4)}, {u.last_longitude.toFixed(4)}
+                                                </a>
                                             </td>
                                             <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{when}</td>
                                         </tr>

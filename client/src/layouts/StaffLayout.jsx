@@ -168,7 +168,13 @@ const StaffLayout = () => {
     
 
     React.useEffect(() => {
-        const getSseUrl = () => '/api/attendance/events';
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
 
         let es;
         const connect = () => {
@@ -211,7 +217,7 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex min-h-screen app-bg w-full">
+        <div className="flex min-h-screen app-bg overflow-hidden w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -223,10 +229,9 @@ const StaffLayout = () => {
 
                  {/* Sidebar */}
                  <aside 
-                    id="staff-sidebar"
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
-                        isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">
@@ -458,14 +463,11 @@ const StaffLayout = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header 
-                    className="bg-white dark:bg-gray-900 shadow p-4 flex flex-row items-center justify-between"
+                    className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
                 >
-                    <div className="flex flex-row items-center">
+                    <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            aria-label="Toggle navigation menu"
-                            aria-controls="staff-sidebar"
-                            aria-expanded={isSidebarOpen}
                             className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target"
                         >
                             <Menu size={24} />
@@ -473,7 +475,7 @@ const StaffLayout = () => {
                         <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>
 
-                    <div className="flex flex-row items-center space-x-4">
+                    <div className="flex items-center space-x-4">
                         <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 

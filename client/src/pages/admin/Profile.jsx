@@ -52,23 +52,6 @@ const AdminProfile = () => {
         }
     };
 
-    const openFilePicker = (mode) => {
-        if (!fileInputRef.current) return;
-        try {
-            fileInputRef.current.setAttribute('accept', 'image/*');
-            if (mode === 'camera') {
-                fileInputRef.current.setAttribute('capture', 'environment');
-            } else {
-                fileInputRef.current.removeAttribute('capture');
-            }
-            if (fileInputRef.current.showPicker) {
-                fileInputRef.current.showPicker();
-            } else {
-                fileInputRef.current.click();
-            }
-        } catch {}
-    };
-
     const handleUpload = async () => {
         if (!file) return;
 
@@ -246,8 +229,18 @@ const AdminProfile = () => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    openFilePicker('camera');
+                                onClick={async () => {
+                                    try {
+                                        if (navigator.mediaDevices?.getUserMedia) {
+                                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+                                        }
+                                    } catch {}
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.setAttribute('capture', 'environment');
+                                        fileInputRef.current?.click();
+                                    } catch {}
                                     setShowUploadConsent(false);
                                 }}
                                 className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
@@ -257,7 +250,11 @@ const AdminProfile = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    openFilePicker('files');
+                                    try {
+                                        fileInputRef.current?.setAttribute('accept', 'image/*');
+                                        fileInputRef.current?.removeAttribute('capture');
+                                        fileInputRef.current?.click();
+                                    } catch {}
                                     setShowUploadConsent(false);
                                 }}
                                 className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"

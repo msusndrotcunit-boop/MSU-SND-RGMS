@@ -12,7 +12,6 @@ export const AuthProvider = ({ children }) => {
 
     const logout = useCallback(async () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
         localStorage.removeItem('role');
         localStorage.removeItem('cadetId');
         localStorage.removeItem('isProfileCompleted');
@@ -27,7 +26,6 @@ export const AuthProvider = ({ children }) => {
         const isCompleted = userData.isProfileCompleted === true || userData.isProfileCompleted === 1 || userData.isProfileCompleted === '1' || userData.isProfileCompleted === 'true';
         
         localStorage.setItem('token', userData.token);
-        if (userData.refresh) localStorage.setItem('refreshToken', userData.refresh);
         localStorage.setItem('role', normalizedRole);
         if (userData.cadetId) localStorage.setItem('cadetId', userData.cadetId);
         localStorage.setItem('isProfileCompleted', isCompleted ? 'true' : 'false');

@@ -116,11 +116,11 @@ const Login = () => {
                 {/* Body Section */}
                 <div className="p-3 md:p-8 pt-3 md:pt-6">
                     {/* Role Selector */}
-                    <div className="mb-3 md:mb-6 bg-gray-100 px-1.5 md:px-2 py-1.5 rounded-lg">
-                        <div className="flex flex-row flex-nowrap items-stretch justify-between gap-1.5">
+                    <div className="mb-3 md:mb-6 bg-gray-100 px-2 py-1 rounded-lg">
+                        <div className="flex items-center justify-center gap-4">
                             <button
                                 onClick={() => { setLoginType('cadet'); setError(''); }}
-                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 text-[10px] md:text-sm font-medium rounded-lg transition-all duration-200 min-h-[44px] ${
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'cadet'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
@@ -130,7 +130,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('staff'); setError(''); }}
-                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 text-[10px] md:text-sm font-medium rounded-lg transition-all duration-200 min-h-[44px] ${
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'staff'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
@@ -140,7 +140,7 @@ const Login = () => {
                             </button>
                             <button
                                 onClick={() => { setLoginType('admin'); setError(''); }}
-                                className={`flex-1 min-w-0 whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-2 md:px-4 py-2 text-[10px] md:text-sm font-medium rounded-lg transition-all duration-200 min-h-[44px] ${
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
                                     loginType === 'admin'
                                         ? 'bg-white text-green-900 shadow-sm border border-green-300'
                                         : 'bg-transparent text-gray-600 hover:text-green-900'
@@ -233,7 +233,7 @@ const Login = () => {
                         )}
 
                         {/* Extras: Remember Me / Forgot Password */}
-                        <div className="flex flex-row items-center justify-between text-[10px] md:text-xs">
+                        <div className="flex items-center justify-between text-[10px] md:text-xs">
                             <label className="flex items-center text-gray-600 cursor-pointer">
                                 <input type="checkbox" className="form-checkbox h-2.5 w-2.5 md:h-3 md:w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
                                 <span className="ml-1 md:ml-1.5 text-[9px] md:text-xs">Remember me</span>

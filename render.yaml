@@ -1,14 +1,22 @@
 services:
   - type: web
-    name: rotc-rgms
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    name: rotc-grading-system
+    env: node
+    buildCommand: npm run build
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
     envVars:
-      - key: DJANGO_SECRET_KEY
-        generateValue: true
-      - key: DEBUG
-        value: "False"
-      - key: ALLOWED_HOSTS
-        value: "*"
+      - key: ENABLE_CADET_AUTO_SYNC
+        value: "false"
+      - key: REDIRECT_ENABLED
+        value: "true"
+      - key: REDIRECT_FROM_HOSTS
+        value: "msu-snd-rgms.onrender.com"
+      - key: REDIRECT_TARGET_HOST
+        value: "msu-snd-rgms-jcsg.onrender.com"
+  - type: cron
+    name: rotc-grading-keepalive
+    schedule: "* * * * *"
+    env: docker
+    command: 'curl -s https://msu-snd-rgms-jcsg.onrender.com/health || true'

@@ -144,11 +144,10 @@ const Cadets = () => {
             await fetchCadets(true);
             fetchSettings();
         })();
-        const getSseUrl = () => '/api/attendance/events';
         let es;
         const connect = () => {
             try {
-                es = new EventSource(getSseUrl());
+                es = new EventSource('/api/attendance/events');
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -1254,7 +1253,7 @@ const Cadets = () => {
                                             No location data yet for this account.
                                         </div>
                                     )}
-                                    {!locationLoading && locationInfo && Number.isFinite(locationInfo.last_latitude) && Number.isFinite(locationInfo.last_longitude) && (
+                                    {!locationLoading && locationInfo && (
                                         <div className="space-y-2 text-sm">
                                             <div className="text-gray-700 dark:text-gray-200">
                                                 {locationInfo.last_latitude.toFixed(4)}, {locationInfo.last_longitude.toFixed(4)}

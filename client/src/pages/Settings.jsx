@@ -9,8 +9,6 @@ const Settings = ({ role }) => {
     const { settings, updateSettings } = useSettings();
     const [localSettings, setLocalSettings] = useState(settings);
     const [saving, setSaving] = useState(false);
-    const [sourceUrl, setSourceUrl] = useState('');
-    const [syncing, setSyncing] = useState(false);
     // Removed cadet email notifications controls
     const [systemStatus, setSystemStatus] = useState(null);
     const [statusError, setStatusError] = useState(false);
@@ -37,18 +35,7 @@ const Settings = ({ role }) => {
                 setStatusError(true);
             }
         };
-        const fetchSource = async () => {
-            if (role !== 'admin') return;
-            try {
-                const res = await axios.get('/api/admin/settings/cadet-source');
-                if (!mounted) return;
-                setSourceUrl(res.data?.url || '');
-            } catch (err) {
-                console.error('Cadet source fetch error:', err);
-            }
-        };
         fetchStatus();
-        fetchSource();
         const id = setInterval(fetchStatus, 60000);
         return () => {
             mounted = false;
@@ -74,38 +61,6 @@ const Settings = ({ role }) => {
             toast.success('Settings saved and applied successfully');
         } else {
             toast.error(result.message || 'Failed to save settings');
-        }
-    };
-
-    const handleUpdateCadetSource = async () => {
-        if (!sourceUrl) {
-            toast.error('Please enter a valid URL');
-            return;
-        }
-        try {
-            const res = await axios.post('/api/admin/settings/cadet-source/update', { url: sourceUrl }, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            setSourceUrl(res.data?.url || sourceUrl);
-            toast.success('Cadet source URL updated');
-        } catch (err) {
-            console.error('Update cadet source error:', err);
-            toast.error('Failed to update source URL');
-        }
-    };
-
-    const handleSyncCadets = async () => {
-        setSyncing(true);
-        try {
-            await axios.post('/api/admin/sync-cadets', {}, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            toast.success('Cadet data sync started');
-        } catch (err) {
-            console.error('Sync cadets error:', err);
-            toast.error(err.response?.data?.message || 'Failed to start sync');
-        } finally {
-            setSyncing(false);
         }
     };
 
@@ -370,36 +325,6 @@ const Settings = ({ role }) => {
                             Archive & Maintenance
                         </h3>
                         <div className="space-y-4 pl-3 md:pl-4 border-l-2 border-gray-100">
-                            <div className="p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <h4 className="text-sm md:text-base font-medium text-gray-800 mb-2">Cadet Source URL</h4>
-                                <p className="text-xs md:text-sm text-gray-600 mb-3">
-                                    Configure the external backend URL used for one-click cadet data sync.
-                                </p>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <input
-                                        type="url"
-                                        value={sourceUrl}
-                                        onChange={(e) => setSourceUrl(e.target.value)}
-                                        placeholder="https://msu-snd-rgms.wuaze.com"
-                                        className="flex-1 px-3 py-2 border rounded text-sm"
-                                    />
-                                    <button
-                                        onClick={handleUpdateCadetSource}
-                                        className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded hover:bg-blue-700 transition-colors text-sm min-h-[44px]"
-                                    >
-                                        <Save size={16} />
-                                        Save URL
-                                    </button>
-                                    <button
-                                        onClick={handleSyncCadets}
-                                        disabled={syncing}
-                                        className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded hover:bg-indigo-700 transition-colors text-sm min-h-[44px] disabled:opacity-50"
-                                    >
-                                        <Download size={16} />
-                                        {syncing ? 'Syncing...' : 'Sync Now'}
-                                    </button>
-                                </div>
-                            </div>
                             <div className="p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200">
                                 <h4 className="text-sm md:text-base font-medium text-gray-800 mb-2">Old Graduates Management</h4>
                                 <p className="text-xs md:text-sm text-gray-600 mb-4">

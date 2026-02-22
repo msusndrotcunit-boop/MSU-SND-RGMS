@@ -151,7 +151,13 @@ const CadetLayout = () => {
     }, [user]);
 
     React.useEffect(() => {
-        const getSseUrl = () => '/api/attendance/events';
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
 
         let es;
         const connect = () => {
@@ -299,7 +305,7 @@ const CadetLayout = () => {
     };
 
     return (
-        <div className="flex min-h-screen app-bg">
+        <div className="flex h-screen app-bg overflow-hidden">
                  <Toaster position="top-center" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -311,10 +317,9 @@ const CadetLayout = () => {
 
                  {/* Sidebar - simplified for Cadet */}
                  <aside 
-                    id="cadet-sidebar"
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
-                        isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
                     )}
                 >
                 <div className="p-6 text-xl font-bold border-b border-white/10 flex justify-between items-center">
@@ -416,15 +421,12 @@ const CadetLayout = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header 
-                    className="bg-white shadow p-4 flex flex-row items-center justify-between"
+                    className="bg-white shadow p-4 flex items-center justify-between"
                 >
-                    <div className="flex flex-row items-center">
+                    <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar} 
-                            aria-label="Toggle navigation menu"
-                            aria-controls="cadet-sidebar"
-                            aria-expanded={isSidebarOpen}
-                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden touch-target"
+                            className="mr-4 text-gray-600 hover:text-gray-900 md:hidden"
                         >
                             <Menu size={24} />
                         </button>
@@ -435,7 +437,7 @@ const CadetLayout = () => {
                             {location.pathname.includes('/cadet/about') && 'About'}
                         </h1>
                     </div>
-                    <div className="flex flex-row items-center space-x-4">
+                    <div className="flex items-center space-x-4">
                         <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 

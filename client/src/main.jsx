@@ -8,15 +8,14 @@ import './index.css'
 console.log('App Initializing...');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
-// Resolve API base URL
-// In development, allow explicit VITE_API_URL or default to localhost:5000.
-// In production, always use same-origin (relative) to avoid CORS issues.
+// In development, allow explicit API URL (e.g., http://localhost:5000).
+// In production builds, always use same-origin to avoid CORS issues
+// between different Render services or domains.
 let apiBaseURL = '';
 if (import.meta.env.DEV) {
   apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-} else {
-  apiBaseURL = '';
 }
+
 axios.defaults.baseURL = apiBaseURL;
 console.log('Axios Base URL:', apiBaseURL || '(relative same-origin)');
 
@@ -28,25 +27,6 @@ axios.interceptors.response.use(
       const status = error?.response?.status;
       const url = error?.config?.url || '';
       const msg = (error?.response?.data && (error.response.data.message || error.response.data.error)) || '';
-      if (status === 401 && error?.config && !error.config.__isRetryRequest) {
-        const refresh = localStorage.getItem('refreshToken');
-        if (refresh) {
-          error.config.__isRetryRequest = true;
-          return axios.post('/api/auth/token/refresh', { refresh })
-            .then((res) => {
-              const newToken = res?.data?.access || res?.data?.token || '';
-              if (newToken) {
-                localStorage.setItem('token', newToken);
-                axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-                error.config.headers = error.config.headers || {};
-                error.config.headers['Authorization'] = `Bearer ${newToken}`;
-                return axios(error.config);
-              }
-              return Promise.reject(error);
-            })
-            .catch(() => Promise.reject(error));
-        }
-      }
       // Transform missing staff profile into a safe placeholder
       if (status === 404 && url.includes('/api/staff/me')) {
         return Promise.resolve({

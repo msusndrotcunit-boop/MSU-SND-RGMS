@@ -11,7 +11,7 @@ const LandingPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-gray-900 text-white font-sans">
             {/* Navigation Bar */}
-            <nav className="flex flex-row justify-between items-center p-4 md:p-6 max-w-7xl mx-auto">
+            <nav className="flex justify-between items-center p-4 md:p-6 max-w-7xl mx-auto">
                 <div className="flex items-center space-x-2 md:space-x-3">
                     {/* Logos can be added here if available, using placeholders for now or just text */}
                     <div className="font-bold text-xl md:text-2xl tracking-wider text-green-100">ROTC<span className="text-yellow-500">GMS</span></div>
@@ -20,10 +20,10 @@ const LandingPage = () => {
 
             {/* Hero Section */}
             <header className="flex flex-col items-center justify-center text-center px-4 mt-6 md:mt-10 lg:mt-20 mb-12 md:mb-20">
-                <div className="flex flex-row flex-wrap items-center justify-center gap-4 md:gap-6 mb-6 md:mb-8 animate-fade-in-up">
-                    <img src={cdcLogo} alt="1002nd CDC" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl hover-highlight hover:scale-105 transition-transform cursor-pointer" />
-                    <img src={rotcLogo} alt="ROTC Unit" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl hover-highlight hover:scale-105 transition-transform cursor-pointer" />
-                    <img src={sndSeal} alt="MSU-SND Seal" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl hover-highlight hover:scale-105 transition-transform cursor-pointer" />
+                <div className="flex space-x-4 md:space-x-6 mb-6 md:mb-8 animate-fade-in-up">
+                    <img src={cdcLogo} alt="1002nd CDC" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
+                    <img src={rotcLogo} alt="ROTC Unit" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
+                    <img src={sndSeal} alt="MSU-SND Seal" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
                 </div>
                 
                 <h1 className="text-2xl md:text-4xl lg:text-6xl font-extrabold mb-3 md:mb-4 tracking-tight leading-tight max-w-4xl px-2">

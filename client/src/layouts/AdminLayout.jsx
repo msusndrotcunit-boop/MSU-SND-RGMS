@@ -145,7 +145,13 @@ const AdminLayout = () => {
     }, []);
 
     useEffect(() => {
-        const getSseUrl = () => '/api/attendance/events';
+        const getSseUrl = () => {
+            const base = import.meta.env.VITE_API_URL || '';
+            if (base && /^https?:/.test(String(base))) {
+                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
+            }
+            return '/api/attendance/events';
+        };
 
         let es;
         const connect = () => {
@@ -277,10 +283,9 @@ const AdminLayout = () => {
 
                 {/* Sidebar */}
                 <aside 
-                    id="admin-sidebar"
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:relative md:inset-auto md:left-auto",
-                        isSidebarOpen ? "translate-x-0 md:translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+                        isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">
@@ -395,14 +400,11 @@ const AdminLayout = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
                 <header 
-                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex flex-row items-center justify-between z-10 w-full"
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
                 >
-                    <div className="flex flex-row items-center flex-1 min-w-0">
+                    <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            aria-label="Toggle navigation menu"
-                            aria-controls="admin-sidebar"
-                            aria-expanded={isSidebarOpen}
                             className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target"
                         >
                             <Menu size={24} />
@@ -445,7 +447,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex flex-row items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
+                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -477,7 +479,7 @@ const AdminLayout = () => {
                     const appStatus = systemStatus && systemStatus.app ? systemStatus.app.status : 'unknown';
                     const dbStatus = systemStatus && systemStatus.database ? systemStatus.database.status : 'unknown';
                     const metrics = systemStatus && systemStatus.metrics ? systemStatus.metrics : {};
-                    const hasIssue = (!systemStatus && statusError) || appStatus === 'error' || dbStatus === 'error' || appStatus === 'degraded';
+                    const hasIssue = statusError || appStatus === 'error' || dbStatus === 'error' || appStatus === 'degraded';
                     const bgClass = hasIssue ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800';
                     const iconClass = hasIssue ? 'text-red-600' : 'text-green-600';
                     const label = hasIssue ? 'System alerts detected' : 'System operating normally';
@@ -498,7 +500,7 @@ const AdminLayout = () => {
                                 {typeof metrics.activities === 'number' && <span>Activities: <span className="font-semibold">{metrics.activities}</span></span>}
                                 {typeof metrics.unreadNotifications === 'number' && <span>Unread notif: <span className="font-semibold">{metrics.unreadNotifications}</span></span>}
                                 {updated && <span>Updated: <span className="font-mono">{updated.toLocaleTimeString()}</span></span>}
-                                {statusError && !systemStatus && <span className="font-semibold">Status API unreachable</span>}
+                                {statusError && <span className="font-semibold">Status API unreachable</span>}
                             </div>
                         </div>
                     );
