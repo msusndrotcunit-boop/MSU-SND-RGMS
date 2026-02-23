@@ -21,9 +21,9 @@ const LandingPage = () => {
             {/* Hero Section */}
             <header className="flex flex-col items-center justify-center text-center px-4 mt-6 md:mt-10 lg:mt-20 mb-12 md:mb-20">
                 <div className="flex space-x-4 md:space-x-6 mb-6 md:mb-8 animate-fade-in-up">
-                    <img src={cdcLogo} alt="1002nd CDC" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
-                    <img src={rotcLogo} alt="ROTC Unit" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
-                    <img src={sndSeal} alt="MSU-SND Seal" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl" />
+                    <img src={cdcLogo} alt="1002nd CDC" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl tilt-media" />
+                    <img src={rotcLogo} alt="ROTC Unit" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl tilt-media" />
+                    <img src={sndSeal} alt="MSU-SND Seal" className="w-16 h-16 md:w-20 md:h-20 lg:w-28 lg:h-28 object-contain drop-shadow-2xl tilt-media" />
                 </div>
                 
                 <h1 className="text-2xl md:text-4xl lg:text-6xl font-extrabold mb-3 md:mb-4 tracking-tight leading-tight max-w-4xl px-2">

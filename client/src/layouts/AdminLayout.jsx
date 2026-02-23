@@ -307,7 +307,7 @@ const AdminLayout = () => {
                             <img 
                                 src={getAvatarSrc()} 
                                 alt="Profile" 
-                                className="h-10 w-10 rounded-full border border-white/20 object-cover" 
+                                className="h-10 w-10 rounded-full border border-white/20 object-cover tilt-media" 
                                 onError={(e) => { 
                                     try {
                                         e.target.src = getProfilePicFallback(adminProfile?.id || 1, 'admin');

@@ -103,11 +103,14 @@ body {
 
 @layer components {
   .hover-highlight {
-    transition: all 150ms ease-in-out;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+    transform: translateZ(0);
   }
   .hover-highlight:hover {
-    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
-    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 12px 22px rgba(0,0,0,0.12);
+    transform: translateY(-2px) scale(1.06) rotateX(4deg) rotateY(-4deg);
     filter: saturate(1.05);
   }
   .bg-primary-surface {
@@ -160,11 +163,14 @@ body {
     border-radius: 0.5rem;
   }
   .hover-icon-highlight {
-    transition: all 150ms ease-in-out;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    transition: transform 220ms ease, color 220ms ease;
+    transform: translateZ(0);
   }
   .hover-icon-highlight:hover {
     color: var(--primary-color);
-    transform: translateY(-1px) scale(1.05);
+    transform: translateY(-1px) scale(1.08) rotateX(6deg) rotateY(-6deg);
   }
   .hover-text-highlight {
     transition: color 150ms ease-in-out;
@@ -175,20 +181,26 @@ body {
 
   button,
   [role="button"] {
-    transition: all 150ms ease-in-out;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease, background-color 220ms ease, color 220ms ease;
+    transform: translateZ(0);
   }
-  button:hover,
-  [role="button"]:hover {
-    box-shadow: 0 0 0 3px var(--primary-color-soft), 0 8px 16px rgba(0,0,0,0.08);
-    transform: translateY(-1px) scale(1.02);
-    filter: saturate(1.05);
+  @media (hover: hover) and (pointer: fine) {
+    button:hover,
+    [role="button"]:hover {
+      box-shadow: 0 0 0 3px var(--primary-color-soft), 0 12px 22px rgba(0,0,0,0.12);
+      transform: translateY(-2px) scale(1.06) rotateX(5deg) rotateY(-5deg);
+      filter: saturate(1.05);
+    }
   }
 
   a {
-    transition: color 150ms ease-in-out;
+    transition: color 220ms ease-in-out, transform 220ms ease-in-out;
   }
   a:hover {
     color: var(--primary-color);
+    transform: translateY(-1px);
   }
 
   h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); line-height: 1.2; }
@@ -240,6 +252,34 @@ body {
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  .tilt-media {
+    transform-origin: center;
+    transform-style: preserve-3d;
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+    transform: translateZ(0);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .tilt-media:hover {
+      transform: translateY(-2px) scale(1.08) rotateX(8deg) rotateY(-8deg);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      filter: saturate(1.08);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-highlight,
+    .hover-icon-highlight,
+    .tilt-media,
+    button,
+    [role="button"],
+    a {
+      transition: none !important;
+      transform: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
   }
 
   /* Desktop grid system (12 columns, 24px gutters, 80px margins) */

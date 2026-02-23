@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npx vite build",
     "build:zip": "npm run build && node scripts/zip-dist.js",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "test": "npm run lint && node -e \"const fs=require('fs');const html=fs.readFileSync('dist/index.html','utf8');if(!html.includes('/static/assets/')){throw new Error('dist/index.html must reference /static/assets/');}\"",
     "preview": "vite preview",
     "electron": "electron .",
@@ -46,12 +46,12 @@
   "devDependencies": {
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
-    "archiver": "^5.3.2",
+    "archiver": "^4.0.2",
     "concurrently": "^8.2.2",
     "electron": "^40.1.0",
-    "electron-builder": "^24.9.1",
-    "eslint": "^9.0.0",
-    "eslint-plugin-react": "^7.32.2",
+    "electron-builder": "^26.8.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.3",
     "sharp": "^0.34.5",
@@ -63,7 +63,9 @@
   },
   "overrides": {
     "tar": "^7.5.7",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "minimatch": "^10.2.1",
+    "glob": "^11.0.0"
   },
   "build": {
     "appId": "com.msusnd.rotc.grading",
