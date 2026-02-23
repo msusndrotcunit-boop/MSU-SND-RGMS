@@ -14,7 +14,7 @@ const envApi = import.meta.env.VITE_API_URL || '';
 if (envApi) {
   apiBaseURL = envApi;
 } else if (import.meta.env.DEV) {
-  apiBaseURL = 'http://localhost:5000';
+  apiBaseURL = 'http://localhost:8000';
 }
 
 axios.defaults.baseURL = apiBaseURL;

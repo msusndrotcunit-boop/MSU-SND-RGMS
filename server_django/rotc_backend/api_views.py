@@ -1,5 +1,6 @@
 import base64
 import json
+from datetime import datetime
 
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -96,6 +97,48 @@ def cadet_to_dict(cadet):
     }
 
 
+def parse_date(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def build_cadet_payload(data):
+    return {
+        "rank": data.get("rank", ""),
+        "first_name": data.get("firstName") or data.get("first_name", ""),
+        "middle_name": data.get("middleName") or data.get("middle_name", ""),
+        "last_name": data.get("lastName") or data.get("last_name", ""),
+        "suffix_name": data.get("suffixName") or data.get("suffix_name", ""),
+        "student_id": data.get("studentId") or data.get("student_id", ""),
+        "email": data.get("email", ""),
+        "username": data.get("username", ""),
+        "contact_number": data.get("contactNumber") or data.get("contact_number", ""),
+        "address": data.get("address", ""),
+        "gender": data.get("gender", ""),
+        "religion": data.get("religion", ""),
+        "birthdate": parse_date(data.get("birthdate")),
+        "course": data.get("course", ""),
+        "year_level": data.get("yearLevel") or data.get("year_level", ""),
+        "school_year": data.get("schoolYear") or data.get("school_year", ""),
+        "battalion": data.get("battalion", ""),
+        "company": data.get("company", ""),
+        "platoon": data.get("platoon", ""),
+        "cadet_course": data.get("cadetCourse") or data.get("cadet_course", ""),
+        "semester": data.get("semester", ""),
+        "corp_position": data.get("corpPosition") or data.get("corp_position", ""),
+        "status": data.get("status", "Ongoing"),
+    }
+
+
 @require_http_methods(["GET"])
 def admin_profile_view(request):
     return JsonResponse(
@@ -104,7 +147,7 @@ def admin_profile_view(request):
             "username": "admin",
             "first_name": "System",
             "last_name": "Administrator",
-            "email": "",
+            "email": "msusndrotcunit@gmail.com",
             "role": "admin",
             "profile_completed": True,
         }
@@ -128,6 +171,79 @@ def admin_cadets_archived_list_view(request):
 
 
 @csrf_exempt
+@require_http_methods(["GET", "POST"])
+def admin_cadets_collection_view(request):
+    if request.method == "GET":
+        return admin_cadets_list_view(request)
+    return admin_cadets_create_view(request)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_cadets_create_view(request):
+    if request.content_type and "application/json" in request.content_type:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    else:
+        payload = request.POST
+    cadet_data = build_cadet_payload(payload)
+    if not cadet_data.get("student_id"):
+        return JsonResponse({"message": "studentId is required"}, status=400)
+    cadet, created = Cadet.objects.get_or_create(
+        student_id=cadet_data["student_id"], defaults=cadet_data
+    )
+    if not created:
+        for key, value in cadet_data.items():
+            setattr(cadet, key, value)
+        cadet.save()
+    return JsonResponse(cadet_to_dict(cadet), status=201 if created else 200)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def admin_cadets_update_view(request, cadet_id):
+    try:
+        cadet = Cadet.objects.get(id=cadet_id)
+    except Cadet.DoesNotExist:
+        return JsonResponse({"message": "Cadet not found"}, status=404)
+    if request.content_type and "application/json" in request.content_type:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    else:
+        payload = request.POST
+    cadet_data = build_cadet_payload(payload)
+    for key, value in cadet_data.items():
+        setattr(cadet, key, value)
+    cadet.save()
+    return JsonResponse(cadet_to_dict(cadet))
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_cadets_bulk_delete_view(request):
+    payload = json.loads(request.body.decode("utf-8") or "{}")
+    ids = payload.get("ids") or []
+    Cadet.objects.filter(id__in=ids).update(status="Completed")
+    return JsonResponse({"deleted_ids": ids})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_cadets_bulk_restore_view(request):
+    payload = json.loads(request.body.decode("utf-8") or "{}")
+    ids = payload.get("ids") or []
+    Cadet.objects.filter(id__in=ids).update(status="Ongoing")
+    return JsonResponse({"restored_ids": ids})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_cadets_bulk_unlock_view(request):
+    payload = json.loads(request.body.decode("utf-8") or "{}")
+    ids = payload.get("ids") or []
+    Cadet.objects.filter(id__in=ids).update(is_profile_completed=False)
+    return JsonResponse({"unlocked_ids": ids})
+
+
+@csrf_exempt
 @require_http_methods(["POST"])
 def admin_import_cadets_view(request):
     return JsonResponse(
@@ -136,6 +252,7 @@ def admin_import_cadets_view(request):
             "updated": 0,
             "skipped": 0,
             "errors": [],
+            "message": "Cadet import is not implemented on the Django backend yet.",
         }
     )
 
@@ -153,7 +270,7 @@ def admin_notifications_clear_view(request):
 
 @require_http_methods(["GET"])
 def staff_list_view(request):
-    return JsonResponse({"results": [], "count": 0})
+    return JsonResponse([], safe=False)
 
 
 @require_http_methods(["GET"])
@@ -173,7 +290,7 @@ def staff_me_view(request):
 
 @require_http_methods(["GET"])
 def staff_list_overview_view(request):
-    return JsonResponse({"results": [], "count": 0})
+    return JsonResponse([], safe=False)
 
 
 @require_http_methods(["GET"])
@@ -184,6 +301,22 @@ def staff_analytics_overview_view(request):
             "trends": [],
         }
     )
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def staff_collection_view(request):
+    if request.method == "GET":
+        return staff_list_view(request)
+    return staff_create_view(request)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "DELETE"])
+def staff_detail_view(request, staff_id):
+    if request.method == "PUT":
+        return staff_update_view(request, staff_id)
+    return staff_delete_view(request, staff_id)
 
 
 @require_http_methods(["GET"])
@@ -620,6 +753,7 @@ def admin_import_staff_view(request):
             "updated": 0,
             "skipped": 0,
             "errors": [],
+            "message": "Staff import is not implemented on the Django backend yet.",
         }
     )
 
