@@ -210,41 +210,45 @@ const WeatherAdvisory = () => {
     if (error) return null;
 
     const current = weather?.current;
+   
+    
     
     if (!current) return null;
 
-    return (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-lg shadow-lg relative overflow-hidden mb-6">
+       return (
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-5 rounded-lg shadow-lg relative overflow-hidden mb-6">
             <div className={`weather-bg ${getAnimationClass(current)}`}></div>
             {/* Overlay for better text visibility */}
             <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
             
-            <div className="absolute top-0 right-0 p-4 opacity-10">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                 <Cloud size={100} />
             </div>
             
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-4">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 md:gap-6">
+                <div className="flex items-center gap-3">
                     <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm shadow-inner">
                         {getWeatherIcon(current.weather_code)}
                     </div>
-                    <div>
-                        <h3 className="text-lg font-bold flex items-center gap-2">
-                            {getSkyCondition(current.weather_code)}
-                            <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${isUsingCurrentLocation ? 'bg-green-500/80 text-white' : 'bg-blue-900/50 text-blue-100'}`}>
+                    <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span>{getSkyCondition(current.weather_code)}</span>
+                            <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded inline-flex items-center gap-1 max-w-[140px] sm:max-w-xs truncate ${isUsingCurrentLocation ? 'bg-green-500/80 text-white' : 'bg-blue-900/50 text-blue-100'}`}>
                                 <MapPin size={10} />
-                                {locationName}
+                                <span className="truncate">{locationName}</span>
                             </span>
                         </h3>
-                        <p className="text-blue-100 text-sm">{getWeatherDescription(current.weather_code)}</p>
+                        <p className="text-blue-100 text-xs sm:text-sm mt-1 max-w-xs sm:max-w-sm">
+                            {getWeatherDescription(current.weather_code)}
+                        </p>
                     </div>
                 </div>
                 
-                <div className="text-right">
-                    <div className="text-4xl font-bold flex items-center justify-end">
+                <div className="text-center md:text-right w-full md:w-auto mt-2 md:mt-0">
+                    <div className="text-3xl sm:text-4xl font-bold flex items-center justify-center md:justify-end">
                         {Math.round(current.temperature_2m)}°C
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-blue-100">
+                    <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 text-xs sm:text-sm text-blue-100 mt-1">
                         <div className="flex items-center gap-1">
                             <Wind size={14} />
                             {current.wind_speed_10m} km/h
