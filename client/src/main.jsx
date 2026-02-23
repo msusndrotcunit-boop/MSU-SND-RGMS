@@ -8,12 +8,13 @@ import './index.css'
 console.log('App Initializing...');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
 
-// In development, allow explicit API URL (e.g., http://localhost:5000).
-// In production builds, always use same-origin to avoid CORS issues
-// between different Render services or domains.
+// Prefer explicit API URL when provided; otherwise fall back to same-origin.
 let apiBaseURL = '';
-if (import.meta.env.DEV) {
-  apiBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const envApi = import.meta.env.VITE_API_URL || '';
+if (envApi) {
+  apiBaseURL = envApi;
+} else if (import.meta.env.DEV) {
+  apiBaseURL = 'http://localhost:5000';
 }
 
 axios.defaults.baseURL = apiBaseURL;
