@@ -5,6 +5,7 @@ import { Calendar, AlertCircle, User, Info, Link } from 'lucide-react';
 import ExcuseLetterSubmission from '../../components/ExcuseLetterSubmission';
 import { cacheData, getCachedData, getSingleton, cacheSingleton } from '../../utils/db';
 import { useAuth } from '../../context/AuthContext';
+import { analyzeCadetDashboard } from '../../services/aiAnalytics';
 
 const CadetDashboard = () => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const CadetDashboard = () => {
     const [esConnected, setEsConnected] = useState(false);
     const [logFilters, setLogFilters] = useState({ type: 'all', start: '', end: '', page: 1, pageSize: 10 });
     const [attendanceFilters, setAttendanceFilters] = useState({ order: 'asc' });
+    const [aiSummary, setAiSummary] = useState(null);
     const fetchAttendance = async (filters = attendanceFilters) => {
         const params = {};
         params.order = filters.order || 'asc';
@@ -192,6 +194,15 @@ const CadetDashboard = () => {
         return () => { try { es && es.close(); } catch {} };
     }, [user]);
 
+    useEffect(() => {
+        if (!user || user.role !== 'cadet') return;
+        const summary = analyzeCadetDashboard({
+            grades,
+            attendance: attendanceLogs
+        });
+        setAiSummary(summary);
+    }, [user, grades, attendanceLogs]);
+
     if (loading) return <div className="text-center p-10">Loading...</div>;
 
     return (
@@ -210,6 +221,12 @@ const CadetDashboard = () => {
                     </button>
                 </div>
             </div>
+
+            {aiSummary && aiSummary.text && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                    {aiSummary.text}
+                </div>
+            )}
 
             {/* Grades Section */}
             <div className="space-y-4 md:space-y-6">

@@ -4,7 +4,7 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
     BarChart, Bar, CartesianGrid, XAxis, YAxis
 } from 'recharts';
-import { FileText, Printer, Building2, Download, Zap } from 'lucide-react';
+import { FileText, Printer, Building2, Download, Zap, Sparkles, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import jsPDF from 'jspdf';
@@ -12,6 +12,7 @@ import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
 import ChartWrapper from '../../components/ChartWrapper';
+import { analyzeAnalyticsData, queryAnalyticsInsights } from '../../services/aiAnalytics';
 
 // Refined Color Scheme
 const COLORS = {
@@ -66,6 +67,13 @@ const DataAnalysis = () => {
     const [courseTotals, setCourseTotals] = useState([]);
     const [religionData, setReligionData] = useState([]);
     const [ageData, setAgeData] = useState([]);
+    const [aiSummary, setAiSummary] = useState(null);
+    const [aiInsights, setAiInsights] = useState([]);
+    const [aiAlerts, setAiAlerts] = useState([]);
+    const [aiRecommendations, setAiRecommendations] = useState([]);
+    const [aiMeta, setAiMeta] = useState(null);
+    const [aiQuery, setAiQuery] = useState('');
+    const [aiQueryResult, setAiQueryResult] = useState(null);
 
     const normalizeStatus = (status) => {
         if (!status) return 'Unknown';
@@ -209,6 +217,21 @@ const DataAnalysis = () => {
     }, []);
 
     useEffect(() => {
+        const analysis = analyzeAnalyticsData({
+            stats,
+            genderByCourse,
+            courseTotals,
+            religionData,
+            ageData
+        });
+        setAiSummary(analysis.summary);
+        setAiInsights(analysis.insights);
+        setAiAlerts(analysis.alerts);
+        setAiRecommendations(analysis.recommendations || []);
+        setAiMeta(analysis.meta);
+    }, [stats, genderByCourse, courseTotals, religionData, ageData]);
+
+    useEffect(() => {
         let es;
         const connect = () => {
             try {
@@ -331,13 +354,12 @@ const DataAnalysis = () => {
             }
         });
 
-        // Completed & Incomplete Summary
         doc.autoTable({
             startY: doc.lastAutoTable.finalY + 10,
             head: [['Status', 'Basic', 'Advance', 'Total']],
             body: [
                 ['Completed/Graduated', stats.completed.basic.total, stats.completed.advance.total, stats.completed.total],
-                ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total],
+                ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total]
             ],
             theme: 'grid',
             headStyles: { fillColor: [33, 33, 33] },
@@ -348,7 +370,23 @@ const DataAnalysis = () => {
             }
         });
 
-        const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
+        let finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
+
+        if (aiSummary && aiSummary.text) {
+            if (finalY > doc.internal.pageSize.getHeight() - 60) {
+                doc.addPage();
+                addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                addReportFooter(doc);
+                finalY = 50;
+            }
+            doc.setFontSize(12);
+            doc.text('AI Summary and Key Findings', 14, finalY + 15);
+            doc.setFontSize(10);
+            const textLines = doc.splitTextToSize(aiSummary.text, doc.internal.pageSize.getWidth() - 28);
+            doc.text(textLines, 14, finalY + 25);
+            finalY = finalY + 25 + textLines.length * 5;
+        }
+
         addSignatories(doc, finalY, {
             preparedBy: 'Wilmer B Montejo',
             preparedRole: 'SSg (Inf) PA • Admin NCO',
@@ -404,6 +442,26 @@ const DataAnalysis = () => {
     return (
         <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
 
+            {aiAlerts && aiAlerts.length > 0 && (
+                <div className="mb-4 space-y-2">
+                    {aiAlerts.slice(0, 2).map(alert => (
+                        <div
+                            key={alert.id}
+                            className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                        >
+                            <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-500" />
+                            <div>
+                                <div className="font-semibold">{alert.title}</div>
+                                <div>{alert.detail}</div>
+                                <div className="mt-1 text-xs opacity-80">
+                                    Confidence: {Math.round((alert.confidence || 0.5) * 100)}%
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* School Info Card */}
             <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden border-t-4 border-yellow-500">
                 <div className="bg-gray-900 px-6 py-3">
@@ -412,6 +470,87 @@ const DataAnalysis = () => {
                 <div className="p-8 text-center">
                     <h3 className="text-2xl font-bold text-gray-800">Mindanao State University-Sultan Naga Dimaporo</h3>
                     <p className="text-gray-500">ROTC Unit Data Analysis</p>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md mb-6 border-t-4 border-green-600">
+                <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="text-yellow-400" size={18} />
+                        <h3 className="text-white font-bold text-sm md:text-base">AI Insights Overview</h3>
+                    </div>
+                    {aiMeta && (
+                        <span className="text-xs text-gray-300">
+                            Data points analyzed: {aiMeta.dataPoints || 0}
+                        </span>
+                    )}
+                </div>
+                <div className="p-4 space-y-4">
+                    <div className="text-sm text-gray-800">
+                        {aiSummary?.text || 'The AI engine is preparing insights. This will activate once analytics data is available.'}
+                    </div>
+                    {aiInsights && aiInsights.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {aiInsights.slice(0, 3).map(insight => (
+                                <div
+                                    key={insight.id}
+                                    className="border border-gray-200 rounded-lg p-3 text-xs bg-gray-50"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="font-semibold text-gray-800 line-clamp-2">
+                                            {insight.title}
+                                        </div>
+                                        <span
+                                            className={
+                                                insight.severity === 'high'
+                                                    ? 'px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700'
+                                                    : insight.severity === 'medium'
+                                                    ? 'px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700'
+                                                    : 'px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700'
+                                            }
+                                        >
+                                            {insight.severity || 'info'}
+                                        </span>
+                                    </div>
+                                    <div className="text-gray-700">{insight.detail}</div>
+                                    <div className="mt-1 text-[10px] text-gray-500">
+                                        Confidence {Math.round((insight.confidence || 0.5) * 100)}%
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="border-t border-gray-200 pt-3">
+                        <div className="text-xs font-semibold text-gray-700 mb-2">
+                            Ask the AI about your cadet data
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-2">
+                            <input
+                                value={aiQuery}
+                                onChange={e => setAiQuery(e.target.value)}
+                                placeholder="Example: Which courses have unusual enrollment patterns?"
+                                className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const result = queryAnalyticsInsights(aiQuery, {
+                                        summary: aiSummary,
+                                        insights: aiInsights
+                                    });
+                                    setAiQueryResult(result);
+                                }}
+                                className="px-4 py-2 rounded bg-green-700 text-white text-sm hover:bg-green-800"
+                            >
+                                Ask AI
+                            </button>
+                        </div>
+                        {aiQueryResult && (
+                            <div className="mt-2 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-2">
+                                {aiQueryResult.answer}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -728,7 +867,7 @@ const DataAnalysis = () => {
                     <Zap size={18} className="text-yellow-400 mr-2" />
                     <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                     <Link
                         to="/admin/data-analysis"
                         className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
@@ -754,6 +893,31 @@ const DataAnalysis = () => {
                         Messages
                     </Link>
                 </div>
+                {aiRecommendations && aiRecommendations.length > 0 && (
+                    <div className="border-t border-green-700 pt-3 mt-1">
+                        <div className="text-xs font-semibold mb-2 opacity-90">
+                            AI recommended next steps
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            {aiRecommendations.slice(0, 3).map(item => (
+                                <Link
+                                    key={item.id}
+                                    to={item.targetRoute || '/admin/data-analysis'}
+                                    className="flex flex-col items-start px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs"
+                                >
+                                    <span className="font-semibold">
+                                        {item.label}
+                                    </span>
+                                    {item.reason && (
+                                        <span className="mt-1 text-[11px] opacity-80">
+                                            {item.reason}
+                                        </span>
+                                    )}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

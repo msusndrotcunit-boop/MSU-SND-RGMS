@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts';
-import { Users, UserCheck, UserX, Clock } from 'lucide-react';
+import { Users, UserCheck, UserX, Clock, Sparkles } from 'lucide-react';
 import { getSingleton, cacheSingleton } from '../../utils/db';
+import { analyzeStaffAnalytics, queryAnalyticsInsights } from '../../services/aiAnalytics';
 
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6']; // Green, Red, Amber, Blue
 
@@ -13,6 +14,11 @@ const StaffAnalytics = () => {
         attendanceStats: []
     });
     const [loading, setLoading] = useState(true);
+    const [aiSummary, setAiSummary] = useState(null);
+    const [aiInsights, setAiInsights] = useState([]);
+    const [aiAlerts, setAiAlerts] = useState([]);
+    const [aiQuery, setAiQuery] = useState('');
+    const [aiQueryResult, setAiQueryResult] = useState(null);
 
     useEffect(() => {
         fetchAnalytics();
@@ -98,6 +104,13 @@ const StaffAnalytics = () => {
         return Object.entries(merged).map(([rank, count]) => ({ rank, count }));
     }, [stats.staffByRank]);
 
+    useEffect(() => {
+        const analysis = analyzeStaffAnalytics({ stats });
+        setAiSummary(analysis.summary);
+        setAiInsights(analysis.insights);
+        setAiAlerts(analysis.alerts);
+    }, [stats]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -117,6 +130,54 @@ const StaffAnalytics = () => {
     return (
         <div className="p-6 space-y-6">
             <h1 className="text-2xl font-bold text-gray-800">Training Staff Analytics</h1>
+
+            {aiSummary && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-900 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        <Sparkles size={18} className="text-emerald-500" />
+                        <span className="font-semibold text-xs uppercase tracking-wide text-emerald-700">
+                            AI overview
+                        </span>
+                    </div>
+                    <div>{aiSummary.text}</div>
+                    {aiInsights && aiInsights.length > 0 && (
+                        <div className="text-xs text-emerald-800">
+                            Highlight: {aiInsights[0].title}
+                        </div>
+                    )}
+                    <div className="mt-1 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <div className="text-[11px] text-emerald-800">
+                            Ask the AI about staff attendance or ranks
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-2">
+                            <input
+                                value={aiQuery}
+                                onChange={e => setAiQuery(e.target.value)}
+                                placeholder="Example: Which rank has unusually many staff?"
+                                className="border border-emerald-300 rounded px-2 py-1 text-xs bg-white/70 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const result = queryAnalyticsInsights(aiQuery, {
+                                        summary: aiSummary,
+                                        insights: aiInsights
+                                    });
+                                    setAiQueryResult(result);
+                                }}
+                                className="px-3 py-1 rounded bg-emerald-600 text-white text-xs hover:bg-emerald-700"
+                            >
+                                Ask AI
+                            </button>
+                        </div>
+                    </div>
+                    {aiQueryResult && (
+                        <div className="mt-1 text-xs text-emerald-900 bg-white/60 border border-emerald-200 rounded p-2">
+                            {aiQueryResult.answer}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

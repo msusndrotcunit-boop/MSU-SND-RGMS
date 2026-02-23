@@ -27,6 +27,7 @@ def health_view(request):
 urlpatterns = [
     path("dj-admin/", admin.site.urls),
     path("api/health", health_view),
+    path("health", health_view),
     path("api/auth/login", auth_views.admin_login_view),
     path("api/auth/heartbeat", auth_views.heartbeat_view),
     path("api/auth/settings", auth_views.settings_view),
