@@ -263,7 +263,7 @@ def admin_locations_view(request):
 
 @require_http_methods(["GET"])
 def attendance_days_list_view(request):
-    return JsonResponse({"days": []})
+    return JsonResponse([], safe=False)
 
 
 @csrf_exempt
@@ -280,12 +280,12 @@ def attendance_days_delete_view(request, day_id):
 
 @require_http_methods(["GET"])
 def attendance_my_history_view(request):
-    return JsonResponse({"records": []})
+    return JsonResponse([], safe=False)
 
 
 @require_http_methods(["GET"])
 def attendance_my_history_staff_view(request):
-    return JsonResponse({"records": []})
+    return JsonResponse([], safe=False)
 
 
 @require_http_methods(["GET"])
@@ -368,12 +368,12 @@ def cadet_my_grades_view(request):
 
 @require_http_methods(["GET"])
 def attendance_records_view(request, day_id):
-    return JsonResponse({"records": []})
+    return JsonResponse([], safe=False)
 
 
 @require_http_methods(["GET"])
 def attendance_records_staff_view(request, day_id):
-    return JsonResponse({"records": []})
+    return JsonResponse([], safe=False)
 
 
 @csrf_exempt
@@ -554,7 +554,7 @@ def admin_merit_logs_delete_view(request, log_id):
 
 @require_http_methods(["GET"])
 def attendance_cadet_history_view(request, cadet_id):
-    return JsonResponse({"records": []})
+    return JsonResponse([], safe=False)
 
 
 @csrf_exempt
