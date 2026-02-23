@@ -238,7 +238,6 @@ const AdminLayout = () => {
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
-        { path: '/admin/demographics-analytics', label: 'Demographics Analytics', icon: Users },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { path: '/admin/archived-cadets', label: 'Archived Cadets', icon: UserCheck },
         { 
@@ -285,7 +284,9 @@ const AdminLayout = () => {
                 <aside 
                     className={clsx(
                         "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
-                        isSidebarOpen ? "translate-x-0 fixed inset-y-0 left-0" : "-translate-x-full md:translate-x-0 md:relative"
+                        isSidebarOpen
+                            ? "translate-x-0 fixed inset-y-0 left-0 md:translate-x-0 md:relative"
+                            : "-translate-x-full fixed inset-y-0 left-0 md:translate-x-0 md:relative"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">

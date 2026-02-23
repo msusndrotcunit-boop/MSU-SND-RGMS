@@ -82,10 +82,7 @@ const Cadets = () => {
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
-    const [importUrl, setImportUrl] = useState('');
     const [importing, setImporting] = useState(false);
-    const [linkedUrl, setLinkedUrl] = useState(null);
-    const [syncing, setSyncing] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Form States
@@ -142,7 +139,6 @@ const Cadets = () => {
                 await cacheSingleton('admin', 'cadets_list', null);
             } catch {}
             await fetchCadets(true);
-            fetchSettings();
         })();
         let es;
         const connect = () => {
@@ -167,30 +163,6 @@ const Cadets = () => {
         connect();
         return () => { try { es && es.close(); } catch {} };
     }, []);
-
-    const fetchSettings = async () => {
-        try {
-            const res = await axios.get('/api/admin/settings/cadet-source');
-            setLinkedUrl(res.data.url);
-        } catch (err) {
-            console.error("Failed to fetch settings", err);
-        }
-    };
-
-    const handleSync = async () => {
-        if (!linkedUrl) return;
-        setSyncing(true);
-        try {
-            const res = await axios.post('/api/admin/sync-cadets');
-            toast.success(res.data.message);
-            fetchCadets(true);
-        } catch (err) {
-            console.error("Sync failed", err);
-            toast.error(err.response?.data?.message || 'Sync failed');
-        } finally {
-            setSyncing(false);
-        }
-    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -439,21 +411,19 @@ const Cadets = () => {
 
     const handleImport = async (e) => {
         e.preventDefault();
-        if (!importFile && !importUrl) return;
+        if (!importFile) {
+            toast.error('Please select a file to import.');
+            return;
+        }
 
         setImporting(true);
         
         try {
-            let res;
-            if (importFile) {
-                const formData = new FormData();
-                formData.append('file', importFile);
-                res = await axios.post('/api/admin/import-cadets', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-            } else {
-                res = await axios.post('/api/admin/import-cadets-url', { url: importUrl });
-            }
+            const formData = new FormData();
+            formData.append('file', importFile);
+            const res = await axios.post('/api/admin/import-cadets', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             
             let message = res.data.message || 'Import successful!';
             
@@ -464,7 +434,6 @@ const Cadets = () => {
             toast.success(message);
             setIsImportModalOpen(false);
             setImportFile(null);
-            setImportUrl('');
             
             try {
                 await clearCache('attendance_by_day'); // Sync attendance lists
@@ -642,7 +611,7 @@ const Cadets = () => {
                 {/* Controls Container - Collapsible on Mobile */}
                 <div 
                     id="cadet-controls"
-                    className={`flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto transition-all duration-300 ease-in-out overflow-hidden ${
+                    className={`flex flex-col md:flex-row md:flex-wrap space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto transition-all duration-300 ease-in-out overflow-hidden ${
                         isControlsExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'
                     }`}
                 >
@@ -660,17 +629,6 @@ const Cadets = () => {
                         />
                     </div>
 
-                    {linkedUrl && (
-                        <button 
-                            onClick={handleSync}
-                            disabled={syncing}
-                            className={`flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-indigo-700 ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title={`Synced with: ${linkedUrl}`}
-                        >
-                            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
-                        </button>
-                    )}
                     {selectedCadets.length > 0 && (
                         <button
                             onClick={handleBulkUnlock}
@@ -977,7 +935,7 @@ const Cadets = () => {
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                                     <input 
                                         type="file" 
-                                        accept=".xlsx,.xls,.csv,.pdf"
+                                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx"
                                         onChange={(e) => setImportFile(e.target.files[0])}
                                         className="hidden" 
                                         id="file-upload"
@@ -991,29 +949,10 @@ const Cadets = () => {
                                     </label>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2 space-y-1">
-                                    <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf</p>
+                                    <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf, .doc, .docx</p>
                                     <p><strong>Supported Columns:</strong> No (ignored), Rank, First Name, Middle Name, Last Name, Username, Email, Student ID</p>
                                     <p><strong>Note:</strong> Login uses Username (defaults to Student ID) or Email.</p>
                                 </div>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Import via OneDrive/SharePoint Link
-                                </label>
-                                <input
-                                    type="url"
-                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Paste OneDrive/SharePoint direct download link..."
-                                    value={importUrl}
-                                    onChange={(e) => {
-                                        setImportUrl(e.target.value);
-                                        setImportFile(null);
-                                    }}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Ensure the link is accessible. For OneDrive/SharePoint, use a shared link and append <code>?download=1</code> if needed.
-                                </p>
                             </div>
                             
                             <div className="pt-4 flex space-x-3">
@@ -1026,7 +965,7 @@ const Cadets = () => {
                                 </button>
                                 <button 
                                     type="submit"
-                                    disabled={(!importFile && !importUrl) || importing}
+                                    disabled={!importFile || importing}
                                     className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex justify-center items-center ${importing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {importing ? (

@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts';
-import { Users, UserCheck, UserX, Clock, Sparkles } from 'lucide-react';
+import { Users, UserCheck, UserX, Clock, Sparkles, FileText } from 'lucide-react';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { analyzeStaffAnalytics, queryAnalyticsInsights } from '../../services/aiAnalytics';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+import { addReportHeader, addReportFooter } from '../../utils/pdf';
 
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6']; // Green, Red, Amber, Blue
 
@@ -127,9 +131,95 @@ const StaffAnalytics = () => {
 
     const totalAttendanceRecords = stats.attendanceStats.reduce((acc, curr) => acc + curr.count, 0);
 
+    const handleExportReport = async () => {
+        const doc = new jsPDF();
+        const date = new Date().toLocaleDateString();
+        let yPos = 50;
+        addReportHeader(doc, { title: 'Training Staff Analytics Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+        addReportFooter(doc);
+
+        const chartIds = ['staff-rank-chart', 'staff-attendance-chart'];
+        for (const id of chartIds) {
+            const element = document.getElementById(id);
+            if (element) {
+                try {
+                    const canvas = await html2canvas(element);
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgProps = doc.getImageProperties(imgData);
+                    const pdfWidth = doc.internal.pageSize.getWidth() - 28;
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    if (yPos + pdfHeight > doc.internal.pageSize.getHeight() - 20) {
+                        doc.addPage();
+                        addReportHeader(doc, { title: 'Training Staff Analytics Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                        addReportFooter(doc);
+                        yPos = 50;
+                    }
+                    doc.addImage(imgData, 'PNG', 14, yPos, pdfWidth, pdfHeight);
+                    yPos += pdfHeight + 10;
+                } catch (err) {
+                    console.error(`Failed to capture chart ${id}:`, err);
+                }
+            }
+        }
+
+        if (yPos > doc.internal.pageSize.getHeight() - 60) {
+            doc.addPage();
+            addReportHeader(doc, { title: 'Training Staff Analytics Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+            addReportFooter(doc);
+            yPos = 50;
+        }
+
+        doc.autoTable({
+            startY: yPos,
+            head: [['Metric', 'Value']],
+            body: [
+                ['Total staff', stats.totalStaff],
+                ['Total attendance records', totalAttendanceRecords],
+                ['Present', getCount('present')],
+                ['Absent', getCount('absent')],
+                ['Late', getCount('late')]
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [16, 185, 129] },
+            margin: { top: 40, bottom: 20 },
+            didDrawPage: () => {
+                addReportHeader(doc, { title: 'Training Staff Analytics Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                addReportFooter(doc);
+            }
+        });
+
+        let finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
+
+        if (aiSummary && aiSummary.text) {
+            if (finalY > doc.internal.pageSize.getHeight() - 60) {
+                doc.addPage();
+                addReportHeader(doc, { title: 'Training Staff Analytics Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
+                addReportFooter(doc);
+                finalY = 50;
+            }
+            doc.setFontSize(12);
+            doc.text('AI Summary and Key Findings', 14, finalY + 15);
+            doc.setFontSize(10);
+            const textLines = doc.splitTextToSize(aiSummary.text, doc.internal.pageSize.getWidth() - 28);
+            doc.text(textLines, 14, finalY + 25);
+        }
+
+        doc.save(`ROTC_Staff_Analytics_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     return (
         <div className="p-6 space-y-6">
-            <h1 className="text-2xl font-bold text-gray-800">Training Staff Analytics</h1>
+            <div className="flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-bold text-gray-800">Training Staff Analytics</h1>
+                <button
+                    type="button"
+                    onClick={handleExportReport}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded bg-emerald-700 text-white text-xs md:text-sm hover:bg-emerald-800"
+                >
+                    <FileText size={16} />
+                    <span>Export PDF</span>
+                </button>
+            </div>
 
             {aiSummary && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-900 flex flex-col gap-2">
@@ -224,7 +314,7 @@ const StaffAnalytics = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Rank Distribution Chart */}
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div id="staff-rank-chart" className="bg-white p-4 rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-4">Staff by Rank</h3>
                     {stats.staffByRank.length > 0 ? (
                         <div className="h-64">
@@ -248,7 +338,7 @@ const StaffAnalytics = () => {
                 </div>
 
                 {/* Attendance Status Chart */}
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div id="staff-attendance-chart" className="bg-white p-4 rounded-lg shadow">
                     <h3 className="text-lg font-semibold mb-4">Attendance Overview</h3>
                     {stats.attendanceStats.length > 0 ? (
                         <div className="h-64">

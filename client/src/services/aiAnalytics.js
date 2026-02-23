@@ -84,7 +84,17 @@ export const analyzeAnalyticsData = params => {
     totalCadets > 0 ? totalIncomplete / totalCadets : 0;
   const highIncomplete = criticalIncompleteRatio >= 0.2;
   if (totalCadets > 0) {
-    const confidence = clamp(0.5 + criticalIncompleteRatio, 0.5, 0.95);
+    let severity = 'low';
+    if (criticalIncompleteRatio >= 0.1 && criticalIncompleteRatio < 0.2) {
+      severity = 'medium';
+    } else if (criticalIncompleteRatio >= 0.2) {
+      severity = 'high';
+    }
+    const confidence = clamp(
+      0.45 + criticalIncompleteRatio * 0.8,
+      0.5,
+      0.97
+    );
     const detail = `Approximately ${(
       criticalIncompleteRatio * 100
     ).toFixed(1)}% of cadets are marked as incomplete or at risk.`;
@@ -94,7 +104,7 @@ export const analyzeAnalyticsData = params => {
       id: 'risk-incomplete-ratio',
       title: 'Elevated incomplete cadet ratio',
       detail,
-      severity: highIncomplete ? 'high' : 'medium',
+      severity,
       confidence,
       metrics: {
         totalCadets,
@@ -104,14 +114,14 @@ export const analyzeAnalyticsData = params => {
       explanation
     };
     insights.push(item);
-    if (highIncomplete) {
+    if (severity !== 'low') {
       alerts.push(item);
       recommendations.push({
         id: 'reco-focus-incomplete',
         label: 'Review incomplete cadets and grading records',
         targetRoute: '/admin/grading',
         reason:
-          'The proportion of incomplete cadets is above the 20% risk threshold in the current dataset.'
+          'The proportion of incomplete cadets is above the 10% risk threshold in the current dataset.'
       });
     }
   }
@@ -369,16 +379,14 @@ export const analyzeStaffAnalytics = params => {
   const late = Number(lateItem?.count || 0);
   const effectiveTotal =
     totalAttendanceRecords || present + absent + late || totalStaff || 0;
-  const reliabilityBase = effectiveTotal || 1;
-  const attendanceRate = reliabilityBase
-    ? present / reliabilityBase
-    : 0;
+  const reliabilityBase = effectiveTotal || totalStaff || 1;
+  const attendanceRate = reliabilityBase ? present / reliabilityBase : 0;
   const riskLoad = reliabilityBase ? (absent + late) / reliabilityBase : 0;
   if (reliabilityBase > 0) {
-    const confidence = clamp(0.5 + attendanceRate / 2, 0.5, 0.95);
+    const confidence = clamp(0.45 + attendanceRate * 0.7, 0.5, 0.97);
     let severity = 'low';
-    if (riskLoad >= 0.15 && riskLoad < 0.3) severity = 'medium';
-    if (riskLoad >= 0.3) severity = 'high';
+    if (riskLoad >= 0.1 && riskLoad < 0.2) severity = 'medium';
+    if (riskLoad >= 0.2) severity = 'high';
     const detail = `Out of approximately ${reliabilityBase} recorded staff attendance events, around ${(
       attendanceRate * 100
     ).toFixed(1)}% are present, while combined absent and late records account for about ${(
@@ -408,7 +416,7 @@ export const analyzeStaffAnalytics = params => {
         label: 'Review staff attendance patterns',
         targetRoute: '/admin/staff-analytics',
         reason:
-          'Combined absent and late records are elevated compared with present records in the current dataset.'
+          'Combined absent and late records are elevated compared with present records in the current staff analytics dataset.'
       });
     }
   }
