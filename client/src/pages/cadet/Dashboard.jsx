@@ -215,7 +215,7 @@ const CadetDashboard = () => {
                     </span>
                     <button
                         onClick={refreshAll}
-                        className="px-3 py-2 rounded bg-[var(--primary-color)] text-white text-sm hover:opacity-90 min-h-[44px]"
+                        className="px-3 py-2 rounded bg-[var(--primary-color)] text-white text-sm hover:opacity-90 min-h-[44px] hover-highlight"
                     >
                         Refresh
                     </button>
@@ -272,8 +272,8 @@ const CadetDashboard = () => {
                         {/* 2. Subject Proficiency */}
                         <div className="bg-white rounded shadow p-4 md:p-6">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 md:mb-4 border-b pb-2 gap-2">
-                                <h2 className="text-lg md:text-xl font-bold text-purple-800 flex items-center">
-                                    <Info className="mr-2" size={18} />
+                            <h2 className="text-lg md:text-xl font-bold text-purple-800 flex items-center">
+                                    <Info className="mr-2 tilt-media" size={18} />
                                     Subject Proficiency (40%)
                                 </h2>
                                 <div>
@@ -307,7 +307,7 @@ const CadetDashboard = () => {
                         <div className="bg-white rounded shadow p-4 md:p-6">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 md:mb-4 border-b pb-2 gap-2">
                                 <h2 className="text-lg md:text-xl font-bold text-blue-800 flex items-center">
-                                    <Calendar className="mr-2" size={18} />
+                                    <Calendar className="mr-2 tilt-media" size={18} />
                                     Attendance History (30%)
                                 </h2>
                                 <div className="text-left md:text-right">
@@ -368,7 +368,7 @@ const CadetDashboard = () => {
                             <div className="bg-white rounded shadow p-4 md:p-6">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 md:mb-4 border-b pb-2 gap-2">
                                     <h2 className="text-lg md:text-xl font-bold text-green-800 flex items-center">
-                                        <AlertCircle className="mr-2" size={18} />
+                                        <AlertCircle className="mr-2 tilt-media" size={18} />
                                         Merit & Demerit Records (30%)
                                     </h2>
                                     <div className="text-left md:text-right">
@@ -408,7 +408,7 @@ const CadetDashboard = () => {
                                                         </p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 md:border-8 border-green-500 flex items-center justify-center bg-white shadow-lg">
+                                                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 md:border-8 border-green-500 flex items-center justify-center bg-white shadow-lg tilt-media">
                                                             <span className="text-xl md:text-2xl font-bold text-green-700">{cappedAptitude}</span>
                                                         </div>
                                                     </div>

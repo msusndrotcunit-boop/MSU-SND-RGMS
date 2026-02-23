@@ -67,8 +67,17 @@ const Login = () => {
         } catch (err) {
             console.error("Login error:", err);
             if (err.response) {
-                const serverMsg = err.response.data?.message;
-                setError(serverMsg || 'Login failed. Please check your credentials.');
+                const status = err.response.status;
+                const serverMsg = err.response.data?.message || '';
+                if (/database/i.test(serverMsg)) {
+                    setError('Database error detected. Please try again in a few minutes or report this to the ROTC Office if it continues.');
+                } else if (serverMsg) {
+                    setError(serverMsg);
+                } else if (status >= 500) {
+                    setError('Server error during login. Please try again later or contact the ROTC Office.');
+                } else {
+                    setError('Login failed. Please check your credentials.');
+                }
             } else if (err.request) {
                 setError('Cannot reach the server. Please check your WiFi or mobile data connection and try again.');
             } else {

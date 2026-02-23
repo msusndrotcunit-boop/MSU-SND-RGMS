@@ -128,17 +128,17 @@ const StaffDashboard = () => {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-green-50 p-6 rounded shadow border-l-4 border-green-500">
+                <div className="bg-green-50 p-6 rounded shadow border-l-4 border-green-500 hover-highlight">
                     <h3 className="text-green-800 font-bold uppercase text-sm">Present</h3>
                     <p className="text-3xl font-bold mt-2">{presentCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>
                 </div>
-                <div className="bg-red-50 p-6 rounded shadow border-l-4 border-red-500">
+                <div className="bg-red-50 p-6 rounded shadow border-l-4 border-red-500 hover-highlight">
                     <h3 className="text-red-800 font-bold uppercase text-sm">Absent</h3>
                     <p className="text-3xl font-bold mt-2">{absentCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>
                 </div>
-                <div className="bg-blue-50 p-6 rounded shadow border-l-4 border-blue-500">
+                <div className="bg-blue-50 p-6 rounded shadow border-l-4 border-blue-500 hover-highlight">
                     <h3 className="text-blue-800 font-bold uppercase text-sm">Excused</h3>
                     <p className="text-3xl font-bold mt-2">{excusedCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>

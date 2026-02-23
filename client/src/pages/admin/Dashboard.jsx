@@ -228,14 +228,14 @@ const Dashboard = () => {
                     <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => handleExport('cadets', 'csv')}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 hover-highlight"
                         >
                             <Download size={16} />
                             <span>Export Cadets (CSV)</span>
                         </button>
                         <button
                             onClick={() => handleExport('users', 'csv')}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500"
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 hover-highlight"
                         >
                             <Download size={16} />
                             <span>Export Users (CSV)</span>
@@ -252,31 +252,31 @@ const Dashboard = () => {
                     title="ONGOING (VERIFIED)" 
                     count={stats.ongoing} 
                     color="text-cyan-500" 
-                    icon={<Activity className="h-10 w-10 text-cyan-500 mb-2" />} 
+                    icon={<Activity className="h-10 w-10 text-cyan-500 mb-2 tilt-media" />} 
                 />
                 <StatusCard 
                     title="COMPLETED (VERIFIED)" 
                     count={stats.completed} 
                     color="text-green-500" 
-                    icon={<CheckCircle className="h-10 w-10 text-green-500 mb-2" />} 
+                    icon={<CheckCircle className="h-10 w-10 text-green-500 mb-2 tilt-media" />} 
                 />
                 <StatusCard 
                     title="INCOMPLETE (VERIFIED)" 
                     count={stats.incomplete} 
                     color="text-amber-500" 
-                    icon={<AlertTriangle className="h-10 w-10 text-amber-500 mb-2" />} 
+                    icon={<AlertTriangle className="h-10 w-10 text-amber-500 mb-2 tilt-media" />} 
                 />
                 <StatusCard 
                     title="FAILED (VERIFIED)" 
                     count={stats.failed} 
                     color="text-red-500" 
-                    icon={<XCircle className="h-10 w-10 text-red-500 mb-2" />} 
+                    icon={<XCircle className="h-10 w-10 text-red-500 mb-2 tilt-media" />} 
                 />
                 <StatusCard 
                     title="DROP (VERIFIED)" 
                     count={stats.drop} 
                     color="text-gray-500" 
-                    icon={<UserMinus className="h-10 w-10 text-gray-500 mb-2" />} 
+                    icon={<UserMinus className="h-10 w-10 text-gray-500 mb-2 tilt-media" />} 
                 />
             </div>
 
@@ -319,7 +319,7 @@ const Dashboard = () => {
             {role === 'admin' && showLocations && locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
-                        <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
+                        <MapPin className="text-[var(--primary-color)] mr-2 tilt-media" size={20} />
                         <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
                     </div>
                     <div className="overflow-x-auto">
@@ -371,7 +371,7 @@ const Dashboard = () => {
             {/* Quick Actions */}
             <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">
                 <div className="flex items-center mb-4 border-b border-green-600 pb-2">
-                    <Zap className="text-yellow-400 mr-2" size={20} />
+                    <Zap className="text-yellow-400 mr-2 tilt-media" size={20} />
                     <h3 className="font-bold text-yellow-50">Quick Actions</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -418,7 +418,7 @@ export default Dashboard;
 
 
 const StatusCard = ({ title, count, color, icon }) => (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)] hover-highlight">
         <div className="flex flex-col items-center">
             {icon}
             <div className="text-xs text-gray-500 mt-1">{title}</div>
@@ -430,7 +430,7 @@ const StatusCard = ({ title, count, color, icon }) => (
 const ActionButton = ({ to, label, icon, className }) => (
     <Link
         to={to}
-        className={`flex items-center justify-center px-4 py-2 rounded ${className}`}
+        className={`flex items-center justify-center px-4 py-2 rounded hover-highlight ${className}`}
     >
         <span className="mr-2">{icon}</span>
         <span className="text-xs md:text-sm">{label}</span>

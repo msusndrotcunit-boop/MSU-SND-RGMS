@@ -635,7 +635,7 @@ const Attendance = () => {
                 <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
                     <button 
                         onClick={() => setViewMode('attendance')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base hover-highlight ${
                             viewMode === 'attendance' 
                                 ? 'bg-[var(--primary-color)] text-white' 
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -646,7 +646,7 @@ const Attendance = () => {
                     </button>
                     <button 
                         onClick={() => setViewMode('excuse')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base hover-highlight ${
                             viewMode === 'excuse' 
                                 ? 'bg-[var(--primary-color)] text-white' 
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -691,7 +691,7 @@ const Attendance = () => {
                                 {!isCameraActive ? (
                                     <button 
                                         onClick={startCamera}
-                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90 hover-highlight"
                                     >
                                         <Camera size={20} /> Start Camera
                                     </button>
@@ -699,7 +699,7 @@ const Attendance = () => {
                                     <button 
                                         onClick={captureAndScan}
                                         disabled={isProcessing}
-                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90 hover-highlight"
                                     >
                                         {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
                                         {isProcessing ? 'Processing...' : 'Capture & Scan'}
@@ -708,7 +708,7 @@ const Attendance = () => {
                                 {capturedImage && (
                                     <button 
                                         onClick={() => { setCapturedImage(null); setScanResults([]); startCamera(); }}
-                                        className="bg-gray-600 text-white px-4 py-2 rounded-full"
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full hover-highlight"
                                     >
                                         Retake
                                     </button>
@@ -772,7 +772,7 @@ const Attendance = () => {
                                 <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
                                     <button 
                                         onClick={handleConfirmScan}
-                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2"
+                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2 hover-highlight"
                                     >
                                         <CheckCircle size={20} />
                                         Confirm & Update {scanResults.length} Records
@@ -904,7 +904,7 @@ const Attendance = () => {
                             <h2 className="font-bold text-lg text-gray-700 dark:text-gray-100">Training Days</h2>
                             <button 
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90"
+                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90 hover-highlight"
                                 title="Add Training Day"
                             >
                                 <Plus size={20} />
@@ -971,7 +971,7 @@ const Attendance = () => {
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handleExport}
-                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition"
+                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition hover-highlight"
                                             title="Export CSV"
                                         >
                                             <Download size={16} className="mr-2" /> Export
@@ -1008,14 +1008,14 @@ const Attendance = () => {
                                         />
                                         <button 
                                             onClick={() => setRotcModalOpen(true)}
-                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition"
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition hover-highlight"
                                             title="Import ROTCMIS"
                                         >
                                             <FileText size={16} className="mr-2" /> Import ROTCMIS
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}
-                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition"
+                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition hover-highlight"
                                         >
                                             <Camera size={16} className="mr-2" /> Smart Scan
                                         </button>
@@ -1409,7 +1409,7 @@ const Attendance = () => {
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90 hover-highlight"
                                 >
                                     Create Day
                                 </button>
