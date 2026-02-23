@@ -1,6 +1,7 @@
+import base64
 import json
 
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -41,6 +42,13 @@ def compute_cadet_grades(cadet):
     cadet.subject_score = subject_score
     cadet.final_grade = final_grade
     cadet.transmuted_grade = transmute_grade(final_grade)
+
+
+def transparent_png_response():
+    data = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII="
+    )
+    return HttpResponse(data, content_type="image/png")
 
 
 def cadet_to_dict(cadet):
@@ -659,4 +667,19 @@ def admin_export_view(request, export_type):
             "type": export_type,
         }
     )
+
+
+@require_http_methods(["GET"])
+def image_admin_view(request, admin_id):
+    return transparent_png_response()
+
+
+@require_http_methods(["GET"])
+def image_staff_view(request, staff_id):
+    return transparent_png_response()
+
+
+@require_http_methods(["GET"])
+def image_cadet_view(request, cadet_id):
+    return transparent_png_response()
 

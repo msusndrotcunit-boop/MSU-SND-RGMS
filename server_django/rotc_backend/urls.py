@@ -83,6 +83,9 @@ urlpatterns = [
     path("api/integration/rotcmis/import", api_views.integration_rotcmis_import_view),
     path("api/integration/grades/import", api_views.integration_grades_import_view),
     path("api/integration/ledger/import", api_views.integration_ledger_import_view),
+    path("api/images/admin/<int:admin_id>", api_views.image_admin_view),
+    path("api/images/staff/<int:staff_id>", api_views.image_staff_view),
+    path("api/images/cadets/<int:cadet_id>", api_views.image_cadet_view),
     re_path(
         r"^(?!api/|dj-admin/|static/|media/).*$",
         TemplateView.as_view(template_name="index.html"),
