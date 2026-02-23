@@ -239,7 +239,6 @@ const AdminLayout = () => {
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
-        { path: '/admin/archived-cadets', label: 'Archived Cadets', icon: UserCheck },
         { 
             label: 'Grading Management', 
             icon: Calculator,

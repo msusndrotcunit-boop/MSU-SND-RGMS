@@ -111,6 +111,29 @@ const Settings = ({ role }) => {
         }
     };
 
+    const handleExportData = async (type, format) => {
+        if (!window.confirm(`Export all ${type} data as ${format.toUpperCase()}? This may include sensitive information. Only download on secure, trusted devices.`)) {
+            return;
+        }
+        try {
+            const url = `/api/admin/export/${type}?format=${format}`;
+            const res = await axios.get(url, { responseType: 'blob' });
+            const contentType = res.headers['content-type'] || (format === 'json' ? 'application/json' : 'text/csv');
+            const blob = new Blob([res.data], { type: contentType });
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `${type}_export.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            console.error(err);
+            toast.error('Export failed: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
     // Removed cadet email notifications handlers
 
     return (
@@ -347,6 +370,30 @@ const Settings = ({ role }) => {
                                     </button>
                                 </div>
                             </div>
+
+                            <div className="p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <h4 className="text-sm md:text-base font-medium text-gray-800 mb-2">Bulk Data Export</h4>
+                                <p className="text-xs md:text-sm text-gray-600 mb-4">
+                                    Download full lists of cadets and users in CSV format for backup or analytics.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <button
+                                        onClick={() => handleExportData('cadets', 'csv')}
+                                        className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded hover:bg-blue-700 transition-colors text-sm min-h-[44px]"
+                                    >
+                                        <Download size={16} />
+                                        Export Cadets (CSV)
+                                    </button>
+                                    <button
+                                        onClick={() => handleExportData('users', 'csv')}
+                                        className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded hover:bg-indigo-700 transition-colors text-sm min-h-[44px]"
+                                    >
+                                        <Download size={16} />
+                                        Export Users (CSV)
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Cadet Email Notifications removed per admin request */}
                         </div>
                     </section>

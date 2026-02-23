@@ -4,7 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { 
-    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, Calendar, Mail, Zap, ClipboardCheck, Calculator, MapPin, Download
+    Activity, CheckCircle, AlertTriangle, XCircle, UserMinus, Calendar, Mail, Zap, ClipboardCheck, Calculator, MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
@@ -126,29 +126,6 @@ const Dashboard = () => {
         return () => clearInterval(id);
     }, [role, showLocations, fetchLocations]);
 
-    const handleExport = async (type, format) => {
-        if (!window.confirm(`Export all ${type} data as ${format.toUpperCase()}? This may include sensitive information. Only download on secure, trusted devices.`)) {
-            return;
-        }
-        try {
-            const url = `/api/admin/export/${type}?format=${format}`;
-            const res = await axios.get(url, { responseType: 'blob' });
-            const contentType = res.headers['content-type'] || (format === 'json' ? 'application/json' : 'text/csv');
-            const blob = new Blob([res.data], { type: contentType });
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `${type}_export.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-        } catch (err) {
-            console.error(err);
-            alert('Export failed: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
     const processData = (data) => {
         const rawStats =
             (data && data.demographics && data.demographics.courseStats) ||
@@ -224,24 +201,6 @@ const Dashboard = () => {
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
                     <span className="border-l-4 border-[var(--primary-color)] pl-3">ROTC Unit Dashboard</span>
                 </h2>
-                {role === 'admin' && (
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            onClick={() => handleExport('cadets', 'csv')}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 hover-highlight"
-                        >
-                            <Download size={16} />
-                            <span>Export Cadets (CSV)</span>
-                        </button>
-                        <button
-                            onClick={() => handleExport('users', 'csv')}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 hover-highlight"
-                        >
-                            <Download size={16} />
-                            <span>Export Users (CSV)</span>
-                        </button>
-                    </div>
-                )}
             </div>
 
             <WeatherAdvisory />
