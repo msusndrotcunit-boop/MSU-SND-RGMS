@@ -217,7 +217,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="space-y-8 p-2">
+        <div className="space-y-8">
             
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">

@@ -270,7 +270,7 @@ const AdminLayout = () => {
     };
 
     return (
-        <div className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
+        <div className="flex min-h-screen w-full app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
                 <Toaster position="top-right" reverseOrder={false} />
                 {/* Mobile Sidebar Overlay */}
                 {isSidebarOpen && (
@@ -283,7 +283,7 @@ const AdminLayout = () => {
                 {/* Sidebar */}
                 <aside 
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 md:flex-shrink-0",
                         isSidebarOpen
                             ? "translate-x-0 fixed inset-y-0 left-0 md:translate-x-0 md:relative"
                             : "-translate-x-full fixed inset-y-0 left-0 md:translate-x-0 md:relative"
@@ -399,7 +399,7 @@ const AdminLayout = () => {
                 </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible">
+            <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible min-w-0">
                 <header 
                     className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
                 >
