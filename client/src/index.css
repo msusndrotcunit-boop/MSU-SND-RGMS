@@ -319,18 +319,6 @@ body {
     max-width: 100%;
   }
 
-  /* Grid to single column */
-  .grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
-  }
-
-  /* Flex column stacking */
-  .flex:not(.flex-col):not(.flex-row) {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
   /* Text sizing for readability */
   h1 { font-size: 1.5rem; }  /* 24px */
   h2 { font-size: 1.25rem; } /* 20px */
@@ -367,20 +355,6 @@ body {
     min-width: 80px;
     padding: 0.75rem 0.5rem;
     font-size: 0.8125rem;
-  }
-
-  /* Chart containers */
-  .recharts-wrapper,
-  .recharts-surface {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
-  /* Prevent icon overflow */
-  svg {
-    max-width: 100%;
-    height: auto;
-    flex-shrink: 0;
   }
 
   /* Images - prevent overflow */
