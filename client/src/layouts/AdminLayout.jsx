@@ -447,7 +447,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
+                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0 ml-auto">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -486,12 +486,12 @@ const AdminLayout = () => {
                     const updated = systemStatus && systemStatus.app && systemStatus.app.time ? new Date(systemStatus.app.time) : null;
                     if (!systemStatus && !statusError) return null;
                     return (
-                        <div className={clsx('text-xs md:text-sm px-3 py-2 border-b flex flex-wrap items-center gap-3', bgClass)}>
+                        <div className={clsx('text-xs md:text-sm px-3 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1 md:gap-3', bgClass)}>
                             <div className="flex items-center gap-2 mr-2">
                                 {hasIssue ? <AlertCircle size={14} className={iconClass} /> : <Activity size={14} className={iconClass} />}
                                 <span className="font-semibold">{label}</span>
                             </div>
-                            <div className="flex flex-wrap gap-3">
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 md:gap-3">
                                 <span>App: <span className="font-semibold capitalize">{appStatus}</span></span>
                                 <span>DB: <span className="font-semibold capitalize">{dbStatus}</span></span>
                                 {typeof metrics.cadets === 'number' && <span>Cadets: <span className="font-semibold">{metrics.cadets}</span></span>}

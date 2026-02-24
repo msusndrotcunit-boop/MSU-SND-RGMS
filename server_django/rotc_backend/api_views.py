@@ -461,11 +461,12 @@ def staff_analytics_overview_view(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
 def staff_collection_view(request):
     if request.method == "GET":
         return staff_list_view(request)
-    return staff_create_view(request)
+    if request.method == "POST":
+        return staff_create_view(request)
+    return JsonResponse({"message": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
