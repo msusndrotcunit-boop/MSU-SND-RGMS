@@ -63,9 +63,7 @@
   },
   "overrides": {
     "tar": "^7.5.7",
-    "esbuild": "^0.25.0",
-    "minimatch": "^10.2.1",
-    "glob": "^11.0.0"
+    "esbuild": "^0.25.0"
   },
   "build": {
     "appId": "com.msusnd.rotc.grading",
