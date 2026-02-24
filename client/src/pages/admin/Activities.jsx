@@ -452,6 +452,8 @@ const Activities = () => {
                             </div>
                         </div>
                     )}
+                </div>
+            </div>
 
             {/* Create/Edit Modal */}
             {isModalOpen && (
