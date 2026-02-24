@@ -1355,16 +1355,9 @@ const Attendance = () => {
                                 </div>
                             )}
                         </div>
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
-                                <Calendar size={64} className="mb-4 opacity-20" />
-                                <p className="text-lg">Select a training day to view attendance</p>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
-            )}
+            </div>
             
             {/* Create Day Modal */}
             {isCreateModalOpen && (

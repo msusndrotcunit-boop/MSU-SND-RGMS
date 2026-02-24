@@ -716,19 +716,15 @@ const DataAnalysis = () => {
                                 <span>Total MS31</span>
                                 <span>{stats.ongoing.advance.MS31}</span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS32</span>
                                 <span>{stats.ongoing.advance.MS32}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS41</span>
                                 <span>{stats.ongoing.advance.MS41}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS42</span>
                                 <span>{stats.ongoing.advance.MS42}</span>
                             </div>
@@ -738,18 +734,18 @@ const DataAnalysis = () => {
             </div>
 
             {/* Completed & Incomplete Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* Completed Chart */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-green-600 h-80">
-                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Completed Cadets</h3>
-                        <div className="space-x-2 text-gray-400">
-                            <button><Printer size={16} /></button>
-                            <button><Download size={16} /></button>
+                <div id="chart-completed" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Completed Cadets</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePrintChart('chart-completed')} className="p-2 text-gray-500 hover:text-green-600 transition-colors"><Printer size={18} /></button>
+                            <button onClick={() => handleDownloadChart('chart-completed', 'Completed Cadets Chart')} className="p-2 text-gray-500 hover:text-green-600 transition-colors"><Download size={18} /></button>
                         </div>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                          <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -774,15 +770,15 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Incomplete Chart */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-amber-500 h-80">
-                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Incomplete Cadets</h3>
-                        <div className="space-x-2 text-gray-400">
-                            <button><Printer size={16} /></button>
-                            <button><Download size={16} /></button>
+                <div id="chart-incomplete" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-amber-500">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Incomplete Cadets</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePrintChart('chart-incomplete')} className="p-2 text-gray-500 hover:text-amber-600 transition-colors"><Printer size={18} /></button>
+                            <button onClick={() => handleDownloadChart('chart-incomplete', 'Incomplete Cadets Chart')} className="p-2 text-gray-500 hover:text-amber-600 transition-colors"><Download size={18} /></button>
                         </div>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -808,23 +804,23 @@ const DataAnalysis = () => {
             </div>
 
             {/* Additional Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Gender by Course */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Gender by Cadet Course</h3>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Gender by Cadet Course</h3>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={genderByCourse}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                <XAxis dataKey="name" fontSize={10} />
+                                <YAxis allowDecimals={false} fontSize={10} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 <Legend />
-                                <Bar dataKey="Male" stackId="g" fill="#3b82f6" />
-                                <Bar dataKey="Female" stackId="g" fill="#ef4444" />
-                                <Bar dataKey="Unknown" stackId="g" fill="#6b7280" />
+                                <Bar dataKey="Male" stackId="g" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Female" stackId="g" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Unknown" stackId="g" fill="#6b7280" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -832,120 +828,63 @@ const DataAnalysis = () => {
 
 
                 {/* Course Distribution */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Course Distribution</h3>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Course Distribution</h3>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={courseTotals}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                <XAxis dataKey="name" fontSize={10} />
+                                <YAxis allowDecimals={false} fontSize={10} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 <Legend />
-                                <Bar dataKey="value" fill="#16a34a" />
+                                <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} name="Cadets" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Religion Distribution (Bar Graph) */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Religion Distribution</h3>
+                {/* Religion Distribution */}
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Religion Distribution</h3>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={religionData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                <XAxis dataKey="name" fontSize={10} />
+                                <YAxis allowDecimals={false} fontSize={10} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 <Legend />
-                                <Bar dataKey="value" fill="#06b6d4" />
+                                <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Cadets" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Age Distribution (Bar Graph) */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Age Distribution</h3>
+                {/* Age Distribution */}
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Age Distribution</h3>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={ageData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                                <XAxis dataKey="name" fontSize={10} />
+                                <YAxis allowDecimals={false} fontSize={10} />
+                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 <Legend />
-                                <Bar dataKey="value" fill="#a855f7" />
+                                <Bar dataKey="value" fill="#a855f7" radius={[4, 4, 0, 0]} name="Cadets" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
-            <div className="mt-4 bg-green-900 text-white rounded-lg p-4 shadow-md">
-                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
-                    <Zap size={18} className="text-yellow-400 mr-2" />
-                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                    <Link
-                        to="/admin/data-analysis"
-                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
-                    >
-                        Data Analysis
-                    </Link>
-                    <Link
-                        to="/admin/grading"
-                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
-                    >
-                        Grading
-                    </Link>
-                    <Link
-                        to="/admin/activities"
-                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
-                    >
-                        Activities
-                    </Link>
-                    <Link
-                        to="/admin/messages"
-                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
-                    >
-                        Messages
-                    </Link>
-                </div>
-                {aiRecommendations && aiRecommendations.length > 0 && (
-                    <div className="border-t border-green-700 pt-3 mt-1">
-                        <div className="text-xs font-semibold mb-2 opacity-90">
-                            AI recommended next steps
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            {aiRecommendations.slice(0, 3).map(item => (
-                                <Link
-                                    key={item.id}
-                                    to={item.targetRoute || '/admin/data-analysis'}
-                                    className="flex flex-col items-start px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs"
-                                >
-                                    <span className="font-semibold">
-                                        {item.label}
-                                    </span>
-                                    {item.reason && (
-                                        <span className="mt-1 text-[11px] opacity-80">
-                                            {item.reason}
-                                        </span>
-                                    )}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
     );
 };
