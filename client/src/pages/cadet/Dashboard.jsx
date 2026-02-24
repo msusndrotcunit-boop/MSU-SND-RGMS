@@ -513,44 +513,38 @@ const CadetDashboard = () => {
 
 
 
-            {false && (
-                <div className="bg-white rounded shadow p-6">
-                    <h2 className="text-xl font-bold mb-4 border-b pb-2">Excuse Letters & Documents</h2>
-                    <ExcuseLetterSubmission />
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow p-4 border border-gray-100">
+                <div className="flex items-center mb-3 border-b pb-1.5">
+                    <Info className="text-[var(--primary-color)] mr-2 tilt-media" size={18} />
+                    <h3 className="font-bold text-gray-800 text-sm">Quick Actions</h3>
                 </div>
-            )}
-
-            {false && (
-                <div className="bg-white rounded shadow p-6">
-                    <h2 className="text-xl font-bold mb-4 border-b pb-2">Quick Links</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button 
-                            onClick={() => navigate('/cadet/profile')}
-                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                        >
-                            <User className="mr-3 text-blue-600 group-hover:scale-110 transition-transform" size={24} />
-                            <span className="font-semibold text-gray-700">My Profile</span>
-                        </button>
-                        <button 
-                            onClick={() => navigate('/cadet/about')}
-                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                        >
-                            <Info className="mr-3 text-green-600 group-hover:scale-110 transition-transform" size={24} />
-                            <span className="font-semibold text-gray-700">About System</span>
-                        </button>
-                        <a 
-                            href="https://www.facebook.com/share/14SweZHYBFR/" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group"
-                        >
-                            <Link className="mr-3 text-indigo-600 group-hover:scale-110 transition-transform" size={24} />
-                            <span className="font-semibold text-gray-700">Official Page</span>
-                        </a>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button 
+                        onClick={() => navigate('/cadet/profile')}
+                        className="flex items-center justify-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group min-h-[44px]"
+                    >
+                        <User className="mr-2 text-blue-600 group-hover:scale-110 transition-transform" size={18} />
+                        <span className="font-semibold text-gray-700 text-xs md:text-sm">My Profile</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/cadet/about')}
+                        className="flex items-center justify-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group min-h-[44px]"
+                    >
+                        <Info className="mr-2 text-green-600 group-hover:scale-110 transition-transform" size={18} />
+                        <span className="font-semibold text-gray-700 text-xs md:text-sm">About System</span>
+                    </button>
+                    <a 
+                        href="https://www.facebook.com/share/14SweZHYBFR/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border transition-colors group min-h-[44px]"
+                    >
+                        <Link className="mr-2 text-indigo-600 group-hover:scale-110 transition-transform" size={18} />
+                        <span className="font-semibold text-gray-700 text-xs md:text-sm">Official Page</span>
+                    </a>
                 </div>
-            )}
-
+            </div>
 
         </div>
     );

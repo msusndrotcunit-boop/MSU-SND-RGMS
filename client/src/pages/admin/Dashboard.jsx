@@ -328,41 +328,41 @@ const Dashboard = () => {
             )}
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">
-                <div className="flex items-center mb-4 border-b border-green-600 pb-2">
-                    <Zap className="text-yellow-400 mr-2 tilt-media" size={20} />
-                    <h3 className="font-bold text-yellow-50">Quick Actions</h3>
+            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700">
+                <div className="flex items-center mb-3 border-b border-green-600 pb-1.5">
+                    <Zap className="text-yellow-400 mr-2 tilt-media" size={18} />
+                    <h3 className="font-bold text-yellow-50 text-sm">Quick Actions</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <ActionButton 
                         to="/admin/data-analysis" 
                         label="Data Analysis" 
-                        icon={<Activity size={18} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                        icon={<Activity size={16} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
                     />
                     <ActionButton 
                         to="/admin/grading" 
                         label="Grading" 
-                        icon={<Calculator size={18} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                        icon={<Calculator size={16} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
                     />
                     <ActionButton 
                         to="/admin/attendance" 
                         label="Attendance" 
-                        icon={<ClipboardCheck size={18} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                        icon={<ClipboardCheck size={16} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
                     />
                     <ActionButton 
                         to="/admin/messages" 
                         label="Messages" 
-                        icon={<Mail size={18} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
+                        icon={<Mail size={16} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
                     />
                     <ActionButton 
                         to="/admin/activities" 
                         label="Activities" 
-                        icon={<Calendar size={18} />} 
-                        className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border-2 border-yellow-300"
+                        icon={<Calendar size={16} />} 
+                        className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border border-yellow-300 min-h-[44px]"
                     />
                 </div>
             </div>
