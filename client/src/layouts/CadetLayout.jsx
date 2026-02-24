@@ -456,7 +456,7 @@ const CadetLayout = () => {
                     </div>
                 )}
                 <main 
-                    className="flex-1 overflow-auto p-6 w-full"
+                    className="flex-1 overflow-auto p-0 md:p-6 w-full"
                 >
                     <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
                         <Outlet />

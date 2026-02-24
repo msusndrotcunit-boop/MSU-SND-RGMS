@@ -342,7 +342,7 @@ body {
     width: 100%;
   }
 
-  /* Container padding optimization */
+  /* Container padding optimization - Removed horizontal padding for mobile edge-to-edge */
   .container,
   .space-y-8,
   .space-y-6,
@@ -354,8 +354,8 @@ body {
   .max-w-2xl,
   .max-w-xl,
   [class*="max-w-"] {
-    padding-left: 1rem;  /* 16px */
-    padding-right: 1rem;
+    padding-left: 0;
+    padding-right: 0;
     max-width: 100%;
   }
 
