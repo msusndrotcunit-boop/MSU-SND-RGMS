@@ -1212,7 +1212,8 @@ const Grading = () => {
                 )}
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 export default Grading;

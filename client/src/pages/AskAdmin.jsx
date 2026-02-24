@@ -146,8 +146,11 @@ const AskAdmin = () => {
                     </div>
                 )}
             </div>
-            </div>
-    );
+        </div>
+    </div>
+</div>
+</div>
+);
 };
 
 export default AskAdmin;
