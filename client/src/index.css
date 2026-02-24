@@ -336,7 +336,7 @@ body {
   input[type="search"],
   textarea,
   select {
-    font-size: 16px;
+    /* font-size: 16px; Removed to allow smaller text per design */
     min-height: 44px;
     line-height: 1.4;
     width: 100%;
