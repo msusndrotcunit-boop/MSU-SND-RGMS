@@ -60,3 +60,18 @@ class MeritDemeritLog(models.Model):
     issued_by_name = models.CharField(max_length=150, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+class TrainingStaff(models.Model):
+    rank = models.CharField(max_length=50, blank=True, default="")
+    first_name = models.CharField(max_length=100)
+    middle_name = models.CharField(max_length=100, blank=True, default="")
+    last_name = models.CharField(max_length=100)
+    suffix_name = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="", unique=True)
+    contact_number = models.CharField(max_length=50, blank=True, default="")
+    role = models.CharField(max_length=100, blank=True, default="Instructor")
+    profile_pic = models.CharField(max_length=255, blank=True, default="")
+    is_profile_completed = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

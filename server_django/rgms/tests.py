@@ -1,8 +1,11 @@
+import io
 import json
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
+from openpyxl import Workbook
 
-from rgms.models import Cadet, MeritDemeritLog
+from rgms.models import Cadet, MeritDemeritLog, TrainingStaff
 
 
 class GradingApiTests(TestCase):
@@ -99,3 +102,59 @@ class GradingApiTests(TestCase):
         self.assertEqual(self.cadet.demerit_points, 3)
         self.assertEqual(data.get("syncedCount"), 1)
         self.assertEqual(data.get("totalCadets"), 1)
+
+
+class ImportApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def _make_excel_file(self, rows):
+        wb = Workbook()
+        ws = wb.active
+        for row in rows:
+            ws.append(row)
+        virtual = io.BytesIO()
+        wb.save(virtual)
+        virtual.seek(0)
+        return virtual.getvalue()
+
+    def test_admin_import_cadets_creates_and_updates_cadets(self):
+        content = self._make_excel_file(
+            [
+                ["Student ID", "First Name", "Last Name", "Email"],
+                ["2024-001", "Juan", "Dela Cruz", "juan@example.com"],
+                ["2024-001", "Juan", "Cruz", "juan2@example.com"],
+            ]
+        )
+        upload = SimpleUploadedFile(
+            "cadets.xlsx", content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        res = self.client.post("/api/admin/import-cadets", {"file": upload})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get("imported"), 1)
+        self.assertEqual(data.get("updated"), 1)
+        self.assertEqual(Cadet.objects.count(), 1)
+        cadet = Cadet.objects.get(student_id="2024-001")
+        self.assertEqual(cadet.first_name, "Juan")
+        self.assertEqual(cadet.last_name, "Cruz")
+        self.assertEqual(cadet.email, "juan2@example.com")
+
+    def test_admin_import_staff_creates_staff_records(self):
+        content = self._make_excel_file(
+            [
+                ["First Name", "Last Name", "Email", "Rank", "Role"],
+                ["Maria", "Lopez", "maria@example.com", "Sgt", "Instructor"],
+            ]
+        )
+        upload = SimpleUploadedFile(
+            "staff.xlsx", content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        res = self.client.post("/api/admin/import-staff", {"file": upload})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data.get("imported"), 1)
+        self.assertEqual(TrainingStaff.objects.count(), 1)
+        staff = TrainingStaff.objects.get(email="maria@example.com")
+        self.assertEqual(staff.first_name, "Maria")
+        self.assertEqual(staff.last_name, "Lopez")

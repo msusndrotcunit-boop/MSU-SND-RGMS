@@ -1,4 +1,5 @@
 import base64
+import csv
 import json
 from datetime import datetime
 
@@ -6,7 +7,9 @@ from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from rgms.models import Cadet, MeritDemeritLog
+from openpyxl import load_workbook
+
+from rgms.models import Cadet, MeritDemeritLog, TrainingStaff
 
 
 def transmute_grade(value):
@@ -139,6 +142,49 @@ def build_cadet_payload(data):
     }
 
 
+def find_column_value(row, candidates):
+    if not row:
+        return None
+    normalized_candidates = [
+        c.strip().lower().replace(" ", "").replace("_", "").replace("-", "") for c in candidates
+    ]
+    for key, value in row.items():
+        if value is None or value == "":
+            continue
+        norm_key = str(key).strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+        for cand in normalized_candidates:
+            if norm_key == cand:
+                return value
+    return None
+
+
+def load_rows_from_upload(uploaded_file):
+    name = (uploaded_file.name or "").lower()
+    if name.endswith(".csv"):
+        decoded = uploaded_file.read().decode("utf-8", errors="ignore")
+        reader = csv.DictReader(decoded.splitlines())
+        return [dict(row) for row in reader]
+    if name.endswith(".xlsx") or name.endswith(".xls"):
+        wb = load_workbook(uploaded_file, read_only=True, data_only=True)
+        sheet = wb.active
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            return []
+        headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+        data_rows = []
+        for row in rows[1:]:
+            if all(cell is None or str(cell).strip() == "" for cell in row):
+                continue
+            item = {}
+            for idx, header in enumerate(headers):
+                if not header:
+                    continue
+                item[header] = row[idx] if idx < len(row) else None
+            data_rows.append(item)
+        return data_rows
+    raise ValueError("Unsupported file type. Please upload CSV or Excel (.xlsx) file.")
+
+
 @require_http_methods(["GET"])
 def admin_profile_view(request):
     return JsonResponse(
@@ -246,13 +292,106 @@ def admin_cadets_bulk_unlock_view(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_import_cadets_view(request):
+    uploaded = request.FILES.get("file")
+    if not uploaded:
+        return JsonResponse({"message": "No file uploaded"}, status=400)
+    try:
+        rows = load_rows_from_upload(uploaded)
+    except ValueError as exc:
+        return JsonResponse({"message": str(exc)}, status=400)
+
+    imported = 0
+    updated = 0
+    skipped = 0
+    errors = []
+
+    for row in rows:
+        try:
+            custom_username = find_column_value(row, ["Username", "User Name", "username"])
+            email = find_column_value(row, ["Email", "E-mail", "Email Address", "email"])
+            first_name = find_column_value(row, ["First Name", "first_name", "FName", "Given Name"])
+            last_name = find_column_value(row, ["Last Name", "last_name", "LName", "Surname"])
+            middle_name = (
+                find_column_value(row, ["Middle Name", "middle_name", "MName", "Middle Initial"]) or ""
+            )
+            rank = find_column_value(row, ["Rank", "rank", "Grade"]) or "Cdt"
+            raw_student_id = find_column_value(
+                row, ["Student ID", "student_id", "ID", "Student Number", "USN"]
+            )
+
+            if not first_name or not last_name:
+                full_name = find_column_value(
+                    row, ["Name", "name", "Full Name", "Cadet Name"]
+                )
+                if full_name:
+                    parts = str(full_name).split(",")
+                    if len(parts) >= 2:
+                        last_name = parts[0].strip()
+                        rest = parts[1].strip().split(" ")
+                        first_name = rest[0]
+                        middle_name = " ".join(rest[1:]) if len(rest) > 1 else middle_name
+                    else:
+                        space_parts = str(full_name).split(" ")
+                        if len(space_parts) >= 2:
+                            last_name = space_parts[-1]
+                            first_name = " ".join(space_parts[:-1])
+                        else:
+                            first_name = full_name
+                            last_name = last_name or "Unknown"
+
+            student_id = raw_student_id or custom_username or email
+            if not student_id and first_name:
+                base = str(first_name).strip().lower()
+                base = "".join(ch for ch in base if ch.isalnum())
+                student_id = f"{base}{Cadet.objects.count()+1}"
+
+            if not student_id:
+                skipped += 1
+                errors.append(
+                    "Could not determine identity (Missing Student ID, Username, Email, or Name)"
+                )
+                continue
+
+            cadet_defaults = {
+                "last_name": last_name or "Cadet",
+                "first_name": first_name or "Unknown",
+                "middle_name": middle_name,
+                "suffix_name": "",
+                "rank": rank,
+                "email": email or "",
+                "contact_number": "",
+                "address": "",
+                "course": "",
+                "year_level": "",
+                "school_year": "",
+                "battalion": "",
+                "company": "",
+                "platoon": "",
+                "cadet_course": "",
+                "semester": "",
+            }
+
+            cadet, created = Cadet.objects.get_or_create(
+                student_id=str(student_id), defaults=cadet_defaults
+            )
+            if not created:
+                for key, value in cadet_defaults.items():
+                    setattr(cadet, key, value)
+                cadet.save()
+                updated += 1
+            else:
+                imported += 1
+        except Exception as exc:
+            skipped += 1
+            errors.append(str(exc))
+
     return JsonResponse(
         {
-            "imported": 0,
-            "updated": 0,
-            "skipped": 0,
-            "errors": [],
-            "message": "Cadet import is not implemented on the Django backend yet.",
+            "imported": imported,
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors[:10],
+            "message": f"Import complete. Success: {imported + updated}, Failed: {skipped}",
         }
     )
 
@@ -270,7 +409,25 @@ def admin_notifications_clear_view(request):
 
 @require_http_methods(["GET"])
 def staff_list_view(request):
-    return JsonResponse([], safe=False)
+    staff = TrainingStaff.objects.filter(is_archived=False).order_by("last_name", "first_name")
+    data = [
+        {
+            "id": s.id,
+            "rank": s.rank,
+            "first_name": s.first_name,
+            "middle_name": s.middle_name,
+            "last_name": s.last_name,
+            "suffix_name": s.suffix_name,
+            "email": s.email,
+            "contact_number": s.contact_number,
+            "role": s.role,
+            "profile_pic": s.profile_pic,
+            "is_profile_completed": s.is_profile_completed,
+            "is_archived": s.is_archived,
+        }
+        for s in staff
+    ]
+    return JsonResponse(data, safe=False)
 
 
 @require_http_methods(["GET"])
@@ -290,7 +447,7 @@ def staff_me_view(request):
 
 @require_http_methods(["GET"])
 def staff_list_overview_view(request):
-    return JsonResponse([], safe=False)
+    return staff_list_view(request)
 
 
 @require_http_methods(["GET"])
@@ -747,13 +904,92 @@ def integration_ledger_import_view(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def admin_import_staff_view(request):
+    uploaded = request.FILES.get("file")
+    if not uploaded:
+        return JsonResponse({"message": "No file uploaded"}, status=400)
+    try:
+        rows = load_rows_from_upload(uploaded)
+    except ValueError as exc:
+        return JsonResponse({"message": str(exc)}, status=400)
+
+    imported = 0
+    updated = 0
+    skipped = 0
+    errors = []
+
+    for row in rows:
+        try:
+            email = find_column_value(row, ["Email", "email", "E-mail"])
+            first_name = find_column_value(row, ["First Name", "first_name", "FName"])
+            last_name = find_column_value(row, ["Last Name", "last_name", "LName"])
+            middle_name = (
+                find_column_value(row, ["Middle Name", "middle_name", "MName"]) or ""
+            )
+
+            if not first_name or not last_name:
+                full_name = find_column_value(
+                    row, ["Name", "name", "Full Name", "Staff Name"]
+                )
+                if full_name:
+                    parts = str(full_name).split(" ")
+                    if len(parts) >= 2:
+                        first_name = " ".join(parts[:-1])
+                        last_name = parts[-1]
+
+            if not first_name or not last_name:
+                skipped += 1
+                errors.append("Missing staff first/last name")
+                continue
+
+            rank = find_column_value(row, ["Rank", "rank"]) or ""
+            contact_number = find_column_value(
+                row, ["Contact Number", "Phone", "contact_number"]
+            ) or ""
+            role = find_column_value(row, ["Role", "role", "Position"]) or "Instructor"
+
+            staff_defaults = {
+                "rank": rank,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "suffix_name": "",
+                "email": email or "",
+                "contact_number": contact_number,
+                "role": role,
+            }
+
+            lookup_email = staff_defaults["email"] or None
+
+            if lookup_email:
+                staff, created = TrainingStaff.objects.get_or_create(
+                    email=lookup_email, defaults=staff_defaults
+                )
+            else:
+                staff, created = TrainingStaff.objects.get_or_create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    rank=rank,
+                    defaults=staff_defaults,
+                )
+
+            if not created:
+                for key, value in staff_defaults.items():
+                    setattr(staff, key, value)
+                staff.save()
+                updated += 1
+            else:
+                imported += 1
+        except Exception as exc:
+            skipped += 1
+            errors.append(str(exc))
+
     return JsonResponse(
         {
-            "imported": 0,
-            "updated": 0,
-            "skipped": 0,
-            "errors": [],
-            "message": "Staff import is not implemented on the Django backend yet.",
+            "imported": imported,
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors[:10],
+            "message": f"Import complete. Success: {imported + updated}, Failed: {skipped}",
         }
     )
 
@@ -761,18 +997,55 @@ def admin_import_staff_view(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def staff_create_view(request):
-    return JsonResponse({"created": True, "id": 1})
+    if request.content_type and "application/json" in request.content_type:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    else:
+        payload = request.POST
+    staff = TrainingStaff.objects.create(
+        rank=payload.get("rank", ""),
+        first_name=payload.get("first_name", ""),
+        middle_name=payload.get("middle_name", ""),
+        last_name=payload.get("last_name", ""),
+        suffix_name=payload.get("suffix_name", ""),
+        email=payload.get("email", ""),
+        contact_number=payload.get("contact_number", ""),
+        role=payload.get("role", "Instructor"),
+    )
+    return JsonResponse({"created": True, "id": staff.id})
 
 
 @csrf_exempt
 @require_http_methods(["PUT"])
 def staff_update_view(request, staff_id):
-    return JsonResponse({"updated": True, "id": staff_id})
+    try:
+        staff = TrainingStaff.objects.get(id=staff_id)
+    except TrainingStaff.DoesNotExist:
+        return JsonResponse({"message": "Staff not found"}, status=404)
+    if request.content_type and "application/json" in request.content_type:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    else:
+        payload = request.POST
+    staff.rank = payload.get("rank", staff.rank)
+    staff.first_name = payload.get("first_name", staff.first_name)
+    staff.middle_name = payload.get("middle_name", staff.middle_name)
+    staff.last_name = payload.get("last_name", staff.last_name)
+    staff.suffix_name = payload.get("suffix_name", staff.suffix_name)
+    staff.email = payload.get("email", staff.email)
+    staff.contact_number = payload.get("contact_number", staff.contact_number)
+    staff.role = payload.get("role", staff.role)
+    staff.save()
+    return JsonResponse({"updated": True, "id": staff.id})
 
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def staff_delete_view(request, staff_id):
+    try:
+        staff = TrainingStaff.objects.get(id=staff_id)
+    except TrainingStaff.DoesNotExist:
+        return JsonResponse({"message": "Staff not found"}, status=404)
+    staff.is_archived = True
+    staff.save()
     return JsonResponse({"deleted": True, "id": staff_id})
 
 

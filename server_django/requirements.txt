@@ -5,3 +5,4 @@ dj-database-url==2.2.0
 whitenoise==6.7.0
 cloudinary==1.41.0
 django-cloudinary-storage==0.3.0
+openpyxl==3.1.5
