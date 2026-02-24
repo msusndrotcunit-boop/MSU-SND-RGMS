@@ -1354,10 +1354,17 @@ const Attendance = () => {
                                     </table>
                                 </div>
                             )}
-                        </div>
-                    )}
-                </div>
+                        </>
+                    ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 p-10">
+                        <Calendar size={64} className="mb-4 opacity-20" />
+                        <p className="text-lg font-medium">Select a training day to view attendance details</p>
+                        <p className="text-sm opacity-60 mt-2">Manage cadet and staff records, export lists, and perform smart scans.</p>
+                    </div>
+                )}
             </div>
+        </div>
+    )}
             
             {/* Create Day Modal */}
             {isCreateModalOpen && (

@@ -37,7 +37,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        globIgnores: ['**/node_modules/**/*', 'sw.js']
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg']
     })
