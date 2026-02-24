@@ -36,7 +36,7 @@ export default defineConfig({
           { src: 'pwa-512x512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' }
         ]
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
         globIgnores: ['**/node_modules/**/*', 'sw.js']
       },
