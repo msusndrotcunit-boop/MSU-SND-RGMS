@@ -622,14 +622,27 @@ const Grading = () => {
     };
 
     return (
-        <div className="relative h-full">
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setIsScoresModalOpen(true)} className="px-3 py-2 bg-blue-600 text-white rounded hover:opacity-90 flex items-center gap-2 hover-highlight">
-                        <Upload size={16} /> Import Exam Scores
+        <div className="space-y-8">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Grading & Assessment Management</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                    <button onClick={() => setIsScoresModalOpen(true)} className="px-4 py-2 bg-blue-700 text-white rounded hover:opacity-90 flex items-center gap-2 shadow-md min-h-[44px] hover-highlight">
+                        <Upload size={16} /> Import Scores
                     </button>
-                    <button onClick={() => setIsLedgerModalOpen(true)} className="px-3 py-2 bg-green-600 text-white rounded hover:opacity-90 flex items-center gap-2 hover-highlight">
-                        <Upload size={16} /> Import Merit/Demerit
+                    <button onClick={() => setIsLedgerModalOpen(true)} className="px-4 py-2 bg-green-700 text-white rounded hover:opacity-90 flex items-center gap-2 shadow-md min-h-[44px] hover-highlight">
+                        <Upload size={16} /> Import Ledger
+                    </button>
+                    <button 
+                        onClick={handleSyncLifetimeMerits}
+                        disabled={isSyncing}
+                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2 shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                        {isSyncing ? 'Syncing...' : 'Sync Merits'}
                     </button>
                 </div>
             </div>
@@ -850,7 +863,7 @@ const Grading = () => {
                 </div>
             )}
 
-            <div className="flex h-full flex-col md:flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-8">
             {/* Left Panel: Cadet List */}
             <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedCadet ? 'hidden md:flex' : ''}`}>
                 <div className="p-4 border-b">

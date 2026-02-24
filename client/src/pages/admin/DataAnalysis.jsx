@@ -440,7 +440,32 @@ const DataAnalysis = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
+        <div className="space-y-8">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Data Analysis & Insights</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={generatePDF}
+                        disabled={loading}
+                        className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition flex items-center shadow-md min-h-[44px] hover-highlight"
+                    >
+                        <Printer size={18} className="mr-2" />
+                        Print Report
+                    </button>
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <Download size={18} className="mr-2" />
+                        Refresh Data
+                    </button>
+                </div>
+            </div>
 
             {aiAlerts && aiAlerts.length > 0 && (
                 <div className="mb-4 space-y-2">
@@ -463,41 +488,38 @@ const DataAnalysis = () => {
             )}
 
             {/* School Info Card */}
-            <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden border-t-4 border-yellow-500">
-                <div className="bg-gray-900 px-6 py-3">
-                    <h2 className="text-white font-bold">Selected Details</h2>
-                </div>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] overflow-hidden">
                 <div className="p-8 text-center">
-                    <h3 className="text-2xl font-bold text-gray-800">Mindanao State University-Sultan Naga Dimaporo</h3>
-                    <p className="text-gray-500">ROTC Unit Data Analysis</p>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Mindanao State University-Sultan Naga Dimaporo</h3>
+                    <p className="text-gray-500 dark:text-gray-400">ROTC Unit Data Analysis & Reporting</p>
                 </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md mb-6 border-t-4 border-green-600">
-                <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="text-yellow-400" size={18} />
-                        <h3 className="text-white font-bold text-sm md:text-base">AI Insights Overview</h3>
+                        <Sparkles className="text-yellow-500" size={20} />
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">AI Insights Overview</h3>
                     </div>
                     {aiMeta && (
-                        <span className="text-xs text-gray-300">
+                        <span className="text-xs text-gray-500">
                             Data points analyzed: {aiMeta.dataPoints || 0}
                         </span>
                     )}
                 </div>
-                <div className="p-4 space-y-4">
-                    <div className="text-sm text-gray-800">
+                <div className="p-6 space-y-4">
+                    <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {aiSummary?.text || 'The AI engine is preparing insights. This will activate once analytics data is available.'}
                     </div>
                     {aiInsights && aiInsights.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {aiInsights.slice(0, 3).map(insight => (
                                 <div
                                     key={insight.id}
-                                    className="border border-gray-200 rounded-lg p-3 text-xs bg-gray-50"
+                                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-xs bg-gray-50 dark:bg-gray-800/50"
                                 >
-                                    <div className="flex items-center justify-between mb-1">
-                                        <div className="font-semibold text-gray-800 line-clamp-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="font-bold text-gray-800 dark:text-gray-100 line-clamp-2">
                                             {insight.title}
                                         </div>
                                         <span
@@ -512,24 +534,24 @@ const DataAnalysis = () => {
                                             {insight.severity || 'info'}
                                         </span>
                                     </div>
-                                    <div className="text-gray-700">{insight.detail}</div>
-                                    <div className="mt-1 text-[10px] text-gray-500">
+                                    <div className="text-gray-600 dark:text-gray-400">{insight.detail}</div>
+                                    <div className="mt-2 text-[10px] text-gray-500 italic">
                                         Confidence {Math.round((insight.confidence || 0.5) * 100)}%
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
-                    <div className="border-t border-gray-200 pt-3">
-                        <div className="text-xs font-semibold text-gray-700 mb-2">
+                    <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
                             Ask the AI about your cadet data
                         </div>
-                        <div className="flex flex-col md:flex-row gap-2">
+                        <div className="flex flex-col md:flex-row gap-3">
                             <input
                                 value={aiQuery}
                                 onChange={e => setAiQuery(e.target.value)}
                                 placeholder="Example: Which courses have unusual enrollment patterns?"
-                                className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
                             />
                             <button
                                 type="button"
@@ -540,13 +562,14 @@ const DataAnalysis = () => {
                                     });
                                     setAiQueryResult(result);
                                 }}
-                                className="px-4 py-2 rounded bg-green-700 text-white text-sm hover:bg-green-800"
+                                className="px-6 py-2.5 rounded bg-green-700 text-white text-sm font-bold hover:bg-green-800 transition shadow-sm hover-highlight"
                             >
                                 Ask AI
                             </button>
                         </div>
                         {aiQueryResult && (
-                            <div className="mt-2 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-2">
+                            <div className="mt-3 text-xs text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded p-3 leading-relaxed">
+                                <span className="font-bold text-blue-800 dark:text-blue-300 mr-2">AI Response:</span>
                                 {aiQueryResult.answer}
                             </div>
                         )}
@@ -555,18 +578,18 @@ const DataAnalysis = () => {
             </div>
 
             {/* Charts Grid - Ongoing */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* Basic ROTC Chart */}
-                <div id="chart-basic" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Ongoing Basic ROTC Cadets</h3>
-                        <div className="space-x-2 text-gray-400">
-                            <button onClick={() => handlePrintChart('chart-basic')} className="hover:text-white transition-colors"><Printer size={16} /></button>
-                            <button onClick={() => handleDownloadChart('chart-basic', 'Basic ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
+                <div id="chart-basic" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Basic ROTC Cadets</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePrintChart('chart-basic')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
+                            <button onClick={() => handleDownloadChart('chart-basic', 'Basic ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
                         </div>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -591,15 +614,15 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Advance ROTC Chart */}
-                <div id="chart-advance" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Ongoing Advance ROTC Cadets</h3>
-                        <div className="space-x-2 text-gray-400">
-                            <button onClick={() => handlePrintChart('chart-advance')} className="hover:text-white transition-colors"><Printer size={16} /></button>
-                            <button onClick={() => handleDownloadChart('chart-advance', 'Advance ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
+                <div id="chart-advance" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Advance ROTC Cadets</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePrintChart('chart-advance')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
+                            <button onClick={() => handleDownloadChart('chart-advance', 'Advance ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
                         </div>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -625,18 +648,18 @@ const DataAnalysis = () => {
             </div>
 
             {/* Combined Chart & Summary Table */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* Combined Chart */}
-                <div id="chart-combined" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
-                        <h3 className="text-white font-bold">Ongoing Basic and Advance ROTC Cadets</h3>
-                        <div className="space-x-2 text-gray-400">
-                            <button onClick={() => handlePrintChart('chart-combined')} className="hover:text-white transition-colors"><Printer size={16} /></button>
-                            <button onClick={() => handleDownloadChart('chart-combined', 'Combined ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
+                <div id="chart-combined" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Overall Distribution</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePrintChart('chart-combined')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
+                            <button onClick={() => handleDownloadChart('chart-combined', 'Combined ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
                         </div>
                     </div>
-                    <div className="p-4 h-64">
+                    <div className="p-6 h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -661,38 +684,42 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Summary Table */}
-                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
-                    <div className="bg-gray-900 px-4 py-3">
-                        <h3 className="text-white font-bold">Ongoing Summary</h3>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Summary</h3>
                     </div>
                     <div className="p-6">
-                        <div className="bg-gray-900 text-white p-3 font-bold flex justify-between items-center rounded-t mb-4">
-                            <span>TOTAL NUMBER OF CADETS (ONGOING)</span>
-                            <span>{stats.ongoing.total}</span>
+                        <div className="bg-[var(--primary-color)] text-white p-4 font-bold flex justify-between items-center rounded-lg shadow-sm mb-6">
+                            <span className="text-sm uppercase tracking-wider">TOTAL ONGOING CADETS</span>
+                            <span className="text-xl">{stats.ongoing.total}</span>
                         </div>
 
                         <div className="space-y-4 text-sm">
-                            <div className="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
-                                <span>Total Basic Cadets (Ongoing)</span>
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 font-bold text-gray-800 dark:text-gray-200">
+                                <span>Total Basic Cadets</span>
                                 <span>{stats.ongoing.basic.total}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS1</span>
                                 <span>{stats.ongoing.basic.MS1}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS2</span>
                                 <span>{stats.ongoing.basic.MS2}</span>
                             </div>
 
-                            <div className="flex justify-between items-center border-b pb-2 font-bold text-gray-700 mt-4">
-                                <span>Total Advance Cadets (Ongoing)</span>
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 font-bold text-gray-800 dark:text-gray-200 mt-6">
+                                <span>Total Advance Cadets</span>
                                 <span>{stats.ongoing.advance.total}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
+                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
                                 <span>Total MS31</span>
                                 <span>{stats.ongoing.advance.MS31}</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
                             <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS32</span>
                                 <span>{stats.ongoing.advance.MS32}</span>

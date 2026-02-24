@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -38,30 +38,25 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary-surface text-white py-6 px-4 md:px-6 mt-auto border-t-2 border-yellow-500">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+    <footer className="bg-primary-surface text-white py-4 px-4 md:px-6 mt-auto border-t-2 border-yellow-500">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Brand Section */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
-          <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-            <div className="bg-yellow-500 p-1.5 rounded shadow-md">
-               <Shield className="w-5 h-5 text-gray-900" />
-            </div>
-            <div className="text-center md:text-left">
-              <h3 className="font-bold text-base tracking-wide leading-tight">
-                MSU-SND{' '}
-                <button 
-                  type="button"
-                  onClick={toggleAdminMap}
-                  className="hover:text-yellow-300 transition-colors"
-                  title="Toggle Admin Map"
-                >
-                  RGMS
-                </button>
-              </h3>
-              <p className="text-[9px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
-            </div>
+          <div className="text-center md:text-left mb-2">
+            <h3 className="font-bold text-base tracking-wide leading-tight">
+              MSU-SND{' '}
+              <button 
+                type="button"
+                onClick={toggleAdminMap}
+                className="hover:text-yellow-300 transition-colors"
+                title="Toggle Admin Map"
+              >
+                RGMS
+              </button>
+            </h3>
+            <p className="text-[9px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
           </div>
-          <p className="text-green-100/80 text-xs mb-2 leading-relaxed max-w-xs md:max-w-none">
+          <p className="text-green-100/80 text-xs mb-1.5 leading-relaxed max-w-xs md:max-w-none">
             MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
           </p>
           <p className="text-yellow-500 font-mono text-xs font-semibold">

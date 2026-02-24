@@ -96,36 +96,36 @@ function PerformanceMonitor() {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Performance Monitor</h1>
-                    <p className="text-gray-600 mt-1">Real-time system performance metrics</p>
-                </div>
-                <div className="flex gap-2 flex-wrap justify-end">
+        <div className="space-y-8">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">System Performance Monitor</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
                     <button
                         onClick={optimizeDatabase}
                         disabled={optimizing}
-                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                        className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition flex items-center shadow-md min-h-[44px] hover-highlight disabled:opacity-50"
                     >
-                        <Zap className={`w-4 h-4 ${optimizing ? 'animate-pulse' : ''}`} />
+                        <Zap size={18} className={`mr-2 ${optimizing ? 'animate-pulse' : ''}`} />
                         {optimizing ? 'Optimizing...' : 'Optimize DB'}
-                    </button>
-                    <button
-                        onClick={fetchMetrics}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        Refresh
                     </button>
                     <button
                         onClick={clearCache}
                         disabled={clearing}
-                        className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 text-sm md:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        className="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 transition flex items-center shadow-md min-h-[44px] hover-highlight disabled:opacity-50"
                     >
-                        <Trash2 className="w-4 h-4" />
-                        Clear Cache
+                        <Trash2 size={18} className="mr-2" />
+                        {clearing ? 'Clearing...' : 'Clear Cache'}
+                    </button>
+                    <button
+                        onClick={fetchMetrics}
+                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <RefreshCw size={18} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
                     </button>
                 </div>
             </div>

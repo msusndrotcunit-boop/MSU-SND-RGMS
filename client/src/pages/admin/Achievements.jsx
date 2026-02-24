@@ -32,57 +32,71 @@ const AdminAchievements = () => {
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    <Trophy className="text-yellow-500" size={32} />
-                    Cadet Achievements & Recognition
-                </h1>
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Cadet Achievements & Recognition</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <Trophy size={18} className="mr-2 text-yellow-500" />
+                        Refresh Data
+                    </button>
+                </div>
             </div>
 
             {/* System Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-center justify-between mb-2">
-                        <Users size={32} className="opacity-80" />
-                        <span className="text-3xl font-bold">{stats?.totalCadets || 0}</span>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-blue-600 p-6 flex items-center gap-4">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full text-blue-600">
+                        <Users size={24} />
                     </div>
-                    <p className="text-sm opacity-90">Total Cadets</p>
+                    <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Cadets</div>
+                        <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats?.totalCadets || 0}</div>
+                    </div>
                 </div>
-
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-center justify-between mb-2">
-                        <TrendingUp size={32} className="opacity-80" />
-                        <span className="text-3xl font-bold">{stats?.averageLifetimeMerit || 0}</span>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600 p-6 flex items-center gap-4">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full text-green-600">
+                        <TrendingUp size={24} />
                     </div>
-                    <p className="text-sm opacity-90">Average Lifetime Merit</p>
+                    <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Avg Merit</div>
+                        <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats?.averageLifetimeMerit || 0}</div>
+                    </div>
                 </div>
-
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-center justify-between mb-2">
-                        <Award size={32} className="opacity-80" />
-                        <span className="text-3xl font-bold">{stats?.maxLifetimeMerit || 0}</span>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-purple-600 p-6 flex items-center gap-4">
+                    <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full text-purple-600">
+                        <Award size={24} />
                     </div>
-                    <p className="text-sm opacity-90">Highest Lifetime Merit</p>
+                    <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Max Merit</div>
+                        <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats?.maxLifetimeMerit || 0}</div>
+                    </div>
                 </div>
-
-                <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-center justify-between mb-2">
-                        <BarChart3 size={32} className="opacity-80" />
-                        <span className="text-3xl font-bold">{stats?.totalWastedPoints || 0}</span>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-amber-600 p-6 flex items-center gap-4">
+                    <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-full text-amber-600">
+                        <BarChart3 size={24} />
                     </div>
-                    <p className="text-sm opacity-90">Total Wasted Points</p>
-                    <p className="text-xs opacity-75 mt-1">Points beyond 100 ceiling</p>
+                    <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Wasted Pts</div>
+                        <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stats?.totalWastedPoints || 0}</div>
+                    </div>
                 </div>
             </div>
 
             {/* Achievement Distribution */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <Award className="text-blue-600" />
-                    Achievement Distribution
-                </h2>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] p-6">
+                <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <Award className="text-[var(--primary-color)]" size={24} />
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Achievement Distribution</h3>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         { level: 'Bronze', count: stats?.achievementCounts?.bronze || 0, icon: '🥉', color: 'from-yellow-700 to-yellow-900', threshold: '50+' },
                         { level: 'Silver', count: stats?.achievementCounts?.silver || 0, icon: '🥈', color: 'from-gray-300 to-gray-500', threshold: '100+' },

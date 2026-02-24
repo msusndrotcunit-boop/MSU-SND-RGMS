@@ -109,130 +109,122 @@ const Communication = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b p-3 flex items-center gap-2 shadow-sm shrink-0">
-        <MessageCircle className="text-green-700" size={24} />
-        <h2 className="text-lg font-bold text-gray-800">Staff Chat</h2>
+    <div className="space-y-8 h-[calc(100vh-140px)] flex flex-col">
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 flex-shrink-0">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+          <span className="border-l-4 border-[var(--primary-color)] pl-3">Staff Communication Hub</span>
+        </h2>
+        <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full border border-green-100 dark:border-green-800 shadow-sm">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Live Chat Active</span>
+        </div>
       </div>
 
-      {/* Messages List */}
-      <div 
-        ref={listRef} 
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-      >
-        {loading ? (
-          <div className="text-center text-gray-500 py-10">Loading conversation...</div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
-            <MessageCircle size={48} className="opacity-20" />
-            <p>No messages yet. Say hello!</p>
-          </div>
-        ) : (
-          messages.map((m) => {
-            const isMine = me && m.staff_id === me.id;
-            const profileSrc = getProfileSrc(m.profile_pic);
+      {/* Chat Container */}
+      <div className="flex-1 bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] overflow-hidden flex flex-col min-h-0">
+        {/* Messages List */}
+        <div 
+          ref={listRef}
+          className="flex-1 overflow-y-auto p-6 space-y-4 scroll-smooth bg-gray-50 dark:bg-gray-950/30"
+        >
+          {loading && messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+              <div className="w-8 h-8 border-2 border-[var(--primary-color)] border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium">Connecting to staff hub...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-50">
+              <MessageCircle size={64} className="mb-4" />
+              <p className="text-lg font-medium">No messages yet. Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map((m) => {
+              const isMine = me && m.staff_id === me.id;
+              const profileSrc = getProfileSrc(m.profile_pic);
 
-            return (
-              <div
-                key={m.id}
-                className={`flex items-end gap-2 group ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
-              >
-                {/* Avatar */}
-                <div className="flex-shrink-0 mb-1">
-                    {profileSrc ? (
-                        <img 
-                            src={profileSrc} 
-                            alt="Avatar" 
-                            className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                            onError={(e) => {
-                                e.target.onerror = null; // Prevent infinite loop
-                                e.target.style.display = 'none'; // Hide broken image
-                                e.target.nextSibling.style.display = 'flex'; // Show fallback
-                            }}
-                        />
-                    ) : null}
-                    <div 
-                        className={`w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border border-gray-300 ${profileSrc ? 'hidden' : 'flex'}`}
-                    >
-                        <User size={14} />
-                    </div>
-                </div>
-
-                {/* Bubble */}
-                <div
-                  className={`max-w-[75%] md:max-w-[60%] px-4 py-2 rounded-2xl shadow-sm text-sm ${
-                    isMine 
-                        ? 'bg-green-600 text-white rounded-br-none' 
-                        : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
-                  }`}
+              return (
+                <div 
+                  key={m.id} 
+                  className={`flex flex-col max-w-[85%] sm:max-w-[70%] ${isMine ? "ml-auto items-end" : "mr-auto items-start"}`}
                 >
                   {!isMine && (
-                      <div className="text-xs font-bold text-green-700 mb-1">
-                          {displayName(m)}
-                      </div>
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{displayName(m)}</span>
+                    </div>
                   )}
-                  <div className="whitespace-pre-wrap break-words leading-relaxed">{m.content}</div>
-                  <div className={`text-[10px] mt-1 text-right ${isMine ? 'text-green-100' : 'text-gray-400'}`}>
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className={`group relative p-3 rounded-2xl shadow-sm text-sm break-words ${
+                    isMine 
+                      ? "bg-[var(--primary-color)] text-white rounded-tr-none" 
+                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-tl-none"
+                  }`}>
+                    {m.content}
+                    
+                    {isMine && (
+                      <div className="absolute right-0 top-0 -translate-y-full flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-b-0 border-gray-100 dark:border-gray-700">
+                        <button 
+                          onClick={() => startEdit(m)}
+                          className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(m.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 px-1">
+                    <span className="text-[9px] text-gray-400 font-medium">
+                      {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                 </div>
+              );
+            })
+          )}
+        </div>
 
-                {/* Actions (Only if mine) */}
-                {isMine && (
-                    <div className="opacity-0 group-hover:opacity-100 flex flex-col gap-1 transition-opacity self-center mb-2">
-                        <button 
-                            onClick={() => startEdit(m)} 
-                            className="p-1.5 text-gray-400 hover:text-blue-500 bg-gray-100 hover:bg-blue-50 rounded-full shadow-sm" 
-                            title="Edit"
-                        >
-                            <Edit2 size={12} />
-                        </button>
-                        <button 
-                            onClick={() => handleDelete(m.id)} 
-                            className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full shadow-sm" 
-                            title="Delete"
-                        >
-                            <Trash2 size={12} />
-                        </button>
-                    </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Input Area - Fixed/Sticky Bottom Look */}
-      <div className="bg-white p-3 border-t shrink-0">
-        {editingMessage && (
-            <div className="flex items-center justify-between bg-blue-50 px-4 py-2 text-xs text-blue-600 mb-2 rounded-lg border border-blue-100">
-                <span>Editing message...</span>
-                <button onClick={cancelEdit} className="text-blue-400 hover:text-blue-700">
-                    <X size={14} />
+        {/* Input Area */}
+        <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+          <form onSubmit={sendMessage} className="relative flex flex-col gap-2">
+            {editingMessage && (
+              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-800">
+                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Editing message...</span>
+                <button 
+                  type="button" 
+                  onClick={cancelEdit}
+                  className="text-blue-500 hover:text-blue-700"
+                >
+                  <X size={14} />
                 </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message here..."
+                disabled={posting}
+                className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] dark:text-gray-100"
+              />
+              <button
+                type="submit"
+                disabled={posting || !input.trim()}
+                className="bg-[var(--primary-color)] text-white p-2.5 rounded-xl shadow-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+              >
+                <Send size={20} />
+              </button>
             </div>
-        )}
-        <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-4xl mx-auto">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 bg-gray-100 text-gray-800 rounded-full px-5 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-          />
-          <button
-            type="submit"
-            disabled={posting || !input.trim()}
-            className={`p-3 rounded-full flex-shrink-0 transition-colors ${
-              posting || !input.trim() 
-                ? 'bg-gray-200 text-gray-400 cursor-default' 
-                : 'bg-green-600 text-white hover:bg-green-700 shadow-md'
-            }`}
-          >
-            <Send size={20} className={posting ? 'animate-pulse' : ''} />
-          </button>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

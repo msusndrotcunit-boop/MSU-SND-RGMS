@@ -66,38 +66,66 @@ const AdminMessages = () => {
         return matchesFilter && matchesSearch;
     });
 
+ 
     return (
-        <div className="flex flex-col h-[calc(100vh-100px)] gap-4">
-            {/* List View */}
-            <div className={clsx(
-                "flex-1 bg-white rounded-lg shadow-md flex flex-col",
-                selectedMessage ? "hidden md:flex md:w-1/3 md:flex-none" : "w-full"
-            )}>
-                <div className="p-4 border-b">
-                    <h1 className="text-xl font-bold flex items-center gap-2 mb-4">
-                        <MessageSquare className="text-blue-600" />
-                        Admin Messages
-                    </h1>
-                    
-                    <div className="flex gap-2 mb-2">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-2 top-2.5 text-gray-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search messages..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+        <div className="space-y-8">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Message Center</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={fetchMessages}
+                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <Zap size={18} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-8">
+                {/* List View */}
+                <div className={clsx(
+                    "w-full md:w-1/3 bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] flex flex-col min-h-[600px]",
+                    selectedMessage ? "hidden md:flex" : "flex"
+                )}>
+                    <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+                        <div className="flex flex-col gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search messages..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm"
+                                />
+                            </div>
+                            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                                <button 
+                                    onClick={() => setFilter('all')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'all' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    ALL
+                                </button>
+                                <button 
+                                    onClick={() => setFilter('pending')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'pending' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    PENDING
+                                </button>
+                                <button 
+                                    onClick={() => setFilter('resolved')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'resolved' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    RESOLVED
+                                </button>
+                            </div>
                         </div>
-                        <div className="relative">
-                            <select
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                                className="appearance-none bg-gray-50 border rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="all">All</option>
-                                <option value="pending">Pending</option>
+                    </div>
                                 <option value="resolved">Resolved</option>
                             </select>
                             <Filter className="absolute right-2 top-2.5 text-gray-400 pointer-events-none" size={16} />

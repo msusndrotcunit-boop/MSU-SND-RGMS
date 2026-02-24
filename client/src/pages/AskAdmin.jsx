@@ -58,50 +58,78 @@ const AskAdmin = () => {
     };
 
     return (
-            <div className="max-w-4xl mx-auto space-y-6 p-4">
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                    <MessageSquare className="text-blue-600" />
-                    Ask the Admin
-                </h1>
+        <div className="space-y-8">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Ask the Admin / Support</span>
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={fetchMessages}
+                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    >
+                        <Clock size={18} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh History
+                    </button>
+                </div>
+            </div>
 
-                {/* Mobile-Optimized Message Form */}
-                <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-                    <h2 className="text-lg font-semibold mb-4 dark:text-gray-100">Submit a Report or Question</h2>
-                    <ContactForm
-                        formData={formData}
-                        onChange={setFormData}
-                        onSubmit={handleSubmit}
-                        loading={submitting}
-                        showSubject={true}
-                        showCategory={false}
-                    />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Form Section */}
+                <div className="lg:col-span-1">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] p-6">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                            <MessageSquare className="text-[var(--primary-color)]" size={20} />
+                            <h3 className="font-bold text-gray-800 dark:text-gray-100">New Message</h3>
+                        </div>
+                        <ContactForm
+                            formData={formData}
+                            onChange={setFormData}
+                            onSubmit={handleSubmit}
+                            loading={submitting}
+                            showSubject={true}
+                            showCategory={false}
+                        />
+                    </div>
                 </div>
 
-            {/* Message History */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-lg font-semibold mb-4">My Messages</h2>
-                {loading ? (
-                    <div className="text-center py-8 text-gray-500">Loading...</div>
-                ) : messages.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                        <AlertCircle className="mx-auto mb-2 opacity-50" size={32} />
-                        No messages yet.
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-semibold text-lg">{msg.subject}</h3>
-                                    <div className="flex items-center gap-1 text-sm font-medium">
-                                        {getStatusIcon(msg.status)}
-                                        <span className={clsx(
-                                            msg.status === 'resolved' ? 'text-green-600' : 'text-yellow-600'
-                                        )}>
-                                            {msg.status.charAt(0).toUpperCase() + msg.status.slice(1)}
-                                        </span>
-                                    </div>
+                {/* History Section */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-blue-600 p-6 flex flex-col min-h-[500px]">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                            <Clock className="text-blue-600" size={20} />
+                            <h3 className="font-bold text-gray-800 dark:text-gray-100">Message History</h3>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-2">
+                                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-sm font-medium">Loading history...</p>
                                 </div>
+                            ) : messages.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-gray-400 opacity-50">
+                                    <AlertCircle size={48} className="mb-4" />
+                                    <p className="text-lg font-medium">No messages yet.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 pr-2">
+                                    {messages.map((msg) => (
+                                        <div key={msg.id} className="group border border-gray-100 dark:border-gray-800 rounded-xl p-4 hover:shadow-md transition-all duration-300 bg-gray-50 dark:bg-gray-800/50">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h4 className="font-bold text-gray-800 dark:text-gray-100 leading-tight">{msg.subject}</h4>
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-gray-900 shadow-sm border border-gray-50 dark:border-gray-800">
+                                                    {getStatusIcon(msg.status)}
+                                                    <span className={clsx(
+                                                        "text-[10px] font-bold uppercase tracking-wider",
+                                                        msg.status === 'resolved' ? 'text-green-600' : 'text-yellow-600'
+                                                    )}>
+                                                        {msg.status}
+                                                    </span>
+                                                </div>
+                                            </div>
                                 <p className="text-gray-700 whitespace-pre-wrap mb-3">{msg.message}</p>
                                 <div className="text-xs text-gray-500 mb-2">
                                     Sent on {new Date(msg.created_at).toLocaleDateString()} at {new Date(msg.created_at).toLocaleTimeString()}
