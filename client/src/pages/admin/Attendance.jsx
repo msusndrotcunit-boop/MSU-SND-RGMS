@@ -945,7 +945,7 @@ const Attendance = () => {
                     {/* Main Content */}
                     <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
                         {selectedDay ? (
-                            <>
+                            <div className="flex flex-col h-full">
                         <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
                             <div className="flex flex-col md:flex-row justify-between items-start gap-2 mb-2">
                                 <div>
@@ -1354,7 +1354,7 @@ const Attendance = () => {
                                 </div>
                             )}
                         </div>
-                    </>
+                    </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 p-10">
                         <Calendar size={64} className="mb-4 opacity-20" />
