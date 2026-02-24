@@ -25,3 +25,4 @@ client/public/uploads/
 *.swp
 *.zip
 dist-electron/
+client/public/downloads/*.apk
