@@ -37,8 +37,7 @@ export default defineConfig({
         ]
       },
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-        globIgnores: ['**/node_modules/**/*', 'sw.js']
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}']
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg']
     })
