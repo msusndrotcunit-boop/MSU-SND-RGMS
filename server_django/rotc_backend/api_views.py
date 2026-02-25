@@ -775,6 +775,10 @@ def cadet_profile_view(request):
                 else:
                     setattr(cadet, key, val)
         
+        # Ensure username is set for login if missing
+        if not cadet.username and cadet.email:
+            cadet.username = cadet.email
+        
         cadet.save()
         data = cadet_to_dict(cadet)
         if profile_pic:
@@ -1058,7 +1062,9 @@ def auth_cadet_login_view(request):
         return JsonResponse({"message": "identifier is required (username or email)"}, status=400)
     try:
         from django.db.models import Q
-        cadet = Cadet.objects.filter(Q(username__iexact=identifier) | Q(email__iexact=identifier)).first()
+        cadet = Cadet.objects.filter(
+            Q(username__iexact=identifier) | Q(email__iexact=identifier) | Q(student_id__iexact=identifier)
+        ).first()
         if not cadet:
             return JsonResponse({"message": "Cadet not found for given identifier"}, status=404)
         token = secrets.token_urlsafe(24)
