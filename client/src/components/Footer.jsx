@@ -40,8 +40,8 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary-surface text-white py-2 md:py-3 px-2 md:px-6 mt-auto border-t border-yellow-500/30 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-[60px] md:h-auto gap-1 sm:gap-3 md:gap-4">
+    <footer className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700">
+      <div className="flex items-center justify-between w-full gap-3">
         {/* Brand Section - Ultra Compact on Mobile */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">

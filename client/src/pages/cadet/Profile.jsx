@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Save, User, Moon, Sun, Camera, Image as ImageIcon, Lock, AlertTriangle } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
+import { compressImageClient, bytesToKB } from '../../utils/imageCompressionClient';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
@@ -147,25 +148,31 @@ const Profile = () => {
         if (isLocked) return;
         const file = e.target.files[0];
         if (file) {
-            // Balanced compression - not too aggressive
-            const options = {
-                maxSizeMB: 0.2,
-                maxWidthOrHeight: 700,
-                useWebWorker: true,
-                initialQuality: 0.75
-            };
-
             try {
-                console.log('[Profile] Original file size:', file.size, 'bytes');
-                const compressedFile = await imageCompression(file, options);
-                console.log('[Profile] Compressed to:', compressedFile.size, 'bytes');
-                setProfilePic(compressedFile);
-                setPreview(URL.createObjectURL(compressedFile));
+                const { file: compressed, stats } = await compressImageClient(file, {
+                    maxBytes: Number(import.meta.env.VITE_PROFILE_MAX_BYTES) || 300 * 1024,
+                    maxDimension: Number(import.meta.env.VITE_PROFILE_MAX_DIMENSION) || 768,
+                    initialQuality: 0.75,
+                    minQuality: 0.5,
+                    preferWebP: true,
+                });
+                setProfilePic(compressed);
+                setPreview(URL.createObjectURL(compressed));
+                try { toast.success(`Compressed ${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`); } catch {}
             } catch (error) {
                 console.error("Image compression error:", error);
-                // Use original file if compression fails
-                setProfilePic(file);
-                setPreview(URL.createObjectURL(file));
+                if (error.code === 'UNSUPPORTED_FORMAT') {
+                    alert('Unsupported image format. Use JPEG, PNG, or WebP.');
+                    return;
+                }
+                if (error.code === 'SIZE_NOT_MET' && error.partial) {
+                    setProfilePic(error.partial.file);
+                    setPreview(URL.createObjectURL(error.partial.file));
+                    try { toast('Using best effort image; server will re-validate.', { icon: 'ℹ️' }); } catch {}
+                } else {
+                    setProfilePic(file);
+                    setPreview(URL.createObjectURL(file));
+                }
             }
         }
     };

@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Download } from 'lucide-react';
 import ResponsiveTable from './ResponsiveTable';
 import { MobileFormLayout, FormField, MobileInput, MobileTextarea, FormActions } from './MobileFormLayout';
+import { compressImageClient, bytesToKB } from '../utils/imageCompressionClient';
+import { toast } from 'react-hot-toast';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);
@@ -41,16 +43,47 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
         setSuccess('');
 
         try {
+            let working = file;
+            if (file && file.type && file.type.startsWith('image/')) {
+                try {
+                    const { file: compressed, stats } = await compressImageClient(file, {
+                        maxBytes: Number(import.meta.env.VITE_EXCUSE_IMG_MAX_BYTES) || 400 * 1024,
+                        maxDimension: Number(import.meta.env.VITE_EXCUSE_IMG_MAX_DIMENSION) || 1200,
+                        initialQuality: 0.78,
+                        minQuality: 0.5,
+                        preferWebP: true,
+                    });
+                    working = compressed;
+                    try { toast.success(`Compressed ${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`); } catch {}
+                } catch (err) {
+                    if (err.code === 'UNSUPPORTED_FORMAT') {
+                        setError('Unsupported image format. Use JPEG, PNG, or WebP.');
+                        setLoading(false);
+                        return;
+                    }
+                    if (err.code === 'SIZE_NOT_MET' && err.partial) {
+                        working = err.partial.file;
+                        try { toast('Using best effort image; server will re-validate.', { icon: 'ℹ️' }); } catch {}
+                    }
+                }
+            }
+
             const formData = new FormData();
             formData.append('date_absent', date);
             formData.append('reason', reason);
-            formData.append('file', file);
+            formData.append('file', working);
 
-            await axios.post('/api/excuse', formData, {
+            const res = await axios.post('/api/excuse', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
+            try {
+                const cmp = res?.data?.compression;
+                if (cmp && typeof cmp.original === 'number') {
+                    toast.success(`Server finalized ${bytesToKB(cmp.original)}KB → ${bytesToKB(cmp.final)}KB`);
+                }
+            } catch {}
 
             setSuccess('Excuse letter submitted successfully.');
             setFile(null);

@@ -8,8 +8,154 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from openpyxl import load_workbook
+import logging
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.conf import settings
 
 from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile
+
+# Image compression utilities
+from io import BytesIO
+from PIL import Image
+import os
+
+IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(512 * 1024)))
+IMAGE_MAX_DIMENSION = int(os.getenv("IMAGE_MAX_DIMENSION", str(1600)))
+JPEG_QUALITY_START = int(os.getenv("JPEG_QUALITY_START", "85"))
+JPEG_QUALITY_MIN = int(os.getenv("JPEG_QUALITY_MIN", "55"))
+ALLOW_WEBP = os.getenv("ALLOW_WEBP", "true").lower() == "true"
+PDF_MAX_BYTES = int(os.getenv("PDF_MAX_BYTES", str(2 * 1024 * 1024)))
+
+def _downscale_preserve_aspect(img, max_dim):
+    w, h = img.size
+    if max(w, h) <= max_dim:
+        return img
+    if w >= h:
+        new_w = max_dim
+        new_h = int(h * (max_dim / w))
+    else:
+        new_h = max_dim
+        new_w = int(w * (max_dim / h))
+    return img.resize((new_w, new_h), Image.LANCZOS)
+
+def _save_to_bytes(img, fmt, quality=None, progressive=False, lossless=False):
+    buf = BytesIO()
+    save_kwargs = {}
+    if fmt.upper() == "JPEG":
+        save_kwargs.update(dict(format="JPEG", quality=quality or JPEG_QUALITY_START, optimize=True, progressive=progressive))
+        if img.mode in ("RGBA", "LA"):
+            img = img.convert("RGB")
+    elif fmt.upper() == "PNG":
+        save_kwargs.update(dict(format="PNG", optimize=True))
+    elif fmt.upper() == "WEBP" and ALLOW_WEBP:
+        save_kwargs.update(dict(format="WEBP", quality=quality or JPEG_QUALITY_START, method=6))
+        if lossless:
+            save_kwargs["lossless"] = True
+    else:
+        raise ValueError("Unsupported format")
+    img.save(buf, **save_kwargs)
+    return buf.getvalue()
+
+def compress_uploaded_image(uploaded_file, max_bytes=IMAGE_MAX_BYTES, max_dim=IMAGE_MAX_DIMENSION):
+    try:
+        original_bytes = uploaded_file.read()
+        original_size = len(original_bytes)
+        uploaded_file.seek(0)
+        img = Image.open(BytesIO(original_bytes))
+        img.load()
+    except Exception:
+        raise ValueError("Unsupported or corrupt image file")
+
+    base_img = _downscale_preserve_aspect(img, max_dim)
+
+    original_fmt = (img.format or "JPEG").upper()
+    candidates = []
+    if original_fmt == "PNG":
+        if ALLOW_WEBP:
+            candidates.append(("WEBP", False))
+        candidates.append(("PNG", False))
+        candidates.append(("JPEG", True))
+    elif original_fmt == "WEBP":
+        candidates.append(("WEBP", False))
+        candidates.append(("JPEG", True))
+    else:
+        candidates.append(("JPEG", True))
+        if ALLOW_WEBP:
+            candidates.append(("WEBP", False))
+
+    best_bytes = None
+    best_fmt = None
+    for fmt, progressive in candidates:
+        if fmt == "PNG":
+            try:
+                data = _save_to_bytes(base_img, "PNG")
+                if best_bytes is None or len(data) < len(best_bytes):
+                    best_bytes = data
+                    best_fmt = "PNG"
+                if len(data) <= max_bytes:
+                    return {
+                        "bytes": data,
+                        "size": len(data),
+                        "format": "PNG",
+                        "original_size": original_size,
+                    }
+            except Exception:
+                pass
+            continue
+        for quality in range(JPEG_QUALITY_START, JPEG_QUALITY_MIN - 1, -7):
+            try:
+                data = _save_to_bytes(base_img, fmt, quality=quality, progressive=progressive, lossless=False)
+                if best_bytes is None or len(data) < len(best_bytes):
+                    best_bytes = data
+                    best_fmt = fmt
+                if len(data) <= max_bytes:
+                    return {
+                        "bytes": data,
+                        "size": len(data),
+                        "format": fmt,
+                        "original_size": original_size,
+                    }
+            except Exception:
+                continue
+
+    if best_bytes is None:
+        raise ValueError("Failed to compress image")
+    if len(best_bytes) > max_bytes:
+        return {
+            "bytes": best_bytes,
+            "size": len(best_bytes),
+            "format": best_fmt or original_fmt,
+            "original_size": original_size,
+            "limit_not_met": True,
+        }
+    return {
+        "bytes": best_bytes,
+        "size": len(best_bytes),
+        "format": best_fmt or original_fmt,
+        "original_size": original_size,
+    }
+
+def compress_pdf_bytes(pdf_bytes, max_bytes=PDF_MAX_BYTES):
+    original_size = len(pdf_bytes)
+    try:
+        import pikepdf
+        with pikepdf.open(BytesIO(pdf_bytes)) as pdf:
+            # Aggressive object stream and image recompression where possible
+            out = BytesIO()
+            pdf.save(out, optimize_version=True, compress_streams=True)
+            data = out.getvalue()
+            if len(data) <= max_bytes or len(data) < original_size:
+                return {"bytes": data, "size": len(data), "original_size": original_size}
+            # If still large, try linearize off to avoid extra overhead
+            out2 = BytesIO()
+            pdf.save(out2, linearize=True)
+            data2 = out2.getvalue()
+            best = data2 if len(data2) < len(data) else data
+            return {"bytes": best, "size": len(best), "original_size": original_size, "limit_not_met": len(best) > max_bytes}
+    except Exception as exc:
+        logging.warning("PDF compression unavailable or failed: %s", exc)
+        return {"bytes": pdf_bytes, "size": original_size, "original_size": original_size, "skipped": True}
 
 
 def transmute_grade(value):
@@ -186,7 +332,7 @@ def load_rows_from_upload(uploaded_file):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "PUT"])
+@require_http_methods(["GET", "PUT", "POST"])
 def admin_profile_view(request):
     admin_profile, _ = AdminProfile.objects.get_or_create(username="admin")
 
@@ -204,30 +350,41 @@ def admin_profile_view(request):
             }
         )
 
-    if request.method == "PUT":
+    if request.method in ["PUT", "POST"]:
         # Handle profile picture upload
         profile_pic = request.FILES.get("profilePic")
         if profile_pic:
-            # Basic validation
-            allowed_types = ["image/jpeg", "image/png", "image/gif"]
+            allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
             if profile_pic.content_type not in allowed_types:
-                return JsonResponse({"message": "Invalid file type. Only JPG, PNG, and GIF are allowed."}, status=400)
-            
-            if profile_pic.size > 5 * 1024 * 1024:
-                return JsonResponse({"message": "File size exceeds 5MB limit."}, status=400)
+                return JsonResponse({"message": "Invalid file type. Only JPEG, PNG, or WebP are allowed."}, status=400)
+
+            try:
+                c = compress_uploaded_image(profile_pic, max_bytes=IMAGE_MAX_BYTES, max_dim=IMAGE_MAX_DIMENSION)
+            except ValueError as exc:
+                return JsonResponse({"message": str(exc)}, status=400)
+            if c.get("limit_not_met"):
+                return JsonResponse({"message": "Unable to meet size limit after compression."}, status=400)
+            from django.core.files.base import ContentFile
+            content = ContentFile(c["bytes"])
 
             # Refined naming convention: admin_[id]_[timestamp].[ext]
             import os
             import time
-            ext = os.path.splitext(profile_pic.name)[1]
-            profile_pic.name = f"admin_{admin_profile.id}_{int(time.time())}{ext}"
+            ext_map = {"JPEG": ".jpg", "JPG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+            ext = ext_map.get(c["format"].upper(), os.path.splitext(profile_pic.name)[1] or ".jpg")
+            filename = f"admin_{admin_profile.id}_{int(time.time())}{ext}"
 
-            admin_profile.profile_pic = profile_pic
+            admin_profile.profile_pic = content
+            admin_profile.profile_pic.name = filename
             admin_profile.save()
-            
+
             return JsonResponse({
                 "message": "Profile picture updated successfully",
-                "profile_pic": admin_profile.profile_pic.url
+                "profile_pic": admin_profile.profile_pic.url,
+                "compression": {
+                    "original": c["original_size"],
+                    "final": c["size"],
+                }
             })
         
         return JsonResponse({"message": "No profile picture provided"}, status=400)
@@ -484,7 +641,19 @@ def cadet_profile_view(request):
         # Handle file upload if present
         profile_pic = request.FILES.get("profilePic")
         if profile_pic:
-            cadet.profile_pic = profile_pic
+            try:
+                c = compress_uploaded_image(profile_pic, max_bytes=IMAGE_MAX_BYTES, max_dim=IMAGE_MAX_DIMENSION)
+            except ValueError as exc:
+                return JsonResponse({"message": str(exc)}, status=400)
+            if c.get("limit_not_met"):
+                return JsonResponse({"message": "Unable to meet size limit after compression."}, status=400)
+            from django.core.files.base import ContentFile
+            content = ContentFile(c["bytes"])
+            import time
+            ext_map = {"JPEG": ".jpg", "JPG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+            ext = ext_map.get(c["format"].upper(), ".jpg")
+            content.name = f"cadet_{cadet.id}_{int(time.time())}{ext}"
+            cadet.profile_pic = content
 
         # Update other fields
         for key in payload:
@@ -492,7 +661,10 @@ def cadet_profile_view(request):
                 setattr(cadet, key, payload[key])
         
         cadet.save()
-        return JsonResponse(cadet_to_dict(cadet))
+        data = cadet_to_dict(cadet)
+        if profile_pic:
+            data["compression"] = {"original": c["original_size"], "final": c["size"]}
+        return JsonResponse(data)
 
 
 @csrf_exempt
@@ -533,13 +705,24 @@ def staff_profile_photo_view(request):
     uploaded = request.FILES.get("image")
     if not uploaded:
         return JsonResponse({"message": "No image provided"}, status=400)
-    
-    staff.profile_pic = uploaded
+    try:
+        c = compress_uploaded_image(uploaded, max_bytes=IMAGE_MAX_BYTES, max_dim=IMAGE_MAX_DIMENSION)
+    except ValueError as exc:
+        return JsonResponse({"message": str(exc)}, status=400)
+    if c.get("limit_not_met"):
+        return JsonResponse({"message": "Unable to meet size limit after compression."}, status=400)
+    from django.core.files.base import ContentFile
+    content = ContentFile(c["bytes"])
+    import time
+    ext_map = {"JPEG": ".jpg", "JPG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+    ext = ext_map.get(c["format"].upper(), ".jpg")
+    content.name = f"staff_{staff.id}_{int(time.time())}{ext}"
+    staff.profile_pic = content
     staff.save()
-    
     return JsonResponse({
         "message": "Photo updated",
-        "filePath": staff.profile_pic.url
+        "filePath": staff.profile_pic.url,
+        "compression": {"original": c["original_size"], "final": c["size"]},
     })
 
 
@@ -1209,4 +1392,77 @@ def image_cadet_view(request, cadet_id):
     except Cadet.DoesNotExist:
         pass
     return transparent_png_response()
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def excuse_collection_view(request):
+    meta_path = settings.BASE_DIR / "excuses_meta.json"
+    if request.method == "GET":
+        try:
+            if meta_path.exists():
+                raw = meta_path.read_text(encoding="utf-8")
+                data = json.loads(raw or "[]")
+                return JsonResponse(data, safe=False)
+        except Exception as exc:
+            logging.error("Failed to read excuses meta: %s", exc)
+        return JsonResponse([], safe=False)
+
+    uploaded = request.FILES.get("file")
+    date_absent = request.POST.get("date_absent")
+    reason = request.POST.get("reason")
+    if not uploaded or not date_absent or not reason:
+        return JsonResponse({"message": "Missing fields"}, status=400)
+
+    content_type = uploaded.content_type or ""
+    original_name = uploaded.name
+    compression_info = None
+
+    try:
+        if content_type.startswith("image/"):
+            c = compress_uploaded_image(uploaded, max_bytes=IMAGE_MAX_BYTES, max_dim=IMAGE_MAX_DIMENSION)
+            if c.get("limit_not_met"):
+                return JsonResponse({"message": "Unable to meet size limit after compression."}, status=400)
+            content = ContentFile(c["bytes"])
+            ext_map = {"JPEG": ".jpg", "JPG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+            ext = ext_map.get(c["format"].upper(), os.path.splitext(original_name)[1] or ".jpg")
+            filename = f"excuses/excuse_{int(datetime.utcnow().timestamp())}{ext}"
+            compression_info = {"type": "image", "original": c["original_size"], "final": c["size"]}
+        elif content_type == "application/pdf":
+            buf = uploaded.read()
+            c = compress_pdf_bytes(buf, max_bytes=PDF_MAX_BYTES)
+            bytes_to_save = c["bytes"]
+            if c.get("limit_not_met"):
+                logging.warning("PDF still above limit after compression: %s -> %s", c["original_size"], c["size"])
+            content = ContentFile(bytes_to_save)
+            filename = f"excuses/excuse_{int(datetime.utcnow().timestamp())}.pdf"
+            compression_info = {"type": "pdf", "original": c["original_size"], "final": c["size"], "skipped": c.get("skipped", False)}
+        else:
+            content = uploaded
+            filename = f"excuses/{int(datetime.utcnow().timestamp())}_{original_name}"
+
+        saved_path = default_storage.save(filename, content)
+        file_url = default_storage.url(saved_path)
+
+        item = {
+            "date_absent": date_absent,
+            "reason": reason,
+            "status": "pending",
+            "file_url": file_url,
+            "original_name": original_name,
+            "uploaded_at": datetime.utcnow().isoformat() + "Z",
+        }
+        try:
+            existing = []
+            if meta_path.exists():
+                existing = json.loads(meta_path.read_text(encoding="utf-8") or "[]")
+            existing.insert(0, item)
+            meta_path.write_text(json.dumps(existing[:200]), encoding="utf-8")
+        except Exception as exc:
+            logging.error("Failed to write excuses meta: %s", exc)
+
+        return JsonResponse({"message": "Submitted", "item": item, "compression": compression_info})
+    except Exception as exc:
+        logging.exception("Excuse upload failed: %s", exc)
+        return JsonResponse({"message": "Upload failed"}, status=500)
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useSettings } from '../context/SettingsContext';
+import { compressImageClient, bytesToKB } from '../utils/imageCompressionClient';
+import { toast } from 'react-hot-toast';
 
 const BackgroundUploader = () => {
     const { settings, setSettings } = useSettings(); // Assuming setSettings is exposed or I need to reload
@@ -16,8 +18,30 @@ const BackgroundUploader = () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        let working = file;
+        try {
+            const { file: compressed, stats } = await compressImageClient(file, {
+                maxBytes: Number(import.meta.env.VITE_BG_IMAGE_MAX_BYTES) || 800 * 1024,
+                maxDimension: Number(import.meta.env.VITE_BG_IMAGE_MAX_DIMENSION) || 1920,
+                initialQuality: 0.82,
+                minQuality: 0.5,
+                preferWebP: true,
+            });
+            working = compressed;
+            toast.success(`Compressed ${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`);
+        } catch (err) {
+            if (err.code === 'UNSUPPORTED_FORMAT') {
+                setMessage('Unsupported image format. Use JPEG, PNG, or WebP.');
+                return;
+            }
+            if (err.code === 'SIZE_NOT_MET' && err.partial) {
+                working = err.partial.file;
+                toast('Using best effort image; server will re-validate.', { icon: 'ℹ️' });
+            }
+        }
+
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', working);
 
         setUploading(true);
         setMessage('');
@@ -31,6 +55,10 @@ const BackgroundUploader = () => {
                 }
             });
 
+            if (res?.data?.compression) {
+                const { original, final } = res.data.compression;
+                toast.success(`Server finalized ${bytesToKB(original)}KB → ${bytesToKB(final)}KB`);
+            }
             // Update context
             // I need to trigger a reload of settings or update state locally.
             // For now, let's assume I can force a reload.

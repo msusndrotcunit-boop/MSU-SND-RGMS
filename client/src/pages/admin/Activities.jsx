@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X, Upload, Zap, Edit } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
+import { compressImageClient, bytesToKB } from '../../utils/imageCompressionClient';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
 
@@ -123,13 +123,23 @@ const Activities = () => {
             }
             
             try {
-                // For announcements, use lighter compression to preserve quality
-                // For activities, use standard compression
-                const options = activeTab === 'announcement' 
-                    ? { maxSizeMB: 5, maxWidthOrHeight: 2048, useWebWorker: true }
-                    : { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
-                
-                const compressed = await imageCompression(file, options);
+                const opts = activeTab === 'announcement'
+                    ? {
+                        maxBytes: Number(import.meta.env.VITE_ACTIVITY_ANN_MAX_BYTES) || 2 * 1024 * 1024,
+                        maxDimension: Number(import.meta.env.VITE_ACTIVITY_ANN_MAX_DIMENSION) || 2048,
+                        initialQuality: 0.82,
+                        minQuality: 0.6,
+                        preferWebP: true,
+                    }
+                    : {
+                        maxBytes: Number(import.meta.env.VITE_ACTIVITY_IMG_MAX_BYTES) || 512 * 1024,
+                        maxDimension: Number(import.meta.env.VITE_ACTIVITY_IMG_MAX_DIMENSION) || 1280,
+                        initialQuality: 0.8,
+                        minQuality: 0.5,
+                        preferWebP: true,
+                    };
+                const { file: compressed, stats } = await compressImageClient(file, opts);
+                console.log('[Activities] Compressed', file.name, `${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`);
                 processedImages.push(compressed);
             } catch (error) {
                 console.error("Compression error", error);

@@ -91,6 +91,7 @@ urlpatterns = [
     path("api/images/admin/<int:admin_id>", api_views.image_admin_view),
     path("api/images/staff/<int:staff_id>", api_views.image_staff_view),
     path("api/images/cadets/<int:cadet_id>", api_views.image_cadet_view),
+    path("api/excuse", api_views.excuse_collection_view),
     re_path(
         r"^(?!api/|dj-admin/|static/|media/).*$",
         TemplateView.as_view(template_name="index.html"),

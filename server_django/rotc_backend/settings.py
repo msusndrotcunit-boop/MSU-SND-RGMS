@@ -106,3 +106,10 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Image compression settings (configurable via env)
+IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(512 * 1024)))
+IMAGE_MAX_DIMENSION = int(os.getenv("IMAGE_MAX_DIMENSION", "1600"))
+JPEG_QUALITY_START = int(os.getenv("JPEG_QUALITY_START", "85"))
+JPEG_QUALITY_MIN = int(os.getenv("JPEG_QUALITY_MIN", "55"))
+ALLOW_WEBP = os.getenv("ALLOW_WEBP", "true").lower() == "true"

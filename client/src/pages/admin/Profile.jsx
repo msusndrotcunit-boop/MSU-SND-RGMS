@@ -125,20 +125,34 @@ const AdminProfile = () => {
         formData.append('profilePic', file);
         if (profile?.gender) formData.append('gender', profile.gender);
 
-        try {
-            setUploading(true);
-            setUploadProgress(0);
-            const toastId = toast.loading('Uploading profile picture...');
-            await axios.put('/api/admin/profile', formData, {
-                headers: { 
-                    'Content-Type': 'multipart/form-data'
-                },
+        const toastId = toast.loading('Uploading profile picture...');
+        const doUpload = async () => {
+            return axios.post('/api/admin/profile', formData, {
+                timeout: 20000,
                 onUploadProgress: (evt) => {
                     if (!evt.total) return;
                     const pct = Math.round((evt.loaded * 100) / evt.total);
                     setUploadProgress(pct);
                 }
             });
+        };
+        try {
+            setUploading(true);
+            setUploadProgress(0);
+            let attempt = 0;
+            let lastError = null;
+            while (attempt < 2) {
+                try {
+                    await doUpload();
+                    lastError = null;
+                    break;
+                } catch (err) {
+                    lastError = err;
+                    attempt += 1;
+                    await new Promise(res => setTimeout(res, 1000 * attempt));
+                }
+            }
+            if (lastError) throw lastError;
             toast.dismiss(toastId);
             toast.success('Profile picture updated!');
             fetchProfile();

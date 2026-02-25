@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { getProfilePicUrl } from '../../utils/image';
+import { compressImageClient, bytesToKB } from '../../utils/imageCompressionClient';
 
 // Dropdown Options
 const UNIT_OPTIONS = ["MSU-SND ROTC UNIT"];
@@ -247,8 +248,30 @@ const StaffProfile = () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        let working = file;
+        try {
+            const { file: compressed, stats } = await compressImageClient(file, {
+                maxBytes: Number(import.meta.env.VITE_PROFILE_MAX_BYTES) || 500 * 1024,
+                maxDimension: Number(import.meta.env.VITE_PROFILE_MAX_DIMENSION) || 1024,
+                initialQuality: 0.8,
+                minQuality: 0.5,
+                preferWebP: true,
+            });
+            working = compressed;
+            toast.success(`Compressed ${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`);
+        } catch (err) {
+            if (err.code === 'UNSUPPORTED_FORMAT') {
+                toast.error('Unsupported image format. Use JPEG, PNG, or WebP.');
+                return;
+            }
+            if (err.code === 'SIZE_NOT_MET' && err.partial) {
+                working = err.partial.file;
+                toast('Using best effort image; server will re-validate.', { icon: 'ℹ️' });
+            }
+        }
+
         const uploadData = new FormData();
-        uploadData.append('image', file);
+        uploadData.append('image', working);
 
         try {
             const toastId = toast.loading('Uploading profile picture...');
@@ -257,7 +280,10 @@ const StaffProfile = () => {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            
+            if (res?.data?.compression) {
+                const { original, final } = res.data.compression;
+                toast.success(`Server finalized ${bytesToKB(original)}KB → ${bytesToKB(final)}KB`);
+            }
             toast.dismiss(toastId);
             toast.success('Profile picture updated');
             
