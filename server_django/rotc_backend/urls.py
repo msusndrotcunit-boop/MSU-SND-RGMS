@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/admin/cadets/export-completed", api_views.admin_cadets_export_completed_view),
     path("api/admin/cadets/prune-completed", api_views.admin_cadets_prune_completed_view),
     path("api/admin/cadets/delete", api_views.admin_cadets_bulk_delete_view),
+    path("api/admin/cadets/delete-permanent", api_views.admin_cadets_permanent_delete_view),
     path("api/admin/cadets/restore", api_views.admin_cadets_bulk_restore_view),
     path("api/admin/cadets/unlock", api_views.admin_cadets_bulk_unlock_view),
     path("api/admin/import-cadets", api_views.admin_import_cadets_view),

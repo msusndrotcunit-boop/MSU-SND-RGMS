@@ -494,6 +494,30 @@ def admin_cadets_bulk_delete_view(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def admin_cadets_permanent_delete_view(request):
+    payload = json.loads(request.body.decode("utf-8") or "{}")
+    ids = payload.get("ids") or []
+    deleted_ids = []
+    try:
+        qs = Cadet.objects.filter(id__in=ids)
+        for cadet in qs:
+            try:
+                if cadet.profile_pic and cadet.profile_pic.name:
+                    try:
+                        default_storage.delete(cadet.profile_pic.name)
+                    except Exception:
+                        pass
+            finally:
+                deleted_ids.append(cadet.id)
+                cadet.delete()
+        return JsonResponse({"permanently_deleted_ids": deleted_ids})
+    except Exception as exc:
+        logging.exception("Permanent delete failed: %s", exc)
+        return JsonResponse({"message": "Permanent delete failed"}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def admin_cadets_bulk_restore_view(request):
     payload = json.loads(request.body.decode("utf-8") or "{}")
     ids = payload.get("ids") or []

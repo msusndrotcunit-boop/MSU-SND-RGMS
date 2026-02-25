@@ -841,6 +841,24 @@ const Cadets = () => {
                         className: 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50'
                     }] : []),
                     {
+                        icon: Trash2,
+                        label: 'Delete Permanently',
+                        onClick: async (cadet) => {
+                            if (!window.confirm('Permanently delete this cadet? This cannot be undone.')) return;
+                            try {
+                                await axios.post('/api/admin/cadets/delete-permanent', { ids: [cadet.id] });
+                                toast.success('Cadet permanently deleted');
+                                await cacheSingleton('admin', 'cadets_list', null);
+                                await clearCache('attendance_by_day');
+                                fetchCadets(true);
+                            } catch (err) {
+                                console.error(err);
+                                toast.error('Failed to permanently delete cadet');
+                            }
+                        },
+                        className: 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                    },
+                    {
                         icon: Eye,
                         label: 'View Profile',
                         onClick: openViewModal,
