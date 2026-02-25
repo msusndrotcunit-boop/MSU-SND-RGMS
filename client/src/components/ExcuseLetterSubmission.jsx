@@ -5,6 +5,7 @@ import ResponsiveTable from './ResponsiveTable';
 import { MobileFormLayout, FormField, MobileInput, MobileTextarea, FormActions } from './MobileFormLayout';
 import { compressImageClient, bytesToKB } from '../utils/imageCompressionClient';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [file, setFile] = useState(null);
@@ -17,6 +18,7 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
     const [showUploadConsent, setShowUploadConsent] = useState(false);
     const fileInputRef = useRef(null);
     const ORIGINAL_ACCEPT = "image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const { user } = useAuth();
 
     useEffect(() => {
         fetchHistory();
@@ -72,6 +74,9 @@ const ExcuseLetterSubmission = ({ onSubmitted }) => {
             formData.append('date_absent', date);
             formData.append('reason', reason);
             formData.append('file', working);
+            if (user?.cadetId) {
+                formData.append('cadetId', String(user.cadetId));
+            }
 
             const res = await axios.post('/api/excuse', formData, {
                 headers: {

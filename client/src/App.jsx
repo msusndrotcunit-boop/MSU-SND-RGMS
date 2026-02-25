@@ -29,6 +29,7 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
+const AdminAbsenceAnalytics = lazy(() => import('./pages/admin/AbsenceAnalytics'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 const BroadcastMessages = lazy(() => import('./pages/BroadcastMessages'));
 const Admin3DStudio = lazy(() => import('./pages/admin/ThreeDStudio'));
@@ -88,6 +89,7 @@ function App() {
                 <Route path="attendance" element={<AdminAttendance />} />
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
+                <Route path="absence-analytics" element={<AdminAbsenceAnalytics />} />
                 <Route path="activities" element={<AdminActivities />} />
                 <Route path="achievements" element={<AdminAchievements />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />

@@ -1411,6 +1411,7 @@ def excuse_collection_view(request):
     uploaded = request.FILES.get("file")
     date_absent = request.POST.get("date_absent")
     reason = request.POST.get("reason")
+    cadet_id = request.POST.get("cadetId")
     if not uploaded or not date_absent or not reason:
         return JsonResponse({"message": "Missing fields"}, status=400)
 
@@ -1452,6 +1453,8 @@ def excuse_collection_view(request):
             "original_name": original_name,
             "uploaded_at": datetime.utcnow().isoformat() + "Z",
         }
+        if cadet_id:
+            item["cadet_id"] = int(cadet_id)
         try:
             existing = []
             if meta_path.exists():
@@ -1465,4 +1468,186 @@ def excuse_collection_view(request):
     except Exception as exc:
         logging.exception("Excuse upload failed: %s", exc)
         return JsonResponse({"message": "Upload failed"}, status=500)
+
+
+@require_http_methods(["GET"])
+def absence_analytics_view(request):
+    try:
+        from collections import defaultdict
+        import math
+        start = request.GET.get("startDate")
+        end = request.GET.get("endDate")
+        battalion = request.GET.get("battalion")
+        company = request.GET.get("company")
+        platoon = request.GET.get("platoon")
+        year_level = request.GET.get("yearLevel")
+        type_filter = request.GET.get("type")  # excused/unexcused
+        severity_filter = request.GET.get("severity")  # low/medium/high
+
+        cadets = Cadet.objects.all()
+        if battalion:
+            cadets = cadets.filter(battalion=battalion)
+        if company:
+            cadets = cadets.filter(company=company)
+        if platoon:
+            cadets = cadets.filter(platoon=platoon)
+        if year_level:
+            cadets = cadets.filter(year_level=year_level)
+
+        cadet_map = {c.id: c for c in cadets}
+        meta_path = settings.BASE_DIR / "excuses_meta.json"
+        excuses = []
+        if meta_path.exists():
+            try:
+                excuses = json.loads(meta_path.read_text(encoding="utf-8") or "[]")
+            except Exception:
+                excuses = []
+
+        def within_range(d):
+            if (not start) and (not end):
+                return True
+            try:
+                from datetime import date
+                dt = datetime.strptime(d, "%Y-%m-%d").date()
+                if start:
+                    s = datetime.strptime(start, "%Y-%m-%d").date()
+                    if dt < s:
+                        return False
+                if end:
+                    e = datetime.strptime(end, "%Y-%m-%d").date()
+                    if dt > e:
+                        return False
+            except Exception:
+                return True
+            return True
+
+        def classify(exc):
+            reason = (exc.get("reason") or "").lower()
+            status = (exc.get("status") or "").lower()
+            etype = "excused" if status == "approved" else "unexcused"
+            if "medical" in reason or len(reason) > 120:
+                severity = "high"
+            elif "official" in reason or "event" in reason:
+                severity = "low"
+            else:
+                severity = "medium"
+            return etype, severity
+
+        per_cadet_excuses = defaultdict(list)
+        timeline_counts = defaultdict(int)
+        for exc in excuses:
+            cadet_id = exc.get("cadet_id")
+            date_str = exc.get("date_absent")
+            if not cadet_id or cadet_id not in cadet_map or not date_str:
+                continue
+            if not within_range(date_str):
+                continue
+            etype, severity = classify(exc)
+            if (type_filter and etype != type_filter) or (severity_filter and severity != severity_filter):
+                continue
+            per_cadet_excuses[cadet_id].append({"date": date_str, "type": etype, "severity": severity})
+            timeline_counts[date_str] += 1
+
+        cadet_rows = []
+        group_by = {
+            "battalion": defaultdict(lambda: {"absences": 0, "cadets": 0}),
+            "company": defaultdict(lambda: {"absences": 0, "cadets": 0}),
+            "platoon": defaultdict(lambda: {"absences": 0, "cadets": 0}),
+            "year_level": defaultdict(lambda: {"absences": 0, "cadets": 0}),
+        }
+        for cid, cadet in cadet_map.items():
+            present = cadet.attendance_present or 0
+            total = cadet.attendance_total or 0
+            total_absences = max(0, total - present)
+            excuse_count = len(per_cadet_excuses.get(cid, []))
+            percent = (total_absences / total) * 100 if total > 0 else 0.0
+            # Simple trend: last 30 days vs previous 30 days from excuses
+            today = datetime.utcnow().date()
+            last30 = 0
+            prev30 = 0
+            for e in per_cadet_excuses.get(cid, []):
+                try:
+                    d = datetime.strptime(e["date"], "%Y-%m-%d").date()
+                    delta = (today - d).days
+                    if 0 <= delta <= 30:
+                        last30 += 1
+                    elif 31 <= delta <= 60:
+                        prev30 += 1
+                except Exception:
+                    continue
+            trend = last30 - prev30
+            risk_score = round(0.6 * percent + 4.0 * max(0, trend), 2)
+            cadet_rows.append(
+                {
+                    "cadetId": cid,
+                    "name": f"{cadet.last_name}, {cadet.first_name}",
+                    "battalion": cadet.battalion,
+                    "company": cadet.company,
+                    "platoon": cadet.platoon,
+                    "year_level": cadet.year_level,
+                    "present": present,
+                    "total": total,
+                    "total_absences": total_absences,
+                    "excuse_events": excuse_count,
+                    "percent": round(percent, 2),
+                    "trend": trend,
+                    "risk_score": risk_score,
+                }
+            )
+            group_by["battalion"][cadet.battalion]["absences"] += total_absences
+            group_by["battalion"][cadet.battalion]["cadets"] += 1
+            group_by["company"][cadet.company]["absences"] += total_absences
+            group_by["company"][cadet.company]["cadets"] += 1
+            group_by["platoon"][cadet.platoon]["absences"] += total_absences
+            group_by["platoon"][cadet.platoon]["cadets"] += 1
+            group_by["year_level"][cadet.year_level]["absences"] += total_absences
+            group_by["year_level"][cadet.year_level]["cadets"] += 1
+
+        cadet_rows.sort(key=lambda x: (-x["risk_score"], -x["percent"], -x["total_absences"]))
+        for idx, row in enumerate(cadet_rows, start=1):
+            row["rank"] = idx
+
+        def to_series(dct):
+            out = []
+            for k, v in dct.items():
+                if v["cadets"] > 0:
+                    rate = v["absences"] / v["cadets"]
+                else:
+                    rate = 0.0
+                out.append({"key": k or "N/A", "avg_absences": round(rate, 2)})
+            out.sort(key=lambda x: -x["avg_absences"])
+            return out
+
+        timeline = [{"date": k, "absences": v} for k, v in timeline_counts.items()]
+        timeline.sort(key=lambda x: x["date"])
+
+        return JsonResponse(
+            {
+                "cadets": cadet_rows,
+                "groups": {
+                    "battalion": to_series(group_by["battalion"]),
+                    "company": to_series(group_by["company"]),
+                    "platoon": to_series(group_by["platoon"]),
+                    "year_level": to_series(group_by["year_level"]),
+                },
+                "timeline": timeline,
+                "at_risk": cadet_rows[:10],
+                "filters": {
+                    "applied": {
+                        "startDate": start,
+                        "endDate": end,
+                        "battalion": battalion,
+                        "company": company,
+                        "platoon": platoon,
+                        "yearLevel": year_level,
+                        "type": type_filter,
+                        "severity": severity_filter,
+                    }
+                },
+            },
+            safe=False,
+        )
+    except Exception as exc:
+        logging.exception("Analytics failed: %s", exc)
+        return JsonResponse({"message": "Analytics computation failed"}, status=500)
 

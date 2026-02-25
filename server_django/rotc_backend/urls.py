@@ -38,6 +38,7 @@ urlpatterns = [
     path("api/admin/export/<str:export_type>", api_views.admin_export_view),
     path("api/admin/analytics", api_views.admin_analytics_overview_view),
     path("api/admin/analytics/demographics", api_views.admin_analytics_demographics_view),
+    path("api/analytics/absences", api_views.absence_analytics_view),
     path("api/admin/profile", api_views.admin_profile_view),
     path("api/admin/cadets", api_views.admin_cadets_collection_view),
     path("api/admin/cadets/<int:cadet_id>", api_views.admin_cadets_update_view),
