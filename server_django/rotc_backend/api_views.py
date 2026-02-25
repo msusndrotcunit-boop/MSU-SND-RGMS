@@ -8,6 +8,7 @@ from datetime import datetime
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db.utils import OperationalError
 
 from openpyxl import load_workbook
 import logging
@@ -938,11 +939,11 @@ def cadet_notifications_list_view(request):
     except Cadet.DoesNotExist:
         return JsonResponse({"message": "Cadet not found"}, status=404)
 
-    # Get all notifications
-    notifications = BroadcastNotification.objects.all().order_by("-created_at")
-    
-    # Get read receipts for this cadet
-    read_ids = NotificationReadReceipt.objects.filter(cadet=cadet).values_list("notification_id", flat=True)
+    try:
+        notifications = BroadcastNotification.objects.all().order_by("-created_at")
+        read_ids = NotificationReadReceipt.objects.filter(cadet=cadet).values_list("notification_id", flat=True)
+    except OperationalError:
+        return JsonResponse([], safe=False)
 
     data = []
     for n in notifications:
