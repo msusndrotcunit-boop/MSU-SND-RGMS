@@ -1028,25 +1028,24 @@ def attendance_events_view(request):
         q = queue.Queue()
         event_queues.append(q)
         try:
-            # Send initial heartbeat
             yield "event: heartbeat\n"
             yield 'data: {"status":"ok"}\n\n'
             
             while True:
                 try:
-                    # Non-blocking get with timeout to allow checking if connection is still active
-                    msg = q.get(timeout=20)
+                    msg = q.get(timeout=5)
                     yield msg
                 except queue.Empty:
-                    # Keep-alive heartbeat
-                    yield ": keep-alive\n\n"
+                    yield "event: ping\n"
+                    yield "data: {}\n\n"
         finally:
             if q in event_queues:
                 event_queues.remove(q)
 
     response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx
+    response['Cache-Control'] = 'no-cache, no-transform'
+    response['Connection'] = 'keep-alive'
+    response['X-Accel-Buffering'] = 'no'
     return response
 
 
