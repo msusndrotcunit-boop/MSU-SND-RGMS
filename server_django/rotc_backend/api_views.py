@@ -12,6 +12,7 @@ import logging
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.conf import settings
+import mimetypes
 
 from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile
 
@@ -1650,4 +1651,24 @@ def absence_analytics_view(request):
     except Exception as exc:
         logging.exception("Analytics failed: %s", exc)
         return JsonResponse({"message": "Analytics computation failed"}, status=500)
+
+
+@require_http_methods(["GET"])
+def media_serve_view(request, path):
+    try:
+        allowed_prefixes = ("admin_profiles/", "staff_profiles/", "cadet_profiles/", "excuses/")
+        if not path.startswith(allowed_prefixes):
+            return JsonResponse({"message": "Forbidden"}, status=403)
+        if not default_storage.exists(path):
+            return JsonResponse({"message": "Not Found"}, status=404)
+        f = default_storage.open(path, "rb")
+        data = f.read()
+        f.close()
+        ctype, _ = mimetypes.guess_type(path)
+        resp = HttpResponse(data, content_type=ctype or "application/octet-stream")
+        resp["Cache-Control"] = "max-age=3600, public"
+        return resp
+    except Exception as exc:
+        logging.exception("Media serve failed for %s: %s", path, exc)
+        return JsonResponse({"message": "Error serving media"}, status=500)
 
