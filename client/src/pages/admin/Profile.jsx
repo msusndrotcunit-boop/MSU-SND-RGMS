@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { Camera, User, Mail, Shield, Info, LayoutDashboard, Users, Calendar, GraduationCap, ExternalLink } from 'lucide-react';
+import { Camera, User, Mail, Shield, Info, LayoutDashboard, Users, Calendar, GraduationCap, ExternalLink, Image as ImageIcon, X, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
@@ -146,11 +146,11 @@ const AdminProfile = () => {
                 {/* Profile Picture Section */}
                 <div className="md:col-span-1">
                     <div className="bg-white rounded shadow p-6 flex flex-col items-center h-full">
-                        <div className="relative w-40 h-40 mb-6">
+                        <div className="relative w-40 h-40 mb-6 group">
                             <img 
                                 src={preview} 
                                 alt="Profile" 
-                                className="w-full h-full object-cover rounded-full border-4 border-gray-200 shadow-sm"
+                                className={`w-full h-full object-cover rounded-full border-4 shadow-sm transition-all duration-300 ${file ? 'border-green-500 scale-105' : 'border-gray-200 group-hover:border-blue-400'}`}
                                 onError={(e) => {
                                     try {
                                         const fallback = getProfilePicFallback(profile?.id || 1, 'admin');
@@ -161,37 +161,73 @@ const AdminProfile = () => {
                                 }}
                             />
                             
-                            <label 
-                                className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
+                            {/* Camera Overlay Button */}
+                            <button 
+                                type="button"
+                                className="absolute bottom-1 right-1 bg-blue-600 text-white p-3 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg transition-all hover:scale-110 active:scale-95 z-10"
                                 onClick={(e) => { e.preventDefault(); setShowUploadConsent(true); }}
+                                title="Update Photo"
                             >
                                 <Camera size={20} />
-                                <input 
-                                    type="file" 
-                                    className="hidden" 
-                                    accept="image/*" 
-                                    onChange={handleFileChange} 
-                                    ref={fileInputRef}
-                                />
-                            </label>
+                            </button>
+
+                            {/* Hidden File Input */}
+                            <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={handleFileChange} 
+                                ref={fileInputRef}
+                            />
                         </div>
 
-                        {file && (
-                            <button 
-                                onClick={handleUpload}
-                                disabled={uploading}
-                                className={`w-full px-4 py-2 rounded transition mb-2 font-medium ${uploading ? 'bg-green-400 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                            >
-                                {uploading ? `Uploading… ${uploadProgress}%` : 'Save New Picture'}
-                            </button>
-                        )}
-                        {uploadError && (
-                            <div className="w-full text-sm text-red-600 mt-1 text-center">{uploadError}</div>
+                        {file ? (
+                            <div className="w-full space-y-2 animate-in slide-in-from-top-4 duration-300">
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={handleUpload}
+                                        disabled={uploading}
+                                        className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-70"
+                                    >
+                                        {uploading ? (
+                                            <>
+                                                <RefreshCw size={18} className="animate-spin" />
+                                                <span>{uploadProgress}%</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ImageIcon size={18} />
+                                                <span>Confirm Upload</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setFile(null);
+                                            setPreview(getProfilePicUrl(profile?.profile_pic, user?.id, 'admin'));
+                                        }}
+                                        disabled={uploading}
+                                        className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all border border-gray-200 disabled:opacity-50"
+                                        title="Cancel / Retake"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-center text-green-600 font-medium bg-green-50 py-1 rounded-full border border-green-100">
+                                    Ready to upload • { (file.size / 1024).toFixed(1) } KB
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-500 text-center mt-2 bg-gray-50 px-3 py-1.5 rounded-full">
+                                Tap camera to change photo
+                            </p>
                         )}
                         
-                        <p className="text-sm text-gray-500 text-center mt-2">
-                            Click the camera icon to update your profile photo.
-                        </p>
+                        {uploadError && (
+                            <div className="w-full text-xs text-red-600 mt-2 text-center bg-red-50 py-2 px-3 rounded-lg border border-red-100 animate-in shake-in duration-300">
+                                {uploadError}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -312,20 +348,19 @@ const AdminProfile = () => {
             </div>
 
             {showUploadConsent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                        <h4 className="text-lg font-bold text-gray-800 mb-2">Allow Camera or Files Access</h4>
-                        <p className="text-sm text-gray-600 mb-4">
-                            To update your profile photo, choose whether to use your camera or select from your gallery/files.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowUploadConsent(false)}
-                                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                            >
-                                Cancel
-                            </button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Modal Header */}
+                        <div className="bg-blue-600 p-6 text-white text-center">
+                            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Camera size={32} />
+                            </div>
+                            <h4 className="text-xl font-bold">Update Profile Photo</h4>
+                            <p className="text-blue-100 text-sm mt-1">Choose your preferred method</p>
+                        </div>
+
+                        {/* Modal Options */}
+                        <div className="p-4 grid grid-cols-1 gap-3">
                             <button
                                 type="button"
                                 onClick={async () => {
@@ -334,31 +369,54 @@ const AdminProfile = () => {
                                             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                                             try { stream.getTracks().forEach(t => t.stop()); } catch {}
                                         }
-                                    } catch {}
-                                    try {
                                         fileInputRef.current?.setAttribute('accept', 'image/*');
                                         fileInputRef.current?.setAttribute('capture', 'environment');
                                         fileInputRef.current?.click();
-                                    } catch {}
-                                    setShowUploadConsent(false);
+                                        setShowUploadConsent(false);
+                                    } catch (err) {
+                                        toast.error("Camera access denied or unavailable.");
+                                        setShowUploadConsent(false);
+                                    }
                                 }}
-                                className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                                className="flex items-center gap-4 p-4 rounded-xl hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group"
                             >
-                                Use Camera
+                                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <Camera size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <span className="block font-bold text-gray-800">Use Camera</span>
+                                    <span className="text-xs text-gray-500">Take a new photo now</span>
+                                </div>
                             </button>
+
                             <button
                                 type="button"
                                 onClick={() => {
-                                    try {
-                                        fileInputRef.current?.setAttribute('accept', 'image/*');
-                                        fileInputRef.current?.removeAttribute('capture');
-                                        fileInputRef.current?.click();
-                                    } catch {}
+                                    fileInputRef.current?.setAttribute('accept', 'image/*');
+                                    fileInputRef.current?.removeAttribute('capture');
+                                    fileInputRef.current?.click();
                                     setShowUploadConsent(false);
                                 }}
-                                className="px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800"
+                                className="flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 border border-transparent hover:border-green-100 transition-all group"
                             >
-                                Choose Files
+                                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors">
+                                    <ImageIcon size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <span className="block font-bold text-gray-800">Gallery / Files</span>
+                                    <span className="text-xs text-gray-500">Choose an existing image</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 bg-gray-50 flex justify-center">
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadConsent(false)}
+                                className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
