@@ -158,3 +158,35 @@ class ImportApiTests(TestCase):
         staff = TrainingStaff.objects.get(email="maria@example.com")
         self.assertEqual(staff.first_name, "Maria")
         self.assertEqual(staff.last_name, "Lopez")
+
+
+class CadetApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_create_and_list_cadet_unverified(self):
+        payload = {
+            "studentId": "T123",
+            "firstName": "John",
+            "lastName": "Doe",
+            "status": "Ongoing"
+        }
+        resp = self.client.post("/api/admin/cadets", data=json.dumps(payload), content_type="application/json")
+        self.assertIn(resp.status_code, (200, 201))
+        list_resp = self.client.get("/api/admin/cadets")
+        self.assertEqual(list_resp.status_code, 200)
+        data = list_resp.json()
+        self.assertTrue(any(c.get("student_id") == "T123" for c in data))
+        created = next((c for c in data if c.get("student_id") == "T123"), None)
+        self.assertIsNotNone(created)
+        self.assertFalse(created.get("is_profile_completed"))
+
+    def test_import_sanitizes_malformed_quote_name(self):
+        csv_content = "Student ID,First Name,Last Name\nS999,,'\n"
+        upload = SimpleUploadedFile("cadets.csv", csv_content.encode("utf-8"), content_type="text/csv")
+        resp = self.client.post("/api/admin/import-cadets", data={"file": upload})
+        self.assertEqual(resp.status_code, 200)
+        c = Cadet.objects.get(student_id="S999")
+        self.assertNotEqual(c.last_name, "'")
+        self.assertTrue(c.last_name)
+        self.assertTrue(c.first_name)

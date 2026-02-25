@@ -20,6 +20,7 @@ from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile
 from io import BytesIO
 from PIL import Image
 import os
+import re
 
 IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(512 * 1024)))
 IMAGE_MAX_DIMENSION = int(os.getenv("IMAGE_MAX_DIMENSION", str(1600)))
@@ -262,31 +263,55 @@ def parse_date(value):
 
 
 def build_cadet_payload(data):
-    return {
-        "rank": data.get("rank", ""),
-        "first_name": data.get("firstName") or data.get("first_name", ""),
-        "middle_name": data.get("middleName") or data.get("middle_name", ""),
-        "last_name": data.get("lastName") or data.get("last_name", ""),
-        "suffix_name": data.get("suffixName") or data.get("suffix_name", ""),
-        "student_id": data.get("studentId") or data.get("student_id", ""),
-        "email": data.get("email", ""),
-        "username": data.get("username", ""),
-        "contact_number": data.get("contactNumber") or data.get("contact_number", ""),
-        "address": data.get("address", ""),
-        "gender": data.get("gender", ""),
-        "religion": data.get("religion", ""),
+    def _sanitize_name(s):
+        if s is None:
+            return ""
+        s = str(s).strip()
+        # Normalize exotic apostrophes to ASCII
+        s = s.replace("’", "'").replace("‘", "'").replace("`", "'").replace("“", '"').replace("”", '"')
+        # Remove control characters
+        s = re.sub(r"[\x00-\x1F\x7F]", "", s)
+        # If only quotes or punctuation remain, treat as empty
+        if re.fullmatch(r"[\'\"\\-_.\\s]*", s):
+            return ""
+        # Collapse multiple spaces
+        s = re.sub(r"\s{2,}", " ", s)
+        return s
+    def _sanitize_id(s):
+        if s is None:
+            return ""
+        return str(s).strip()
+    payload = {
+        "rank": _sanitize_name(data.get("rank", "")),
+        "first_name": _sanitize_name(data.get("firstName") or data.get("first_name", "")),
+        "middle_name": _sanitize_name(data.get("middleName") or data.get("middle_name", "")),
+        "last_name": _sanitize_name(data.get("lastName") or data.get("last_name", "")),
+        "suffix_name": _sanitize_name(data.get("suffixName") or data.get("suffix_name", "")),
+        "student_id": _sanitize_id(data.get("studentId") or data.get("student_id", "")),
+        "email": (data.get("email", "") or "").strip(),
+        "username": _sanitize_id(data.get("username", "")),
+        "contact_number": (data.get("contactNumber") or data.get("contact_number", "") or "").strip(),
+        "address": (data.get("address", "") or "").strip(),
+        "gender": _sanitize_name(data.get("gender", "")),
+        "religion": _sanitize_name(data.get("religion", "")),
         "birthdate": parse_date(data.get("birthdate")),
-        "course": data.get("course", ""),
-        "year_level": data.get("yearLevel") or data.get("year_level", ""),
-        "school_year": data.get("schoolYear") or data.get("school_year", ""),
-        "battalion": data.get("battalion", ""),
-        "company": data.get("company", ""),
-        "platoon": data.get("platoon", ""),
-        "cadet_course": data.get("cadetCourse") or data.get("cadet_course", ""),
-        "semester": data.get("semester", ""),
-        "corp_position": data.get("corpPosition") or data.get("corp_position", ""),
-        "status": data.get("status", "Ongoing"),
+        "course": _sanitize_name(data.get("course", "")),
+        "year_level": _sanitize_name(data.get("yearLevel") or data.get("year_level", "")),
+        "school_year": _sanitize_name(data.get("schoolYear") or data.get("school_year", "")),
+        "battalion": _sanitize_name(data.get("battalion", "")),
+        "company": _sanitize_name(data.get("company", "")),
+        "platoon": _sanitize_name(data.get("platoon", "")),
+        "cadet_course": _sanitize_name(data.get("cadetCourse") or data.get("cadet_course", "")),
+        "semester": _sanitize_name(data.get("semester", "")),
+        "corp_position": _sanitize_name(data.get("corpPosition") or data.get("corp_position", "")),
+        "status": _sanitize_name(data.get("status", "Ongoing")) or "Ongoing",
     }
+    # Ensure name fallbacks to avoid malformed one-char punctuation names
+    if not payload["first_name"] and payload["last_name"]:
+        payload["first_name"] = "Unknown"
+    if not payload["last_name"] and payload["first_name"]:
+        payload["last_name"] = "Cadet"
+    return payload
 
 
 def find_column_value(row, candidates):
@@ -425,14 +450,19 @@ def admin_cadets_create_view(request):
     cadet_data = build_cadet_payload(payload)
     if not cadet_data.get("student_id"):
         return JsonResponse({"message": "studentId is required"}, status=400)
-    cadet, created = Cadet.objects.get_or_create(
-        student_id=cadet_data["student_id"], defaults=cadet_data
-    )
-    if not created:
-        for key, value in cadet_data.items():
-            setattr(cadet, key, value)
-        cadet.save()
-    return JsonResponse(cadet_to_dict(cadet), status=201 if created else 200)
+    try:
+        cadet, created = Cadet.objects.get_or_create(
+            student_id=cadet_data["student_id"], defaults=cadet_data
+        )
+        if not created:
+            for key, value in cadet_data.items():
+                setattr(cadet, key, value)
+            cadet.save()
+        logging.info("Cadet %s (%s) %s", f"{cadet.last_name}, {cadet.first_name}", cadet.student_id, "created" if created else "updated")
+        return JsonResponse(cadet_to_dict(cadet), status=201 if created else 200)
+    except Exception as exc:
+        logging.exception("Cadet creation failed: %s", exc)
+        return JsonResponse({"message": "Cadet creation failed"}, status=500)
 
 
 @csrf_exempt
@@ -496,6 +526,10 @@ def admin_import_cadets_view(request):
     skipped = 0
     errors = []
 
+    def _san(s):
+        return (s or "").strip()
+    def _san_name(s):
+        return build_cadet_payload({"firstName": s}).get("first_name", "")
     for row in rows:
         try:
             custom_username = find_column_value(row, ["Username", "User Name", "username"])
@@ -517,20 +551,20 @@ def admin_import_cadets_view(request):
                 if full_name:
                     parts = str(full_name).split(",")
                     if len(parts) >= 2:
-                        last_name = parts[0].strip()
+                        last_name = _san_name(parts[0])
                         rest = parts[1].strip().split(" ")
-                        first_name = rest[0]
-                        middle_name = " ".join(rest[1:]) if len(rest) > 1 else middle_name
+                        first_name = _san_name(rest[0])
+                        middle_name = _san_name(" ".join(rest[1:]) if len(rest) > 1 else middle_name)
                     else:
                         space_parts = str(full_name).split(" ")
                         if len(space_parts) >= 2:
-                            last_name = space_parts[-1]
-                            first_name = " ".join(space_parts[:-1])
+                            last_name = _san_name(space_parts[-1])
+                            first_name = _san_name(" ".join(space_parts[:-1]))
                         else:
-                            first_name = full_name
+                            first_name = _san_name(full_name)
                             last_name = last_name or "Unknown"
 
-            student_id = raw_student_id or custom_username or email
+            student_id = _san(raw_student_id) or _san(custom_username) or _san(email)
             if not student_id and first_name:
                 base = str(first_name).strip().lower()
                 base = "".join(ch for ch in base if ch.isalnum())
@@ -543,13 +577,20 @@ def admin_import_cadets_view(request):
                 )
                 continue
 
+            # Sanitize final names
+            sf = build_cadet_payload({
+                "firstName": first_name or "Unknown",
+                "lastName": last_name or "Cadet",
+                "middleName": middle_name,
+                "rank": rank
+            })
             cadet_defaults = {
-                "last_name": last_name or "Cadet",
-                "first_name": first_name or "Unknown",
-                "middle_name": middle_name,
+                "last_name": sf["last_name"] or "Cadet",
+                "first_name": sf["first_name"] or "Unknown",
+                "middle_name": sf["middle_name"],
                 "suffix_name": "",
-                "rank": rank,
-                "email": email or "",
+                "rank": sf["rank"] or "Cdt",
+                "email": _san(email),
                 "contact_number": "",
                 "address": "",
                 "course": "",
