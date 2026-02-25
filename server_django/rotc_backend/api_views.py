@@ -482,6 +482,11 @@ def admin_cadets_update_view(request, cadet_id):
         # Avoid wiping student_id if omitted/blank in payload
         if not cadet_data.get("student_id"):
             cadet_data.pop("student_id", None)
+            
+        # Automatically complete profile if status is Verified
+        if cadet_data.get("status") == "Verified":
+            cadet_data["is_profile_completed"] = True
+            
         for key, value in cadet_data.items():
             setattr(cadet, key, value)
         cadet.save()
@@ -738,7 +743,21 @@ def cadet_profile_view(request):
         # Update other fields
         for key in payload:
             if hasattr(cadet, key):
-                setattr(cadet, key, payload[key])
+                val = payload[key]
+                # Robust validation for is_profile_completed
+                if key == "is_profile_completed":
+                    is_completing = val in [True, "true", 1, "1"]
+                    if is_completing:
+                        # Required fields check before allowing completion
+                        required = [cadet.first_name, cadet.last_name, cadet.email, cadet.contact_number, cadet.address]
+                        if all(required):
+                            cadet.is_profile_completed = True
+                            cadet.status = "Verified"
+                        else:
+                            # If fields are missing, don't allow completion
+                            continue
+                else:
+                    setattr(cadet, key, val)
         
         cadet.save()
         data = cadet_to_dict(cadet)
@@ -1410,8 +1429,14 @@ def staff_update_view(request, staff_id):
     staff.email = payload.get("email", staff.email)
     staff.contact_number = payload.get("contact_number", staff.contact_number)
     staff.role = payload.get("role", staff.role)
+    
+    # Auto-calculate is_profile_completed based on required fields presence
+    staff.is_profile_completed = bool(
+        staff.rank and staff.first_name and staff.last_name and staff.email and staff.contact_number
+    )
+    
     staff.save()
-    return JsonResponse({"updated": True, "id": staff.id})
+    return JsonResponse({"updated": True, "id": staff.id, "isProfileCompleted": staff.is_profile_completed})
 
 
 @csrf_exempt
