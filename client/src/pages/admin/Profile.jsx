@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Camera, User, Mail, Shield, Info } from 'lucide-react';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
+import imageCompression from 'browser-image-compression';
+import { toast } from 'react-hot-toast';
 
 const AdminProfile = () => {
     const { user } = useAuth();
@@ -14,6 +16,9 @@ const AdminProfile = () => {
     const [preview, setPreview] = useState(null);
     const [showUploadConsent, setShowUploadConsent] = useState(false);
     const fileInputRef = React.useRef(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadError, setUploadError] = useState('');
 
     useEffect(() => {
         fetchProfile();
@@ -44,15 +49,51 @@ const AdminProfile = () => {
         }
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
+        setUploadError('');
         const selectedFile = e.target.files[0];
-        setFile(selectedFile);
-        if (selectedFile) {
-            setPreview(URL.createObjectURL(selectedFile));
+        if (!selectedFile) {
+            setFile(null);
+            return;
         }
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(selectedFile.type)) {
+            setUploadError('Invalid file type. Please upload a JPEG, PNG, or GIF image.');
+            setFile(null);
+            return;
+        }
+
+        const maxBytes = 5 * 1024 * 1024;
+        let workingFile = selectedFile;
+
+        try {
+            if (selectedFile.size > maxBytes) {
+                const options = {
+                    maxSizeMB: 4.9,
+                    maxWidthOrHeight: 1600,
+                    useWebWorker: true,
+                };
+                const compressed = await imageCompression(selectedFile, options);
+                if (compressed.size > maxBytes) {
+                    setUploadError('Image is too large even after compression (max 5MB). Please choose a smaller image.');
+                    setFile(null);
+                    return;
+                }
+                workingFile = new File([compressed], selectedFile.name.replace(/\.(jpg|jpeg|png|gif)$/i, '.jpg'), { type: 'image/jpeg' });
+            }
+        } catch (err) {
+            setUploadError('Failed to process the image. Please try another file.');
+            setFile(null);
+            return;
+        }
+
+        setFile(workingFile);
+        setPreview(URL.createObjectURL(workingFile));
     };
 
     const handleUpload = async () => {
+        setUploadError('');
         if (!file) return;
 
         const formData = new FormData();
@@ -60,17 +101,32 @@ const AdminProfile = () => {
         if (profile?.gender) formData.append('gender', profile.gender);
 
         try {
+            setUploading(true);
+            setUploadProgress(0);
+            const toastId = toast.loading('Uploading profile picture...');
             await axios.put('/api/admin/profile', formData, {
                 headers: { 
                     'Content-Type': 'multipart/form-data'
+                },
+                onUploadProgress: (evt) => {
+                    if (!evt.total) return;
+                    const pct = Math.round((evt.loaded * 100) / evt.total);
+                    setUploadProgress(pct);
                 }
             });
-            alert('Profile picture updated!');
+            toast.dismiss(toastId);
+            toast.success('Profile picture updated!');
             fetchProfile();
             setFile(null);
+            setPreview(getProfilePicUrl(profile?.profile_pic, user?.id, 'admin'));
         } catch (error) {
             console.error('Error updating profile:', error);
-            alert('Failed to update profile.');
+            const msg = error.response?.data?.message || 'Failed to update profile.';
+            setUploadError(msg);
+            toast.error(msg);
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
         }
     };
     
@@ -121,10 +177,14 @@ const AdminProfile = () => {
                         {file && (
                             <button 
                                 onClick={handleUpload}
-                                className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition mb-2 font-medium"
+                                disabled={uploading}
+                                className={`w-full px-4 py-2 rounded transition mb-2 font-medium ${uploading ? 'bg-green-400 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
                             >
-                                Save New Picture
+                                {uploading ? `Uploading… ${uploadProgress}%` : 'Save New Picture'}
                             </button>
+                        )}
+                        {uploadError && (
+                            <div className="w-full text-sm text-red-600 mt-1 text-center">{uploadError}</div>
                         )}
                         
                         <p className="text-sm text-gray-500 text-center mt-2">
