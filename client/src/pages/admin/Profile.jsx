@@ -268,43 +268,6 @@ const AdminProfile = () => {
                 </div>
             </div>
 
-            {/* Quick Links Section */}
-            <div className="bg-white rounded shadow p-6">
-                <h3 className="text-lg font-bold mb-6 flex items-center text-gray-800 border-b pb-2">
-                    <ExternalLink className="mr-2 text-blue-600" size={20} /> Quick Links
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <button 
-                        onClick={() => navigate('/admin/dashboard')}
-                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-blue-50 hover:text-blue-600 transition-all border border-gray-100 group"
-                    >
-                        <LayoutDashboard className="mb-2 text-gray-400 group-hover:text-blue-500" size={24} />
-                        <span className="text-xs font-semibold">Dashboard</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/admin/cadets')}
-                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-green-50 hover:text-green-600 transition-all border border-gray-100 group"
-                    >
-                        <Users className="mb-2 text-gray-400 group-hover:text-green-500" size={24} />
-                        <span className="text-xs font-semibold">Cadets</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/admin/attendance')}
-                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-yellow-50 hover:text-yellow-600 transition-all border border-gray-100 group"
-                    >
-                        <Calendar className="mb-2 text-gray-400 group-hover:text-yellow-500" size={24} />
-                        <span className="text-xs font-semibold">Attendance</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/admin/grading')}
-                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-purple-50 hover:text-purple-600 transition-all border border-gray-100 group"
-                    >
-                        <GraduationCap className="mb-2 text-gray-400 group-hover:text-purple-500" size={24} />
-                        <span className="text-xs font-semibold">Grading</span>
-                    </button>
-                </div>
-            </div>
-
             {/* About the App Section */}
             <div className="bg-white rounded shadow p-6">
                 <h3 className="text-lg font-bold mb-4 flex items-center text-gray-800 border-b pb-2">
@@ -344,6 +307,62 @@ const AdminProfile = () => {
                             <li>User Approval & Access Control</li>
                         </ul>
                     </div>
+                </div>
+            </div>
+
+            {/* Quick Links Section - Redesigned & Relocated to bottom */}
+            <div className="bg-[#F8FAFC] rounded-2xl shadow-sm p-6 sm:p-8 mt-8 border border-gray-100">
+                <h3 className="text-xl font-bold mb-8 flex items-center text-gray-800 border-b border-gray-200 pb-3">
+                    <ExternalLink className="mr-3 text-blue-600" size={24} /> Quick Management Links
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Dashboard */}
+                    <button 
+                        onClick={() => navigate('/admin/dashboard')}
+                        className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-[#00D4FF] text-gray-700 hover:text-gray-900 transition-all duration-500 shadow-sm hover:shadow-xl border border-gray-100 min-h-[140px] relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-[#00D4FF]/5 rounded-bl-full group-hover:bg-white/10 transition-colors duration-500" />
+                        <div className="mb-4 p-4 rounded-2xl bg-blue-50 group-hover:bg-white/20 transition-all duration-500 transform group-hover:scale-110">
+                            <LayoutDashboard className="text-[#0062cc] group-hover:text-gray-900 transition-all duration-500 group-hover:rotate-[15deg]" size={32} />
+                        </div>
+                        <span className="text-sm font-extrabold uppercase tracking-widest">Dashboard</span>
+                    </button>
+
+                    {/* Cadets */}
+                    <button 
+                        onClick={() => navigate('/admin/cadets')}
+                        className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-[#10B981] text-gray-700 hover:text-gray-900 transition-all duration-500 shadow-sm hover:shadow-xl border border-gray-100 min-h-[140px] relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-[#10B981]/5 rounded-bl-full group-hover:bg-white/10 transition-colors duration-500" />
+                        <div className="mb-4 p-4 rounded-2xl bg-emerald-50 group-hover:bg-white/20 transition-all duration-500 transform group-hover:scale-110">
+                            <Users className="text-[#059669] group-hover:text-gray-900 transition-all duration-500 group-hover:rotate-[15deg]" size={32} />
+                        </div>
+                        <span className="text-sm font-extrabold uppercase tracking-widest">Cadets</span>
+                    </button>
+
+                    {/* Attendance */}
+                    <button 
+                        onClick={() => navigate('/admin/attendance')}
+                        className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-[#F59E0B] text-gray-700 hover:text-gray-900 transition-all duration-500 shadow-sm hover:shadow-xl border border-gray-100 min-h-[140px] relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-[#F59E0B]/5 rounded-bl-full group-hover:bg-white/10 transition-colors duration-500" />
+                        <div className="mb-4 p-4 rounded-2xl bg-yellow-50 group-hover:bg-white/20 transition-all duration-500 transform group-hover:scale-110">
+                            <Calendar className="text-[#D97706] group-hover:text-gray-900 transition-all duration-500 group-hover:rotate-[15deg]" size={32} />
+                        </div>
+                        <span className="text-sm font-extrabold uppercase tracking-widest">Attendance</span>
+                    </button>
+
+                    {/* Grading */}
+                    <button 
+                        onClick={() => navigate('/admin/grading')}
+                        className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-[#8B5CF6] text-gray-700 hover:text-gray-900 transition-all duration-500 shadow-sm hover:shadow-xl border border-gray-100 min-h-[140px] relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-[#8B5CF6]/5 rounded-bl-full group-hover:bg-white/10 transition-colors duration-500" />
+                        <div className="mb-4 p-4 rounded-2xl bg-purple-50 group-hover:bg-white/20 transition-all duration-500 transform group-hover:scale-110">
+                            <GraduationCap className="text-[#7C3AED] group-hover:text-gray-900 transition-all duration-500 group-hover:rotate-[15deg]" size={32} />
+                        </div>
+                        <span className="text-sm font-extrabold uppercase tracking-widest">Grading</span>
+                    </button>
                 </div>
             </div>
 
