@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, re_path
 from django.views.generic import TemplateView
+from django.http import HttpResponse
+from pathlib import Path
 from django.db import connections
 from django.db.utils import OperationalError
 from django.utils.timezone import now
@@ -98,8 +100,17 @@ urlpatterns = [
     path("api/images/cadets/<int:cadet_id>", api_views.image_cadet_view),
     path("api/excuse", api_views.excuse_collection_view),
     path("media/<path:path>", api_views.media_serve_view),
+    # SPA fallback with runtime-safe file check (avoids 502 if dist is missing)
     re_path(
         r"^(?!api/|dj-admin/|static/|media/).*$",
-        TemplateView.as_view(template_name="index.html"),
+        lambda request: (
+            (lambda p: HttpResponse(p.read_text(encoding="utf-8"), content_type="text/html"))
+            (Path(__file__).resolve().parent.parent / "client" / "dist" / "index.html")
+            if (Path(__file__).resolve().parent.parent / "client" / "dist" / "index.html").exists()
+            else HttpResponse(
+                "<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='refresh' content='5;url=/login'><title>RGMS</title></head><body style='font-family:system-ui;padding:2rem'><h1>Service is starting</h1><p>The application assets are not yet available. Please try again shortly or go to <a href='/login'>/login</a>.</p></body></html>",
+                content_type="text/html",
+            )
+        ),
     ),
 ]
