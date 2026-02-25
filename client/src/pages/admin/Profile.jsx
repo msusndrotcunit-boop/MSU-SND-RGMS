@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { Camera, User, Mail, Shield, Info } from 'lucide-react';
+import { Camera, User, Mail, Shield, Info, LayoutDashboard, Users, Calendar, GraduationCap, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cacheSingleton, getSingleton } from '../../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../../utils/image';
 import imageCompression from 'browser-image-compression';
@@ -9,6 +10,7 @@ import { toast } from 'react-hot-toast';
 
 const AdminProfile = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -210,9 +212,9 @@ const AdminProfile = () => {
                             
                             <div>
                                 <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 block">Email Address</label>
-                                <div className="flex items-center text-gray-800 bg-gray-50 p-3 rounded border border-gray-100">
-                                    <Mail size={18} className="mr-3 text-gray-400" />
-                                    <span className="font-medium">{profile.email || 'No email provided'}</span>
+                                <div className="flex items-center text-gray-800 bg-gray-50 p-3 rounded border border-gray-100 overflow-hidden">
+                                    <Mail size={18} className="mr-3 text-gray-400 flex-shrink-0" />
+                                    <span className="font-medium break-all text-sm sm:text-base">{profile.email || 'msusndrotcunit@gmail.com'}</span>
                                 </div>
                             </div>
 
@@ -227,6 +229,43 @@ const AdminProfile = () => {
                             
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Quick Links Section */}
+            <div className="bg-white rounded shadow p-6">
+                <h3 className="text-lg font-bold mb-6 flex items-center text-gray-800 border-b pb-2">
+                    <ExternalLink className="mr-2 text-blue-600" size={20} /> Quick Links
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <button 
+                        onClick={() => navigate('/admin/dashboard')}
+                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-blue-50 hover:text-blue-600 transition-all border border-gray-100 group"
+                    >
+                        <LayoutDashboard className="mb-2 text-gray-400 group-hover:text-blue-500" size={24} />
+                        <span className="text-xs font-semibold">Dashboard</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/admin/cadets')}
+                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-green-50 hover:text-green-600 transition-all border border-gray-100 group"
+                    >
+                        <Users className="mb-2 text-gray-400 group-hover:text-green-500" size={24} />
+                        <span className="text-xs font-semibold">Cadets</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/admin/attendance')}
+                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-yellow-50 hover:text-yellow-600 transition-all border border-gray-100 group"
+                    >
+                        <Calendar className="mb-2 text-gray-400 group-hover:text-yellow-500" size={24} />
+                        <span className="text-xs font-semibold">Attendance</span>
+                    </button>
+                    <button 
+                        onClick={() => navigate('/admin/grading')}
+                        className="flex flex-col items-center justify-center p-4 rounded-lg bg-gray-50 hover:bg-purple-50 hover:text-purple-600 transition-all border border-gray-100 group"
+                    >
+                        <GraduationCap className="mb-2 text-gray-400 group-hover:text-purple-500" size={24} />
+                        <span className="text-xs font-semibold">Grading</span>
+                    </button>
                 </div>
             </div>
 
@@ -251,7 +290,7 @@ const AdminProfile = () => {
                         </div>
                         <div>
                             <span className="text-xs text-gray-500 uppercase font-bold block mb-1">Developer</span>
-                            <span className="font-semibold text-gray-800">MSU-SND ROTC Unit</span>
+                            <span className="font-semibold text-gray-800">JUNJIE L. BAHIAN</span>
                         </div>
                         <div>
                             <span className="text-xs text-gray-500 uppercase font-bold block mb-1">Release Date</span>

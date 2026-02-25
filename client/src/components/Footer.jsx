@@ -41,14 +41,14 @@ const Footer = () => {
 
   return (
     <footer className="bg-primary-surface text-white py-2 md:py-3 px-3 md:px-6 mt-auto border-t border-yellow-500/30 relative">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-[50px] md:h-auto gap-2 md:gap-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-[60px] md:h-auto gap-3 md:gap-4">
         {/* Brand Section - Ultra Compact on Mobile */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
             <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
           </div>
-          <div className="hidden sm:flex flex-col items-start leading-none">
-            <h3 className="font-bold text-xs tracking-wide flex items-center gap-1">
+          <div className="flex flex-col items-start leading-none">
+            <h3 className="font-bold text-sm tracking-wide flex items-center gap-1">
               MSU-SND{' '}
               <button 
                 type="button"
@@ -58,29 +58,29 @@ const Footer = () => {
                 RGMS
               </button>
             </h3>
-            <p className="text-[9px] text-green-100/50">ROTC Grading System</p>
+            <p className="text-[11px] md:text-[10px] text-green-100/50">ROTC Grading System</p>
           </div>
         </div>
 
         {/* Essential Navigation Links (Mobile: Icons, Desktop: Text) */}
-        <div className="flex items-center gap-1 md:gap-4 flex-1 justify-center md:justify-start">
+        <div className="flex items-center gap-2 md:gap-4 flex-1 justify-center md:justify-start">
           <button
             type="button"
             onClick={() => setModal('about')}
-            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
             title="About the App"
           >
-            <Info size={18} className="md:hidden" />
+            <Info size={22} className="md:hidden" />
             <span className="hidden md:inline">About</span>
           </button>
           
           <button
             type="button"
             onClick={handleSupport}
-            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
             title="Support"
           >
-            <Headphones size={18} className="md:hidden" />
+            <Headphones size={22} className="md:hidden" />
             <span className="hidden md:inline">Support</span>
           </button>
 
@@ -95,10 +95,10 @@ const Footer = () => {
                   setShowMore(!showMore);
                 }
               }}
-              className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+              className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
               title={showMore ? "Close Menu" : "More Options"}
             >
-              <MoreHorizontal size={18} className="md:hidden" />
+              <MoreHorizontal size={22} className="md:hidden" />
               <span className="hidden md:inline">Docs</span>
             </button>
 
@@ -128,14 +128,14 @@ const Footer = () => {
         </div>
 
         {/* Desktop Copyright & Social / Mobile Compact Copyright */}
-        <div className="flex flex-col items-end shrink-0">
+        <div className="flex flex-col items-end shrink-0 ml-auto">
           <div className="hidden md:flex gap-3 mb-1">
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Facebook size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Twitter size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Linkedin size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Mail size={14} /></a>
           </div>
-          <p className="text-[9px] md:text-[10px] text-green-100/40 text-right leading-none md:leading-normal">
+          <p className="text-sm md:text-[10px] text-green-100/40 text-right leading-none md:leading-normal">
             <span className="hidden sm:inline">© {new Date().getFullYear()} MSU-SND ROTC • </span>
             <span className="sm:hidden">© {new Date().getFullYear()} </span>
             JUNJIE L. BAHIAN

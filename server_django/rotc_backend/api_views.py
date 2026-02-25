@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 
 from openpyxl import load_workbook
 
-from rgms.models import Cadet, MeritDemeritLog, TrainingStaff
+from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile
 
 
 def transmute_grade(value):
@@ -82,7 +82,7 @@ def cadet_to_dict(cadet):
         "corp_position": cadet.corp_position,
         "status": cadet.status,
         "is_profile_completed": cadet.is_profile_completed,
-        "profile_pic": cadet.profile_pic,
+        "profile_pic": cadet.profile_pic.url if cadet.profile_pic else None,
         "attendance_present": cadet.attendance_present,
         "attendance_total": cadet.attendance_total,
         "attendanceScore": cadet.attendance_score,
@@ -185,19 +185,46 @@ def load_rows_from_upload(uploaded_file):
     raise ValueError("Unsupported file type. Please upload CSV or Excel (.xlsx) file.")
 
 
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
 def admin_profile_view(request):
-    return JsonResponse(
-        {
-            "id": 1,
-            "username": "admin",
-            "first_name": "System",
-            "last_name": "Administrator",
-            "email": "msusndrotcunit@gmail.com",
-            "role": "admin",
-            "profile_completed": True,
-        }
-    )
+    admin_profile, _ = AdminProfile.objects.get_or_create(username="admin")
+
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "id": admin_profile.id,
+                "username": admin_profile.username,
+                "first_name": admin_profile.first_name,
+                "last_name": admin_profile.last_name,
+                "email": admin_profile.email,
+                "profile_pic": admin_profile.profile_pic.url if admin_profile.profile_pic else None,
+                "role": "admin",
+                "profile_completed": True,
+            }
+        )
+
+    if request.method == "PUT":
+        # Handle profile picture upload
+        profile_pic = request.FILES.get("profilePic")
+        if profile_pic:
+            # Basic validation
+            allowed_types = ["image/jpeg", "image/png", "image/gif"]
+            if profile_pic.content_type not in allowed_types:
+                return JsonResponse({"message": "Invalid file type. Only JPG, PNG, and GIF are allowed."}, status=400)
+            
+            if profile_pic.size > 5 * 1024 * 1024:
+                return JsonResponse({"message": "File size exceeds 5MB limit."}, status=400)
+
+            admin_profile.profile_pic = profile_pic
+            admin_profile.save()
+            
+            return JsonResponse({
+                "message": "Profile picture updated successfully",
+                "profile_pic": admin_profile.profile_pic.url
+            })
+        
+        return JsonResponse({"message": "No profile picture provided"}, status=400)
 
 
 @require_http_methods(["GET"])
@@ -421,7 +448,7 @@ def staff_list_view(request):
             "email": s.email,
             "contact_number": s.contact_number,
             "role": s.role,
-            "profile_pic": s.profile_pic,
+            "profile_pic": s.profile_pic.url if s.profile_pic else None,
             "is_profile_completed": s.is_profile_completed,
             "is_archived": s.is_archived,
         }
@@ -430,19 +457,84 @@ def staff_list_view(request):
     return JsonResponse(data, safe=False)
 
 
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+def cadet_profile_view(request):
+    # In a real app, we'd get the cadet from the authenticated user
+    # For now, we'll use the first cadet or a mock
+    cadet = Cadet.objects.first()
+    if not cadet:
+        return JsonResponse({"message": "No cadet found"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(cadet_to_dict(cadet))
+
+    if request.method == "PUT":
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        else:
+            payload = request.POST
+        
+        # Handle file upload if present
+        profile_pic = request.FILES.get("profilePic")
+        if profile_pic:
+            cadet.profile_pic = profile_pic
+
+        # Update other fields
+        for key in payload:
+            if hasattr(cadet, key):
+                setattr(cadet, key, payload[key])
+        
+        cadet.save()
+        return JsonResponse(cadet_to_dict(cadet))
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
 def staff_me_view(request):
-    return JsonResponse(
-        {
-            "id": None,
-            "first_name": "",
-            "last_name": "",
-            "rank": "",
-            "role": "training_staff",
-            "profile_pic": None,
-            "username": None,
-        }
-    )
+    staff = TrainingStaff.objects.first()
+    if not staff:
+        return JsonResponse({"message": "No staff found"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({
+            "id": staff.id,
+            "first_name": staff.first_name,
+            "last_name": staff.last_name,
+            "rank": staff.rank,
+            "role": staff.role,
+            "profile_pic": staff.profile_pic.url if staff.profile_pic else None,
+            "is_profile_completed": staff.is_profile_completed,
+            "email": staff.email,
+        })
+
+    if request.method == "PUT":
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+        for key in payload:
+            if hasattr(staff, key):
+                setattr(staff, key, payload[key])
+        staff.save()
+        return JsonResponse({"updated": True})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def staff_profile_photo_view(request):
+    staff = TrainingStaff.objects.first()
+    if not staff:
+        return JsonResponse({"message": "No staff found"}, status=404)
+    
+    uploaded = request.FILES.get("image")
+    if not uploaded:
+        return JsonResponse({"message": "No image provided"}, status=400)
+    
+    staff.profile_pic = uploaded
+    staff.save()
+    
+    return JsonResponse({
+        "message": "Photo updated",
+        "filePath": staff.profile_pic.url
+    })
 
 
 @require_http_methods(["GET"])
@@ -1079,15 +1171,36 @@ def admin_export_view(request, export_type):
 
 @require_http_methods(["GET"])
 def image_admin_view(request, admin_id):
+    try:
+        admin_profile = AdminProfile.objects.get(id=admin_id)
+        if admin_profile.profile_pic:
+            from django.shortcuts import redirect
+            return redirect(admin_profile.profile_pic.url)
+    except AdminProfile.DoesNotExist:
+        pass
     return transparent_png_response()
 
 
 @require_http_methods(["GET"])
 def image_staff_view(request, staff_id):
+    try:
+        staff = TrainingStaff.objects.get(id=staff_id)
+        if staff.profile_pic:
+            from django.shortcuts import redirect
+            return redirect(staff.profile_pic.url)
+    except TrainingStaff.DoesNotExist:
+        pass
     return transparent_png_response()
 
 
 @require_http_methods(["GET"])
 def image_cadet_view(request, cadet_id):
+    try:
+        cadet = Cadet.objects.get(id=cadet_id)
+        if cadet.profile_pic:
+            from django.shortcuts import redirect
+            return redirect(cadet.profile_pic.url)
+    except Cadet.DoesNotExist:
+        pass
     return transparent_png_response()
 

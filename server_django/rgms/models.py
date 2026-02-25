@@ -26,7 +26,7 @@ class Cadet(models.Model):
     corp_position = models.CharField(max_length=100, blank=True, default="")
     status = models.CharField(max_length=20, blank=True, default="Ongoing")
     is_profile_completed = models.BooleanField(default=False)
-    profile_pic = models.CharField(max_length=255, blank=True, default="")
+    profile_pic = models.ImageField(upload_to="cadet_profiles/", null=True, blank=True)
     attendance_present = models.IntegerField(default=0)
     attendance_total = models.IntegerField(default=15)
     merit_points = models.IntegerField(default=0)
@@ -70,8 +70,20 @@ class TrainingStaff(models.Model):
     email = models.EmailField(blank=True, default="", unique=True)
     contact_number = models.CharField(max_length=50, blank=True, default="")
     role = models.CharField(max_length=100, blank=True, default="Instructor")
-    profile_pic = models.CharField(max_length=255, blank=True, default="")
+    profile_pic = models.ImageField(upload_to="staff_profiles/", null=True, blank=True)
     is_profile_completed = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class AdminProfile(models.Model):
+    username = models.CharField(max_length=150, unique=True, default="admin")
+    first_name = models.CharField(max_length=100, default="System")
+    last_name = models.CharField(max_length=100, default="Administrator")
+    email = models.EmailField(default="msusndrotcunit@gmail.com")
+    profile_pic = models.ImageField(upload_to="admin_profiles/", null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.username
