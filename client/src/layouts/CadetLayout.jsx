@@ -38,75 +38,20 @@ const CadetLayout = () => {
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [guideStep, setGuideStep] = useState(0);
     const [health, setHealth] = useState({ status: 'unknown' });
-    const [badgeNotif, setBadgeNotif] = useState(0);
-    const [badgeMsg, setBadgeMsg] = useState(0);
-    const [notifHighlight, setNotifHighlight] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [messages, setMessages] = useState([]);
-
-    const fetchNotifications = async () => {
-        try {
-            const res = await axios.get('/api/cadet/notifications');
-            const onlyBroadcasts = (res.data || []).filter(n => n && n.type === 'admin_broadcast');
-            setNotifications(onlyBroadcasts);
-            setBadgeNotif(onlyBroadcasts.length);
-        } catch (err) { console.error(err); }
-    };
-
-    const fetchMessages = async () => {
-        try {
-            const res = await axios.get('/api/messages/my');
-            const onlyAdminMessages = (res.data || []).filter(m => m && m.sender_role === 'admin');
-            setMessages(onlyAdminMessages);
-        } catch (err) { console.error(err); }
-    };
-
-    const handleMarkReadNotif = async (id) => {
-        try {
-            await axios.delete(`/api/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n.id !== id));
-            setBadgeNotif(prev => Math.max(0, prev - 1));
-        } catch (err) { console.error(err); }
-    };
-
-    const handleMarkReadMsg = async (id) => {
-        try {
-            await axios.delete(`/api/messages/${id}`).catch(() => {});
-            await axios.delete(`/api/notifications/${id}`).catch(() => {});
-            setMessages(prev => prev.filter(m => m.id !== id));
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (err) { console.error(err); }
-    };
-
-    const handleClearNotifs = async () => {
-        try {
-            await axios.delete('/api/cadet/notifications/delete-all');
-            setNotifications([]);
-            setBadgeNotif(0);
-        } catch (err) { console.error(err); }
-    };
-
-    const handleClearMessages = async () => {
-        try {
-            await Promise.all(messages.map(m => axios.delete(`/api/messages/${m.id}`).catch(() => {})));
-            await axios.delete('/api/cadet/notifications/delete-all').catch(() => {});
-            setMessages([]);
-            setNotifications([]);
-        } catch (err) { console.error(err); }
-    };
 
     React.useEffect(() => {
         if (user) {
-            fetchNotifications();
-            fetchMessages();
+            const fetchHealth = async () => {
+                try {
+                    const res = await axios.get('/api/health');
+                    setHealth(res.data);
+                } catch { setHealth({ status: 'error', db: 'disconnected' }); }
+            };
+            fetchHealth();
+            const id = setInterval(fetchHealth, 30000);
+            return () => clearInterval(id);
         }
     }, [user]);
-
-    // Unified badge count on Messages icon: direct admin replies + broadcast announcements
-    React.useEffect(() => {
-        const count = (messages?.length || 0) + (notifications?.length || 0);
-        setBadgeMsg(count);
-    }, [messages, notifications]);
 
     const guideSteps = [
         {
@@ -205,19 +150,7 @@ const CadetLayout = () => {
         return () => { try { es && es.close(); } catch {} };
     }, []);
 
-    React.useEffect(() => {
-        const fetchHealth = async () => {
-            try {
-                const res = await axios.get('/api/health');
-                setHealth(res.data || { status: 'ok', db: 'connected' });
-            } catch (_) {
-                setHealth({ status: 'ok', db: 'disconnected' });
-            }
-        };
-        fetchHealth();
-        const id = setInterval(fetchHealth, 20000);
-        return () => clearInterval(id);
-    }, []);
+
 
     const handleStartGuide = () => {
         setShowWelcomeModal(false);
@@ -438,16 +371,6 @@ const CadetLayout = () => {
                         </h1>
                     </div>
                     <div className="flex items-center space-x-4">
-                        <NotificationDropdown 
-                            type="Messages" 
-                            icon={Mail} 
-                            count={badgeMsg}
-                            notifications={[...notifications, ...messages].sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))}
-                            navigateToMessage="/cadet/ask-admin"
-                            navigateToBroadcast="/cadet/broadcasts"
-                            onMarkRead={handleMarkReadMsg}
-                            onClear={handleClearMessages}
-                        />
                     </div>
                 </header>
                 {(health && health.db === 'disconnected') && (
