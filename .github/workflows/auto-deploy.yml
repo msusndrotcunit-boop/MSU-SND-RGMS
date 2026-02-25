@@ -1,0 +1,30 @@
+name: Auto Deploy on Push
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deployment
+        if: github.event_name == 'push'
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          else
+            echo "RENDER_DEPLOY_HOOK secret not configured. Render will auto-deploy via autoDeploy: true setting."
+          fi
+
+      - name: Log Deployment Info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployment configured via:"
+          echo "  - render.yaml autoDeploy: true"
+          echo "  - GitHub push trigger"
