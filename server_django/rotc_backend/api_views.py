@@ -624,9 +624,15 @@ def staff_list_view(request):
 @csrf_exempt
 @require_http_methods(["GET", "PUT"])
 def cadet_profile_view(request):
-    # In a real app, we'd get the cadet from the authenticated user
-    # For now, we'll use the first cadet or a mock
-    cadet = Cadet.objects.first()
+    cadet_id_hdr = request.headers.get("X-Cadet-Id") or request.GET.get("cadetId")
+    cadet = None
+    if cadet_id_hdr:
+        try:
+            cadet = Cadet.objects.get(id=int(cadet_id_hdr))
+        except (Cadet.DoesNotExist, ValueError):
+            cadet = None
+    if cadet is None:
+        cadet = Cadet.objects.first()
     if not cadet:
         return JsonResponse({"message": "No cadet found"}, status=404)
 
@@ -792,15 +798,30 @@ def attendance_events_view(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def auth_cadet_login_view(request):
-    return JsonResponse(
-        {
-            "token": "cadet-token",
-            "role": "cadet",
-            "cadetId": 1,
-            "staffId": None,
-            "isProfileCompleted": False,
-        }
-    )
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    identifier = (payload.get("identifier") or "").strip()
+    if not identifier:
+        return JsonResponse({"message": "identifier is required (username or email)"}, status=400)
+    try:
+        from django.db.models import Q
+        cadet = Cadet.objects.filter(Q(username__iexact=identifier) | Q(email__iexact=identifier)).first()
+        if not cadet:
+            return JsonResponse({"message": "Cadet not found for given identifier"}, status=404)
+        token = secrets.token_urlsafe(24)
+        return JsonResponse(
+            {
+                "token": token,
+                "role": "cadet",
+                "cadetId": cadet.id,
+                "staffId": None,
+                "isProfileCompleted": bool(cadet.is_profile_completed),
+            }
+        )
+    except Exception as exc:
+        return JsonResponse({"message": "Login failed"}, status=500)
 
 
 @csrf_exempt

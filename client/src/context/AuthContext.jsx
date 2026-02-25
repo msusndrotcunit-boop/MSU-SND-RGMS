@@ -32,6 +32,11 @@ export const AuthProvider = ({ children }) => {
         
         setUser({ ...userData, role: normalizedRole, isProfileCompleted: isCompleted });
         axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+        if (userData.cadetId) {
+            axios.defaults.headers.common['X-Cadet-Id'] = String(userData.cadetId);
+        } else {
+            delete axios.defaults.headers.common['X-Cadet-Id'];
+        }
         try { await clearCache('profiles'); } catch {}
     }, []);
 
@@ -51,6 +56,11 @@ export const AuthProvider = ({ children }) => {
                 console.log('[AuthContext] Setting user with isProfileCompleted:', isCompleted);
                 setUser({ token, role, cadetId, isProfileCompleted: isCompleted });
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                if (cadetId) {
+                    axios.defaults.headers.common['X-Cadet-Id'] = String(cadetId);
+                } else {
+                    delete axios.defaults.headers.common['X-Cadet-Id'];
+                }
             }
             setLoading(false);
         };
