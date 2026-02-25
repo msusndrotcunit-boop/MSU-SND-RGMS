@@ -14,6 +14,8 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [sidebarCollapsedLg, setSidebarCollapsedLg] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState({
         'Training Staff': true,
         'Grading Management': true
@@ -230,7 +232,30 @@ const AdminLayout = () => {
         setShowPermissionModal(false);
     };
 
-    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    useEffect(() => {
+        const update = () => setIsDesktop(window.innerWidth >= 1024);
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+
+    useEffect(() => {
+        if (!isDesktop && isSidebarOpen) {
+            const prev = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = prev; };
+        }
+    }, [isDesktop, isSidebarOpen]);
+
+    const toggleSidebar = () => {
+        if (isDesktop) {
+            setSidebarCollapsedLg(c => !c);
+        } else {
+            setIsSidebarOpen(o => o ? false : true);
+        }
+    };
+
+    const sidebarVisible = isDesktop ? !sidebarCollapsedLg : isSidebarOpen;
 
     // Filter logic for Footer
     const shouldShowFooter = location.pathname === '/admin/dashboard';
@@ -238,6 +263,7 @@ const AdminLayout = () => {
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
+        { path: '/admin/absence-analytics', label: 'Absence Analytics', icon: PieChart },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
         { 
             label: 'Grading Management', 
@@ -271,8 +297,8 @@ const AdminLayout = () => {
     return (
         <div className="flex min-h-screen w-full app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
                 <Toaster position="top-right" reverseOrder={false} />
-                {/* Mobile Sidebar Overlay */}
-                {isSidebarOpen && (
+                {/* Sidebar Backdrop (non-desktop) */}
+                {!isDesktop && isSidebarOpen && (
                     <div 
                         className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
                         onClick={() => setIsSidebarOpen(false)}
@@ -281,12 +307,13 @@ const AdminLayout = () => {
 
                 {/* Sidebar */}
                 <aside 
+                    id="admin-sidebar"
                     className={clsx(
-                        "w-60 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 md:flex-shrink-0",
-                        isSidebarOpen
-                            ? "translate-x-0 fixed inset-y-0 left-0 md:translate-x-0 md:relative"
-                            : "-translate-x-full fixed inset-y-0 left-0 md:translate-x-0 md:relative"
+                        "w-60 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
+                        "fixed inset-y-0 left-0", // fixed on all viewports for viewport-relative positioning
+                        sidebarVisible ? "translate-x-0" : "-translate-x-full"
                     )}
+                    style={{ willChange: 'transform' }}
                 >
                 <div className="p-5 border-b border-white/10">
                     <div className="flex justify-between items-center">
@@ -297,7 +324,7 @@ const AdminLayout = () => {
                         >
                             ROTC Admin
                         </button>
-                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
+                        <button onClick={() => (isDesktop ? setSidebarCollapsedLg(true) : setIsSidebarOpen(false))} className="lg:hidden text-green-200 hover:text-white" aria-label="Close sidebar">
                             <X size={24} />
                         </button>
                     </div>
@@ -337,6 +364,8 @@ const AdminLayout = () => {
                                             "w-full flex items-center justify-between px-4 py-3 rounded-lg transition hover-highlight",
                                             isActiveParent ? "bg-black/15 text-white shadow-inner" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
+                                        aria-expanded={isExpanded ? 'true' : 'false'}
+                                        aria-controls={`submenu-${item.label}`}
                                     >
                                         <div className="flex items-center space-x-3">
                                             <Icon size={18} />
@@ -346,7 +375,7 @@ const AdminLayout = () => {
                                     </button>
                                     
                                         {isExpanded && (
-                                        <div className="ml-8 mt-1 space-y-1 border-l-2 border-white/20 pl-2">
+                                        <div id={`submenu-${item.label}`} className="ml-8 mt-1 space-y-1 border-l-2 border-white/20 pl-2">
                                             {item.children.map(child => {
                                                 const isChildActive = location.pathname === child.path;
                                                 return (
@@ -398,14 +427,17 @@ const AdminLayout = () => {
                 </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible min-w-0">
+            <div className={clsx("flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible min-w-0 transition-[margin] duration-300 ease-in-out", isDesktop && sidebarVisible ? "lg:ml-60" : "lg:ml-0")}>
                 <header 
-                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full sticky top-0"
                 >
                     <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white flex-shrink-0 touch-target w-11 h-11 flex items-center justify-center"
+                            aria-expanded={sidebarVisible ? 'true' : 'false'}
+                            aria-controls="admin-sidebar"
+                            aria-label="Toggle sidebar"
                         >
                             <Menu size={24} />
                         </button>

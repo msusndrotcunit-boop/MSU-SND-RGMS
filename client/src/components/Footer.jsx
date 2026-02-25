@@ -40,8 +40,8 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700">
-      <div className="flex items-center justify-between w-full gap-3">
+    <footer className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700 w-full overflow-x-hidden">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3">
         {/* Brand Section - Ultra Compact on Mobile */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
@@ -53,7 +53,7 @@ const Footer = () => {
               <button 
                 type="button"
                 onClick={toggleAdminMap}
-                className="hover:text-yellow-300 transition-colors"
+                className="hover:text-yellow-300 transition-colors min-h-[44px]"
               >
                 RGMS
               </button>
@@ -62,12 +62,12 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Essential Navigation Links (Mobile: Icons, Desktop: Text) */}
-        <div className="flex items-center gap-0 sm:gap-2 md:gap-4 flex-1 justify-center">
+        {/* Essential Navigation Links (Mobile: grid to match Quick Actions sizing) */}
+        <div className="w-full md:w-auto grid grid-cols-3 gap-3 md:flex md:items-center md:gap-2 md:justify-center">
           <button
             type="button"
             onClick={() => setModal('about')}
-            className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/90 hover:text-yellow-50 bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm transition-all duration-200"
             title="About the App"
           >
             <Info size={20} className="md:hidden" />
@@ -77,7 +77,7 @@ const Footer = () => {
           <button
             type="button"
             onClick={handleSupport}
-            className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border border-yellow-300 transition-all duration-200"
             title="Support"
           >
             <Headphones size={20} className="md:hidden" />
@@ -95,7 +95,7 @@ const Footer = () => {
                   setShowMore(!showMore);
                 }
               }}
-              className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+              className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/90 hover:text-yellow-50 bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm transition-all duration-200"
               title={showMore ? "Close Menu" : "More Options"}
             >
               <MoreHorizontal size={20} className="md:hidden" />
@@ -128,15 +128,15 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Desktop Copyright & Social / Mobile Compact Copyright */}
-        <div className="flex flex-col items-end shrink-0 ml-auto">
+        {/* Copyright & Social */}
+        <div className="flex flex-col items-center md:items-end shrink-0 md:ml-auto w-full md:w-auto">
           <div className="hidden md:flex gap-3 mb-1">
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Facebook size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Twitter size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Linkedin size={14} /></a>
             <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Mail size={14} /></a>
           </div>
-          <p className="text-sm md:text-[10px] text-green-100/40 text-right leading-none md:leading-normal">
+          <p className="text-sm md:text-[10px] text-green-100/40 text-center md:text-right leading-none md:leading-normal w-full">
             <span className="hidden sm:inline">© {new Date().getFullYear()} MSU-SND ROTC • </span>
             <span className="sm:hidden xs:inline">© {new Date().getFullYear()} </span>
             JUNJIE L. BAHIAN

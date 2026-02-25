@@ -615,7 +615,7 @@ const Cadets = () => {
                         isControlsExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'
                     }`}
                 >
-                    {/* Search Bar */}
+                    {/* Search Bar (medium size) */}
                     <div className="relative flex-1 md:flex-none">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search size={18} className="text-gray-400" />
@@ -623,7 +623,7 @@ const Cadets = () => {
                         <input
                             type="text"
                             placeholder="Search cadets..."
-                            className="pl-10 pr-4 py-2 border rounded w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="pl-10 pr-3 h-10 border rounded-md w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -659,14 +659,14 @@ const Cadets = () => {
                     <button 
                         onClick={handleRefresh}
                         disabled={refreshing}
-                        className={`flex-1 md:flex-none bg-gray-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-gray-700 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`flex-1 md:flex-none bg-gray-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-gray-700 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
                         <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
                     </button>
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
-                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-blue-700"
+                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-blue-700"
                     >
                         <Upload size={18} />
                         <span>Import</span>
@@ -679,14 +679,14 @@ const Cadets = () => {
                             }
                             setIsAddModalOpen(true);
                         }}
-                        className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-700"
+                        className="flex-1 md:flex-none bg-green-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-green-700"
                     >
                         <Plus size={18} />
                         <span>Add Cadet</span>
                     </button>
                     <button 
                         onClick={() => setIsExportModalOpen(true)}
-                        className="flex-1 md:flex-none bg-green-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-800"
+                        className="flex-1 md:flex-none bg-green-700 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-green-800"
                     >
                         <FileDown size={18} />
                         <span>PDF</span>
