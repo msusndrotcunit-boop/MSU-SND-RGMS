@@ -1,22 +1,18 @@
 services:
   - type: web
-    name: rotc-grading-system
+    name: MSU-SND-RGMS-1
     env: node
     buildCommand: npm run build
     startCommand: npm start
     autoDeploy: true
     healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: ENABLE_CADET_AUTO_SYNC
         value: "false"
-      - key: REDIRECT_ENABLED
-        value: "true"
-      - key: REDIRECT_FROM_HOSTS
-        value: "msu-snd-rgms.onrender.com"
-      - key: REDIRECT_TARGET_HOST
-        value: "msu-snd-rgms-jcsg.onrender.com"
   - type: cron
     name: rotc-grading-keepalive
-    schedule: "* * * * *"
+    schedule: "*/5 * * * *"
     env: docker
-    command: 'curl -s https://msu-snd-rgms-jcsg.onrender.com/health || true'
+    command: 'curl -s https://msu-snd-rgms-1.onrender.com/health || true'
