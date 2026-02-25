@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
-    "start": "cd server && node server.js",
-    "sync": "git add . && git commit -m \"chore: auto sync\" && git push"
+    "start": "node server/server.js",
+    "prestart": "node -e \"console.log('[Prestart] Node.js version:', process.version); console.log('[Prestart] Current directory:', process.cwd()); const fs = require('fs'); console.log('[Prestart] Server file exists:', fs.existsSync('./server/server.js')); console.log('[Prestart] Client build exists:', fs.existsSync('./client/dist/index.html'));\"",
+    "build:debug": "npm install --prefix server && npm install --prefix client && npm run build --prefix client && ls -la client/dist/ || echo 'no dist'"
   }
 }
