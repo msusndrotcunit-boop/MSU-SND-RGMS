@@ -244,15 +244,37 @@ const Dashboard = () => {
                 <div className="flex items-center mb-4">
                     <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status Distribution by Course (Verified Only)</h3>
                 </div>
-                <ChartWrapper className="h-80">
+                <ChartWrapper className="h-[400px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={courseData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="total" fill="#2563eb" />
+                        <BarChart 
+                            data={courseData}
+                            margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                            <XAxis 
+                                dataKey="name" 
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#6b7280', fontSize: 12 }}
+                                dy={10}
+                            />
+                            <YAxis 
+                                allowDecimals={false} 
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#6b7280', fontSize: 12 }}
+                            />
+                            <Tooltip 
+                                cursor={{ fill: '#f3f4f6' }}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Legend verticalAlign="top" height={36} />
+                            <Bar 
+                                dataKey="total" 
+                                fill="#2563eb" 
+                                radius={[4, 4, 0, 0]} 
+                                barSize={40}
+                            />
                         </BarChart>
                     </ResponsiveContainer>
                 </ChartWrapper>

@@ -282,17 +282,17 @@ const AdminLayout = () => {
                 {/* Sidebar */}
                 <aside 
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 md:flex-shrink-0",
+                        "w-60 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 md:flex-shrink-0",
                         isSidebarOpen
                             ? "translate-x-0 fixed inset-y-0 left-0 md:translate-x-0 md:relative"
                             : "-translate-x-full fixed inset-y-0 left-0 md:translate-x-0 md:relative"
                     )}
                 >
-                <div className="p-6 border-b border-white/10">
+                <div className="p-5 border-b border-white/10">
                     <div className="flex justify-between items-center">
                         <button
                             onClick={() => navigate('/admin/broadcasts')}
-                            className="text-xl font-bold hover:underline"
+                            className="text-lg font-bold hover:underline tracking-tight"
                             title="Open ROTC Admin Broadcast"
                         >
                             ROTC Admin
@@ -334,15 +334,15 @@ const AdminLayout = () => {
                                     <button
                                         onClick={() => toggleMenu(item.label)}
                                         className={clsx(
-                                            "w-full flex items-center justify-between p-3 rounded transition hover-highlight",
-                                            isActiveParent ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
+                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg transition hover-highlight",
+                                            isActiveParent ? "bg-black/15 text-white shadow-inner" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <Icon size={20} />
-                                            <span>{item.label}</span>
+                                            <Icon size={18} />
+                                            <span className="text-sm font-medium tracking-wide">{item.label}</span>
                                         </div>
-                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     </button>
                                     
                                         {isExpanded && (
@@ -376,12 +376,12 @@ const AdminLayout = () => {
                                 to={item.path}
                                 onClick={() => setIsSidebarOpen(false)}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
-                                    isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
+                                    "flex items-center space-x-3 px-4 py-3 rounded-lg transition hover-highlight",
+                                    isActive ? "bg-black/15 text-white shadow-inner" : "text-white/80 hover:bg-black/10 hover:text-white"
                                 )}
                             >
-                                <Icon size={20} />
-                                <span>{item.label}</span>
+                                <Icon size={18} />
+                                <span className="text-sm font-medium tracking-wide">{item.label}</span>
                             </Link>
                         );
                     })}
@@ -389,10 +389,10 @@ const AdminLayout = () => {
                 <div className="p-4 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded transition hover-highlight"
+                        className="flex items-center space-x-3 px-4 py-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded-lg transition hover-highlight"
                     >
-                        <LogOut size={20} />
-                        <span>Logout</span>
+                        <LogOut size={18} />
+                        <span className="text-sm font-medium tracking-wide">Logout</span>
                     </button>
                 </div>
                 </aside>

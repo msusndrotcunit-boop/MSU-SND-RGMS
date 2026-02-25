@@ -216,6 +216,12 @@ def admin_profile_view(request):
             if profile_pic.size > 5 * 1024 * 1024:
                 return JsonResponse({"message": "File size exceeds 5MB limit."}, status=400)
 
+            # Refined naming convention: admin_[id]_[timestamp].[ext]
+            import os
+            import time
+            ext = os.path.splitext(profile_pic.name)[1]
+            profile_pic.name = f"admin_{admin_profile.id}_{int(time.time())}{ext}"
+
             admin_profile.profile_pic = profile_pic
             admin_profile.save()
             

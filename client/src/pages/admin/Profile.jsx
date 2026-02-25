@@ -21,6 +21,7 @@ const AdminProfile = () => {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadError, setUploadError] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -51,17 +52,31 @@ const AdminProfile = () => {
         }
     };
 
-    const handleFileChange = async (e) => {
-        setUploadError('');
-        const selectedFile = e.target.files[0];
-        if (!selectedFile) {
-            setFile(null);
-            return;
-        }
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
 
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile) {
+            validateAndSetFile(droppedFile);
+        }
+    };
+
+    const validateAndSetFile = async (selectedFile) => {
+        setUploadError('');
+        
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(selectedFile.type)) {
             setUploadError('Invalid file type. Please upload a JPEG, PNG, or GIF image.');
+            toast.error('Invalid file type');
             setFile(null);
             return;
         }
@@ -78,7 +93,8 @@ const AdminProfile = () => {
                 };
                 const compressed = await imageCompression(selectedFile, options);
                 if (compressed.size > maxBytes) {
-                    setUploadError('Image is too large even after compression (max 5MB). Please choose a smaller image.');
+                    setUploadError('Image is too large even after compression (max 5MB).');
+                    toast.error('File too large');
                     setFile(null);
                     return;
                 }
@@ -92,6 +108,13 @@ const AdminProfile = () => {
 
         setFile(workingFile);
         setPreview(URL.createObjectURL(workingFile));
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            validateAndSetFile(selectedFile);
+        }
     };
 
     const handleUpload = async () => {
@@ -146,11 +169,16 @@ const AdminProfile = () => {
                 {/* Profile Picture Section */}
                 <div className="md:col-span-1">
                     <div className="bg-white rounded shadow p-6 flex flex-col items-center h-full">
-                        <div className="relative w-40 h-40 mb-6 group">
+                        <div 
+                            className={`relative w-40 h-40 mb-6 group transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
                             <img 
                                 src={preview} 
                                 alt="Profile" 
-                                className={`w-full h-full object-cover rounded-full border-4 shadow-sm transition-all duration-300 ${file ? 'border-green-500 scale-105' : 'border-gray-200 group-hover:border-blue-400'}`}
+                                className={`w-full h-full object-cover rounded-full border-4 shadow-sm transition-all duration-300 ${isDragging ? 'border-blue-500 bg-blue-50 opacity-50' : file ? 'border-green-500 scale-105' : 'border-gray-200 group-hover:border-blue-400'}`}
                                 onError={(e) => {
                                     try {
                                         const fallback = getProfilePicFallback(profile?.id || 1, 'admin');
@@ -161,12 +189,19 @@ const AdminProfile = () => {
                                 }}
                             />
                             
+                            {/* Drag and Drop Overlay Hint */}
+                            {isDragging && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <ImageIcon className="text-blue-600 animate-bounce" size={48} />
+                                </div>
+                            )}
+                            
                             {/* Camera Overlay Button */}
                             <button 
                                 type="button"
                                 className="absolute bottom-1 right-1 bg-blue-600 text-white p-3 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg transition-all hover:scale-110 active:scale-95 z-10"
                                 onClick={(e) => { e.preventDefault(); setShowUploadConsent(true); }}
-                                title="Update Photo"
+                                title="Update Photo (Drag & Drop Supported)"
                             >
                                 <Camera size={20} />
                             </button>
@@ -224,8 +259,17 @@ const AdminProfile = () => {
                         )}
                         
                         {uploadError && (
-                            <div className="w-full text-xs text-red-600 mt-2 text-center bg-red-50 py-2 px-3 rounded-lg border border-red-100 animate-in shake-in duration-300">
-                                {uploadError}
+                            <div className="w-full space-y-2 animate-in shake-in duration-300">
+                                <div className="w-full text-xs text-red-600 mt-2 text-center bg-red-50 py-2 px-3 rounded-lg border border-red-100">
+                                    {uploadError}
+                                </div>
+                                <button 
+                                    onClick={handleUpload}
+                                    className="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <RefreshCw size={14} />
+                                    <span>Retry Upload</span>
+                                </button>
                             </div>
                         )}
                     </div>
