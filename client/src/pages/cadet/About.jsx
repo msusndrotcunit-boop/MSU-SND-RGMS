@@ -9,17 +9,17 @@ const About = () => {
                         <img 
                             src="/assets/msu_rotc_logo.webp" 
                             alt="ROTC Logo" 
-                            className="w-24 h-24 object-contain tilt-media"
+                            className="w-24 h-24 object-contain"
                         />
                         <img 
                             src="/assets/1002nd_cdc.webp" 
                             alt="1002nd CDC Logo" 
-                            className="w-24 h-24 object-contain tilt-media"
+                            className="w-24 h-24 object-contain"
                         />
                         <img 
                             src="/assets/msu_snd_seal.webp" 
                             alt="MSU-SND Seal" 
-                            className="w-24 h-24 object-contain tilt-media"
+                            className="w-24 h-24 object-contain"
                         />
                     </div>
                     <h1 className="text-3xl font-bold text-green-900 dark:text-green-400 mb-2">

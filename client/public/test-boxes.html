@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive Boxes Test</title>
+<link rel="stylesheet" href="responsive-boxes.css">
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#f8fafc}
+#status{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:center;height:44px;background:#0f766e;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<div id="status">Ready</div>
+<main class="box-grid" aria-label="Sample boxes">
+  <section class="box">
+    <h2 class="title">Short</h2>
+    <p class="text">Compact content that fits easily.</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Medium</h2>
+    <p class="text">A little more text to ensure wrapping and spacing behave correctly on small screens.</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Long Unbroken String</h2>
+    <p class="text">Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong</p>
+  </section>
+  <section class="box">
+    <h2 class="title">URL</h2>
+    <p class="text">https://example.com/some/really/long/path/that/should/wrap/properly/without/causing/horizontal/scrolling</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Buttons Row</h2>
+    <div class="btn-row">
+      <a class="btn" href="#">Export</a>
+      <a class="btn" href="#">Import ROTCMIS</a>
+      <a class="btn" href="#">Smart Scan</a>
+    </div>
+  </section>
+  <section class="box">
+    <h2 class="title">Grid Content</h2>
+    <div class="box-grid">
+      <div class="box"><div class="title">A</div><div class="text">Nested 1</div></div>
+      <div class="box"><div class="title">B</div><div class="text">Nested 2</div></div>
+      <div class="box"><div class="title">C</div><div class="text">Nested 3</div></div>
+    </div>
+  </section>
+  <section class="box">
+    <h2 class="title">Rich Text</h2>
+    <p class="text"><strong>Bold</strong> and <em>italic</em> with enough content to test wrapping across viewports. The objective is zero horizontal scrolling.</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Numbers</h2>
+    <p class="text">12345678901234567890123456789012345678901234567890</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Mixed Content</h2>
+    <p class="text">Short then long: A sequence-of-words-that-should-wrap-without-overflowing-even-when-very-long.</p>
+  </section>
+  <section class="box">
+    <h2 class="title">Final</h2>
+    <p class="text">Ensures total count is ten and layouts remain stable.</p>
+  </section>
+</main>
+<script>
+function auditBoxes(){
+  var boxes=document.querySelectorAll('.box');
+  var vw=window.innerWidth;
+  var fails=0;
+  boxes.forEach(function(b){
+    b.classList.remove('fail');
+    var r=b.getBoundingClientRect();
+    if(r.right>vw+2){
+      fails+=1;
+      b.classList.add('fail');
+      console.error('Box exceeds viewport width',b);
+    }
+  });
+  var status=document.getElementById('status');
+  status.textContent=fails?('Failures: '+fails):'All boxes fit';
+}
+window.addEventListener('load',auditBoxes);
+window.addEventListener('resize',auditBoxes);
+window.addEventListener('orientationchange',auditBoxes);
+</script>
+</body>
+</html>

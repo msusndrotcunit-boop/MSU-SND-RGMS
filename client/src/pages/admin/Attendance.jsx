@@ -635,7 +635,7 @@ const Attendance = () => {
                 <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-2">
                     <button 
                         onClick={() => setViewMode('attendance')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base hover-highlight ${
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
                             viewMode === 'attendance' 
                                 ? 'bg-[var(--primary-color)] text-white' 
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -646,7 +646,7 @@ const Attendance = () => {
                     </button>
                     <button 
                         onClick={() => setViewMode('excuse')}
-                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base hover-highlight ${
+                        className={`flex-1 sm:flex-none justify-center px-3 md:px-4 py-2 rounded flex items-center transition text-sm md:text-base ${
                             viewMode === 'excuse' 
                                 ? 'bg-[var(--primary-color)] text-white' 
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -691,7 +691,7 @@ const Attendance = () => {
                                 {!isCameraActive ? (
                                     <button 
                                         onClick={startCamera}
-                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90 hover-highlight"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 hover:opacity-90"
                                     >
                                         <Camera size={20} /> Start Camera
                                     </button>
@@ -699,7 +699,7 @@ const Attendance = () => {
                                     <button 
                                         onClick={captureAndScan}
                                         disabled={isProcessing}
-                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90 hover-highlight"
+                                        className="bg-[var(--primary-color)] text-white px-6 py-2 rounded-full flex items-center gap-2 disabled:opacity-50 hover:opacity-90"
                                     >
                                         {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
                                         {isProcessing ? 'Processing...' : 'Capture & Scan'}
@@ -708,7 +708,7 @@ const Attendance = () => {
                                 {capturedImage && (
                                     <button 
                                         onClick={() => { setCapturedImage(null); setScanResults([]); startCamera(); }}
-                                        className="bg-gray-600 text-white px-4 py-2 rounded-full hover-highlight"
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full"
                                     >
                                         Retake
                                     </button>
@@ -772,7 +772,7 @@ const Attendance = () => {
                                 <div className="p-4 border-t bg-white dark:bg-gray-900 dark:border-gray-800">
                                     <button 
                                         onClick={handleConfirmScan}
-                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2 hover-highlight"
+                                        className="w-full bg-[var(--primary-color)] text-white py-3 rounded font-bold hover:opacity-90 flex justify-center items-center gap-2"
                                     >
                                         <CheckCircle size={20} />
                                         Confirm & Update {scanResults.length} Records
@@ -904,7 +904,7 @@ const Attendance = () => {
                             <h2 className="font-bold text-lg text-gray-700 dark:text-gray-100">Training Days</h2>
                             <button 
                                 onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90 hover-highlight"
+                                className="bg-[var(--primary-color)] text-white p-2 rounded hover:opacity-90"
                                 title="Add Training Day"
                             >
                                 <Plus size={20} />
@@ -945,7 +945,7 @@ const Attendance = () => {
                     {/* Main Content */}
                     <div className={`w-full md:w-2/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${!selectedDay ? 'hidden md:flex' : ''}`}>
                         {selectedDay ? (
-                            <div className="flex flex-col h-full">
+                            <>
                         <div className="p-4 border-b bg-gray-50 dark:bg-gray-800 rounded-t">
                             <div className="flex flex-col md:flex-row justify-between items-start gap-2 mb-2">
                                 <div>
@@ -971,7 +971,7 @@ const Attendance = () => {
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={handleExport}
-                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition hover-highlight"
+                                            className="flex items-center text-sm bg-[var(--primary-color)] text-white px-3 py-1 rounded hover:opacity-90 transition"
                                             title="Export CSV"
                                         >
                                             <Download size={16} className="mr-2" /> Export
@@ -1008,14 +1008,14 @@ const Attendance = () => {
                                         />
                                         <button 
                                             onClick={() => setRotcModalOpen(true)}
-                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition hover-highlight"
+                                            className="flex items-center text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-black transition"
                                             title="Import ROTCMIS"
                                         >
                                             <FileText size={16} className="mr-2" /> Import ROTCMIS
                                         </button>
                                         <button 
                                             onClick={() => setIsScannerOpen(true)}
-                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition hover-highlight"
+                                            className="flex items-center text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black transition"
                                         >
                                             <Camera size={16} className="mr-2" /> Smart Scan
                                         </button>
@@ -1028,167 +1028,6 @@ const Attendance = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Enhanced Attendance Summary Card */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                                {/* Left Side - Day Details */}
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-                                    <div className="grid grid-cols-2 gap-2 md:gap-4">
-                                        {/* Date */}
-                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:-rotate-1">
-                                            <div className="bg-blue-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
-                                                <Calendar className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Date</div>
-                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight">
-                                                    {new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Location */}
-                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:rotate-1">
-                                            <div className="bg-orange-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
-                                                <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Location</div>
-                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight truncate">
-                                                    {selectedDay.location || 'Not specified'}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Time */}
-                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 hover:-rotate-1">
-                                            <div className="bg-cyan-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
-                                                <Clock className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Time</div>
-                                                <div className="text-[10px] md:text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5 md:mt-1 leading-tight">
-                                                    {selectedDay.time || '7:30 AM - 12:30 PM'}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Enrollment */}
-                                        <div className="flex items-start gap-1.5 md:gap-3 p-1.5 md:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-green-100 dark:hover:bg-green-900/30 hover:rotate-1">
-                                            <div className="bg-green-500 p-1 md:p-2 rounded-md md:rounded-lg flex-shrink-0">
-                                                <svg className="w-4 h-4 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                </svg>
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="text-[9px] md:text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase leading-tight">Enrollment</div>
-                                                <div className="flex flex-wrap gap-1 md:gap-2 mt-0.5 md:mt-1">
-                                                    <span className="bg-blue-500 text-white text-[8px] md:text-xs font-bold px-1 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
-                                                        {attendanceRecords.length} ENROLLED
-                                                    </span>
-                                                    <span className="bg-green-500 text-white text-[8px] md:text-xs font-bold px-1 md:px-2 py-0.5 md:py-1 rounded whitespace-nowrap">
-                                                        {stats.present || 0} PRESENT
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right Side - Attendance Percentage */}
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 md:p-6 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
-                                    {/* Circular Progress */}
-                                    <div className="relative w-28 h-28 md:w-40 md:h-40 mb-2 md:mb-4">
-                                        <svg className="w-full h-full transform -rotate-90">
-                                            <circle
-                                                cx="56"
-                                                cy="56"
-                                                r="48"
-                                                stroke="currentColor"
-                                                strokeWidth="8"
-                                                fill="none"
-                                                className="text-gray-200 dark:text-gray-700 md:hidden"
-                                            />
-                                            <circle
-                                                cx="56"
-                                                cy="56"
-                                                r="48"
-                                                stroke="currentColor"
-                                                strokeWidth="8"
-                                                fill="none"
-                                                strokeDasharray={`${2 * Math.PI * 48}`}
-                                                strokeDashoffset={`${2 * Math.PI * 48 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
-                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 md:hidden"
-                                                strokeLinecap="round"
-                                            />
-                                            <circle
-                                                cx="80"
-                                                cy="80"
-                                                r="70"
-                                                stroke="currentColor"
-                                                strokeWidth="12"
-                                                fill="none"
-                                                className="text-gray-200 dark:text-gray-700 hidden md:block"
-                                            />
-                                            <circle
-                                                cx="80"
-                                                cy="80"
-                                                r="70"
-                                                stroke="currentColor"
-                                                strokeWidth="12"
-                                                fill="none"
-                                                strokeDasharray={`${2 * Math.PI * 70}`}
-                                                strokeDashoffset={`${2 * Math.PI * 70 * (1 - (attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length : 0))}`}
-                                                className="text-blue-600 dark:text-blue-400 transition-all duration-1000 hidden md:block"
-                                                strokeLinecap="round"
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl md:text-4xl font-bold text-gray-800 dark:text-gray-100">
-                                                {attendanceRecords.length > 0 ? Math.round((stats.present || 0) / attendanceRecords.length * 100) : 0}%
-                                            </span>
-                                            <span className="text-[9px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Attendance</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Progress Bar */}
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 md:h-3 mb-2 md:mb-4">
-                                        <div 
-                                            className="bg-gradient-to-r from-blue-600 to-blue-400 h-1.5 md:h-3 rounded-full transition-all duration-1000"
-                                            style={{ width: `${attendanceRecords.length > 0 ? (stats.present || 0) / attendanceRecords.length * 100 : 0}%` }}
-                                        ></div>
-                                    </div>
-
-                                    {/* Status Badges */}
-                                    <div className="flex gap-2 md:gap-4 justify-center">
-                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
-                                            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 md:p-3 rounded-lg mb-1">
-                                                <CheckCircle className="w-4 h-4 md:w-6 md:h-6 text-green-600 dark:text-green-400 mx-auto" />
-                                            </div>
-                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.present || 0}</div>
-                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Present</div>
-                                        </div>
-                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-3">
-                                            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-1.5 md:p-3 rounded-lg mb-1">
-                                                <AlertTriangle className="w-4 h-4 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400 mx-auto" />
-                                            </div>
-                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.excused || 0}</div>
-                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Excused</div>
-                                        </div>
-                                        <div className="text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-rotate-3">
-                                            <div className="bg-red-100 dark:bg-red-900/30 p-1.5 md:p-3 rounded-lg mb-1">
-                                                <XCircle className="w-4 h-4 md:w-6 md:h-6 text-red-600 dark:text-red-400 mx-auto" />
-                                            </div>
-                                            <div className="text-lg md:text-2xl font-bold text-gray-800 dark:text-gray-100">{stats.absent || 0}</div>
-                                            <div className="text-[8px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Absent</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <div
                                 id="attendance-controls"
                                 className={`grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 transition-all duration-300 ease-in-out overflow-hidden ${controlsOpen ? 'opacity-100 max-h-[800px]' : 'opacity-0 max-h-0 pointer-events-none'}`}
@@ -1226,7 +1065,22 @@ const Attendance = () => {
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
-                                {/* Removed company/platoon boxes per request */}
+                                {attendanceType === 'cadet' && (
+                                    <>
+                                        <input 
+                                            placeholder="Company (A/B/C)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                            value={filterCompany}
+                                            onChange={e => setFilterCompany(e.target.value)}
+                                        />
+                                        <input 
+                                            placeholder="Platoon (1/2/3)" 
+                                            className="border p-2 rounded bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                                            value={filterPlatoon}
+                                            onChange={e => setFilterPlatoon(e.target.value)}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -1236,8 +1090,8 @@ const Attendance = () => {
                                     No records found matching filters.
                                 </div>
                             ) : (
-                                <div className="overflow-auto max-h-[70vh] overscroll-contain border rounded">
-                                    <table className="w-full min-w-[1200px]">
+                                <div className="overflow-auto border rounded">
+                                    <table className="w-full min-w-[900px]">
                                         <thead className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                             <tr className="bg-gradient-to-r from-black/10 to-black/5 dark:from-white/5 dark:to-white/10 border-b border-gray-200 dark:border-gray-800">
                                                 <th className="p-3 text-left font-semibold">Name</th>
@@ -1338,13 +1192,6 @@ const Attendance = () => {
                                                                 >
                                                                     Excused
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => handleMarkAttendance(id, 'late')}
-                                                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--primary-color)] ${active === 'late' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'}`}
-                                                                    aria-pressed={active === 'late'}
-                                                                >
-                                                                    Late
-                                                                </button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1355,12 +1202,11 @@ const Attendance = () => {
                                 </div>
                             )}
                         </div>
-                            </div>
+                            </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 p-10">
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
                                 <Calendar size={64} className="mb-4 opacity-20" />
-                                <p className="text-lg font-medium">Select a training day to view attendance details</p>
-                                <p className="text-sm opacity-60 mt-2">Manage cadet and staff records, export lists, and perform smart scans.</p>
+                                <p className="text-lg">Select a training day to view attendance</p>
                             </div>
                         )}
                     </div>
@@ -1410,7 +1256,7 @@ const Attendance = () => {
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90 hover-highlight"
+                                    className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90"
                                 >
                                     Create Day
                                 </button>

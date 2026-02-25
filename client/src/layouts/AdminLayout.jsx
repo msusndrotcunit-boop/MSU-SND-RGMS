@@ -7,6 +7,10 @@ import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import Footer from '../components/Footer';
 import NotificationDropdown from '../components/NotificationDropdown';
+import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
+import AnimationOptimizer from '../components/AnimationOptimizer';
+import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 
 const AdminLayout = () => {
@@ -14,8 +18,6 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isDesktop, setIsDesktop] = useState(false);
-    const [sidebarCollapsedLg, setSidebarCollapsedLg] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState({
         'Training Staff': true,
         'Grading Management': true
@@ -147,18 +149,10 @@ const AdminLayout = () => {
     }, []);
 
     useEffect(() => {
-        const getSseUrl = () => {
-            const base = import.meta.env.VITE_API_URL || '';
-            if (base && /^https?:/.test(String(base))) {
-                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
-            }
-            return '/api/attendance/events';
-        };
-
         let es;
         const connect = () => {
             try {
-                es = new EventSource(getSseUrl());
+                es = new EventSource('/api/attendance/events');
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -232,39 +226,35 @@ const AdminLayout = () => {
         setShowPermissionModal(false);
     };
 
-    useEffect(() => {
-        const update = () => setIsDesktop(window.innerWidth >= 1024);
-        update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
-    }, []);
-
-    useEffect(() => {
-        if (!isDesktop && isSidebarOpen) {
-            const prev = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
-            return () => { document.body.style.overflow = prev; };
-        }
-    }, [isDesktop, isSidebarOpen]);
-
-    const toggleSidebar = () => {
-        if (isDesktop) {
-            setSidebarCollapsedLg(c => !c);
-        } else {
-            setIsSidebarOpen(o => o ? false : true);
-        }
-    };
-
-    const sidebarVisible = isDesktop ? !sidebarCollapsedLg : isSidebarOpen;
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     // Filter logic for Footer
     const shouldShowFooter = location.pathname === '/admin/dashboard';
 
+    // Lock body scroll when sidebar is open (mobile)
+    useEffect(() => {
+        try {
+            if (isSidebarOpen) {
+                document.body.style.overflow = 'hidden';
+                document.body.style.touchAction = 'none';
+            } else {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            }
+        } catch {}
+        return () => {
+            try {
+                document.body.style.overflow = '';
+                document.body.style.touchAction = '';
+            } catch {}
+        };
+    }, [isSidebarOpen]);
+
     const navItems = [
         { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/data-analysis', label: 'Data Analysis', icon: PieChart },
-        { path: '/admin/absence-analytics', label: 'Absence Analytics', icon: PieChart },
         { path: '/admin/cadets', label: 'Cadet Management', icon: Users },
+        { path: '/admin/archived-cadets', label: 'Archived Cadets', icon: UserCheck },
         { 
             label: 'Grading Management', 
             icon: Calculator,
@@ -291,40 +281,44 @@ const AdminLayout = () => {
 
     const getAvatarSrc = () => {
         if (!adminProfile) return null;
-        return getProfilePicUrl(adminProfile.profile_pic, adminProfile.id || 1, 'admin');
+        // The admin profile might have a profile_pic or just use the username
+        return getProfilePicUrl(adminProfile.profile_pic, 'admin', 'admin');
     };
 
     return (
-        <div className="flex min-h-screen w-full app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full">
-                <Toaster position="top-right" reverseOrder={false} />
-                {/* Sidebar Backdrop (non-desktop) */}
-                {!isDesktop && isSidebarOpen && (
-                    <div 
-                        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-                        onClick={() => setIsSidebarOpen(false)}
-                    ></div>
-                )}
+        <SafeAreaProvider>
+            <MobilePerformanceOptimizer>
+                <AnimationOptimizer preserveFixed>
+                    <CrossPlatformStandardizer>
+                        <SafeAreaManager className="flex min-h-screen app-bg dark:bg-gray-900 dark:text-gray-100 max-w-full overflow-hidden readable-text text-balance">
+            <Toaster position="top-right" reverseOrder={false} />
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                ></div>
+            )}
 
                 {/* Sidebar */}
-                <aside 
-                    id="admin-sidebar"
+                <FixedElement 
+                    position="left" 
+                    respectSafeArea={true}
                     className={clsx(
-                        "w-60 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50",
-                        "fixed inset-y-0 left-0", // fixed on all viewports for viewport-relative positioning
-                        sidebarVisible ? "translate-x-0" : "-translate-x-full"
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out z-50 fixed inset-y-0 left-0 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden",
+                        isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
-                    style={{ willChange: 'transform' }}
                 >
-                <div className="p-5 border-b border-white/10">
+                <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-center">
                         <button
                             onClick={() => navigate('/admin/broadcasts')}
-                            className="text-lg font-bold hover:underline tracking-tight"
+                            className="text-xl font-bold hover:underline"
                             title="Open ROTC Admin Broadcast"
                         >
                             ROTC Admin
                         </button>
-                        <button onClick={() => (isDesktop ? setSidebarCollapsedLg(true) : setIsSidebarOpen(false))} className="lg:hidden text-green-200 hover:text-white" aria-label="Close sidebar">
+                        <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-green-200 hover:text-white">
                             <X size={24} />
                         </button>
                     </div>
@@ -333,13 +327,9 @@ const AdminLayout = () => {
                             <img 
                                 src={getAvatarSrc()} 
                                 alt="Profile" 
-                                className="h-10 w-10 rounded-full border border-white/20 object-cover tilt-media" 
+                                className="h-10 w-10 rounded-full border border-white/20 object-cover" 
                                 onError={(e) => { 
-                                    try {
-                                        e.target.src = getProfilePicFallback(adminProfile?.id || 1, 'admin');
-                                    } catch {
-                                        e.target.src = '';
-                                    }
+                                    e.target.src = getProfilePicFallback('admin', 'admin');
                                 }}
                             />
                         </Link>
@@ -348,6 +338,7 @@ const AdminLayout = () => {
                         </div>
                     </div>
                 </div>
+                {/* Mobile horizontal pill nav removed per request */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     {navItems.map((item) => {
                         const Icon = item.icon;
@@ -361,21 +352,19 @@ const AdminLayout = () => {
                                     <button
                                         onClick={() => toggleMenu(item.label)}
                                         className={clsx(
-                                            "w-full flex items-center justify-between px-4 py-3 rounded-lg transition hover-highlight",
-                                            isActiveParent ? "bg-black/15 text-white shadow-inner" : "text-white/80 hover:bg-black/10 hover:text-white"
+                                            "w-full nav-link justify-between transition hover-highlight",
+                                            isActiveParent ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                                         )}
-                                        aria-expanded={isExpanded ? 'true' : 'false'}
-                                        aria-controls={`submenu-${item.label}`}
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <Icon size={18} />
-                                            <span className="text-sm font-medium tracking-wide">{item.label}</span>
+                                            <Icon size={20} />
+                                            <span>{item.label}</span>
                                         </div>
-                                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                                     </button>
                                     
                                         {isExpanded && (
-                                        <div id={`submenu-${item.label}`} className="ml-8 mt-1 space-y-1 border-l-2 border-white/20 pl-2">
+                                        <div className="ml-8 mt-1 space-y-1 border-l-2 border-white/20 pl-2">
                                             {item.children.map(child => {
                                                 const isChildActive = location.pathname === child.path;
                                                 return (
@@ -384,7 +373,7 @@ const AdminLayout = () => {
                                                         to={child.path}
                                                         onClick={() => setIsSidebarOpen(false)}
                                                         className={clsx(
-                                                            "block p-2 text-sm rounded transition hover-highlight",
+                                                            "nav-link text-sm transition hover-highlight",
                                                             isChildActive ? "text-white font-medium bg-black/20" : "text-white/80 hover:text-white"
                                                         )}
                                                     >
@@ -400,46 +389,50 @@ const AdminLayout = () => {
 
                         const isActive = location.pathname === item.path;
                         return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={clsx(
-                                    "flex items-center space-x-3 px-4 py-3 rounded-lg transition hover-highlight",
-                                    isActive ? "bg-black/15 text-white shadow-inner" : "text-white/80 hover:bg-black/10 hover:text-white"
-                                )}
-                            >
-                                <Icon size={18} />
-                                <span className="text-sm font-medium tracking-wide">{item.label}</span>
-                            </Link>
+                            <React.Fragment key={item.path}>
+                                <Link
+                                    to={item.path}
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className={clsx(
+                                        "nav-link space-x-3 transition hover-highlight",
+                                        isActive ? "bg-black/15 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
+                                    )}
+                                >
+                                    <Icon size={20} />
+                                    <span>{item.label}</span>
+                                </Link>
+                            </React.Fragment>
                         );
                     })}
                 </nav>
-                <div className="p-4 border-t border-white/10">
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)] sticky bottom-0">
                     <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-3 px-4 py-3 w-full text-left text-white/80 hover:text-white hover:bg-black/20 rounded-lg transition hover-highlight"
+                        type="button"
+                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white hover:opacity-95 transition"
+                        aria-label="Logout"
                     >
-                        <LogOut size={18} />
-                        <span className="text-sm font-medium tracking-wide">Logout</span>
+                        <LogOut size={20} />
+                        <span>Logout</span>
                     </button>
                 </div>
-                </aside>
+                </FixedElement>
+
 
             {/* Main Content */}
-            <div className={clsx("flex-1 flex flex-col overflow-hidden relative w-full md:overflow-visible min-w-0 transition-[margin] duration-300 ease-in-out", isDesktop && sidebarVisible ? "lg:ml-60" : "lg:ml-0")}>
-                <header 
-                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full sticky top-0"
+            <div className="flex-1 flex flex-col overflow-hidden relative z-20 w-full md:ml-64 md:overflow-visible">
+                <FixedElement 
+                    position="top" 
+                    respectSafeArea={true}
+                    className="bg-white dark:bg-gray-800 shadow p-2 md:p-4 flex items-center justify-between z-10 w-full"
                 >
                     <div className="flex items-center flex-1 min-w-0">
                         <button 
                             onClick={toggleSidebar} 
-                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white flex-shrink-0 touch-target w-11 h-11 flex items-center justify-center"
-                            aria-expanded={sidebarVisible ? 'true' : 'false'}
-                            aria-controls="admin-sidebar"
-                            aria-label="Toggle sidebar"
+                            className="mr-4 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white md:hidden flex-shrink-0 touch-target p-2"
+                            style={{ minHeight: '48px', minWidth: '48px' }}
                         >
-                            <Menu size={24} />
+                            <Menu size={28} />
                         </button>
                         
                         {/* Mobile Title */}
@@ -479,7 +472,7 @@ const AdminLayout = () => {
                     </div>
 
                     {/* Right Side Icons */}
-                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0 ml-auto">
+                    <div className="flex items-center space-x-3 md:space-x-5 mr-2 flex-shrink-0">
                          <NotificationDropdown 
                             type="Messages" 
                             icon={Mail} 
@@ -502,7 +495,7 @@ const AdminLayout = () => {
 
                         <div className="hidden md:block h-8 w-px bg-gray-300 mx-2"></div>
                     </div>
-                </header>
+                </FixedElement>
 
                 {/* System Status Bar */}
                 {(() => {
@@ -518,12 +511,12 @@ const AdminLayout = () => {
                     const updated = systemStatus && systemStatus.app && systemStatus.app.time ? new Date(systemStatus.app.time) : null;
                     if (!systemStatus && !statusError) return null;
                     return (
-                        <div className={clsx('text-xs md:text-sm px-3 py-2 border-b flex flex-wrap items-center gap-x-3 gap-y-1 md:gap-3', bgClass)}>
+                        <div className={clsx('text-xs md:text-sm px-3 py-2 border-b flex flex-wrap items-center gap-3', bgClass)}>
                             <div className="flex items-center gap-2 mr-2">
                                 {hasIssue ? <AlertCircle size={14} className={iconClass} /> : <Activity size={14} className={iconClass} />}
                                 <span className="font-semibold">{label}</span>
                             </div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 md:gap-3">
+                            <div className="flex flex-wrap gap-3">
                                 <span>App: <span className="font-semibold capitalize">{appStatus}</span></span>
                                 <span>DB: <span className="font-semibold capitalize">{dbStatus}</span></span>
                                 {typeof metrics.cadets === 'number' && <span>Cadets: <span className="font-semibold">{metrics.cadets}</span></span>}
@@ -538,7 +531,7 @@ const AdminLayout = () => {
                     );
                 })()}
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full mx-auto">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col w-full max-w-full">
                     <div className="flex-grow w-full max-w-full">
                         <Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-color)]"></div></div>}>
                             <Outlet />
@@ -577,7 +570,11 @@ const AdminLayout = () => {
                     </div>
                 </div>
             )}
-        </div>
+                        </SafeAreaManager>
+                    </CrossPlatformStandardizer>
+                </AnimationOptimizer>
+            </MobilePerformanceOptimizer>
+        </SafeAreaProvider>
     );
 };
 

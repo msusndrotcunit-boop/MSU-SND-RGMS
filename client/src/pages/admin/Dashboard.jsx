@@ -62,18 +62,10 @@ const Dashboard = () => {
             }
         };
         fetchData();
-        const getSseUrl = () => {
-            const base = import.meta.env.VITE_API_URL || '';
-            if (base && /^https?:/.test(String(base))) {
-                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
-            }
-            return '/api/attendance/events';
-        };
-
         let es;
         const connect = () => {
             try {
-                es = new EventSource(getSseUrl());
+                es = new EventSource('/api/attendance/events');
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -194,10 +186,10 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 p-2">
             
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
                     <span className="border-l-4 border-[var(--primary-color)] pl-3">ROTC Unit Dashboard</span>
                 </h2>
@@ -211,31 +203,31 @@ const Dashboard = () => {
                     title="ONGOING (VERIFIED)" 
                     count={stats.ongoing} 
                     color="text-cyan-500" 
-                    icon={<Activity className="h-10 w-10 text-cyan-500 mb-2 tilt-media" />} 
+                    icon={<Activity className="h-10 w-10 text-cyan-500 mb-2" />} 
                 />
                 <StatusCard 
                     title="COMPLETED (VERIFIED)" 
                     count={stats.completed} 
                     color="text-green-500" 
-                    icon={<CheckCircle className="h-10 w-10 text-green-500 mb-2 tilt-media" />} 
+                    icon={<CheckCircle className="h-10 w-10 text-green-500 mb-2" />} 
                 />
                 <StatusCard 
                     title="INCOMPLETE (VERIFIED)" 
                     count={stats.incomplete} 
                     color="text-amber-500" 
-                    icon={<AlertTriangle className="h-10 w-10 text-amber-500 mb-2 tilt-media" />} 
+                    icon={<AlertTriangle className="h-10 w-10 text-amber-500 mb-2" />} 
                 />
                 <StatusCard 
                     title="FAILED (VERIFIED)" 
                     count={stats.failed} 
                     color="text-red-500" 
-                    icon={<XCircle className="h-10 w-10 text-red-500 mb-2 tilt-media" />} 
+                    icon={<XCircle className="h-10 w-10 text-red-500 mb-2" />} 
                 />
                 <StatusCard 
                     title="DROP (VERIFIED)" 
                     count={stats.drop} 
                     color="text-gray-500" 
-                    icon={<UserMinus className="h-10 w-10 text-gray-500 mb-2 tilt-media" />} 
+                    icon={<UserMinus className="h-10 w-10 text-gray-500 mb-2" />} 
                 />
             </div>
 
@@ -244,37 +236,15 @@ const Dashboard = () => {
                 <div className="flex items-center mb-4">
                     <h3 className="font-bold text-gray-800 dark:text-gray-100">Cadet Status Distribution by Course (Verified Only)</h3>
                 </div>
-                <ChartWrapper className="h-[400px] w-full">
+                <ChartWrapper className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                            data={courseData}
-                            margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                            <XAxis 
-                                dataKey="name" 
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6b7280', fontSize: 12 }}
-                                dy={10}
-                            />
-                            <YAxis 
-                                allowDecimals={false} 
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6b7280', fontSize: 12 }}
-                            />
-                            <Tooltip 
-                                cursor={{ fill: '#f3f4f6' }}
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            />
-                            <Legend verticalAlign="top" height={36} />
-                            <Bar 
-                                dataKey="total" 
-                                fill="#2563eb" 
-                                radius={[4, 4, 0, 0]} 
-                                barSize={40}
-                            />
+                        <BarChart data={courseData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" />
+                            <YAxis allowDecimals={false} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="total" fill="#2563eb" />
                         </BarChart>
                     </ResponsiveContainer>
                 </ChartWrapper>
@@ -300,7 +270,7 @@ const Dashboard = () => {
             {role === 'admin' && showLocations && locations.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 border-t-4 border-[var(--primary-color)]">
                     <div className="flex items-center mb-4">
-                        <MapPin className="text-[var(--primary-color)] mr-2 tilt-media" size={20} />
+                        <MapPin className="text-[var(--primary-color)] mr-2" size={20} />
                         <h3 className="font-bold text-gray-800 dark:text-gray-100">Live User Locations</h3>
                     </div>
                     <div className="overflow-x-auto">
@@ -350,41 +320,41 @@ const Dashboard = () => {
             )}
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700">
-                <div className="flex items-center mb-3 border-b border-green-600 pb-1.5">
-                    <Zap className="text-yellow-400 mr-2 tilt-media" size={18} />
-                    <h3 className="font-bold text-yellow-50 text-sm">Quick Actions</h3>
+            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-6 text-white shadow-lg border border-green-700">
+                <div className="flex items-center mb-4 border-b border-green-600 pb-2">
+                    <Zap className="text-yellow-400 mr-2" size={20} />
+                    <h3 className="font-bold text-yellow-50">Quick Actions</h3>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <ActionButton 
                         to="/admin/data-analysis" 
                         label="Data Analysis" 
-                        icon={<Activity size={16} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
+                        icon={<Activity size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/grading" 
                         label="Grading" 
-                        icon={<Calculator size={16} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
+                        icon={<Calculator size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/attendance" 
                         label="Attendance" 
-                        icon={<ClipboardCheck size={16} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
+                        icon={<ClipboardCheck size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/messages" 
                         label="Messages" 
-                        icon={<Mail size={16} />} 
-                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px]"
+                        icon={<Mail size={18} />} 
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200"
                     />
                     <ActionButton 
                         to="/admin/activities" 
                         label="Activities" 
-                        icon={<Calendar size={16} />} 
-                        className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border border-yellow-300 min-h-[44px]"
+                        icon={<Calendar size={18} />} 
+                        className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border-2 border-yellow-300"
                     />
                 </div>
             </div>
@@ -399,7 +369,7 @@ export default Dashboard;
 
 
 const StatusCard = ({ title, count, color, icon }) => (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)] hover-highlight">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 border-t-4 border-[var(--primary-color)]">
         <div className="flex flex-col items-center">
             {icon}
             <div className="text-xs text-gray-500 mt-1">{title}</div>
@@ -411,7 +381,7 @@ const StatusCard = ({ title, count, color, icon }) => (
 const ActionButton = ({ to, label, icon, className }) => (
     <Link
         to={to}
-        className={`flex items-center justify-center px-4 py-2 rounded hover-highlight ${className}`}
+        className={`flex items-center justify-center px-4 py-2 rounded ${className}`}
     >
         <span className="mr-2">{icon}</span>
         <span className="text-xs md:text-sm">{label}</span>

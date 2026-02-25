@@ -66,231 +66,194 @@ const AdminMessages = () => {
         return matchesFilter && matchesSearch;
     });
 
- 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Message Center</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={fetchMessages}
-                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
-                    >
-                        <Zap size={18} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-8">
-                {/* List View */}
-                <div className={clsx(
-                    "w-full md:w-1/3 bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] flex flex-col min-h-[600px]",
-                    selectedMessage ? "hidden md:flex" : "flex"
-                )}>
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                        <div className="flex flex-col gap-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search messages..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm"
-                                />
-                            </div>
-                            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                                <button 
-                                    onClick={() => setFilter('all')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'all' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    ALL
-                                </button>
-                                <button 
-                                    onClick={() => setFilter('pending')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'pending' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    PENDING
-                                </button>
-                                <button 
-                                    onClick={() => setFilter('resolved')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${filter === 'resolved' ? 'bg-white dark:bg-gray-700 text-[var(--primary-color)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    RESOLVED
-                                </button>
-                            </div>
+        <div className="flex flex-col h-[calc(100vh-100px)] gap-4">
+            {/* List View */}
+            <div className={clsx(
+                "flex-1 bg-white rounded-lg shadow-md flex flex-col",
+                selectedMessage ? "hidden md:flex md:w-1/3 md:flex-none" : "w-full"
+            )}>
+                <div className="p-4 border-b">
+                    <h1 className="text-xl font-bold flex items-center gap-2 mb-4">
+                        <MessageSquare className="text-blue-600" />
+                        Admin Messages
+                    </h1>
+                    
+                    <div className="flex gap-2 mb-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2 top-2.5 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search messages..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
                         </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto">
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-2">
-                                <div className="w-8 h-8 border-2 border-[var(--primary-color)] border-t-transparent rounded-full animate-spin" />
-                                <p className="text-sm font-medium">Loading messages...</p>
-                            </div>
-                        ) : filteredMessages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-gray-400 opacity-50">
-                                <MessageSquare size={48} className="mb-4" />
-                                <p className="text-lg font-medium">No messages found.</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {filteredMessages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        onClick={() => setSelectedMessage(msg)}
-                                        className={clsx(
-                                            "p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
-                                            selectedMessage?.id === msg.id ? "bg-[var(--primary-color)]/5 border-l-4 border-[var(--primary-color)]" : "border-l-4 border-transparent",
-                                            msg.status === 'pending' ? "font-bold" : "text-gray-600 dark:text-gray-400"
-                                        )}
-                                    >
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="text-[10px] font-bold uppercase tracking-wider">
-                                                {msg.sender_role === 'cadet' ? (
-                                                    <span className="text-blue-600">Cadet {msg.cadet_last || msg.username}</span>
-                                                ) : (
-                                                    <span className="text-green-600">Staff {msg.staff_last || msg.username}</span>
-                                                )}
-                                            </div>
-                                            <div className="text-[10px] text-gray-400">
-                                                {new Date(msg.created_at).toLocaleDateString()}
-                                            </div>
-                                        </div>
-                                        <div className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate mb-1">{msg.subject}</div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{msg.message}</div>
-                                        <div className="mt-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest">
-                                            {msg.status === 'resolved' ? (
-                                                <span className="flex items-center gap-1 text-green-600">
-                                                    <CheckCircle size={12} /> Resolved
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1 text-amber-600">
-                                                    <Clock size={12} /> Pending
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="relative">
+                            <select
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="appearance-none bg-gray-50 border rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="all">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                            <Filter className="absolute right-2 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                        </div>
                     </div>
                 </div>
 
-                {/* Detail View */}
-                <div className={clsx(
-                    "flex-1 bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-blue-600 flex flex-col h-full overflow-hidden min-h-[600px]",
-                    !selectedMessage && "hidden md:flex justify-center items-center text-gray-400 p-12"
-                )}>
-                    {!selectedMessage ? (
-                        <div className="text-center">
-                            <MessageSquare size={64} className="mx-auto mb-4 opacity-20" />
-                            <p className="text-lg font-medium">Select a message from the list to view details and reply.</p>
-                        </div>
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                    ) : filteredMessages.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No messages found.</div>
                     ) : (
-                        <>
-                            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-                                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{selectedMessage.subject}</h2>
-                                <button onClick={() => setSelectedMessage(null)} className="md:hidden text-gray-500 hover:text-gray-700 transition-colors">
-                                    <X size={24} />
-                                </button>
-                            </div>
-                            
-                            <div className="flex-1 overflow-y-auto p-8">
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700">
-                                        <User size={28} className="text-gray-400" />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-gray-800 dark:text-gray-100">
-                                            {selectedMessage.sender_role === 'cadet' ? 
-                                                `Cadet ${selectedMessage.cadet_first || ''} ${selectedMessage.cadet_last || selectedMessage.username}` : 
-                                                `Staff ${selectedMessage.staff_first || ''} ${selectedMessage.staff_last || selectedMessage.username}`
-                                            }
-                                        </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mt-0.5">
-                                            {selectedMessage.sender_role} • {selectedMessage.user_email || 'No Email'}
-                                        </div>
-                                        <div className="text-[10px] text-gray-400 mt-1 italic">
-                                            {new Date(selectedMessage.created_at).toLocaleString()}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700 mb-8 leading-relaxed text-gray-800 dark:text-gray-200">
-                                    <p className="whitespace-pre-wrap">{selectedMessage.message}</p>
-                                </div>
-
-                                {selectedMessage.admin_reply && (
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 mb-8">
-                                        <div className="text-[10px] font-bold text-blue-800 dark:text-blue-400 uppercase tracking-widest mb-3">Previous Admin Reply</div>
-                                        <p className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 italic">{selectedMessage.admin_reply}</p>
-                                    </div>
-                                )}
-
-                                <div className="border-t border-gray-100 dark:border-gray-800 pt-8">
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-widest">Your Reply</label>
-                                    <textarea
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] h-40 text-sm leading-relaxed"
-                                        placeholder="Type your reply to resolve this message..."
-                                    />
-                                    <div className="mt-4 flex justify-end">
-                                        <button
-                                            onClick={handleReply}
-                                            disabled={replying || !replyText.trim()}
-                                            className="bg-green-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-800 transition flex items-center gap-2 shadow-lg disabled:opacity-50 active:scale-95"
-                                        >
-                                            {replying ? 'Sending...' : (
-                                                <>
-                                                    <Send size={18} />
-                                                    Send & Resolve
-                                                </>
+                        <div className="divide-y">
+                            {filteredMessages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    onClick={() => setSelectedMessage(msg)}
+                                    className={clsx(
+                                        "p-4 cursor-pointer hover:bg-gray-50 transition-colors",
+                                        selectedMessage?.id === msg.id ? "bg-blue-50 border-l-4 border-blue-500" : "border-l-4 border-transparent",
+                                        msg.status === 'pending' ? "font-medium" : "text-gray-600"
+                                    )}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="text-sm font-semibold">
+                                            {msg.sender_role === 'cadet' ? (
+                                                <span className="text-blue-600">Cadet {msg.cadet_last || msg.username}</span>
+                                            ) : (
+                                                <span className="text-green-600">Staff {msg.staff_last || msg.username}</span>
                                             )}
-                                        </button>
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {new Date(msg.created_at).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <div className="text-sm font-bold truncate mb-1">{msg.subject}</div>
+                                    <div className="text-sm text-gray-500 truncate">{msg.message}</div>
+                                    <div className="mt-2 flex items-center gap-1 text-xs">
+                                        {msg.status === 'resolved' ? (
+                                            <span className="flex items-center gap-1 text-green-600">
+                                                <CheckCircle size={12} /> Resolved
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-yellow-600">
+                                                <Clock size={12} /> Pending
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        </>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
 
-            <div className="mt-8 bg-gradient-to-r from-green-900 to-green-800 text-white rounded-lg p-6 shadow-lg border border-green-700">
-                <div className="flex items-center mb-4 border-b border-green-700/50 pb-2">
-                    <Zap size={20} className="text-yellow-400 mr-2" />
-                    <h3 className="font-bold text-sm uppercase tracking-widest">Admin Quick Navigation</h3>
+            {/* Detail View */}
+            {selectedMessage ? (
+                <div className="flex-1 bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden">
+                    <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                        <h2 className="text-lg font-bold">{selectedMessage.subject}</h2>
+                        <button onClick={() => setSelectedMessage(null)} className="md:hidden text-gray-500">Close</button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                <User size={24} className="text-gray-500" />
+                            </div>
+                            <div>
+                                <div className="font-semibold">
+                                    {selectedMessage.sender_role === 'cadet' ? 
+                                        `Cadet ${selectedMessage.cadet_first || ''} ${selectedMessage.cadet_last || selectedMessage.username}` : 
+                                        `Staff ${selectedMessage.staff_first || ''} ${selectedMessage.staff_last || selectedMessage.username}`
+                                    }
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                    {selectedMessage.sender_role.toUpperCase()} • {selectedMessage.user_email || 'No Email'}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    {new Date(selectedMessage.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded-lg border mb-6">
+                            <p className="whitespace-pre-wrap text-gray-800">{selectedMessage.message}</p>
+                        </div>
+
+                        {selectedMessage.admin_reply && (
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+                                <div className="text-sm font-semibold text-blue-800 mb-2">Previous Reply:</div>
+                                <p className="whitespace-pre-wrap text-gray-800">{selectedMessage.admin_reply}</p>
+                            </div>
+                        )}
+
+                        <div className="border-t pt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Reply to User</label>
+                            <textarea
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-32"
+                                placeholder="Type your reply here..."
+                            />
+                            <div className="mt-3 flex justify-end">
+                                <button
+                                    onClick={handleReply}
+                                    disabled={replying || !replyText.trim()}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {replying ? 'Sending...' : (
+                                        <>
+                                            <Send size={18} />
+                                            Send Reply & Resolve
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            ) : (
+                <div className="hidden md:flex flex-1 bg-gray-50 rounded-lg border border-dashed border-gray-300 items-center justify-center text-gray-400">
+                    Select a message to view details
+                </div>
+            )}
+
+            <div className="mt-2 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <Link
                         to="/admin/data-analysis"
-                        className="flex items-center justify-center px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs md:text-sm font-medium"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
                     >
                         Data Analysis
                     </Link>
                     <Link
                         to="/admin/grading"
-                        className="flex items-center justify-center px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs md:text-sm font-medium"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
                     >
                         Grading
                     </Link>
                     <Link
                         to="/admin/activities"
-                        className="flex items-center justify-center px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs md:text-sm font-medium"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
                     >
                         Activities
                     </Link>
                     <Link
                         to="/admin/messages"
-                        className="flex items-center justify-center px-4 py-3 rounded-lg bg-white/20 border border-white/20 transition-all text-xs md:text-sm font-bold"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/20 text-xs md:text-sm"
                     >
-                        Messages Hub
+                        Messages
                     </Link>
                 </div>
             </div>

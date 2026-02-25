@@ -1,18 +1,12 @@
-name: Keep Render Backend Awake
-
+name: Keepalive Render
 on:
   schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch: {}
-
-env:
-  BACKEND_URL: https://msu-snd-rgms-1.onrender.com
-
+  workflow_dispatch:
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Django health endpoint
+      - name: Ping health
         run: |
-          echo "Pinging $BACKEND_URL/api/health"
-          curl -fsS "$BACKEND_URL/api/health" || true
+          curl -fsS https://msu-snd-rgms.onrender.com/health || true

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trash2, Plus, Calendar, ChevronLeft, ChevronRight, X, Upload, Zap, Edit } from 'lucide-react';
-import { compressImageClient, bytesToKB } from '../../utils/imageCompressionClient';
+import imageCompression from 'browser-image-compression';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import { Link } from 'react-router-dom';
 
@@ -21,20 +21,17 @@ const getImages = (activity) => {
     imgs = (imgs || []).filter(Boolean);
 
     if (imgs.length === 0 && activity.image_path) {
-        const src = activity.image_path.startsWith('data:') || activity.image_path.startsWith('http')
+        const src = activity.image_path.startsWith('data:')
             ? activity.image_path
-            : activity.image_path;  // Don't prepend anything, let the browser resolve it
+            : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
         return [src];
     }
 
-    return imgs.map((src) => {
-        // If it's a data URL or full HTTP URL, return as-is
-        if (src.startsWith('data:') || src.startsWith('http')) {
-            return src;
-        }
-        // Otherwise, it's a relative path like /uploads/filename - return as-is
-        return src;
-    });
+    return imgs.map((src) =>
+        src.startsWith('data:') || src.startsWith('http')
+            ? src
+            : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
+    );
 };
 
 const Activities = () => {
@@ -85,18 +82,9 @@ const Activities = () => {
         }
         try {
             const res = await axios.get('/api/cadet/activities');
-            console.log('[Activities] Fetched activities:', res.data);
-            // Log first activity's images for debugging
-            if (res.data && res.data.length > 0) {
-                console.log('[Activities] First activity images:', {
-                    image_path: res.data[0].image_path,
-                    images: res.data[0].images,
-                    parsed: getImages(res.data[0])
-                });
-            }
             setActivities(res.data);
             await cacheSingleton('admin', 'activities_list', { data: res.data, timestamp: Date.now() });
-        } catch (err) { console.error('[Activities] Fetch error:', err); }
+        } catch (err) { console.error(err); }
     };
 
     const [showUploadConsent, setShowUploadConsent] = useState(false);
@@ -123,23 +111,13 @@ const Activities = () => {
             }
             
             try {
-                const opts = activeTab === 'announcement'
-                    ? {
-                        maxBytes: Number(import.meta.env.VITE_ACTIVITY_ANN_MAX_BYTES) || 2 * 1024 * 1024,
-                        maxDimension: Number(import.meta.env.VITE_ACTIVITY_ANN_MAX_DIMENSION) || 2048,
-                        initialQuality: 0.82,
-                        minQuality: 0.6,
-                        preferWebP: true,
-                    }
-                    : {
-                        maxBytes: Number(import.meta.env.VITE_ACTIVITY_IMG_MAX_BYTES) || 512 * 1024,
-                        maxDimension: Number(import.meta.env.VITE_ACTIVITY_IMG_MAX_DIMENSION) || 1280,
-                        initialQuality: 0.8,
-                        minQuality: 0.5,
-                        preferWebP: true,
-                    };
-                const { file: compressed, stats } = await compressImageClient(file, opts);
-                console.log('[Activities] Compressed', file.name, `${bytesToKB(stats.original)}KB → ${bytesToKB(stats.final)}KB`);
+                // For announcements, use lighter compression to preserve quality
+                // For activities, use standard compression
+                const options = activeTab === 'announcement' 
+                    ? { maxSizeMB: 5, maxWidthOrHeight: 2048, useWebWorker: true }
+                    : { maxSizeMB: 0.5, maxWidthOrHeight: 1024, useWebWorker: true };
+                
+                const compressed = await imageCompression(file, options);
                 processedImages.push(compressed);
             } catch (error) {
                 console.error("Compression error", error);
@@ -297,173 +275,106 @@ const Activities = () => {
     };
 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Activities & Announcements</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={() => { resetForms(); setIsModalOpen(true); }}
-                        className="bg-[var(--primary-color)] text-white px-4 py-2 rounded hover:opacity-90 transition flex items-center shadow-md min-h-[44px] hover-highlight"
-                    >
-                        <Plus size={18} className="mr-2" />
-                        New Activity
-                    </button>
-                    <button
-                        onClick={() => fetchActivities(true)}
-                        className="bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
-                    >
-                        <Zap size={18} className="mr-2" />
-                        Refresh
-                    </button>
-                </div>
+        <div className="h-full flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3 bg-white dark:bg-gray-900 p-4 rounded shadow">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">Activity Management</h2>
+                <button 
+                    onClick={() => {
+                        resetForms();
+                        setIsModalOpen(true);
+                    }}
+                    className="bg-[var(--primary-color)] text-white px-4 py-2 rounded flex items-center space-x-2 hover:opacity-90"
+                >
+                    <Plus size={18} />
+                    <span>New Post</span>
+                </button>
             </div>
 
-            {/* Tabs Section */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] overflow-hidden">
-                <div className="flex border-b border-gray-100 dark:border-gray-800">
-                    <button 
-                        onClick={() => setActiveTab('activity')}
-                        className={`flex-1 py-4 text-sm font-bold transition-all ${activeTab === 'activity' ? 'bg-[var(--primary-color)]/5 text-[var(--primary-color)] border-b-2 border-[var(--primary-color)]' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                    >
-                        Activities Feed
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('announcement')}
-                        className={`flex-1 py-4 text-sm font-bold transition-all ${activeTab === 'announcement' ? 'bg-[var(--primary-color)]/5 text-[var(--primary-color)] border-b-2 border-[var(--primary-color)]' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                    >
-                        Quick Announcements
-                    </button>
-                </div>
-                
-                <div className="p-6">
-                    {activeTab === 'activity' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {activities
-                                .filter(a => (a.type || 'activity') === 'activity')
-                                .map(activity => (
-                                <div key={activity.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => setSelectedActivity(activity)}>
-                                    <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-900">
-                                        {getImages(activity).length > 0 ? (
+            {/* Tabs */}
+            <div className="flex space-x-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+                <button 
+                    onClick={() => setActiveTab('activity')}
+                    className={`px-6 py-2 font-medium transition-colors ${
+                        activeTab === 'activity' 
+                            ? 'border-b-2 border-[var(--primary-color)] text-[var(--primary-color)]' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                >
+                    Activities
+                </button>
+                <button 
+                    onClick={() => setActiveTab('announcement')}
+                    className={`px-6 py-2 font-medium transition-colors ${
+                        activeTab === 'announcement' 
+                            ? 'border-b-2 border-[var(--primary-color)] text-[var(--primary-color)]' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                >
+                    Announcements
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {activities
+                    .filter(a => (a.type || 'activity') === activeTab)
+                    .map(activity => {
+                        const images = getImages(activity);
+                        const primary = images[0] || null;
+
+                        return (
+                            <div 
+                                key={activity.id} 
+                                className="bg-white dark:bg-gray-900 rounded shadow overflow-hidden border border-gray-100 dark:border-gray-800 cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => setSelectedActivity(activity)}
+                            >
+                                <div className="p-4">
+                                    <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-gray-100">{activity.title}</h3>
+                                    <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-3">
+                                        <Calendar size={14} className="mr-1" />
+                                        {new Date(activity.date).toLocaleDateString()}
+                                    </div>
+                                    
+                                    <div className="w-full h-48 mb-4 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden relative">
+                                        {primary && (
                                             <img 
-                                                src={getImages(activity)[0]} 
-                                                alt={activity.title} 
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-                                                }}
+                                                src={primary}
+                                                alt={activity.title}
+                                                className="w-full h-full object-cover"
                                             />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                <Calendar size={48} />
+                                        )}
+                                        {images.length > 1 && (
+                                            <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+                                                +{images.length - 1}
                                             </div>
                                         )}
-                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                            <button 
-                                                onClick={(e) => handleEdit(activity, e)}
-                                                className="p-2 bg-white/90 dark:bg-gray-900/90 text-blue-600 rounded-full shadow-sm hover:bg-white transition-colors"
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => handleDelete(activity.id, e)}
-                                                className="p-2 bg-white/90 dark:bg-gray-900/90 text-red-600 rounded-full shadow-sm hover:bg-white transition-colors"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
                                     </div>
-                                    <div className="p-4">
-                                        <div className="text-[10px] font-bold text-[var(--primary-color)] uppercase tracking-wider mb-1">
-                                            {new Date(activity.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                        </div>
-                                        <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 line-clamp-1">{activity.title}</h4>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4 leading-relaxed">{activity.description}</p>
+
+                                    <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line line-clamp-3">{activity.description}</p>
+                                    <div className="flex gap-2">
                                         <button 
-                                            className="w-full py-2 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-lg hover:bg-[var(--primary-color)] hover:text-white transition-all duration-200"
+                                            onClick={(e) => handleEdit(activity, e)}
+                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center z-10 relative"
                                         >
-                                            View Details
+                                            <Edit size={16} className="mr-1" /> Edit
+                                        </button>
+                                        <button 
+                                            onClick={(e) => handleDelete(activity.id, e)}
+                                            className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center z-10 relative"
+                                        >
+                                            <Trash2 size={16} className="mr-1" /> Delete
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {activities
-                                .filter(a => a.type === 'announcement')
-                                .map(activity => (
-                                    <div key={activity.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => setSelectedActivity(activity)}>
-                                        <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-900">
-                                            {getImages(activity).length > 0 ? (
-                                                <img 
-                                                    src={getImages(activity)[0]} 
-                                                    alt={activity.title} 
-                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                    <Calendar size={48} />
-                                                </div>
-                                            )}
-                                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                <button 
-                                                    onClick={(e) => handleEdit(activity, e)}
-                                                    className="p-2 bg-white/90 dark:bg-gray-900/90 text-blue-600 rounded-full shadow-sm hover:bg-white transition-colors"
-                                                >
-                                                    <Edit size="16" />
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => handleDelete(activity.id, e)}
-                                                    className="p-2 bg-white/90 dark:bg-gray-900/90 text-red-600 rounded-full shadow-sm hover:bg-white transition-colors"
-                                                >
-                                                    <Trash2 size="16" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="p-4">
-                                            <div className="text-[10px] font-bold text-[var(--primary-color)] uppercase tracking-wider mb-1">
-                                                {new Date(activity.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                            </div>
-                                            <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 line-clamp-1">{activity.title}</h4>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4 leading-relaxed">{activity.description}</p>
-                                            <button 
-                                                className="w-full py-2 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-lg hover:bg-[var(--primary-color)] hover:text-white transition-all duration-200"
-                                            >
-                                                View Details
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
-                    )}
-                    
-                    {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
-                        <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                            <div className="max-w-xs mx-auto">
-                                <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No {activeTab}s found</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Start by creating a new post to update your students.</p>
-                                <button 
-                                    onClick={() => { resetForms(); setIsModalOpen(true); }}
-                                    className="inline-flex items-center px-4 py-2 bg-[var(--primary-color)] text-white text-sm font-bold rounded-lg hover:opacity-90"
-                                >
-                                    <Plus size={18} className="mr-2" />
-                                    Create First Post
-                                </button>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        );
+                })}
             </div>
+            
+            {activities.filter(a => (a.type || 'activity') === activeTab).length === 0 && (
+                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                    No {activeTab}s found.
+                </div>
+            )}
 
             {/* Create/Edit Modal */}
             {isModalOpen && (

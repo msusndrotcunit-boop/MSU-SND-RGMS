@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Facebook, Twitter, Linkedin, Mail, Info, FileText, Headphones, MoreHorizontal, ChevronUp } from 'lucide-react';
+import { Shield, Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -9,8 +9,6 @@ const Footer = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [modal, setModal] = useState(null); // 'about' | 'docs' | null
-  const [showMore, setShowMore] = useState(false);
-
   const toggleAdminMap = () => {
     try {
       if (user?.role !== 'admin') return;
@@ -40,107 +38,88 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700 w-full overflow-x-hidden">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3">
-        {/* Brand Section - Ultra Compact on Mobile */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
-            <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex flex-col items-start leading-none">
-            <h3 className="font-bold text-[13px] sm:text-sm tracking-wide flex items-center gap-1">
-              <span className="hidden xs:inline">MSU-SND</span>{' '}
-              <button 
-                type="button"
-                onClick={toggleAdminMap}
-                className="hover:text-yellow-300 transition-colors min-h-[44px]"
-              >
-                RGMS
-              </button>
-            </h3>
-            <p className="hidden xs:block text-[10px] text-green-100/50">ROTC Grading</p>
-          </div>
-        </div>
-
-        {/* Essential Navigation Links (Mobile: grid to match Quick Actions sizing) */}
-        <div className="w-full md:w-auto grid grid-cols-3 gap-3 md:flex md:items-center md:gap-2 md:justify-center">
-          <button
-            type="button"
-            onClick={() => setModal('about')}
-            className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/90 hover:text-yellow-50 bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm transition-all duration-200"
-            title="About the App"
-          >
-            <Info size={20} className="md:hidden" />
-            <span className="hidden md:inline">About</span>
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleSupport}
-            className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border border-yellow-300 transition-all duration-200"
-            title="Support"
-          >
-            <Headphones size={20} className="md:hidden" />
-            <span className="hidden md:inline">Support</span>
-          </button>
-
-          {/* More Dropdown for Mobile / Desktop Docs Link */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.innerWidth >= 768) {
-                  setModal('docs');
-                } else {
-                  setShowMore(!showMore);
-                }
-              }}
-              className="min-h-[44px] w-full md:w-auto rounded-md md:rounded-none flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/90 hover:text-yellow-50 bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-sm transition-all duration-200"
-              title={showMore ? "Close Menu" : "More Options"}
-            >
-              <MoreHorizontal size={20} className="md:hidden" />
-              <span className="hidden md:inline">Docs</span>
-            </button>
-            {/* ... rest of the menu logic stays same ... */}
-
-            {/* Mobile "More" Menu */}
-            {showMore && (
-              <div className="absolute bottom-full right-0 mb-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl border border-gray-200 overflow-hidden md:hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="p-2 border-b bg-gray-50 flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">More Links</span>
-                  <ChevronUp size={14} className="text-gray-400" />
-                </div>
-                <button
-                  onClick={() => { setModal('docs'); setShowMore(false); }}
-                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-100 flex items-center gap-3"
+    <footer className="bg-primary-surface text-white py-10 px-6 mt-auto border-t-4 border-yellow-500">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Brand Section */}
+        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
+            <div className="bg-yellow-500 p-2 rounded-lg shadow-lg shadow-yellow-500/20">
+               <Shield className="w-6 h-6 text-gray-900" />
+            </div>
+            <div className="text-center md:text-left">
+              <h3 className="font-bold text-lg tracking-wide leading-tight">
+                MSU-SND{' '}
+                <button 
+                  type="button"
+                  onClick={toggleAdminMap}
+                  className="hover:text-yellow-300 transition-colors"
+                  title="Toggle Admin Map"
                 >
-                  <FileText size={16} className="text-blue-600" />
-                  Documentation
+                  RGMS
                 </button>
-                <div className="p-2 border-t flex justify-around bg-gray-50">
-                  <a href="#" className="p-2 text-gray-600 hover:text-blue-600"><Facebook size={18} /></a>
-                  <a href="#" className="p-2 text-gray-600 hover:text-blue-400"><Twitter size={18} /></a>
-                  <a href="#" className="p-2 text-gray-600 hover:text-blue-700"><Linkedin size={18} /></a>
-                  <a href="#" className="p-2 text-gray-600 hover:text-red-500"><Mail size={18} /></a>
-                </div>
-              </div>
-            )}
+              </h3>
+              <p className="text-[10px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
+            </div>
           </div>
+          <p className="text-green-100/80 text-sm mb-4 leading-relaxed max-w-xs md:max-w-none">
+            MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
+          </p>
+          <p className="text-yellow-500 font-mono text-sm font-semibold">
+            Version {import.meta.env.PACKAGE_VERSION}
+          </p>
         </div>
 
-        {/* Copyright & Social */}
-        <div className="flex flex-col items-center md:items-end shrink-0 md:ml-auto w-full md:w-auto">
-          <div className="hidden md:flex gap-3 mb-1">
-            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Facebook size={14} /></a>
-            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Twitter size={14} /></a>
-            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Linkedin size={14} /></a>
-            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Mail size={14} /></a>
-          </div>
-          <p className="text-sm md:text-[10px] text-green-100/40 text-center md:text-right leading-none md:leading-normal w-full">
-            <span className="hidden sm:inline">© {new Date().getFullYear()} MSU-SND ROTC • </span>
-            <span className="sm:hidden xs:inline">© {new Date().getFullYear()} </span>
-            JUNJIE L. BAHIAN
-          </p>
+        {/* Information */}
+        <div className="text-center md:text-left">
+          <h4 className="text-yellow-500 font-bold mb-4 uppercase text-sm tracking-wider">Information</h4>
+           <ul className="space-y-3 text-green-50 text-sm">
+            <li>
+                <button
+                  type="button"
+                  onClick={() => setModal('about')}
+                  className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About the App
+                </button>
+            </li>
+            <li>
+                <button
+                    type="button"
+                    onClick={() => setModal('docs')}
+                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
+                >
+                    <span className="group-hover:translate-x-1 transition-transform">📄</span> Documentation
+                </button>
+            </li>
+            <li>
+                <button
+                    type="button"
+                    onClick={handleSupport}
+                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group"
+                >
+                    <span className="group-hover:translate-x-1 transition-transform">🎧</span> Support
+                </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-green-100/60">
+        <div className="flex items-center gap-3 mb-4 md:mb-0">
+           <div className="w-8 h-8 rounded-full shadow-lg overflow-hidden">
+             <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
+           </div>
+           <div>
+             <p className="font-bold text-white">© {new Date().getFullYear()} MSU-SND ROTC Unit</p>
+             <p className="text-xs">Developed by JUNJIE L. BAHIAN • All rights reserved.</p>
+           </div>
+        </div>
+        
+        <div className="flex gap-4">
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Facebook size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Twitter size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Linkedin size={16} /></a>
+          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Mail size={16} /></a>
         </div>
       </div>
 

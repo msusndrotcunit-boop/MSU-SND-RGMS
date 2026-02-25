@@ -111,197 +111,311 @@ const Settings = ({ role }) => {
         }
     };
 
-    const handleExportData = async (type, format) => {
-        if (!window.confirm(`Export all ${type} data as ${format.toUpperCase()}? This may include sensitive information. Only download on secure, trusted devices.`)) {
-            return;
-        }
-        try {
-            const url = `/api/admin/export/${type}?format=${format}`;
-            const res = await axios.get(url, { responseType: 'blob' });
-            const contentType = res.headers['content-type'] || (format === 'json' ? 'application/json' : 'text/csv');
-            const blob = new Blob([res.data], { type: contentType });
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `${type}_export.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-        } catch (err) {
-            console.error(err);
-            toast.error('Export failed: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
     // Removed cadet email notifications handlers
 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">System Settings & Configuration</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
+        <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <PaintBucket className="text-[var(--primary-color)]" />
+                My Settings
+            </h2>
+
+            <div className="space-y-8">
+                {/* Notifications Settings */}
+                <section>
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
+                        <Bell size={20} />
+                        Notifications
+                    </h3>
+                    <div className="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={localSettings.notifications.emailAlerts}
+                                onChange={(e) => handleChange('notifications', 'emailAlerts', e.target.checked)}
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                            />
+                            <span className="text-gray-700">Email Alerts</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={localSettings.notifications.pushNotifications}
+                                onChange={(e) => handleChange('notifications', 'pushNotifications', e.target.checked)}
+                                className="form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">Push Notifications</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={localSettings.notifications.activityUpdates}
+                                onChange={(e) => handleChange('notifications', 'activityUpdates', e.target.checked)}
+                                className="form-checkbox h-3 w-3 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">Activity Updates</span>
+                        </label>
+                    </div>
+                </section>
+
+                {/* Display Settings */}
+                <section>
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
+                        <Monitor size={20} />
+                        Display
+                    </h3>
+                    <div className="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={localSettings.display.darkMode}
+                                onChange={(e) => handleChange('display', 'darkMode', e.target.checked)}
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                            />
+                            <span className="text-gray-700">Dark Mode (Beta)</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={localSettings.display.compactMode}
+                                onChange={(e) => handleChange('display', 'compactMode', e.target.checked)}
+                                className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                            />
+                            <span className="text-gray-700">Compact Mode</span>
+                        </label>
+                    </div>
+                </section>
+
+                {/* Theme Settings */}
+                <section>
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
+                        <PaintBucket size={20} />
+                        Theme Customization
+                    </h3>
+                    <div className="pl-4 border-l-2 border-gray-100 dark:border-gray-700 space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Primary Color</label>
+                            <label className="flex items-center gap-2 mb-2 text-xs text-gray-600 dark:text-gray-400">
+                                <input 
+                                    type="checkbox" 
+                                    checked={!!localSettings.display?.compactSwatches} 
+                                    onChange={(e) => setLocalSettings(prev => ({ 
+                                        ...prev, 
+                                        display: { ...prev.display, compactSwatches: e.target.checked } 
+                                    }))}
+                                    className="form-checkbox h-3 w-3 text-[var(--primary-color)] rounded focus:ring-[var(--primary-color)]"
+                                />
+                                Compact swatches
+                            </label>
+                            <div className="flex gap-3 flex-wrap">
+                                {[
+                                    'default','blue','indigo','green','emerald','red','pink','purple','orange','amber','cyan','teal','slate',
+                                    'gradient-emerald','gradient-sunset','gradient-ocean'
+                                ].map(token => {
+                                    const solids = {
+                                        default: '#0f766e',
+                                        blue: '#2563eb',
+                                        indigo: '#4f46e5',
+                                        green: '#16a34a',
+                                        emerald: '#059669',
+                                        red: '#dc2626',
+                                        pink: '#db2777',
+                                        purple: '#7c3aed',
+                                        orange: '#ea580c',
+                                        amber: '#d97706',
+                                        cyan: '#06b6d4',
+                                        teal: '#0f766e',
+                                        slate: '#334155'
+                                    };
+                                    const isGradient = token.startsWith('gradient-');
+                                    const label = isGradient
+                                        ? token.replace('gradient-', '').replace('-', ' ') + ' gradient'
+                                        : token === 'default' ? 'Default' : token;
+                                    return (
+                                        <button
+                                            key={token}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 transition-transform ${
+                                                localSettings.theme.primaryColor === token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'
+                                            }`}
+                                            style={isGradient ? { backgroundImage: 'var(--primary-gradient)', background: token === 'gradient-emerald'
+                                                ? 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)'
+                                                : token === 'gradient-sunset'
+                                                ? 'linear-gradient(135deg, #fb7185 0%, #f59e0b 50%, #ea580c 100%)'
+                                                : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #1d4ed8 100%)'
+                                            } : { backgroundColor: solids[token] }}
+                                            aria-label={label}
+                                            title={label}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Grouped sections */}
+                        <div className="space-y-2">
+                            <div className="text-xs font-semibold uppercase text-gray-500">Solids</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {['default','blue','indigo','green','emerald','red','pink','purple','orange','amber','cyan','teal','slate'].map(token => {
+                                    const solids = {
+                                        default: '#0f766e', blue: '#2563eb', indigo: '#4f46e5', green: '#16a34a', emerald: '#059669',
+                                        red: '#dc2626', pink: '#db2777', purple: '#7c3aed', orange: '#ea580c', amber: '#d97706',
+                                        cyan: '#06b6d4', teal: '#0f766e', slate: '#334155'
+                                    };
+                                    return (
+                                        <button
+                                            key={`solid-${token}`}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${localSettings.theme.primaryColor===token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'} transition-transform`}
+                                            style={{ backgroundColor: solids[token] }}
+                                            title={token}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs font-semibold uppercase text-gray-500">Gradients</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {['gradient-emerald','gradient-sunset','gradient-ocean'].map(token => {
+                                    const gradients = {
+                                        'gradient-emerald': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+                                        'gradient-sunset': 'linear-gradient(135deg, #fb7185 0%, #f59e0b 50%, #ea580c 100%)',
+                                        'gradient-ocean': 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #1d4ed8 100%)'
+                                    };
+                                    return (
+                                        <button
+                                            key={`grad-${token}`}
+                                            onClick={() => handleChange('theme', 'primaryColor', token)}
+                                            className={`${localSettings.display?.compactSwatches ? 'w-6 h-6' : 'w-8 h-8'} rounded-full border-2 ${localSettings.theme.primaryColor===token ? 'border-gray-900 scale-110' : 'border-gray-200 hover:scale-105'} transition-transform`}
+                                            style={{ background: gradients[token] }}
+                                            title={token.replace('gradient-','') + ' gradient'}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs font-semibold uppercase text-gray-500">Unit Packages</div>
+                            <div className="flex gap-3 flex-wrap">
+                                {[
+                                    { token: 'default', name: 'ROTC Green' },
+                                    { token: 'slate', name: 'Ops Slate' },
+                                    { token: 'gradient-emerald', name: 'Field Blend' }
+                                ].map(p => (
+                                    <button
+                                        key={`pkg-${p.token}`}
+                                        onClick={() => handleChange('theme', 'primaryColor', p.token)}
+                                        className={`${localSettings.display?.compactSwatches ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded border-2 ${localSettings.theme.primaryColor===p.token ? 'border-gray-900' : 'border-gray-200'} bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:shadow`}
+                                        title={p.name}
+                                    >
+                                        {p.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                             <BackgroundUploader />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Archive & Maintenance (Admin Only) */}
+                {role === 'admin' && (
+                    <section>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
+                            <Database size={20} />
+                            Archive & Maintenance
+                        </h3>
+                        <div className="space-y-4 pl-4 border-l-2 border-gray-100">
+                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <h4 className="font-medium text-gray-800 mb-2">Old Graduates Management</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Export data of cadets who have completed the course (Status: "Completed"), then remove them to free up database space.
+                                </p>
+                                <div className="flex gap-3 flex-wrap">
+                                    <button 
+                                        onClick={handleExportGraduates}
+                                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                                    >
+                                        <Download size={16} />
+                                        Export Graduates (Excel)
+                                    </button>
+                                    <button 
+                                        onClick={handlePruneGraduates}
+                                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete from Database
+                                    </button>
+                                </div>
+                            </div>
+                            {/* Cadet Email Notifications removed per admin request */}
+                        </div>
+                    </section>
+                )}
+
+                {role === 'admin' && (
+                    <section>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-100 flex items-center gap-2">
+                            <Database size={20} />
+                            Database Status
+                        </h3>
+                        <div className="space-y-4 pl-4 border-l-2 border-gray-100 dark:border-gray-700">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Type</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            {systemStatus?.database?.type || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Status</span>
+                                        <span className={`text-sm font-semibold ${systemStatus?.database?.status === 'ok' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {systemStatus?.database?.status || (statusError ? 'error' : 'unknown')}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Latency (ms)</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            {systemStatus?.database?.latencyMs ?? '—'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Cadets</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.cadets ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Users</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.users ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Training Days</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.trainingDays ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Activities</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.activities ?? '—'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Unread Notifications</span>
+                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{systemStatus?.metrics?.unreadNotifications ?? '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                <div className="pt-6 border-t border-gray-200">
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="bg-green-700 text-white px-6 py-2 rounded hover:bg-green-800 transition flex items-center shadow-md min-h-[44px] hover-highlight disabled:opacity-50"
+                        className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
                     >
-                        <Save size={18} className="mr-2" />
-                        {saving ? 'Saving...' : 'Save Changes'}
+                        <Save size={20} />
+                        <span>{saving ? 'Saving...' : 'Save Settings'}</span>
                     </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Sidebar: Navigation/Quick Stats */}
-                <div className="lg:col-span-1 space-y-6">
-                    {/* Appearance Preview */}
-                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-blue-600 p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <PaintBucket className="text-blue-600" size={20} />
-                            <h3 className="font-bold text-gray-800 dark:text-gray-100">Appearance</h3>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Customize the look and feel of your interface.</p>
-                        
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Theme Mode</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button 
-                                        onClick={() => handleChange('appearance', 'theme', 'light')}
-                                        className={`py-2 px-3 text-xs font-bold rounded border transition-all ${localSettings.appearance?.theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
-                                    >
-                                        LIGHT
-                                    </button>
-                                    <button 
-                                        onClick={() => handleChange('appearance', 'theme', 'dark')}
-                                        className={`py-2 px-3 text-xs font-bold rounded border transition-all ${localSettings.appearance?.theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
-                                    >
-                                        DARK
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Notification Preferences */}
-                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600 p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Bell className="text-green-600" size={20} />
-                            <h3 className="font-bold text-gray-800 dark:text-gray-100">Notifications</h3>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Manage how you receive updates and alerts.</p>
-                        
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Push Notifications</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={localSettings.notifications?.pushEnabled ?? true}
-                                        onChange={(e) => handleChange('notifications', 'pushEnabled', e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                                </label>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sound Alerts</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={localSettings.notifications?.soundEnabled ?? true}
-                                        onChange={(e) => handleChange('notifications', 'soundEnabled', e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                                </label>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Forwarding</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer"
-                                        checked={localSettings.notifications?.emailEnabled ?? false}
-                                        onChange={(e) => handleChange('notifications', 'emailEnabled', e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {role === 'admin' && (
-                        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-amber-600 p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Database className="text-amber-600" size={20} />
-                                <h3 className="font-bold text-gray-800 dark:text-gray-100">Database Health</h3>
-                            </div>
-                            {systemStatus ? (
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500">Status</span>
-                                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase">Online</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-500">Active Users</span>
-                                        <span className="font-bold text-gray-800 dark:text-gray-100">{systemStatus.active_users || 0}</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="text-xs text-gray-400 italic">Checking system health...</p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Main Settings Area */}
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Background Settings */}
-                    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] p-6">
-                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <Monitor className="text-[var(--primary-color)]" size={20} />
-                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Interface Customization</h3>
-                        </div>
-                        
-                        <div className="space-y-6">
-                            <BackgroundUploader />
-                        </div>
-                    </div>
-
-                    {/* Data Management (Admin Only) */}
-                    {role === 'admin' && (
-                        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-red-600 p-6">
-                            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
-                                <Database className="text-red-600" size={20} />
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Data Management</h3>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button 
-                                    onClick={handleExportGraduates}
-                                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex flex-col items-center text-center gap-2 group"
-                                >
-                                    <Download size={24} className="text-blue-600 group-hover:scale-110 transition-transform" />
-                                    <span className="font-bold text-gray-800 dark:text-gray-100 text-sm">Export Graduates</span>
-                                    <span className="text-[10px] text-gray-500">Download Excel archive of completed cadets</span>
-                                </button>
-                                <button 
-                                    onClick={handlePruneGraduates}
-                                    className="p-4 border border-red-100 dark:border-red-900/30 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-all flex flex-col items-center text-center gap-2 group"
-                                >
-                                    <Trash2 size={24} className="text-red-600 group-hover:scale-110 transition-transform" />
-                                    <span className="font-bold text-red-700 text-sm">Prune Database</span>
-                                    <span className="text-[10px] text-red-500/70">Permanently remove archived records</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

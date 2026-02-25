@@ -7,18 +7,9 @@ import './index.css'
 // DEBUG: Log API URL to help troubleshoot connection issues
 console.log('App Initializing...');
 console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Axios Base URL:', import.meta.env.VITE_API_URL || '(relative)');
 
-// Prefer explicit API URL when provided; otherwise fall back to same-origin.
-let apiBaseURL = '';
-const envApi = import.meta.env.VITE_API_URL || '';
-if (envApi) {
-  apiBaseURL = envApi;
-} else if (import.meta.env.DEV) {
-  apiBaseURL = 'http://localhost:8000';
-}
-
-axios.defaults.baseURL = apiBaseURL;
-console.log('Axios Base URL:', apiBaseURL || '(relative same-origin)');
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
 // Global Axios interceptors for graceful 404/403 handling on staff/cadet endpoints
 axios.interceptors.response.use(

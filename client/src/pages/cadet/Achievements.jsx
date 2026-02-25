@@ -43,66 +43,44 @@ const Achievements = () => {
 
     return (
         <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">My Achievements & Recognition</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
-                    >
-                        <Trophy size={18} className="mr-2 text-yellow-500" />
-                        Refresh
-                    </button>
-                </div>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                    <Trophy className="text-yellow-500" size={32} />
+                    My Achievements
+                </h1>
             </div>
 
-            {/* Current Status Card */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] overflow-hidden">
-                <div className="bg-gradient-to-r from-[var(--primary-color)] to-green-600 p-8 text-white relative overflow-hidden">
-                    {/* Decorative background icon */}
-                    <Trophy className="absolute -right-8 -bottom-8 text-white/10 w-48 h-48 rotate-12" />
-                    
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                        <div className="text-center md:text-left">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-white/80 mb-2">Lifetime Merit Achievement</h3>
-                            <div className="flex items-center justify-center md:justify-start gap-6">
-                                <span className="text-7xl font-black">{achievements?.lifetimeMerit || 0}</span>
-                                <div className="text-left">
-                                    <p className="text-lg font-bold">Total Merits Earned</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider">
-                                            Current Rank: {achievements?.rank || 'Cadet'}
-                                        </span>
-                                    </div>
-                                </div>
+            {/* Current Status */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-lg p-8 text-white">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold mb-2">Lifetime Merit Achievement</h2>
+                        <div className="flex items-center gap-4">
+                            <span className="text-6xl font-extrabold">{achievements?.lifetimeMerit || 0}</span>
+                            <div>
+                                <p className="text-lg opacity-90">Total Merits Earned</p>
+                                <p className="text-sm opacity-75">Current Rank: {achievements?.rank || 'Cadet'}</p>
                             </div>
                         </div>
-                        
-                        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-white/20 shadow-2xl transform hover:scale-110 transition-transform duration-500">
-                            <div className="text-7xl drop-shadow-lg">
-                                {achievements?.rank === 'Platinum' && '💎'}
-                                {achievements?.rank === 'Gold' && '🥇'}
-                                {achievements?.rank === 'Silver' && '🥈'}
-                                {achievements?.rank === 'Bronze' && '🥉'}
-                                {!achievements?.rank && '🎖️'}
-                            </div>
-                        </div>
+                    </div>
+                    <div className="text-8xl">
+                        {achievements?.rank === 'Platinum' && '💎'}
+                        {achievements?.rank === 'Gold' && '🥇'}
+                        {achievements?.rank === 'Silver' && '🥈'}
+                        {achievements?.rank === 'Bronze' && '🥉'}
+                        {!achievements?.rank && '🎖️'}
                     </div>
                 </div>
             </div>
 
-            {/* Achievement Badges Grid */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] p-6">
-                <div className="flex items-center gap-2 mb-8 border-b border-gray-100 dark:border-gray-800 pb-4">
-                    <Award className="text-[var(--primary-color)]" size={24} />
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Achievement Badges</h3>
-                </div>
+            {/* Achievement Badges */}
+            <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <Award className="text-blue-600" />
+                    Achievement Badges
+                </h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         { level: 'Bronze', threshold: 50, icon: '🥉', color: 'from-yellow-700 to-yellow-900' },
                         { level: 'Silver', threshold: 100, icon: '🥈', color: 'from-gray-300 to-gray-500' },

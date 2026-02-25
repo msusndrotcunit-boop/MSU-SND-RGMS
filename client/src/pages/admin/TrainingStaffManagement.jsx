@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin, ChevronLeft, Sun, Moon, User, MoreVertical, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, X, Upload, Plus, UserCog, MapPin, ChevronLeft, Sun, Moon, User, MoreVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getSingleton, cacheSingleton, clearCache } from '../../utils/db';
 import { getProfilePicUrl } from '../../utils/image';
@@ -214,39 +214,30 @@ const TrainingStaffManagement = () => {
     });
 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Training Staff Management</span>
+        <div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <UserCog /> Training Staff Management
                 </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition flex items-center shadow-md min-h-[44px] hover-highlight"
-                    >
-                        <Plus size={18} className="mr-2" />
-                        Add Staff
-                    </button>
-                    <button
+                <div className="flex space-x-2 w-full md:w-auto">
+                    <button 
                         onClick={() => setIsImportModalOpen(true)}
-                        className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition flex items-center shadow-md min-h-[44px] hover-highlight"
+                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-blue-700"
                     >
-                        <Upload size={18} className="mr-2" />
-                        Import List
+                        <Upload size={18} />
+                        <span>Import List</span>
                     </button>
-                    <button
-                        onClick={() => fetchStaff(true)}
-                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-700"
                     >
-                        <RefreshCw size={18} className="mr-2" />
-                        Refresh
+                        <Plus size={18} />
+                        <span>Add Staff</span>
                     </button>
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
                 <div className="text-sm text-gray-600">Sort by</div>
                 <div className="flex items-center space-x-2">
                     <select

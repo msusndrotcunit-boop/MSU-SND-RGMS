@@ -29,20 +29,17 @@ const StaffHome = () => {
         imgs = (imgs || []).filter(Boolean);
 
         if (imgs.length === 0 && activity.image_path) {
-            const src = activity.image_path.startsWith('data:') || activity.image_path.startsWith('http')
+            const src = activity.image_path.startsWith('data:')
                 ? activity.image_path
-                : activity.image_path;  // Return as-is, let browser resolve
+                : `${import.meta.env.VITE_API_URL || ''}${activity.image_path.replace(/\\/g, '/')}`;
             return [src];
         }
 
-        return imgs.map((src) => {
-            // If it's a data URL or full HTTP URL, return as-is
-            if (src.startsWith('data:') || src.startsWith('http')) {
-                return src;
-            }
-            // Otherwise, it's a relative path - return as-is
-            return src;
-        });
+        return imgs.map((src) =>
+            src.startsWith('data:') || src.startsWith('http')
+                ? src
+                : `${import.meta.env.VITE_API_URL || ''}${String(src).replace(/\\/g, '/')}`
+        );
     };
 
     useEffect(() => {
@@ -140,27 +137,13 @@ const StaffHome = () => {
                                         {(() => {
                                             const images = getImages(activity);
                                             const primary = images[0];
-                                            if (!primary) {
-                                                return (
-                                                    <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                                                            <polyline points="21 15 16 10 5 21"/>
-                                                        </svg>
-                                                    </div>
-                                                );
-                                            }
+                                            if (!primary) return null;
                                             return (
                                                 <div className="w-full bg-gray-100 flex justify-center items-center h-[400px]">
                                                     <img
                                                         src={primary}
                                                         alt={activity.title}
                                                         className="max-h-full max-w-full object-contain"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            e.target.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-                                                        }}
                                                     />
                                                 </div>
                                             );

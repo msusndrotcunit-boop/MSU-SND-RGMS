@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, XCircle, Users, ClipboardCheck, Zap, User, Info, MessageCircle } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Users, ClipboardCheck } from 'lucide-react';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
@@ -12,7 +11,6 @@ import { useAuth } from '../../context/AuthContext';
 
 const StaffDashboard = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [attendanceLogs, setAttendanceLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [staffRole, setStaffRole] = useState(null);
@@ -130,17 +128,17 @@ const StaffDashboard = () => {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-green-50 p-6 rounded shadow border-l-4 border-green-500 hover-highlight">
+                <div className="bg-green-50 p-6 rounded shadow border-l-4 border-green-500">
                     <h3 className="text-green-800 font-bold uppercase text-sm">Present</h3>
                     <p className="text-3xl font-bold mt-2">{presentCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>
                 </div>
-                <div className="bg-red-50 p-6 rounded shadow border-l-4 border-red-500 hover-highlight">
+                <div className="bg-red-50 p-6 rounded shadow border-l-4 border-red-500">
                     <h3 className="text-red-800 font-bold uppercase text-sm">Absent</h3>
                     <p className="text-3xl font-bold mt-2">{absentCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>
                 </div>
-                <div className="bg-blue-50 p-6 rounded shadow border-l-4 border-blue-500 hover-highlight">
+                <div className="bg-blue-50 p-6 rounded shadow border-l-4 border-blue-500">
                     <h3 className="text-blue-800 font-bold uppercase text-sm">Excused</h3>
                     <p className="text-3xl font-bold mt-2">{excusedCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Training Days</p>
@@ -288,45 +286,6 @@ const StaffDashboard = () => {
                     </div>
                 )}
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg p-4 text-white shadow-lg border border-green-700">
-                <div className="flex items-center mb-3 border-b border-green-600 pb-1.5">
-                    <Zap className="text-yellow-400 mr-2 tilt-media" size={18} />
-                    <h3 className="font-bold text-yellow-50 text-sm">Quick Actions</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button 
-                        onClick={() => navigate('/staff/profile')}
-                        className="flex items-center justify-center p-3 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px] rounded-lg"
-                    >
-                        <User className="mr-2 text-blue-300" size={16} />
-                        <span className="text-xs md:text-sm">My Profile</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/staff/communication')}
-                        className="flex items-center justify-center p-3 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px] rounded-lg"
-                    >
-                        <MessageCircle className="mr-2 text-green-300" size={16} />
-                        <span className="text-xs md:text-sm">Communication</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/staff/settings')}
-                        className="flex items-center justify-center p-3 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all duration-200 min-h-[44px] rounded-lg"
-                    >
-                        <Info className="mr-2 text-purple-300" size={16} />
-                        <span className="text-xs md:text-sm">Settings</span>
-                    </button>
-                    <button 
-                        onClick={() => navigate('/staff/activities')}
-                        className="flex items-center justify-center p-3 bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold shadow-lg border border-yellow-300 min-h-[44px] rounded-lg"
-                    >
-                        <Calendar className="mr-2" size={16} />
-                        <span className="text-xs md:text-sm">Activities</span>
-                    </button>
-                </div>
-            </div>
-
         </div>
     );
 };

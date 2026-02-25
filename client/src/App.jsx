@@ -7,7 +7,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ReloadPrompt from './components/ReloadPrompt';
 import KeepAlive from './components/KeepAlive';
 import { Toaster } from 'react-hot-toast';
-import SafeAreaManager, { SafeAreaProvider } from './components/SafeAreaManager';
 
 // Lazy Load Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -29,7 +28,6 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminStaff = lazy(() => import('./pages/admin/TrainingStaffManagement'));
 const AdminStaffScanner = lazy(() => import('./pages/admin/StaffAttendanceScanner'));
 const AdminStaffAnalytics = lazy(() => import('./pages/admin/StaffAnalytics'));
-const AdminAbsenceAnalytics = lazy(() => import('./pages/admin/AbsenceAnalytics'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 const BroadcastMessages = lazy(() => import('./pages/BroadcastMessages'));
 const Admin3DStudio = lazy(() => import('./pages/admin/ThreeDStudio'));
@@ -38,7 +36,6 @@ const Admin3DStudio = lazy(() => import('./pages/admin/ThreeDStudio'));
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
 const CadetHome = lazy(() => import('./pages/cadet/Home'));
 const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
-const CadetNotifications = lazy(() => import('./pages/cadet/NotificationHistory'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
 const CadetAchievements = lazy(() => import('./pages/cadet/Achievements'));
@@ -65,15 +62,13 @@ function App() {
   console.log(`App Version: ${import.meta.env.PACKAGE_VERSION} (Deploy 2026-02-10 Cache Bust)`);
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <Router>
-          <AuthProvider>
-            <SettingsProvider>
-              <Toaster position="top-center" />
-              <ReloadPrompt />
-              <KeepAlive />
-              <SafeAreaManager className="min-h-screen">
-                <Suspense fallback={<LoadingSpinner />}>
+      <Router>
+        <AuthProvider>
+          <SettingsProvider>
+            <Toaster position="top-center" />
+            <ReloadPrompt />
+            <KeepAlive />
+            <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
@@ -90,7 +85,6 @@ function App() {
                 <Route path="attendance" element={<AdminAttendance />} />
                 <Route path="staff-scanner" element={<AdminStaffScanner />} />
                 <Route path="staff-analytics" element={<AdminStaffAnalytics />} />
-                <Route path="absence-analytics" element={<AdminAbsenceAnalytics />} />
                 <Route path="activities" element={<AdminActivities />} />
                 <Route path="achievements" element={<AdminAchievements />} />
                 <Route path="data-analysis" element={<AdminDataAnalysis />} />
@@ -109,7 +103,6 @@ function App() {
               <Route path="/cadet" element={<CadetLayout />}>
                 <Route path="home" element={<CadetHome />} />
                 <Route path="dashboard" element={<CadetDashboard />} />
-                <Route path="notifications" element={<CadetNotifications />} />
                 <Route path="profile" element={<CadetProfile />} />
                 <Route path="achievements" element={<CadetAchievements />} />
                 <Route path="broadcasts" element={<BroadcastMessages />} />
@@ -143,12 +136,10 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
-                </Suspense>
-              </SafeAreaManager>
-            </SettingsProvider>
-          </AuthProvider>
-        </Router>
-      </SafeAreaProvider>
+            </Suspense>
+          </SettingsProvider>
+        </AuthProvider>
+      </Router>
     </ErrorBoundary>
   );
 }

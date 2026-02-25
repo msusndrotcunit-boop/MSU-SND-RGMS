@@ -82,7 +82,10 @@ const Cadets = () => {
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState(null);
+    const [importUrl, setImportUrl] = useState('');
     const [importing, setImporting] = useState(false);
+    const [linkedUrl, setLinkedUrl] = useState(null);
+    const [syncing, setSyncing] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Form States
@@ -90,7 +93,6 @@ const Cadets = () => {
     const [addForm, setAddForm] = useState({
         rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
         studentId: '', email: '', contactNumber: '', address: '',
-        gender: '', religion: '', birthdate: '',
         course: '', yearLevel: '', schoolYear: '',
         battalion: '', company: '', platoon: '',
         cadetCourse: '', semester: '', status: 'Ongoing'
@@ -139,6 +141,7 @@ const Cadets = () => {
                 await cacheSingleton('admin', 'cadets_list', null);
             } catch {}
             await fetchCadets(true);
+            fetchSettings();
         })();
         let es;
         const connect = () => {
@@ -163,6 +166,30 @@ const Cadets = () => {
         connect();
         return () => { try { es && es.close(); } catch {} };
     }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await axios.get('/api/admin/settings/cadet-source');
+            setLinkedUrl(res.data.url);
+        } catch (err) {
+            console.error("Failed to fetch settings", err);
+        }
+    };
+
+    const handleSync = async () => {
+        if (!linkedUrl) return;
+        setSyncing(true);
+        try {
+            const res = await axios.post('/api/admin/sync-cadets');
+            toast.success(res.data.message);
+            fetchCadets(true);
+        } catch (err) {
+            console.error("Sync failed", err);
+            toast.error(err.response?.data?.message || 'Sync failed');
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -403,27 +430,28 @@ const Cadets = () => {
             setIsEditModalOpen(false);
             toast.success('Cadet updated successfully');
         } catch (err) {
-            console.error('Cadet update error:', err);
-            const errorMsg = err.response?.data?.message || err.message || 'Error updating cadet';
-            toast.error(errorMsg);
+            console.error(err);
+            toast.error('Error updating cadet');
         }
     };
 
     const handleImport = async (e) => {
         e.preventDefault();
-        if (!importFile) {
-            toast.error('Please select a file to import.');
-            return;
-        }
+        if (!importFile && !importUrl) return;
 
         setImporting(true);
         
         try {
-            const formData = new FormData();
-            formData.append('file', importFile);
-            const res = await axios.post('/api/admin/import-cadets', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            let res;
+            if (importFile) {
+                const formData = new FormData();
+                formData.append('file', importFile);
+                res = await axios.post('/api/admin/import-cadets', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                res = await axios.post('/api/admin/import-cadets-url', { url: importUrl });
+            }
             
             let message = res.data.message || 'Import successful!';
             
@@ -434,6 +462,7 @@ const Cadets = () => {
             toast.success(message);
             setIsImportModalOpen(false);
             setImportFile(null);
+            setImportUrl('');
             
             try {
                 await clearCache('attendance_by_day'); // Sync attendance lists
@@ -485,7 +514,6 @@ const Cadets = () => {
             setAddForm({
                 rank: '', firstName: '', middleName: '', lastName: '', suffixName: '',
                 studentId: '', email: '', contactNumber: '', address: '',
-                gender: '', religion: '', birthdate: '',
                 course: '', yearLevel: '', schoolYear: '',
                 battalion: '', company: '', platoon: '',
                 cadetCourse: '', semester: '', status: 'Ongoing'
@@ -611,11 +639,11 @@ const Cadets = () => {
                 {/* Controls Container - Collapsible on Mobile */}
                 <div 
                     id="cadet-controls"
-                    className={`flex flex-col md:flex-row md:flex-wrap space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto transition-all duration-300 ease-in-out overflow-hidden ${
+                    className={`flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto transition-all duration-300 ease-in-out overflow-hidden ${
                         isControlsExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'
                     }`}
                 >
-                    {/* Search Bar (medium size) */}
+                    {/* Search Bar */}
                     <div className="relative flex-1 md:flex-none">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search size={18} className="text-gray-400" />
@@ -623,12 +651,23 @@ const Cadets = () => {
                         <input
                             type="text"
                             placeholder="Search cadets..."
-                            className="pl-10 pr-3 h-10 border rounded-md w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="pl-10 pr-4 py-2 border rounded w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
 
+                    {linkedUrl && (
+                        <button 
+                            onClick={handleSync}
+                            disabled={syncing}
+                            className={`flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-indigo-700 ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={`Synced with: ${linkedUrl}`}
+                        >
+                            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                            <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+                        </button>
+                    )}
                     {selectedCadets.length > 0 && (
                         <button
                             onClick={handleBulkUnlock}
@@ -644,30 +683,7 @@ const Cadets = () => {
                             className="flex-1 md:flex-none bg-red-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-700 animate-fade-in"
                         >
                             <Trash2 size={18} />
-                            <span>Archive ({selectedCadets.length})</span>
-                        </button>
-                    )}
-                    {selectedCadets.length > 0 && (
-                        <button
-                            onClick={async () => {
-                                if (!window.confirm(`Permanently delete ${selectedCadets.length} cadet(s)? This cannot be undone.`)) return;
-                                try {
-                                    await axios.post('/api/admin/cadets/delete-permanent', { ids: selectedCadets });
-                                    toast.success('Cadets permanently deleted');
-                                    setSelectedCadets([]);
-                                    await cacheSingleton('admin', 'cadets_list', null);
-                                    await clearCache('attendance_by_day');
-                                    fetchCadets(true);
-                                } catch (err) {
-                                    console.error(err);
-                                    toast.error('Failed to permanently delete cadets');
-                                }
-                            }}
-                            className="flex-1 md:flex-none bg-red-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-800 animate-fade-in"
-                            title="Permanently delete selected cadets"
-                        >
-                            <Trash2 size={18} />
-                            <span>Delete Permanently</span>
+                            <span>Delete ({selectedCadets.length})</span>
                         </button>
                     )}
                     {selectedCadets.length > 0 && selectedCadetCourse === 'Archived' && (
@@ -682,14 +698,14 @@ const Cadets = () => {
                     <button 
                         onClick={handleRefresh}
                         disabled={refreshing}
-                        className={`flex-1 md:flex-none bg-gray-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-gray-700 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`flex-1 md:flex-none bg-gray-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-gray-700 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
                         <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
                     </button>
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
-                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-blue-700"
+                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-blue-700"
                     >
                         <Upload size={18} />
                         <span>Import</span>
@@ -702,14 +718,14 @@ const Cadets = () => {
                             }
                             setIsAddModalOpen(true);
                         }}
-                        className="flex-1 md:flex-none bg-green-600 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-green-700"
+                        className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-700"
                     >
                         <Plus size={18} />
                         <span>Add Cadet</span>
                     </button>
                     <button 
                         onClick={() => setIsExportModalOpen(true)}
-                        className="flex-1 md:flex-none bg-green-700 text-white px-4 h-10 rounded-md text-sm flex items-center justify-center space-x-2 hover:bg-green-800"
+                        className="flex-1 md:flex-none bg-green-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-green-800"
                     >
                         <FileDown size={18} />
                         <span>PDF</span>
@@ -864,24 +880,6 @@ const Cadets = () => {
                         className: 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50'
                     }] : []),
                     {
-                        icon: Trash2,
-                        label: 'Delete Permanently',
-                        onClick: async (cadet) => {
-                            if (!window.confirm('Permanently delete this cadet? This cannot be undone.')) return;
-                            try {
-                                await axios.post('/api/admin/cadets/delete-permanent', { ids: [cadet.id] });
-                                toast.success('Cadet permanently deleted');
-                                await cacheSingleton('admin', 'cadets_list', null);
-                                await clearCache('attendance_by_day');
-                                fetchCadets(true);
-                            } catch (err) {
-                                console.error(err);
-                                toast.error('Failed to permanently delete cadet');
-                            }
-                        },
-                        className: 'text-red-600 hover:text-red-800 hover:bg-red-50'
-                    },
-                    {
                         icon: Eye,
                         label: 'View Profile',
                         onClick: openViewModal,
@@ -976,7 +974,7 @@ const Cadets = () => {
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                                     <input 
                                         type="file" 
-                                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx"
+                                        accept=".xlsx,.xls,.csv,.pdf"
                                         onChange={(e) => setImportFile(e.target.files[0])}
                                         className="hidden" 
                                         id="file-upload"
@@ -990,10 +988,29 @@ const Cadets = () => {
                                     </label>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2 space-y-1">
-                                    <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf, .doc, .docx</p>
+                                    <p><strong>Supported formats:</strong> .xlsx, .xls, .csv, .pdf</p>
                                     <p><strong>Supported Columns:</strong> No (ignored), Rank, First Name, Middle Name, Last Name, Username, Email, Student ID</p>
                                     <p><strong>Note:</strong> Login uses Username (defaults to Student ID) or Email.</p>
                                 </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Import via OneDrive/SharePoint Link
+                                </label>
+                                <input
+                                    type="url"
+                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Paste OneDrive/SharePoint direct download link..."
+                                    value={importUrl}
+                                    onChange={(e) => {
+                                        setImportUrl(e.target.value);
+                                        setImportFile(null);
+                                    }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Ensure the link is accessible. For OneDrive/SharePoint, use a shared link and append <code>?download=1</code> if needed.
+                                </p>
                             </div>
                             
                             <div className="pt-4 flex space-x-3">
@@ -1006,7 +1023,7 @@ const Cadets = () => {
                                 </button>
                                 <button 
                                     type="submit"
-                                    disabled={!importFile || importing}
+                                    disabled={(!importFile && !importUrl) || importing}
                                     className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex justify-center items-center ${importing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {importing ? (
@@ -1054,24 +1071,6 @@ const Cadets = () => {
                             </div>
 
                             <input className="border p-2 rounded w-full" value={addForm.address} onChange={e => setAddForm({...addForm, address: e.target.value})} placeholder="Address" />
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select className="border p-2 rounded" value={addForm.gender} onChange={e => setAddForm({...addForm, gender: e.target.value})}>
-                                    <option value="">Select Gender</option>
-                                    {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <select className="border p-2 rounded" value={addForm.religion} onChange={e => setAddForm({...addForm, religion: e.target.value})}>
-                                    <option value="">Select Religion</option>
-                                    {PHILIPPINE_RELIGIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <input 
-                                    type="date" 
-                                    className="border p-2 rounded" 
-                                    value={addForm.birthdate} 
-                                    onChange={e => setAddForm({...addForm, birthdate: e.target.value})} 
-                                    placeholder="Birthdate" 
-                                />
-                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select className="border p-2 rounded" value={addForm.course} onChange={e => setAddForm({...addForm, course: e.target.value})}>

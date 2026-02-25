@@ -112,7 +112,7 @@ export const getProfilePicFallback = (id, type = 'cadets') => {
     // Determine the correct API path based on type
     let apiPath = '';
     if (type === 'admin') {
-        apiPath = `/api/images/admin/${id}?t=${t}`;
+        apiPath = `/api/admin/profile/image?t=${t}`;
     } else if (type === 'staff') {
         apiPath = `/api/images/staff/${id}?t=${t}`;
     } else {

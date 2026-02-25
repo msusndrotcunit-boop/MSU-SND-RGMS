@@ -4,7 +4,7 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
     BarChart, Bar, CartesianGrid, XAxis, YAxis
 } from 'recharts';
-import { FileText, Printer, Building2, Download, Zap, Sparkles, AlertTriangle } from 'lucide-react';
+import { FileText, Printer, Building2, Download, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSingleton, cacheSingleton } from '../../utils/db';
 import jsPDF from 'jspdf';
@@ -12,7 +12,6 @@ import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { addReportHeader, addReportFooter, addSignatories } from '../../utils/pdf';
 import ChartWrapper from '../../components/ChartWrapper';
-import { analyzeAnalyticsData, queryAnalyticsInsights } from '../../services/aiAnalytics';
 
 // Refined Color Scheme
 const COLORS = {
@@ -67,13 +66,6 @@ const DataAnalysis = () => {
     const [courseTotals, setCourseTotals] = useState([]);
     const [religionData, setReligionData] = useState([]);
     const [ageData, setAgeData] = useState([]);
-    const [aiSummary, setAiSummary] = useState(null);
-    const [aiInsights, setAiInsights] = useState([]);
-    const [aiAlerts, setAiAlerts] = useState([]);
-    const [aiRecommendations, setAiRecommendations] = useState([]);
-    const [aiMeta, setAiMeta] = useState(null);
-    const [aiQuery, setAiQuery] = useState('');
-    const [aiQueryResult, setAiQueryResult] = useState(null);
 
     const normalizeStatus = (status) => {
         if (!status) return 'Unknown';
@@ -217,21 +209,6 @@ const DataAnalysis = () => {
     }, []);
 
     useEffect(() => {
-        const analysis = analyzeAnalyticsData({
-            stats,
-            genderByCourse,
-            courseTotals,
-            religionData,
-            ageData
-        });
-        setAiSummary(analysis.summary);
-        setAiInsights(analysis.insights);
-        setAiAlerts(analysis.alerts);
-        setAiRecommendations(analysis.recommendations || []);
-        setAiMeta(analysis.meta);
-    }, [stats, genderByCourse, courseTotals, religionData, ageData]);
-
-    useEffect(() => {
         let es;
         const connect = () => {
             try {
@@ -354,12 +331,13 @@ const DataAnalysis = () => {
             }
         });
 
+        // Completed & Incomplete Summary
         doc.autoTable({
             startY: doc.lastAutoTable.finalY + 10,
             head: [['Status', 'Basic', 'Advance', 'Total']],
             body: [
                 ['Completed/Graduated', stats.completed.basic.total, stats.completed.advance.total, stats.completed.total],
-                ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total]
+                ['Incomplete/Dropped', stats.incomplete.basic.total, stats.incomplete.advance.total, stats.incomplete.total],
             ],
             theme: 'grid',
             headStyles: { fillColor: [33, 33, 33] },
@@ -370,23 +348,7 @@ const DataAnalysis = () => {
             }
         });
 
-        let finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
-
-        if (aiSummary && aiSummary.text) {
-            if (finalY > doc.internal.pageSize.getHeight() - 60) {
-                doc.addPage();
-                addReportHeader(doc, { title: 'Data Analysis Report', dateText: date, leftLogo: import.meta.env.VITE_REPORT_LEFT_LOGO || null, rightLogo: import.meta.env.VITE_REPORT_RIGHT_LOGO || null });
-                addReportFooter(doc);
-                finalY = 50;
-            }
-            doc.setFontSize(12);
-            doc.text('AI Summary and Key Findings', 14, finalY + 15);
-            doc.setFontSize(10);
-            const textLines = doc.splitTextToSize(aiSummary.text, doc.internal.pageSize.getWidth() - 28);
-            doc.text(textLines, 14, finalY + 25);
-            finalY = finalY + 25 + textLines.length * 5;
-        }
-
+        const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || yPos;
         addSignatories(doc, finalY, {
             preparedBy: 'Wilmer B Montejo',
             preparedRole: 'SSg (Inf) PA • Admin NCO',
@@ -440,156 +402,32 @@ const DataAnalysis = () => {
     };
 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Data Analysis & Insights</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={generatePDF}
-                        disabled={loading}
-                        className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition flex items-center shadow-md min-h-[44px] hover-highlight"
-                    >
-                        <Printer size={18} className="mr-2" />
-                        Print Report
-                    </button>
-                    <button
-                        onClick={fetchData}
-                        disabled={loading}
-                        className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition flex items-center shadow-sm min-h-[44px] hover-highlight"
-                    >
-                        <Download size={18} className="mr-2" />
-                        Refresh Data
-                    </button>
-                </div>
-            </div>
-
-            {aiAlerts && aiAlerts.length > 0 && (
-                <div className="mb-4 space-y-2">
-                    {aiAlerts.slice(0, 2).map(alert => (
-                        <div
-                            key={alert.id}
-                            className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-                        >
-                            <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-500" />
-                            <div>
-                                <div className="font-semibold">{alert.title}</div>
-                                <div>{alert.detail}</div>
-                                <div className="mt-1 text-xs opacity-80">
-                                    Confidence: {Math.round((alert.confidence || 0.5) * 100)}%
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+        <div className="p-4 md:p-6 min-h-screen bg-gray-50 font-sans">
 
             {/* School Info Card */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] overflow-hidden">
+            <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden border-t-4 border-yellow-500">
+                <div className="bg-gray-900 px-6 py-3">
+                    <h2 className="text-white font-bold">Selected Details</h2>
+                </div>
                 <div className="p-8 text-center">
-                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Mindanao State University-Sultan Naga Dimaporo</h3>
-                    <p className="text-gray-500 dark:text-gray-400">ROTC Unit Data Analysis & Reporting</p>
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="text-yellow-500" size={20} />
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">AI Insights Overview</h3>
-                    </div>
-                    {aiMeta && (
-                        <span className="text-xs text-gray-500">
-                            Data points analyzed: {aiMeta.dataPoints || 0}
-                        </span>
-                    )}
-                </div>
-                <div className="p-6 space-y-4">
-                    <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        {aiSummary?.text || 'The AI engine is preparing insights. This will activate once analytics data is available.'}
-                    </div>
-                    {aiInsights && aiInsights.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {aiInsights.slice(0, 3).map(insight => (
-                                <div
-                                    key={insight.id}
-                                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-xs bg-gray-50 dark:bg-gray-800/50"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="font-bold text-gray-800 dark:text-gray-100 line-clamp-2">
-                                            {insight.title}
-                                        </div>
-                                        <span
-                                            className={
-                                                insight.severity === 'high'
-                                                    ? 'px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700'
-                                                    : insight.severity === 'medium'
-                                                    ? 'px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700'
-                                                    : 'px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-700'
-                                            }
-                                        >
-                                            {insight.severity || 'info'}
-                                        </span>
-                                    </div>
-                                    <div className="text-gray-600 dark:text-gray-400">{insight.detail}</div>
-                                    <div className="mt-2 text-[10px] text-gray-500 italic">
-                                        Confidence {Math.round((insight.confidence || 0.5) * 100)}%
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
-                            Ask the AI about your cadet data
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-3">
-                            <input
-                                value={aiQuery}
-                                onChange={e => setAiQuery(e.target.value)}
-                                placeholder="Example: Which courses have unusual enrollment patterns?"
-                                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const result = queryAnalyticsInsights(aiQuery, {
-                                        summary: aiSummary,
-                                        insights: aiInsights
-                                    });
-                                    setAiQueryResult(result);
-                                }}
-                                className="px-6 py-2.5 rounded bg-green-700 text-white text-sm font-bold hover:bg-green-800 transition shadow-sm hover-highlight"
-                            >
-                                Ask AI
-                            </button>
-                        </div>
-                        {aiQueryResult && (
-                            <div className="mt-3 text-xs text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded p-3 leading-relaxed">
-                                <span className="font-bold text-blue-800 dark:text-blue-300 mr-2">AI Response:</span>
-                                {aiQueryResult.answer}
-                            </div>
-                        )}
-                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800">Mindanao State University-Sultan Naga Dimaporo</h3>
+                    <p className="text-gray-500">ROTC Unit Data Analysis</p>
                 </div>
             </div>
 
             {/* Charts Grid - Ongoing */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Basic ROTC Chart */}
-                <div id="chart-basic" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Basic ROTC Cadets</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handlePrintChart('chart-basic')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
-                            <button onClick={() => handleDownloadChart('chart-basic', 'Basic ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
+                <div id="chart-basic" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-white font-bold">Ongoing Basic ROTC Cadets</h3>
+                        <div className="space-x-2 text-gray-400">
+                            <button onClick={() => handlePrintChart('chart-basic')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-basic', 'Basic ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -614,15 +452,15 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Advance ROTC Chart */}
-                <div id="chart-advance" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Advance ROTC Cadets</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handlePrintChart('chart-advance')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
-                            <button onClick={() => handleDownloadChart('chart-advance', 'Advance ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
+                <div id="chart-advance" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-white font-bold">Ongoing Advance ROTC Cadets</h3>
+                        <div className="space-x-2 text-gray-400">
+                            <button onClick={() => handlePrintChart('chart-advance')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-advance', 'Advance ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -648,18 +486,18 @@ const DataAnalysis = () => {
             </div>
 
             {/* Combined Chart & Summary Table */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Combined Chart */}
-                <div id="chart-combined" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Overall Distribution</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handlePrintChart('chart-combined')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Printer size={18} /></button>
-                            <button onClick={() => handleDownloadChart('chart-combined', 'Combined ROTC Chart')} className="p-2 text-gray-500 hover:text-[var(--primary-color)] transition-colors"><Download size={18} /></button>
+                <div id="chart-combined" className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-white font-bold">Ongoing Basic and Advance ROTC Cadets</h3>
+                        <div className="space-x-2 text-gray-400">
+                            <button onClick={() => handlePrintChart('chart-combined')} className="hover:text-white transition-colors"><Printer size={16} /></button>
+                            <button onClick={() => handleDownloadChart('chart-combined', 'Combined ROTC Chart')} className="hover:text-white transition-colors"><Download size={16} /></button>
                         </div>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -684,47 +522,47 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Summary Table */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Ongoing Summary</h3>
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Ongoing Summary</h3>
                     </div>
                     <div className="p-6">
-                        <div className="bg-[var(--primary-color)] text-white p-4 font-bold flex justify-between items-center rounded-lg shadow-sm mb-6">
-                            <span className="text-sm uppercase tracking-wider">TOTAL ONGOING CADETS</span>
-                            <span className="text-xl">{stats.ongoing.total}</span>
+                        <div className="bg-gray-900 text-white p-3 font-bold flex justify-between items-center rounded-t mb-4">
+                            <span>TOTAL NUMBER OF CADETS (ONGOING)</span>
+                            <span>{stats.ongoing.total}</span>
                         </div>
 
                         <div className="space-y-4 text-sm">
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 font-bold text-gray-800 dark:text-gray-200">
-                                <span>Total Basic Cadets</span>
+                            <div className="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
+                                <span>Total Basic Cadets (Ongoing)</span>
                                 <span>{stats.ongoing.basic.total}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS1</span>
                                 <span>{stats.ongoing.basic.MS1}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS2</span>
                                 <span>{stats.ongoing.basic.MS2}</span>
                             </div>
 
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 font-bold text-gray-800 dark:text-gray-200 mt-6">
-                                <span>Total Advance Cadets</span>
+                            <div className="flex justify-between items-center border-b pb-2 font-bold text-gray-700 mt-4">
+                                <span>Total Advance Cadets (Ongoing)</span>
                                 <span>{stats.ongoing.advance.total}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS31</span>
                                 <span>{stats.ongoing.advance.MS31}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS32</span>
                                 <span>{stats.ongoing.advance.MS32}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS41</span>
                                 <span>{stats.ongoing.advance.MS41}</span>
                             </div>
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 pl-4 text-gray-600 dark:text-gray-400">
+                            <div className="flex justify-between items-center border-b pb-2 pl-4 text-gray-600">
                                 <span>Total MS42</span>
                                 <span>{stats.ongoing.advance.MS42}</span>
                             </div>
@@ -734,18 +572,18 @@ const DataAnalysis = () => {
             </div>
 
             {/* Completed & Incomplete Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 
                 {/* Completed Chart */}
-                <div id="chart-completed" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-green-600">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Completed Cadets</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handlePrintChart('chart-completed')} className="p-2 text-gray-500 hover:text-green-600 transition-colors"><Printer size={18} /></button>
-                            <button onClick={() => handleDownloadChart('chart-completed', 'Completed Cadets Chart')} className="p-2 text-gray-500 hover:text-green-600 transition-colors"><Download size={18} /></button>
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-green-600 h-80">
+                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-white font-bold">Completed Cadets</h3>
+                        <div className="space-x-2 text-gray-400">
+                            <button><Printer size={16} /></button>
+                            <button><Download size={16} /></button>
                         </div>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                          <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -770,15 +608,15 @@ const DataAnalysis = () => {
                 </div>
 
                 {/* Incomplete Chart */}
-                <div id="chart-incomplete" className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-amber-500">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Incomplete Cadets</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handlePrintChart('chart-incomplete')} className="p-2 text-gray-500 hover:text-amber-600 transition-colors"><Printer size={18} /></button>
-                            <button onClick={() => handleDownloadChart('chart-incomplete', 'Incomplete Cadets Chart')} className="p-2 text-gray-500 hover:text-amber-600 transition-colors"><Download size={18} /></button>
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-amber-500 h-80">
+                    <div className="bg-gray-900 px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-white font-bold">Incomplete Cadets</h3>
+                        <div className="space-x-2 text-gray-400">
+                            <button><Printer size={16} /></button>
+                            <button><Download size={16} /></button>
                         </div>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -804,23 +642,23 @@ const DataAnalysis = () => {
             </div>
 
             {/* Additional Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 {/* Gender by Course */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Gender by Cadet Course</h3>
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Gender by Cadet Course</h3>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={genderByCourse}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                <XAxis dataKey="name" fontSize={10} />
-                                <YAxis allowDecimals={false} fontSize={10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
                                 <Legend />
-                                <Bar dataKey="Male" stackId="g" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Female" stackId="g" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Unknown" stackId="g" fill="#6b7280" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Male" stackId="g" fill="#3b82f6" />
+                                <Bar dataKey="Female" stackId="g" fill="#ef4444" />
+                                <Bar dataKey="Unknown" stackId="g" fill="#6b7280" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -828,63 +666,95 @@ const DataAnalysis = () => {
 
 
                 {/* Course Distribution */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Course Distribution</h3>
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Course Distribution</h3>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={courseTotals}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                <XAxis dataKey="name" fontSize={10} />
-                                <YAxis allowDecimals={false} fontSize={10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
                                 <Legend />
-                                <Bar dataKey="value" fill="#16a34a" radius={[4, 4, 0, 0]} name="Cadets" />
+                                <Bar dataKey="value" fill="#16a34a" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Religion Distribution */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Religion Distribution</h3>
+                {/* Religion Distribution (Bar Graph) */}
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Religion Distribution</h3>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={religionData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                <XAxis dataKey="name" fontSize={10} />
-                                <YAxis allowDecimals={false} fontSize={10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
                                 <Legend />
-                                <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Cadets" />
+                                <Bar dataKey="value" fill="#06b6d4" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Age Distribution */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-gray-800 dark:text-gray-100 font-bold">Age Distribution</h3>
+                {/* Age Distribution (Bar Graph) */}
+                <div className="bg-white rounded-lg shadow-md border-t-4 border-blue-900">
+                    <div className="bg-gray-900 px-4 py-3">
+                        <h3 className="text-white font-bold">Age Distribution</h3>
                     </div>
-                    <div className="p-6 h-72">
+                    <div className="p-4 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={ageData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                <XAxis dataKey="name" fontSize={10} />
-                                <YAxis allowDecimals={false} fontSize={10} />
-                                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
                                 <Legend />
-                                <Bar dataKey="value" fill="#a855f7" radius={[4, 4, 0, 0]} name="Cadets" />
+                                <Bar dataKey="value" fill="#a855f7" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
+            <div className="mt-4 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
+                </div>
+            </div>
         </div>
     );
 };

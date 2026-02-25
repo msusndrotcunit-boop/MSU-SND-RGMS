@@ -7,9 +7,6 @@ export default {
   darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
-      screens: {
-        'xs': '400px',
-      },
       fontSize: {
         'xs': '0.6875rem',    // 11px - very compact
         'sm': '0.8125rem',    // 13px - compact

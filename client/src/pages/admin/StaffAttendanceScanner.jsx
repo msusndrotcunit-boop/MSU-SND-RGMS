@@ -115,73 +115,93 @@ const StaffAttendanceScanner = () => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--primary-color)]">Staff QR Attendance Scanner</h2>
+            <p className="mb-4 text-gray-600 dark:text-gray-300">
+                Scan each training staff&apos;s unique QR code to record their attendance.
+            </p>
             
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Staff Attendance Scanner</span>
-                </h2>
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Select Training Day</label>
+                <select 
+                    value={selectedDay} 
+                    onChange={(e) => setSelectedDay(e.target.value)}
+                    className="w-full md:w-1/3 p-2 border rounded shadow-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"
+                >
+                    <option value="">-- Select Day --</option>
+                    {trainingDays.map(day => (
+                        <option key={day.id} value={day.id}>
+                            {day.date} - {day.title}
+                        </option>
+                    ))}
+                </select>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border-t-4 border-[var(--primary-color)] p-6">
-                <div className="mb-6">
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">Select Training Day</label>
-                    <select 
-                        value={selectedDay} 
-                        onChange={(e) => setSelectedDay(e.target.value)}
-                        className="w-full md:w-1/2 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
-                    >
-                        {trainingDays.map(day => (
-                            <option key={day.id} value={day.id}>{day.title} ({new Date(day.date).toLocaleDateString()})</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="max-w-md mx-auto">
-                    <div id="staff-qr-reader" className="overflow-hidden rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 shadow-inner"></div>
-                </div>
-
-                <div className="mt-8 text-center bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-4">
-                    <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">Position staff QR code within the frame to automatically scan attendance status.</p>
-                </div>
-            </div>
-
-            {isChoosingStatus && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-sm border-t-8 border-yellow-500 overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-8 text-center">
-                            <div className="bg-yellow-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <QrCode className="text-yellow-600" size={40} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{pendingStaff?.name}</h3>
-                            <p className="text-gray-500 dark:text-gray-400 font-mono text-sm mb-8 uppercase tracking-widest">{pendingStaff?.afpsn}</p>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <button 
-                                    onClick={() => handleStatusChoice('present')}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-95 text-lg"
-                                >
-                                    PRESENT
-                                </button>
-                                <button 
-                                    onClick={() => handleStatusChoice('late')}
-                                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all active:scale-95 text-lg"
-                                >
-                                    LATE
-                                </button>
-                            </div>
-                            
-                            <button 
-                                onClick={() => setIsChoosingStatus(false)}
-                                className="mt-8 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-semibold uppercase tracking-widest text-xs"
-                            >
-                                Cancel Scan
-                            </button>
+            <div className="flex flex-col md:flex-row gap-8">
+                {/* QR Scanner Section */}
+                <div className="w-full md:w-1/2 bg-white dark:bg-gray-900 p-4 rounded shadow">
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary-color-soft)] text-[var(--primary-color)]">
+                            <QrCode size={20} />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Live QR Scanner</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Point the camera at the staff QR code.</div>
                         </div>
                     </div>
+                    <div id="staff-qr-reader" className="w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700" />
                 </div>
-            )}
+                
+                {/* Results Section */}
+                <div className="w-full md:w-1/2">
+                    <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Last Scan Result</h3>
+                    {isChoosingStatus && (
+                        <div className="mb-4 p-4 bg-[var(--primary-color-soft)] border border-[var(--primary-color)] rounded">
+                            <div className="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
+                                {pendingStaff?.name || 'Scanned staff'} {pendingStaff?.afpsn ? `(${pendingStaff.afpsn})` : ''}
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                                Choose attendance status. First scan records time in (7:30–9:00 window), second scan records time out (11:30–12:00).
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => handleStatusChoice('present')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-[var(--primary-color)] text-white hover:bg-teal-800"
+                                >
+                                    Present
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChoice('absent')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-red-100 text-red-700 hover:bg-red-200"
+                                >
+                                    Absent
+                                </button>
+                                <button
+                                    onClick={() => handleStatusChoice('excused')}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                >
+                                    Excused
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {scanResult ? (
+                        <div className="p-6 bg-white dark:bg-gray-900 border-l-4 border-[var(--primary-color)] rounded shadow animate-pulse-once">
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="text-xl font-bold text-gray-800 dark:text-gray-100">{scanResult.staff?.name || scanResult.staff?.last_name}</h4>
+                                <span className="px-2 py-1 text-xs font-semibold rounded bg-[var(--primary-color-soft)] text-[var(--primary-color)]">
+                                    {scanResult.status?.toUpperCase()}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-300 mt-2">{scanResult.message}</p>
+                        </div>
+                    ) : (
+                        <div className="p-6 bg-gray-50 dark:bg-gray-800 border rounded text-center text-gray-500 dark:text-gray-300">
+                            Waiting for scan...
+                        </div>
+                    )}
+                </div>
+            </div>
             <style>{`
               #staff-qr-reader { min-height: 320px; }
               @media (min-width: 640px) { #staff-qr-reader { min-height: 380px; } }

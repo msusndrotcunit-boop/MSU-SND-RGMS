@@ -1,0 +1,778 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../database');
+const bcrypt = require('bcryptjs');
+const { authenticateToken, isAdmin, isAdminOrPrivilegedStaff } = require('../middleware/auth');
+const { upload } = require('../utils/cloudinary');
+const { broadcastEvent } = require('../utils/sseHelper');
+const path = require('path');
+const webpush = require('web-push');
+const NodeCache = require('node-cache');
+const cache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes
+
+router.get('/analytics/overview', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
+    const cachedStats = cache.get("staff_analytics");
+    if (cachedStats) {
+        return res.json(cachedStats);
+    }
+
+    const analytics = {};
+
+    db.get("SELECT COUNT(*) as total FROM training_staff", [], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        analytics.totalStaff = row.total;
+
+        db.all("SELECT UPPER(TRIM(rank)) as rank, COUNT(*) as count FROM training_staff GROUP BY UPPER(TRIM(rank))", [], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            analytics.staffByRank = rows;
+
+            db.all("SELECT status, COUNT(*) as count FROM staff_attendance_records GROUP BY status", [], (err, rows) => {
+                if (err) return res.status(500).json({ message: err.message });
+                analytics.attendanceStats = rows;
+                
+                cache.set("staff_analytics", analytics);
+                res.json(analytics);
+            });
+        });
+    });
+});
+
+// Limited Staff List for Command Group visibility
+router.get('/list', authenticateToken, isAdminOrPrivilegedStaff, (req, res) => {
+    const sql = `
+        SELECT s.id, s.rank, s.first_name, s.last_name, s.role, s.email, s.contact_number
+        FROM training_staff s
+        WHERE s.is_archived IS FALSE OR s.is_archived IS NULL
+        ORDER BY s.last_name ASC
+        LIMIT 200
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Edit a message
+router.put('/chat/messages/:id', authenticateToken, (req, res) => {
+    const { content } = req.body;
+    const messageId = req.params.id;
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: 'Message content is required.' });
+    }
+
+    db.get('SELECT sender_staff_id FROM staff_messages WHERE id = ?', [messageId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!row) return res.status(404).json({ message: 'Message not found.' });
+
+        if (req.user.role !== 'admin' && row.sender_staff_id !== req.user.staffId) {
+             return res.status(403).json({ message: 'You can only edit your own messages.' });
+        }
+
+        db.run('UPDATE staff_messages SET content = ? WHERE id = ?', [content.trim(), messageId], (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Message updated' });
+        });
+    });
+});
+
+// Delete a message
+router.delete('/chat/messages/:id', authenticateToken, (req, res) => {
+    const messageId = req.params.id;
+
+    db.get('SELECT sender_staff_id FROM staff_messages WHERE id = ?', [messageId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!row) return res.status(404).json({ message: 'Message not found.' });
+
+        if (req.user.role !== 'admin' && row.sender_staff_id !== req.user.staffId) {
+             return res.status(403).json({ message: 'You can only delete your own messages.' });
+        }
+
+        db.run('DELETE FROM staff_messages WHERE id = ?', [messageId], (err) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'Message deleted' });
+        });
+    });
+});
+
+// GET All Staff (Admin)
+router.get('/', authenticateToken, isAdmin, (req, res) => {
+    const sql = `
+        SELECT s.*, u.username 
+        FROM training_staff s 
+        LEFT JOIN users u ON u.staff_id = s.id 
+        WHERE s.is_archived IS FALSE OR s.is_archived IS NULL
+        ORDER BY s.last_name ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(rows);
+    });
+});
+
+// Portal Access Telemetry (Staff)
+router.post('/access', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Not a staff account' });
+    broadcastEvent({ type: 'portal_access', role: 'staff', userId: req.user.id, staffId: req.user.staffId, at: Date.now() });
+    db.run('INSERT INTO notifications (user_id, message, type) VALUES (NULL, ?, ?)', ['Staff portal accessed', 'portal_access']);
+    res.json({ message: 'access recorded' });
+});
+
+router.get('/notifications', authenticateToken, (req, res, next) => {
+    next();
+});
+
+router.delete('/notifications/:id', authenticateToken, (req, res) => {
+    db.run(`DELETE FROM notifications WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Notification deleted' });
+    });
+});
+
+router.delete('/notifications/delete-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement')";
+    if (!staffId) {
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All notifications deleted' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `DELETE FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ?`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All notifications deleted' });
+        });
+    });
+});
+// Wrapper for upload middleware to handle errors gracefully
+const uploadProfilePic = (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+        if (err) {
+            console.error("Staff Profile Pic Upload Error:", err);
+            const msg = err.message || 'Unknown upload error';
+            return res.status(400).json({ message: `Image upload failed: ${msg}` });
+        }
+        next();
+    });
+};
+
+// UPLOAD Profile Picture (Me)
+router.post('/profile/photo', authenticateToken, uploadProfilePic, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    // Cloudinary returns the URL in req.file.path
+    let filePath = req.file.path;
+
+    // Normalize local path if needed (e.g. C:\Users\...\uploads\file.jpg -> /uploads/file.jpg)
+    // But avoid modifying Cloudinary URLs which might contain 'uploads' in their path
+    if (filePath.includes('uploads') && !filePath.startsWith('http')) {
+        const parts = filePath.split(/[\\/]/);
+        const uploadIndex = parts.indexOf('uploads');
+        if (uploadIndex !== -1) {
+            filePath = '/' + parts.slice(uploadIndex).join('/');
+        }
+    }
+
+    // Update both training_staff and users table
+    db.run("UPDATE training_staff SET profile_pic = ? WHERE id = ?", [filePath, req.user.staffId], (err) => {
+        if (err) {
+            console.error("Error updating staff profile pic:", err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        db.run("UPDATE users SET profile_pic = ? WHERE staff_id = ?", [filePath, req.user.staffId], (uErr) => {
+             if (uErr) console.error("Error updating user profile pic:", uErr);
+             
+             res.json({ message: 'Profile picture updated', filePath });
+        });
+    });
+});
+
+// GET Current Staff Profile (Me)
+router.get('/me', authenticateToken, (req, res) => {
+    // Resolve staffId from session or users table
+    const resolveAndRespond = (staffId) => {
+        // Join with users table to get username
+        const sql = `SELECT s.*, u.username 
+                     FROM training_staff s 
+                     LEFT JOIN users u ON u.staff_id = s.id 
+                     WHERE s.id = ?`;
+        db.get(sql, [staffId], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (!row) {
+                // Non-throwing response for missing record (placeholder)
+                return res.json({
+                    id: null,
+                    first_name: '',
+                    last_name: '',
+                    rank: '',
+                    role: 'training_staff',
+                    profile_pic: null,
+                    username: null
+                });
+            }
+            res.json(row);
+        });
+    };
+
+    if (req.user && req.user.staffId) {
+        return resolveAndRespond(req.user.staffId);
+    }
+
+    // Fallback: if the role is training_staff, try to resolve staff_id from users table
+    if (req.user && req.user.role === 'training_staff') {
+        db.get('SELECT staff_id FROM users WHERE id = ?', [req.user.id], (err, row) => {
+            if (err) return res.status(500).json({ message: err.message });
+            if (row && row.staff_id) {
+                return resolveAndRespond(row.staff_id);
+            }
+            // No mapping yet; return safe placeholder instead of 404
+            return res.json({
+                id: null,
+                first_name: '',
+                last_name: '',
+                rank: '',
+                role: 'training_staff',
+                profile_pic: null,
+                username: null
+            });
+        });
+        return;
+    }
+
+    // Not a staff session
+    return res.status(404).json({ message: 'Not logged in as staff' });
+});
+
+// Save QR Code Data
+router.post('/qr-code', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    
+    const { qr_data } = req.body;
+    if (!qr_data) return res.status(400).json({ message: 'QR code data is required' });
+    
+    // Check if column exists first (database-agnostic)
+    const checkColumnSql = db.pool 
+        ? `SELECT column_name FROM information_schema.columns WHERE table_name = 'training_staff' AND column_name = 'qr_code_data'`
+        : `PRAGMA table_info(training_staff)`;
+    
+    db.all(checkColumnSql, [], (err, columns) => {
+        if (err) return res.status(500).json({ message: err.message });
+        
+        // Handle different result formats for PostgreSQL vs SQLite
+        const hasQrColumn = db.pool 
+            ? columns.length > 0  // PostgreSQL: returns rows if column exists
+            : columns.some(col => col.name === 'qr_code_data');  // SQLite: returns table info
+        
+        if (!hasQrColumn) {
+            // Add column if it doesn't exist
+            db.run("ALTER TABLE training_staff ADD COLUMN qr_code_data TEXT", (alterErr) => {
+                if (alterErr && !alterErr.message.includes('duplicate column') && !alterErr.message.includes('already exists')) {
+                    return res.status(500).json({ message: alterErr.message });
+                }
+                // Now update
+                updateQrCode();
+            });
+        } else {
+            updateQrCode();
+        }
+    });
+    
+    function updateQrCode() {
+        const sql = `UPDATE training_staff SET qr_code_data = ? WHERE id = ?`;
+        db.run(sql, [qr_data, req.user.staffId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'QR code saved successfully' });
+        });
+    }
+});
+
+// UPDATE Current Staff Profile (Me) - Complete Profile
+router.put('/profile', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    
+    const { 
+        rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
+        profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
+        address, civil_status, nationality, gender, language_spoken, 
+        combat_boots_size, uniform_size, bullcap_size, facebook_link, 
+        rotc_unit, mobilization_center, username, is_profile_completed
+    } = req.body;
+
+    // Helper to proceed with update
+    const proceedUpdate = () => {
+        // Build the SQL dynamically based on provided fields
+        const sql = `UPDATE training_staff SET 
+            rank = COALESCE(?, rank), 
+            first_name = COALESCE(?, first_name), 
+            middle_name = COALESCE(?, middle_name), 
+            last_name = COALESCE(?, last_name), 
+            suffix_name = COALESCE(?, suffix_name), 
+            email = COALESCE(?, email), 
+            contact_number = COALESCE(?, contact_number), 
+            profile_pic = COALESCE(?, profile_pic),
+            afpsn = COALESCE(?, afpsn),
+            birthdate = COALESCE(?, birthdate),
+            birthplace = COALESCE(?, birthplace),
+            age = COALESCE(?, age),
+            height = COALESCE(?, height),
+            weight = COALESCE(?, weight),
+            blood_type = COALESCE(?, blood_type),
+            address = COALESCE(?, address),
+            civil_status = COALESCE(?, civil_status),
+            nationality = COALESCE(?, nationality),
+            gender = COALESCE(?, gender),
+            language_spoken = COALESCE(?, language_spoken),
+            combat_boots_size = COALESCE(?, combat_boots_size),
+            uniform_size = COALESCE(?, uniform_size),
+            bullcap_size = COALESCE(?, bullcap_size),
+            facebook_link = COALESCE(?, facebook_link),
+            rotc_unit = COALESCE(?, rotc_unit),
+            mobilization_center = COALESCE(?, mobilization_center),
+            is_profile_completed = COALESCE(?, is_profile_completed)
+            WHERE id = ?`;
+        
+        const params = [
+            rank, first_name, middle_name, last_name, suffix_name, email, contact_number, 
+            profile_pic, afpsn, birthdate, birthplace, age, height, weight, blood_type, 
+            address, civil_status, nationality, gender, language_spoken, 
+            combat_boots_size, uniform_size, bullcap_size, facebook_link, 
+            rotc_unit, mobilization_center,
+            is_profile_completed !== undefined ? is_profile_completed : null,
+            req.user.staffId
+        ];
+        
+        db.run(sql, params, function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            
+            // Also update users table email, profile_pic, and username if changed
+            if (email || profile_pic || username) {
+                let updateFields = [];
+                let updateParams = [];
+                
+                if (email) {
+                    updateFields.push("email = ?");
+                    updateParams.push(email);
+                    
+                    // FORCE Username to be Email when updating profile
+                    updateFields.push("username = ?");
+                    updateParams.push(email);
+                }
+                if (profile_pic) {
+                    updateFields.push("profile_pic = ?");
+                    updateParams.push(profile_pic);
+                }
+                // Ignore provided username if email is present, otherwise use it (fallback)
+                if (username && !email) {
+                    updateFields.push("username = ?");
+                    updateParams.push(username);
+                }
+                
+                if (updateFields.length > 0) {
+                    const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE staff_id = ?`;
+                    updateParams.push(req.user.staffId);
+                    
+                    db.run(userSql, updateParams, (uErr) => {
+                       if (uErr) {
+                           console.error("Error updating user table:", uErr);
+                           // If unique constraint failed here, it's problematic because staff table is already updated.
+                           // ideally we check before, which we do below.
+                       }
+                    });
+                }
+            }
+            
+            res.json({ message: 'Profile updated successfully', isProfileCompleted: is_profile_completed });
+        });
+    };
+
+    // Enforce lock after profile completion; block further edits when completed
+    db.get("SELECT is_profile_completed FROM training_staff WHERE id = ?", [req.user.staffId], (lockErr, lockRow) => {
+        if (lockErr) return res.status(500).json({ message: lockErr.message });
+        const isCompleted = !!(lockRow && (lockRow.is_profile_completed === 1 || lockRow.is_profile_completed === true));
+        if (isCompleted) {
+            return res.status(403).json({ message: 'Profile is locked after completion. Contact admin for changes.' });
+        }
+        // Check email uniqueness if email is changing
+        if (email) {
+            db.get("SELECT id FROM users WHERE (email = ? OR username = ?) AND staff_id != ?", [email, email, req.user.staffId], (err, row) => {
+                if (err) return res.status(500).json({ message: err.message });
+                if (row) {
+                    return res.status(400).json({ message: 'Email/Username is already in use by another account.' });
+                }
+                proceedUpdate();
+            });
+        } else {
+            proceedUpdate();
+        }
+    })
+});
+
+// --- Notifications ---
+
+// Get Notifications (Staff)
+router.get('/notifications', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement')";
+    if (!staffId) {
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${baseTypes}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        return db.all(sql, [userId], (err, rows) => {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json(rows);
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `SELECT * FROM notifications WHERE (user_id IS NULL AND type IN ${types}) OR user_id = ? ORDER BY created_at DESC LIMIT 50`;
+        db.all(sql, [userId], (err2, rows) => {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json(rows);
+        });
+    });
+});
+
+// Mark Notification as Read
+router.put('/notifications/:id/read', authenticateToken, (req, res) => {
+    db.run(`UPDATE notifications SET is_read = TRUE WHERE id = ?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'Marked as read' });
+    });
+});
+
+// Mark All as Read
+router.put('/notifications/read-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const staffId = req.user.staffId;
+    const baseTypes = "('activity','announcement')";
+    const privTypes = "('activity','announcement')";
+    if (!staffId) {
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${baseTypes}) OR user_id = ?) AND is_read = FALSE`;
+        return db.run(sql, [userId], function(err) {
+            if (err) return res.status(500).json({ message: err.message });
+            res.json({ message: 'All marked as read' });
+        });
+    }
+    db.get("SELECT role FROM training_staff WHERE id = ?", [staffId], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        const role = row && row.role ? row.role : '';
+        const priv = ['Commandant','Assistant Commandant','NSTP Director','ROTC Coordinator','Admin NCO'].includes(role);
+        const types = priv ? privTypes : baseTypes;
+        const sql = `UPDATE notifications SET is_read = TRUE WHERE ((user_id IS NULL AND type IN ${types}) OR user_id = ?) AND is_read = FALSE`;
+        db.run(sql, [userId], function(err2) {
+            if (err2) return res.status(500).json({ message: err2.message });
+            res.json({ message: 'All marked as read' });
+        });
+    });
+});
+
+// GET Single Staff
+router.get('/:id', authenticateToken, (req, res) => {
+    // Check permissions: Admin or Self
+    if (req.user.role !== 'admin' && req.user.staffId != req.params.id) {
+         return res.status(403).json({ message: 'Access denied.' });
+    }
+    db.get("SELECT * FROM training_staff WHERE id = ?", [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        if (!row) return res.status(404).json({ message: 'Staff not found' });
+        res.json(row);
+    });
+});
+
+// CREATE Staff (Admin)
+router.post('/', authenticateToken, isAdmin, async (req, res) => {
+    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic } = req.body;
+    
+    // 1. Create Staff Profile
+    const sql = `INSERT INTO training_staff (rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    let params = [rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role || 'Instructor', profile_pic];
+
+    const insertStaff = () => new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+        if (err) return reject(err);
+        cache.del("staff_analytics"); // Invalidate cache
+        resolve(this.lastID);
+    });
+    });
+    
+    let staffId;
+    try {
+        staffId = await insertStaff();
+    } catch (e) {
+        const msg = e.message || '';
+        const isUniqueEmail = msg.includes('UNIQUE') || msg.includes('duplicate key') || msg.includes('unique constraint');
+        if (isUniqueEmail) {
+            params[5] = null;
+            try {
+                staffId = await insertStaff();
+            } catch (e2) {
+                return res.status(500).json({ message: e2.message });
+            }
+        } else {
+            return res.status(500).json({ message: msg });
+        }
+    }
+        
+    db.get("SELECT COUNT(*) as count FROM training_staff WHERE LOWER(first_name) = LOWER(?)", [first_name], async (err, row) => {
+        if (err) {}
+
+        const nameCount = row ? row.count : 1;
+        const cleanFirst = first_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const cleanLast = last_name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+        let passwordStr = (nameCount > 1) ? cleanLast : cleanFirst;
+        let usernameBase = (nameCount > 1) ? cleanLast : cleanFirst;
+
+        try {
+            const hashedPassword = await bcrypt.hash(passwordStr, 10);
+            const tryInsertUser = (attemptStage, currentUsername) => {
+                const userSql = `INSERT INTO users (username, password, role, staff_id, is_approved, email, profile_pic) VALUES (?, ?, 'training_staff', ?, 1, ?, ?)`;
+                db.run(userSql, [currentUsername, hashedPassword, staffId, params[5] || null, profile_pic], (uErr) => {
+                    if (uErr) {
+                         if (uErr.message.includes('UNIQUE') || uErr.message.includes('duplicate key')) {
+                             if (attemptStage === 1) {
+                                 tryInsertUser(2, `${cleanFirst}.${cleanLast}`);
+                             } else if (attemptStage === 2) {
+                                 tryInsertUser(3, `${cleanLast}.${cleanFirst}`);
+                             } else {
+                                 const newUsername = usernameBase + Math.floor(Math.random() * 1000);
+                                 tryInsertUser(4, newUsername);
+                             }
+                         } else {
+                            return res.json({ message: 'Staff profile created, but user account creation failed. ' + uErr.message, id: staffId });
+                         }
+                    } else {
+                        res.json({ message: `Staff created successfully. Username: ${currentUsername}, Password: "${passwordStr}"`, id: staffId });
+                    }
+                });
+            };
+            tryInsertUser(1, usernameBase);
+        } catch (hashErr) {
+            res.status(500).json({ message: 'Error hashing password' });
+        }
+    });
+
+});
+
+// UPDATE Staff
+router.put('/:id', authenticateToken, isAdmin, (req, res) => {
+    const { rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic, username } = req.body;
+    const sql = `UPDATE training_staff SET rank = ?, first_name = ?, middle_name = ?, last_name = ?, suffix_name = ?, email = ?, contact_number = ?, role = ?, profile_pic = ? WHERE id = ?`;
+    
+    db.run(sql, [rank, first_name, middle_name, last_name, suffix_name, email, contact_number, role, profile_pic, req.params.id], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+
+        // Update User Account (Username/Email)
+        if (email || username) {
+            let updateFields = [];
+            let updateParams = [];
+
+            if (email) {
+                updateFields.push("email = ?");
+                updateParams.push(email);
+            }
+            if (username) {
+                updateFields.push("username = ?");
+                updateParams.push(username);
+            }
+
+            if (updateFields.length > 0) {
+                updateParams.push(req.params.id);
+                const userSql = `UPDATE users SET ${updateFields.join(", ")} WHERE staff_id = ?`;
+                
+                db.run(userSql, updateParams, (uErr) => {
+                    if (uErr) console.error("Error syncing staff user credentials:", uErr);
+                });
+            }
+        }
+
+        res.json({ message: 'Staff updated successfully' });
+    });
+});
+
+// DELETE Staff
+router.delete('/:id', authenticateToken, isAdmin, (req, res) => {
+    const staffId = req.params.id;
+    // Create audit table if missing
+    db.run(`CREATE TABLE IF NOT EXISTS staff_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        staff_id INTEGER,
+        before_json TEXT,
+        after_json TEXT,
+        user_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`, [], () => {
+        db.get(`SELECT * FROM training_staff WHERE id = ?`, [staffId], (selErr, beforeRow) => {
+            // Write audit entry (best-effort)
+            try {
+                const beforeJson = beforeRow ? JSON.stringify(beforeRow) : null;
+                db.run(`INSERT INTO staff_audit (action, staff_id, before_json, user_id) VALUES (?, ?, ?, ?)`,
+                    ['delete', staffId, beforeJson, req.user.id || null], () => {});
+            } catch (_) {}
+            // Try soft-delete first: archive records if column exists
+            db.run(`UPDATE users SET is_archived = 1, is_approved = 0 WHERE staff_id = ?`, [staffId], () => {
+                db.run(`UPDATE training_staff SET is_archived = 1 WHERE id = ?`, [staffId], function(updErr) {
+                    if (!updErr && this && this.changes > 0) {
+                        return res.json({ message: 'Staff archived successfully' });
+                    }
+                    // Fallback: hard delete if archive column not present
+                    db.run("DELETE FROM users WHERE staff_id = ?", [staffId], (uDelErr) => {
+                        // Proceed regardless of user deletion error
+                        db.run("DELETE FROM training_staff WHERE id = ?", [staffId], function(err) {
+                            if (err) return res.status(500).json({ message: err.message });
+                            res.json({ message: 'Staff deleted successfully' });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+// RESTORE archived Staff
+router.post('/:id/restore', authenticateToken, isAdmin, (req, res) => {
+    const staffId = req.params.id;
+    db.run(`UPDATE training_staff SET is_archived = 0 WHERE id = ?`, [staffId], function(err) {
+        if (err) {
+            // If column missing, return bad request
+            return res.status(400).json({ message: 'Archive feature not available on this database.' });
+        }
+        if (this.changes === 0) return res.status(404).json({ message: 'Staff not found or not archived' });
+        // Also un-archive related user if exists
+        db.run(`UPDATE users SET is_archived = 0, is_approved = 1 WHERE staff_id = ?`, [staffId], () => {});
+        // Audit
+        db.run(`INSERT INTO staff_audit (action, staff_id, before_json, after_json, user_id) VALUES (?, ?, ?, ?, ?)`,
+            ['restore', staffId, null, null, req.user.id || null], () => {});
+        res.json({ message: 'Staff restored' });
+    });
+});
+
+// Acknowledge User Guide
+router.post('/acknowledge-guide', authenticateToken, (req, res) => {
+    if (!req.user.staffId) return res.status(403).json({ message: 'Access denied.' });
+    
+    db.run("UPDATE training_staff SET has_seen_guide = TRUE WHERE id = ?", [req.user.staffId], (err) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ message: 'User guide acknowledged' });
+    });
+});
+
+module.exports = router;
+ 
+// --- Communication Panel for Training Staff ---
+// List recent messages (last 100)
+router.get('/chat/messages', authenticateToken, (req, res) => {
+    // Allow admins and training_staff to read
+    if (req.user.role !== 'training_staff' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied.' });
+    }
+    const sql = `
+        SELECT m.id, m.content, m.created_at, 
+               s.id as staff_id, s.first_name, s.last_name, s.rank
+        FROM staff_messages m
+        JOIN training_staff s ON s.id = m.sender_staff_id
+        ORDER BY m.id DESC
+        LIMIT 100
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ message: err.message });
+        // Return in ascending order by time for UI display
+        res.json(rows.reverse());
+    });
+});
+
+// Get latest message for polling/notifications
+router.get('/chat/latest', authenticateToken, (req, res) => {
+    if (req.user.role !== 'training_staff' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied.' });
+    }
+    const sql = `
+        SELECT m.id, m.content, m.created_at, 
+               s.first_name, s.last_name, s.rank
+        FROM staff_messages m
+        JOIN training_staff s ON s.id = m.sender_staff_id
+        ORDER BY m.id DESC
+        LIMIT 1
+    `;
+    db.get(sql, [], (err, row) => {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json(row || null);
+    });
+});
+
+// Post a new message
+router.post('/chat/messages', authenticateToken, (req, res) => {
+    if (req.user.role !== 'training_staff' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied.' });
+    }
+    const { content } = req.body || {};
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: 'Message content is required.' });
+    }
+    if (!req.user.staffId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Staff identity required.' });
+    }
+    const senderId = req.user.staffId || null;
+    if (!senderId && req.user.role === 'admin') {
+        // For admin messages, we can optionally store sender_staff_id as NULL
+        // But schema requires NOT NULL, so disallow admin without staffId for now
+        return res.status(403).json({ message: 'Admin must have a staff profile to post.' });
+    }
+    db.run(`INSERT INTO staff_messages (sender_staff_id, content) VALUES (?, ?)`, [senderId, content.trim()], function(err) {
+        if (err) return res.status(500).json({ message: err.message });
+        res.json({ id: this.lastID, message: 'Message posted' });
+
+        // Send Push Notifications
+        db.get(`SELECT rank, last_name FROM training_staff WHERE id = ?`, [senderId], (err, sender) => {
+            if (err || !sender) return;
+
+            const notificationPayload = JSON.stringify({
+                title: `${sender.rank} ${sender.last_name}`,
+                body: content.trim(),
+                url: '/staff/communication',
+                icon: '/pwa-192x192.png'
+            });
+
+            // Get all subscriptions except the sender
+            db.all(`SELECT * FROM push_subscriptions WHERE user_id != ?`, [req.user.id], (err, subscriptions) => {
+                if (err) return console.error('Error fetching subscriptions:', err);
+
+                subscriptions.forEach(sub => {
+                    let pushSubscription;
+                    try {
+                        pushSubscription = {
+                            endpoint: sub.endpoint,
+                            keys: JSON.parse(sub.keys)
+                        };
+                    } catch (e) {
+                        return;
+                    }
+
+                    webpush.sendNotification(pushSubscription, notificationPayload)
+                        .catch(error => {
+                            // console.error('Error sending notification:', error);
+                            if (error.statusCode === 410 || error.statusCode === 404) {
+                                db.run('DELETE FROM push_subscriptions WHERE id = ?', [sub.id]);
+                            }
+                        });
+                });
+            });
+        });
+    });
+});

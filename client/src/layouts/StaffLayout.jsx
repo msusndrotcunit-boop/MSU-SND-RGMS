@@ -6,6 +6,10 @@ import { LayoutDashboard, User, LogOut, Menu, X, Home as HomeIcon, Settings, Loc
 import { Toaster, toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import NotificationDropdown from '../components/NotificationDropdown';
+import SafeAreaManager, { SafeAreaProvider, FixedElement } from '../components/SafeAreaManager';
+import MobilePerformanceOptimizer from '../components/MobilePerformanceOptimizer';
+import AnimationOptimizer from '../components/AnimationOptimizer';
+import CrossPlatformStandardizer from '../components/CrossPlatformStandardizer';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
 function urlBase64ToUint8Array(base64String) {
@@ -109,6 +113,7 @@ const StaffLayout = () => {
 
     React.useEffect(() => {
         const fetchStaffRole = async () => {
+            if (!user || user.role !== 'training_staff') return;
             try {
                 const res = await axios.get('/api/staff/me');
                 setStaffRole(res.data?.role || null);
@@ -116,7 +121,7 @@ const StaffLayout = () => {
             } catch {}
         };
         fetchStaffRole();
-    }, []);
+    }, [user]);
 
     React.useEffect(() => {
         try {
@@ -168,18 +173,11 @@ const StaffLayout = () => {
     
 
     React.useEffect(() => {
-        const getSseUrl = () => {
-            const base = import.meta.env.VITE_API_URL || '';
-            if (base && /^https?:/.test(String(base))) {
-                return `${String(base).replace(/\/+$/, '')}/api/attendance/events`;
-            }
-            return '/api/attendance/events';
-        };
 
         let es;
         const connect = () => {
             try {
-                es = new EventSource(getSseUrl());
+                es = new EventSource('/api/attendance/events');
                 es.onmessage = (e) => {
                     try {
                         const data = JSON.parse(e.data || '{}');
@@ -190,7 +188,7 @@ const StaffLayout = () => {
                             setNotifHighlight(true);
                             setTimeout(() => setNotifHighlight(false), 1200);
                         } else if (data.type === 'staff_attendance_updated') {
-                            const shouldPrefetch = !data.staffId || (user && user.staffId && data.staffId === user.staffId);
+                            const shouldPrefetch = (user && user.role === 'training_staff') && (!data.staffId || (user && user.staffId && data.staffId === user.staffId));
                             if (shouldPrefetch) {
                                 axios.get('/api/attendance/my-history/staff').then(async res => {
                                     await cacheSingleton('attendance_by_day', 'my_staff_history', { data: res.data, timestamp: Date.now() });
@@ -217,7 +215,11 @@ const StaffLayout = () => {
     // Removed manual toggle and buttons; notifications auto-show and auto-hide
     
     return (
-        <div className="flex min-h-screen app-bg overflow-hidden w-full">
+        <SafeAreaProvider>
+            <MobilePerformanceOptimizer>
+                <AnimationOptimizer preserveFixed>
+                    <CrossPlatformStandardizer>
+                        <SafeAreaManager className="flex min-h-screen app-bg overflow-hidden">
                 <Toaster position="top-right" reverseOrder={false} />
                  {/* Mobile Sidebar Overlay */}
                  {isSidebarOpen && (
@@ -228,10 +230,12 @@ const StaffLayout = () => {
                 )}
 
                  {/* Sidebar */}
-                 <aside 
+                 <FixedElement 
+                    position="left" 
+                    respectSafeArea={true}
                     className={clsx(
-                        "w-64 bg-[var(--primary-color)] text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                        "w-[85vw] max-w-sm md:w-64 bg-primary-surface text-white flex flex-col transform transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-50 md:fixed md:translate-x-0 md:flex-shrink-0 md:pointer-events-auto max-h-[100dvh] overflow-hidden",
+                        isSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none"
                     )}
                 >
                 <div className="p-6 border-b border-white/10">
@@ -267,6 +271,7 @@ const StaffLayout = () => {
                         </div>
                     )}
                 </div>
+                {/* Mobile horizontal pill nav removed per request */}
                 <nav className="flex-1 p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto text-sm md:text-base">
                     {/* Home - Locked if profile incomplete */}
                     <Link
@@ -276,7 +281,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/home' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -294,7 +299,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -313,7 +318,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    "nav-link space-x-3 transition hover-highlight",
                                     location.pathname === '/staff/unit-dashboard' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -330,7 +335,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    "nav-link space-x-3 transition hover-highlight",
                                     location.pathname === '/staff/data-analysis' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -347,7 +352,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    "nav-link space-x-3 transition hover-highlight",
                                     location.pathname === '/staff/activities' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -364,7 +369,7 @@ const StaffLayout = () => {
                                     setIsSidebarOpen(false);
                                 }}
                                 className={clsx(
-                                    "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                                    "nav-link space-x-3 transition hover-highlight",
                                     location.pathname === '/staff/achievements' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                                     !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                                 )}
@@ -384,7 +389,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/communication' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -404,7 +409,7 @@ const StaffLayout = () => {
                         to="/staff/ask-admin"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/ask-admin' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white"
                         )}
                     >
@@ -422,7 +427,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/my-qr' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -440,7 +445,7 @@ const StaffLayout = () => {
                             setIsSidebarOpen(false);
                         }}
                         className={clsx(
-                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            "nav-link space-x-3 transition hover-highlight",
                             location.pathname === '/staff/settings' ? "bg-black/10 text-white" : "text-white/80 hover:bg-black/10 hover:text-white",
                             !user?.isProfileCompleted && "opacity-50 cursor-not-allowed"
                         )}
@@ -450,27 +455,32 @@ const StaffLayout = () => {
                         {!user?.isProfileCompleted && <Lock size={16} className="ml-auto" />}
                     </Link>
                 </nav>
-                <div className="p-4 border-t border-white/10">
+                <div className="mt-auto p-4 border-t border-white/10 bg-black/10 backdrop-blur pb-[var(--sab)] sticky bottom-0">
                     <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-3 p-3 w-full text-left text-white/80 hover:text-white hover:bg-black/10 rounded transition hover-highlight"
+                        onClick={() => { setIsSidebarOpen(false); handleLogout(); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 hover:bg-white/15 text-white hover:opacity-95 transition"
+                        type="button"
+                        aria-label="Logout"
                     >
                         <LogOut size={20} />
                         <span>Logout</span>
                     </button>
                 </div>
-            </aside>
+            </FixedElement>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <header 
+            <div className="flex-1 flex flex-col overflow-hidden md:ml-64">
+                <FixedElement 
+                    position="top" 
+                    respectSafeArea={true}
                     className="bg-white dark:bg-gray-900 shadow p-4 flex items-center justify-between"
                 >
                     <div className="flex items-center">
                         <button 
                             onClick={toggleSidebar}
-                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target"
+                            className="text-[var(--primary-color)] focus:outline-none md:hidden mr-4 touch-target p-2"
+                            style={{ minHeight: '48px', minWidth: '48px' }}
                         >
-                            <Menu size={24} />
+                            <Menu size={28} />
                         </button>
                         <span className="font-bold text-gray-900 dark:text-gray-100">Training Staff Portal</span>
                     </div>
@@ -487,13 +497,15 @@ const StaffLayout = () => {
                             onClear={handleClearMessages}
                         />
                     </div>
-                </header>
+                </FixedElement>
 
-                <main 
-                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-3 md:p-8 w-full"
+                <SafeAreaManager 
+                    className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8 readable-text text-balance"
+                    enableKeyboardAdjustment={true}
+                    enableScrollAdjustment={true}
                 >
                     <Outlet />
-                </main>
+                </SafeAreaManager>
 
                 
             </div>
@@ -527,7 +539,11 @@ const StaffLayout = () => {
                     </div>
                 </div>
               )}
-        </div>
+                        </SafeAreaManager>
+                    </CrossPlatformStandardizer>
+                </AnimationOptimizer>
+            </MobilePerformanceOptimizer>
+        </SafeAreaProvider>
     );
 };
 

@@ -1,12 +1,10 @@
 {
   "compilerOptions": {
+    "jsx": "react-jsx",
+    "allowJs": true,
     "checkJs": false,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "lib": ["dom", "es2020"],
+    "forceConsistentCasingInFileNames": false
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "vite.config.js"
-  ]
+  "include": ["src/**/*"]
 }

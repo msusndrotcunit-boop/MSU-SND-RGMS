@@ -32,9 +32,6 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
         onMarkRead(notif.id);
     };
 
-    // Safe access to notifications array to prevent runtime errors like "map is not a function"
-    const safeNotifications = Array.isArray(notifications) ? notifications : [];
-
     return (
         <div className="relative" ref={dropdownRef}>
             <button 
@@ -54,23 +51,23 @@ const NotificationDropdown = ({ type, icon: Icon, count, notifications, onClear,
                 <div className="absolute right-0 mt-2 w-[85vw] max-w-[20rem] sm:w-80 bg-white rounded-md shadow-lg overflow-hidden z-20 border border-gray-200">
                     <div className="py-2 px-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <span className="font-semibold text-sm text-gray-700">{type}</span>
-                        {safeNotifications.length > 0 && (
+                        {notifications.length > 0 && (
                             <button onClick={onClear} className="text-xs text-red-600 hover:text-red-800">Clear All</button>
                         )}
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                        {safeNotifications.length === 0 ? (
+                        {notifications.length === 0 ? (
                             <div className="p-4 text-center text-sm text-gray-500">No new notifications</div>
                         ) : (
-                            safeNotifications.map(notif => (
+                            notifications.map(notif => (
                                 <div 
                                     key={notif.id} 
                                     className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex justify-between items-start"
                                     onClick={() => handleItemClick(notif)}
                                 >
                                     <div className="text-sm text-gray-800">
-                                        <p>{notif.message || 'New notification'}</p>
-                                        <p className="text-xs text-gray-400 mt-1">{notif.created_at ? new Date(notif.created_at).toLocaleString() : 'Just now'}</p>
+                                        <p>{notif.message}</p>
+                                        <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
                                     </div>
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); onMarkRead(notif.id); }}

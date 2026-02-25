@@ -61,9 +61,6 @@ export const initDB = async () => {
             if (!db.objectStoreNames.contains('dashboard')) {
                 db.createObjectStore('dashboard', { keyPath: 'key' });
             }
-            if (!db.objectStoreNames.contains('notifications')) {
-                db.createObjectStore('notifications', { keyPath: 'key' });
-            }
         },
     });
 };

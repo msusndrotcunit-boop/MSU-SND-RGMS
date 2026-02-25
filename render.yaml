@@ -12,11 +12,11 @@ services:
       - key: REDIRECT_ENABLED
         value: "true"
       - key: REDIRECT_FROM_HOSTS
-        value: "localhost"
+        value: "msu-snd-rgms.onrender.com"
       - key: REDIRECT_TARGET_HOST
-        value: "localhost"
+        value: "msu-snd-rgms-jcsg.onrender.com"
   - type: cron
     name: rotc-grading-keepalive
     schedule: "* * * * *"
     env: docker
-    command: 'curl -s http://localhost:8000/api/health || true'
+    command: 'curl -s https://msu-snd-rgms-jcsg.onrender.com/health || true'

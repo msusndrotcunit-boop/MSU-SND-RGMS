@@ -622,27 +622,14 @@ const Grading = () => {
     };
 
     return (
-        <div className="space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                    <span className="border-l-4 border-[var(--primary-color)] pl-3">Grading & Assessment Management</span>
-                </h2>
-                <div className="flex flex-wrap gap-3">
-                    <button onClick={() => setIsScoresModalOpen(true)} className="px-4 py-2 bg-blue-700 text-white rounded hover:opacity-90 flex items-center gap-2 shadow-md min-h-[44px] hover-highlight">
-                        <Upload size={16} /> Import Scores
+        <div className="relative h-full">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setIsScoresModalOpen(true)} className="px-3 py-2 bg-blue-600 text-white rounded hover:opacity-90 flex items-center gap-2">
+                        <Upload size={16} /> Import Exam Scores
                     </button>
-                    <button onClick={() => setIsLedgerModalOpen(true)} className="px-4 py-2 bg-green-700 text-white rounded hover:opacity-90 flex items-center gap-2 shadow-md min-h-[44px] hover-highlight">
-                        <Upload size={16} /> Import Ledger
-                    </button>
-                    <button 
-                        onClick={handleSyncLifetimeMerits}
-                        disabled={isSyncing}
-                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2 shadow-sm min-h-[44px] hover-highlight"
-                    >
-                        <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                        {isSyncing ? 'Syncing...' : 'Sync Merits'}
+                    <button onClick={() => setIsLedgerModalOpen(true)} className="px-3 py-2 bg-green-600 text-white rounded hover:opacity-90 flex items-center gap-2">
+                        <Upload size={16} /> Import Merit/Demerit
                     </button>
                 </div>
             </div>
@@ -657,7 +644,7 @@ const Grading = () => {
                         <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handlePickScores} />
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setIsScoresModalOpen(false)} className="px-3 py-2 border rounded">Cancel</button>
-                            <button disabled={uploading || scoresFiles.length === 0} onClick={handleUploadScores} className="px-3 py-2 bg-blue-600 text-white rounded hover-highlight">{uploading ? 'Uploading...' : 'Upload'}</button>
+                            <button disabled={uploading || scoresFiles.length === 0} onClick={handleUploadScores} className="px-3 py-2 bg-blue-600 text-white rounded">{uploading ? 'Uploading...' : 'Upload'}</button>
                         </div>
                     </div>
                 </div>
@@ -673,7 +660,7 @@ const Grading = () => {
                         <input type="file" multiple accept=".csv,.xlsx,.xls,.json" onChange={handlePickLedger} />
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setIsLedgerModalOpen(false)} className="px-3 py-2 border rounded">Cancel</button>
-                            <button disabled={uploading || ledgerFiles.length === 0} onClick={handleUploadLedger} className="px-3 py-2 bg-green-600 text-white rounded hover-highlight">{uploading ? 'Uploading...' : 'Upload'}</button>
+                            <button disabled={uploading || ledgerFiles.length === 0} onClick={handleUploadLedger} className="px-3 py-2 bg-green-600 text-white rounded">{uploading ? 'Uploading...' : 'Upload'}</button>
                         </div>
                     </div>
                 </div>
@@ -801,7 +788,7 @@ const Grading = () => {
                                     <div className="text-center">
                                         <button 
                                             onClick={startCamera}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full flex items-center gap-2 transition hover-highlight"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full flex items-center gap-2 transition transform hover:scale-105"
                                         >
                                             <Camera size={24} /> Activate Smart Camera
                                         </button>
@@ -816,7 +803,7 @@ const Grading = () => {
                                     <div className="flex gap-4 w-full justify-center">
                                         <button 
                                             onClick={captureAndAnalyze}
-                                            className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-200 transition hover-highlight"
+                                            className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-200 transition"
                                         >
                                             <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
                                             Capture & Grade
@@ -850,7 +837,7 @@ const Grading = () => {
                                             </button>
                                             <button 
                                                 onClick={confirmScanResult}
-                                                className="bg-[var(--primary-color)] hover:opacity-90 text-white px-6 py-2 rounded font-bold flex items-center gap-2 hover-highlight"
+                                                className="bg-[var(--primary-color)] hover:opacity-90 text-white px-6 py-2 rounded font-bold flex items-center gap-2"
                                             >
                                                 <CheckCircle size={18} /> Sync to Gradebook
                                             </button>
@@ -863,28 +850,28 @@ const Grading = () => {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex h-full flex-col md:flex-row gap-6">
             {/* Left Panel: Cadet List */}
             <div className={`w-full md:w-1/3 bg-white dark:bg-gray-900 rounded shadow flex flex-col ${selectedCadet ? 'hidden md:flex' : ''}`}>
                 <div className="p-4 border-b">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Grading Management</h2>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={handleExport}
-                                    className="bg-[var(--primary-color)] text-white px-3 py-1.5 rounded hover:opacity-90 flex items-center text-sm transition hover-highlight"
-                                    title="Export CSV"
-                                >
-                                    <Download size={16} />
-                                </button>
-                                <button 
-                                    onClick={() => setIsScannerOpen(true)}
-                                    className="bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-black flex items-center text-sm transition"
-                                >
-                                    <ScanLine size={16} className="mr-1.5" /> Scan Exams
-                                </button>
-                            </div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Grading Management</h2>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleExport}
+                                className="bg-[var(--primary-color)] text-white px-3 py-1.5 rounded hover:opacity-90 flex items-center text-sm transition"
+                                title="Export CSV"
+                            >
+                                <Download size={16} />
+                            </button>
+                            <button 
+                                onClick={() => setIsScannerOpen(true)}
+                                className="bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-black flex items-center text-sm transition"
+                            >
+                                <ScanLine size={16} className="mr-1.5" /> Scan Exams
+                            </button>
                         </div>
+                    </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                         <input 
@@ -1014,7 +1001,7 @@ const Grading = () => {
                                                 />
                                             </div>
                                             <div className="pt-4">
-                                                <button type="submit" className="w-full bg-[var(--primary-color)] text-white py-2 rounded hover:opacity-90 flex justify-center items-center hover-highlight">
+                                                <button type="submit" className="w-full bg-[var(--primary-color)] text-white py-2 rounded hover:opacity-90 flex justify-center items-center">
                                                     <Save size={18} className="mr-2" />
                                                     Save Scores
                                                 </button>
@@ -1069,7 +1056,7 @@ const Grading = () => {
                                                             onChange={e => setLedgerForm({...ledgerForm, reason: e.target.value})}
                                                         />
                                                     </div>
-                                                    <button type="submit" className="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700 text-sm hover-highlight">
+                                                    <button type="submit" className="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700 text-sm">
                                                         Add Entry
                                                     </button>
                                                 </form>
@@ -1081,7 +1068,7 @@ const Grading = () => {
                                                     <button
                                                         onClick={handleSyncLifetimeMerits}
                                                         disabled={isSyncing}
-                                                        className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-2 py-1 rounded flex items-center gap-1 transition hover-highlight"
+                                                        className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-2 py-1 rounded flex items-center gap-1 transition"
                                                         title="Sync lifetime merit points from logs"
                                                     >
                                                         <Zap size={12} />
@@ -1211,9 +1198,42 @@ const Grading = () => {
                     </>
                 )}
             </div>
+            </div>
+
+            <div className="mt-4 bg-green-900 text-white rounded-lg p-4 shadow-md">
+                <div className="flex items-center mb-3 border-b border-green-700 pb-1">
+                    <Zap size={18} className="text-yellow-400 mr-2" />
+                    <span className="font-semibold text-sm uppercase tracking-wide">Quick Actions</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Link
+                        to="/admin/data-analysis"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Data Analysis
+                    </Link>
+                    <Link
+                        to="/admin/grading"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/20 text-xs md:text-sm"
+                    >
+                        Grading
+                    </Link>
+                    <Link
+                        to="/admin/activities"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Activities
+                    </Link>
+                    <Link
+                        to="/admin/messages"
+                        className="flex items-center justify-center px-3 py-2 rounded bg-white/10 hover:bg-white/20 text-xs md:text-sm"
+                    >
+                        Messages
+                    </Link>
+                </div>
+            </div>
         </div>
-    </div>
-);
+    );
 };
 
 export default Grading;
