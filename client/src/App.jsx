@@ -38,6 +38,7 @@ const Admin3DStudio = lazy(() => import('./pages/admin/ThreeDStudio'));
 const CadetLayout = lazy(() => import('./layouts/CadetLayout'));
 const CadetHome = lazy(() => import('./pages/cadet/Home'));
 const CadetDashboard = lazy(() => import('./pages/cadet/Dashboard'));
+const CadetNotifications = lazy(() => import('./pages/cadet/NotificationHistory'));
 const CadetProfile = lazy(() => import('./pages/cadet/Profile'));
 const CadetAbout = lazy(() => import('./pages/cadet/About'));
 const CadetAchievements = lazy(() => import('./pages/cadet/Achievements'));
@@ -108,6 +109,7 @@ function App() {
               <Route path="/cadet" element={<CadetLayout />}>
                 <Route path="home" element={<CadetHome />} />
                 <Route path="dashboard" element={<CadetDashboard />} />
+                <Route path="notifications" element={<CadetNotifications />} />
                 <Route path="profile" element={<CadetProfile />} />
                 <Route path="achievements" element={<CadetAchievements />} />
                 <Route path="broadcasts" element={<BroadcastMessages />} />

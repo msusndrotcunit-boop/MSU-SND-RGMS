@@ -1,6 +1,8 @@
 import base64
 import csv
 import json
+import queue
+import time
 from datetime import datetime
 
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
@@ -14,7 +16,9 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 import mimetypes
 
-from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile
+from rgms.models import Cadet, MeritDemeritLog, TrainingStaff, AdminProfile, BroadcastNotification, NotificationReadReceipt
+from .auth_utils import require_admin, require_auth
+from django.utils.html import escape
 
 # Image compression utilities
 from io import BytesIO
@@ -29,6 +33,18 @@ JPEG_QUALITY_START = int(os.getenv("JPEG_QUALITY_START", "85"))
 JPEG_QUALITY_MIN = int(os.getenv("JPEG_QUALITY_MIN", "55"))
 ALLOW_WEBP = os.getenv("ALLOW_WEBP", "true").lower() == "true"
 PDF_MAX_BYTES = int(os.getenv("PDF_MAX_BYTES", str(2 * 1024 * 1024)))
+
+# Global event queue for SSE
+event_queues = []
+
+def broadcast_event(event_type, data):
+    event_data = {
+        "type": event_type,
+        **data
+    }
+    msg = f"data: {json.dumps(event_data)}\n\n"
+    for q in event_queues:
+        q.put(msg)
 
 def _downscale_preserve_aspect(img, max_dim):
     w, h = img.size
@@ -857,6 +873,130 @@ def staff_detail_view(request, staff_id):
     return staff_delete_view(request, staff_id)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_admin
+def messages_broadcast_create_view(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+
+    subject = (payload.get("subject") or "").strip()
+    message = (payload.get("message") or "").strip()
+    priority = payload.get("priority", "medium")
+    category = payload.get("category", "General")
+    author = payload.get("author", "ROTC Admin")
+    image_url = payload.get("image_url")
+    action_url = payload.get("action_url")
+    action_label = payload.get("action_label", "")
+
+    if not subject or not message:
+        return JsonResponse({"message": "Subject and message are required"}, status=400)
+
+    broadcast = BroadcastNotification.objects.create(
+        subject=escape(subject),
+        message=escape(message),
+        priority=priority,
+        category=category,
+        author=author,
+        image_url=image_url,
+        action_url=action_url,
+        action_label=action_label,
+    )
+
+    # Trigger real-time event
+    broadcast_event("admin_broadcast", {
+        "id": broadcast.id,
+        "subject": broadcast.subject,
+        "priority": broadcast.priority
+    })
+
+    return JsonResponse(
+        {
+            "message": "Broadcast sent successfully",
+            "id": broadcast.id,
+            "subject": broadcast.subject,
+        },
+        status=201,
+    )
+
+
+@require_http_methods(["GET"])
+@require_auth
+def cadet_notifications_list_view(request):
+    cadet_id = request.headers.get("X-Cadet-Id") or request.GET.get("cadetId")
+    if not cadet_id:
+        return JsonResponse({"message": "cadetId is required"}, status=400)
+
+    try:
+        cadet = Cadet.objects.get(id=cadet_id)
+    except Cadet.DoesNotExist:
+        return JsonResponse({"message": "Cadet not found"}, status=404)
+
+    # Get all notifications
+    notifications = BroadcastNotification.objects.all().order_by("-created_at")
+    
+    # Get read receipts for this cadet
+    read_ids = NotificationReadReceipt.objects.filter(cadet=cadet).values_list("notification_id", flat=True)
+
+    data = []
+    for n in notifications:
+        data.append({
+            "id": n.id,
+            "subject": n.subject,
+            "message": n.message,
+            "priority": n.priority,
+            "category": n.category,
+            "author": n.author,
+            "image_url": n.image_url,
+            "action_url": n.action_url,
+            "action_label": n.action_label,
+            "created_at": n.created_at.isoformat(),
+            "is_read": n.id in read_ids,
+        })
+
+    return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_auth
+def notification_mark_read_view(request, notification_id):
+    cadet_id = request.headers.get("X-Cadet-Id") or request.GET.get("cadetId")
+    staff_id = request.headers.get("X-Staff-Id") or request.GET.get("staffId")
+
+    if not cadet_id and not staff_id:
+        return JsonResponse({"message": "User identification required"}, status=400)
+
+    try:
+        notification = BroadcastNotification.objects.get(id=notification_id)
+    except BroadcastNotification.DoesNotExist:
+        return JsonResponse({"message": "Notification not found"}, status=404)
+
+    cadet = None
+    if cadet_id:
+        try:
+            cadet = Cadet.objects.get(id=cadet_id)
+        except Cadet.DoesNotExist:
+            pass
+
+    staff = None
+    if staff_id:
+        try:
+            staff = TrainingStaff.objects.get(id=staff_id)
+        except TrainingStaff.DoesNotExist:
+            pass
+
+    NotificationReadReceipt.objects.get_or_create(
+        notification=notification,
+        cadet=cadet,
+        staff=staff,
+    )
+
+    return JsonResponse({"message": "Notification marked as read"})
+
+
 @require_http_methods(["GET"])
 def messages_admin_list_view(request):
     return JsonResponse({"messages": []})
@@ -881,10 +1021,29 @@ def messages_delete_view(request, message_id):
 
 def attendance_events_view(request):
     def event_stream():
-        yield "event: heartbeat\n"
-        yield 'data: {"status":"ok"}\n\n'
+        q = queue.Queue()
+        event_queues.append(q)
+        try:
+            # Send initial heartbeat
+            yield "event: heartbeat\n"
+            yield 'data: {"status":"ok"}\n\n'
+            
+            while True:
+                try:
+                    # Non-blocking get with timeout to allow checking if connection is still active
+                    msg = q.get(timeout=20)
+                    yield msg
+                except queue.Empty:
+                    # Keep-alive heartbeat
+                    yield ": keep-alive\n\n"
+        finally:
+            if q in event_queues:
+                event_queues.remove(q)
 
-    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'  # Disable buffering for Nginx
+    return response
 
 
 @csrf_exempt

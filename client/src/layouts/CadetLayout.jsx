@@ -7,7 +7,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
 import { cacheSingleton } from '../utils/db';
 import { getProfilePicUrl, getProfilePicFallback } from '../utils/image';
-import NotificationDropdown from '../components/NotificationDropdown';
+import NotificationPanel from '../components/NotificationPanel';
 
 const CadetLayout = () => {
     const { logout, user } = useAuth();
@@ -38,6 +38,9 @@ const CadetLayout = () => {
     const [showGuideModal, setShowGuideModal] = useState(false);
     const [guideStep, setGuideStep] = useState(0);
     const [health, setHealth] = useState({ status: 'unknown' });
+    const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
+    const [unreadNotifs, setUnreadNotifs] = useState(0);
+    const [notifHighlight, setNotifHighlight] = useState(false);
 
     React.useEffect(() => {
         if (user) {
@@ -297,6 +300,17 @@ const CadetLayout = () => {
                         <span>My Portal</span>
                     </Link>
                     <Link
+                        to="/cadet/notifications"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={clsx(
+                            "flex items-center space-x-3 p-3 rounded transition hover-highlight",
+                            location.pathname === '/cadet/notifications' ? "bg-green-700 text-white" : "text-green-200 hover:bg-green-800 hover:text-white"
+                        )}
+                    >
+                        <Bell size={20} />
+                        <span>Notifs History</span>
+                    </Link>
+                    <Link
                         to="/cadet/achievements"
                         onClick={() => setIsSidebarOpen(false)}
                         className={clsx(
@@ -371,6 +385,21 @@ const CadetLayout = () => {
                         </h1>
                     </div>
                     <div className="flex items-center space-x-4">
+                        <button 
+                            onClick={() => setIsNotifPanelOpen(true)}
+                            className={clsx(
+                                "relative p-2 text-gray-600 hover:text-green-700 hover:bg-gray-100 rounded-full transition-all",
+                                notifHighlight && "animate-bounce text-green-700 bg-green-50"
+                            )}
+                            title="Notifications"
+                        >
+                            <Bell size={24} />
+                            {unreadNotifs > 0 && (
+                                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full font-bold border-2 border-white shadow-sm">
+                                    {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </header>
                 {(health && health.db === 'disconnected') && (
@@ -378,6 +407,12 @@ const CadetLayout = () => {
                         Degraded mode: Database disconnected. Your changes will be limited until service restores.
                     </div>
                 )}
+                <NotificationPanel 
+                    isOpen={isNotifPanelOpen} 
+                    onClose={() => setIsNotifPanelOpen(false)} 
+                    cadetId={user?.cadetId}
+                    onBadgeUpdate={setUnreadNotifs}
+                />
                 <main 
                     className="flex-1 overflow-auto p-3 md:p-6 w-full"
                 >

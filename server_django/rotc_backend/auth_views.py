@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from .auth_utils import issue_admin_token, require_auth
 
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
@@ -35,7 +36,7 @@ def admin_login_view(request):
     if username != ADMIN_USERNAME or password != ADMIN_PASSWORD:
         return JsonResponse({"message": "Invalid username or password."}, status=401)
 
-    token = secrets.token_urlsafe(32)
+    token = issue_admin_token()
 
     return JsonResponse(
         {
@@ -50,6 +51,7 @@ def admin_login_view(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@require_auth
 def heartbeat_view(request):
     return JsonResponse({"status": "ok", "time": now().isoformat()})
 

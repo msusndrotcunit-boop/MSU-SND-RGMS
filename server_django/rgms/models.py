@@ -87,3 +87,41 @@ class AdminProfile(models.Model):
 
     def __str__(self):
         return self.username
+
+
+class BroadcastNotification(models.Model):
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("urgent", "Urgent"),
+    ]
+
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="medium")
+    category = models.CharField(max_length=50, blank=True, default="General")
+    author = models.CharField(max_length=150, default="ROTC Admin")
+    image_url = models.URLField(blank=True, null=True)
+    action_url = models.URLField(blank=True, null=True)
+    action_label = models.CharField(max_length=50, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.subject
+
+
+class NotificationReadReceipt(models.Model):
+    notification = models.ForeignKey(
+        BroadcastNotification, on_delete=models.CASCADE, related_name="read_receipts"
+    )
+    cadet = models.ForeignKey(
+        Cadet, on_delete=models.CASCADE, null=True, blank=True, related_name="notif_receipts"
+    )
+    staff = models.ForeignKey(
+        TrainingStaff, on_delete=models.CASCADE, null=True, blank=True, related_name="notif_receipts"
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("notification", "cadet", "staff")
