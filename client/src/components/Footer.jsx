@@ -40,16 +40,16 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary-surface text-white py-2 md:py-3 px-3 md:px-6 mt-auto border-t border-yellow-500/30 relative">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-[60px] md:h-auto gap-3 md:gap-4">
+    <footer className="bg-primary-surface text-white py-2 md:py-3 px-2 md:px-6 mt-auto border-t border-yellow-500/30 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-[60px] md:h-auto gap-1 sm:gap-3 md:gap-4">
         {/* Brand Section - Ultra Compact on Mobile */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
             <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col items-start leading-none">
-            <h3 className="font-bold text-sm tracking-wide flex items-center gap-1">
-              MSU-SND{' '}
+            <h3 className="font-bold text-[13px] sm:text-sm tracking-wide flex items-center gap-1">
+              <span className="hidden xs:inline">MSU-SND</span>{' '}
               <button 
                 type="button"
                 onClick={toggleAdminMap}
@@ -58,29 +58,29 @@ const Footer = () => {
                 RGMS
               </button>
             </h3>
-            <p className="text-[11px] md:text-[10px] text-green-100/50">ROTC Grading System</p>
+            <p className="hidden xs:block text-[10px] text-green-100/50">ROTC Grading</p>
           </div>
         </div>
 
         {/* Essential Navigation Links (Mobile: Icons, Desktop: Text) */}
-        <div className="flex items-center gap-2 md:gap-4 flex-1 justify-center md:justify-start">
+        <div className="flex items-center gap-0 sm:gap-2 md:gap-4 flex-1 justify-center">
           <button
             type="button"
             onClick={() => setModal('about')}
-            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
             title="About the App"
           >
-            <Info size={22} className="md:hidden" />
+            <Info size={20} className="md:hidden" />
             <span className="hidden md:inline">About</span>
           </button>
           
           <button
             type="button"
             onClick={handleSupport}
-            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
             title="Support"
           >
-            <Headphones size={22} className="md:hidden" />
+            <Headphones size={20} className="md:hidden" />
             <span className="hidden md:inline">Support</span>
           </button>
 
@@ -95,12 +95,13 @@ const Footer = () => {
                   setShowMore(!showMore);
                 }
               }}
-              className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+              className="w-10 h-10 sm:w-11 sm:h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-2 text-sm md:text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
               title={showMore ? "Close Menu" : "More Options"}
             >
-              <MoreHorizontal size={22} className="md:hidden" />
+              <MoreHorizontal size={20} className="md:hidden" />
               <span className="hidden md:inline">Docs</span>
             </button>
+            {/* ... rest of the menu logic stays same ... */}
 
             {/* Mobile "More" Menu */}
             {showMore && (
@@ -137,7 +138,7 @@ const Footer = () => {
           </div>
           <p className="text-sm md:text-[10px] text-green-100/40 text-right leading-none md:leading-normal">
             <span className="hidden sm:inline">© {new Date().getFullYear()} MSU-SND ROTC • </span>
-            <span className="sm:hidden">© {new Date().getFullYear()} </span>
+            <span className="sm:hidden xs:inline">© {new Date().getFullYear()} </span>
             JUNJIE L. BAHIAN
           </p>
         </div>
