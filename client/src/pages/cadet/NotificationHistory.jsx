@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getCachedWithFreshness, cacheWithTimestamp } from '../../utils/db';
 import { Bell, Search, Filter, Calendar, AlertTriangle, Info, Megaphone, CheckCircle, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
@@ -20,10 +21,14 @@ const NotificationHistory = () => {
     if (!user?.cadetId) return;
     try {
       setLoading(true);
-      const res = await axios.get('/api/cadet/notifications', {
-        params: { cadetId: user.cadetId }
-      });
-      setNotifications(Array.isArray(res.data) ? res.data : []);
+      const cached = await getCachedWithFreshness('notifications', `cadet_${user.cadetId}`, 60000);
+      const data = cached || (await (async () => {
+        const res = await axios.get('/api/cadet/notifications', { params: { cadetId: user.cadetId } });
+        const d = Array.isArray(res.data) ? res.data : [];
+        await cacheWithTimestamp('notifications', `cadet_${user.cadetId}`, d);
+        return d;
+      })());
+      setNotifications(data);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
     } finally {

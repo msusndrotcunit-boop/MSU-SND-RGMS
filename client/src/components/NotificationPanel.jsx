@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getCachedWithFreshness, cacheWithTimestamp } from '../utils/db';
 import { Bell, X, Check, Clock, AlertTriangle, Info, Megaphone, Trash2, ChevronRight, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
@@ -14,10 +15,13 @@ const NotificationPanel = ({ isOpen, onClose, cadetId, onBadgeUpdate }) => {
     if (!cadetId) return;
     try {
       setLoading(true);
-      const res = await axios.get('/api/cadet/notifications', {
-        params: { cadetId }
-      });
-      const data = Array.isArray(res.data) ? res.data : [];
+      const cached = await getCachedWithFreshness('notifications', `cadet_${cadetId}`, 60000);
+      const data = cached || (await (async () => {
+        const res = await axios.get('/api/cadet/notifications', { params: { cadetId } });
+        const d = Array.isArray(res.data) ? res.data : [];
+        await cacheWithTimestamp('notifications', `cadet_${cadetId}`, d);
+        return d;
+      })());
       setNotifications(data);
       if (onBadgeUpdate) {
         const unreadCount = data.filter(n => !n.is_read).length;
