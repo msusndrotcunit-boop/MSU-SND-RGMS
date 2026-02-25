@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Facebook, Twitter, Linkedin, Mail, Info, FileText, Headphones, MoreHorizontal, ChevronUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,8 @@ const Footer = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [modal, setModal] = useState(null); // 'about' | 'docs' | null
+  const [showMore, setShowMore] = useState(false);
+
   const toggleAdminMap = () => {
     try {
       if (user?.role !== 'admin') return;
@@ -38,83 +40,106 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary-surface text-white py-4 px-4 md:px-6 mt-auto border-t-2 border-yellow-500">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Brand Section */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left">
-          <div className="text-center md:text-left mb-2">
-            <h3 className="font-bold text-base tracking-wide leading-tight">
+    <footer className="bg-primary-surface text-white py-2 md:py-3 px-3 md:px-6 mt-auto border-t border-yellow-500/30 relative">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-[50px] md:h-auto gap-2 md:gap-4">
+        {/* Brand Section - Ultra Compact on Mobile */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 flex-shrink-0">
+            <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
+          </div>
+          <div className="hidden sm:flex flex-col items-start leading-none">
+            <h3 className="font-bold text-xs tracking-wide flex items-center gap-1">
               MSU-SND{' '}
               <button 
                 type="button"
                 onClick={toggleAdminMap}
                 className="hover:text-yellow-300 transition-colors"
-                title="Toggle Admin Map"
               >
                 RGMS
               </button>
             </h3>
-            <p className="text-[9px] text-green-100/70 uppercase tracking-wider">Integrated with Training Staff Attendance System</p>
+            <p className="text-[9px] text-green-100/50">ROTC Grading System</p>
           </div>
-          <p className="text-green-100/80 text-xs mb-1.5 leading-relaxed max-w-xs md:max-w-none">
-            MSU-Sultan Naga Dimporo ROTC Unit Grading Management System
-          </p>
-          <p className="text-yellow-500 font-mono text-xs font-semibold">
-            Version {import.meta.env.PACKAGE_VERSION}
-          </p>
         </div>
 
-        {/* Information */}
-        <div className="text-center md:text-left">
-          <h4 className="text-yellow-500 font-bold mb-2 uppercase text-[11px] tracking-wider">Information</h4>
-           <ul className="space-y-1 text-green-50 text-xs">
-            <li>
-                <button
-                  type="button"
-                  onClick={() => setModal('about')}
-                  className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group min-h-[44px] py-1"
-                >
-                  <span className="group-hover:translate-x-1 transition-transform">ℹ️</span> About the App
-                </button>
-            </li>
-            <li>
-                <button
-                    type="button"
-                    onClick={() => setModal('docs')}
-                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group min-h-[44px] py-1"
-                >
-                    <span className="group-hover:translate-x-1 transition-transform">📄</span> Documentation
-                </button>
-            </li>
-            <li>
-                <button
-                    type="button"
-                    onClick={handleSupport}
-                    className="hover:text-yellow-500 transition-colors inline-flex items-center gap-2 group min-h-[44px] py-1"
-                >
-                    <span className="group-hover:translate-x-1 transition-transform">🎧</span> Support
-                </button>
-            </li>
-          </ul>
-        </div>
-      </div>
+        {/* Essential Navigation Links (Mobile: Icons, Desktop: Text) */}
+        <div className="flex items-center gap-1 md:gap-4 flex-1 justify-center md:justify-start">
+          <button
+            type="button"
+            onClick={() => setModal('about')}
+            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            title="About the App"
+          >
+            <Info size={18} className="md:hidden" />
+            <span className="hidden md:inline">About</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleSupport}
+            className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+            title="Support"
+          >
+            <Headphones size={18} className="md:hidden" />
+            <span className="hidden md:inline">Support</span>
+          </button>
 
-      <div className="max-w-7xl mx-auto border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-green-100/60">
-        <div className="flex items-center gap-3 mb-4 md:mb-0">
-           <div className="w-8 h-8 rounded-full shadow-lg overflow-hidden">
-             <img src={rgmsLogo} alt="RGMS" className="w-full h-full object-cover" />
-           </div>
-           <div>
-             <p className="font-bold text-white">© {new Date().getFullYear()} MSU-SND ROTC Unit</p>
-             <p className="text-xs">Developed by JUNJIE L. BAHIAN • All rights reserved.</p>
-           </div>
+          {/* More Dropdown for Mobile / Desktop Docs Link */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.innerWidth >= 768) {
+                  setModal('docs');
+                } else {
+                  setShowMore(!showMore);
+                }
+              }}
+              className="w-11 h-11 md:w-auto md:h-auto flex items-center justify-center md:gap-1 text-[11px] text-green-100/80 hover:text-yellow-500 transition-colors"
+              title={showMore ? "Close Menu" : "More Options"}
+            >
+              <MoreHorizontal size={18} className="md:hidden" />
+              <span className="hidden md:inline">Docs</span>
+            </button>
+
+            {/* Mobile "More" Menu */}
+            {showMore && (
+              <div className="absolute bottom-full right-0 mb-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl border border-gray-200 overflow-hidden md:hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="p-2 border-b bg-gray-50 flex justify-between items-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">More Links</span>
+                  <ChevronUp size={14} className="text-gray-400" />
+                </div>
+                <button
+                  onClick={() => { setModal('docs'); setShowMore(false); }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-100 flex items-center gap-3"
+                >
+                  <FileText size={16} className="text-blue-600" />
+                  Documentation
+                </button>
+                <div className="p-2 border-t flex justify-around bg-gray-50">
+                  <a href="#" className="p-2 text-gray-600 hover:text-blue-600"><Facebook size={18} /></a>
+                  <a href="#" className="p-2 text-gray-600 hover:text-blue-400"><Twitter size={18} /></a>
+                  <a href="#" className="p-2 text-gray-600 hover:text-blue-700"><Linkedin size={18} /></a>
+                  <a href="#" className="p-2 text-gray-600 hover:text-red-500"><Mail size={18} /></a>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="flex gap-4">
-          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Facebook size={16} /></a>
-          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Twitter size={16} /></a>
-          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Linkedin size={16} /></a>
-          <a href="#" className="p-2 bg-black/20 rounded hover:bg-yellow-600 hover:text-white transition-all"><Mail size={16} /></a>
+
+        {/* Desktop Copyright & Social / Mobile Compact Copyright */}
+        <div className="flex flex-col items-end shrink-0">
+          <div className="hidden md:flex gap-3 mb-1">
+            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Facebook size={14} /></a>
+            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Twitter size={14} /></a>
+            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Linkedin size={14} /></a>
+            <a href="#" className="text-green-100/40 hover:text-yellow-500 transition-colors"><Mail size={14} /></a>
+          </div>
+          <p className="text-[9px] md:text-[10px] text-green-100/40 text-right leading-none md:leading-normal">
+            <span className="hidden sm:inline">© {new Date().getFullYear()} MSU-SND ROTC • </span>
+            <span className="sm:hidden">© {new Date().getFullYear()} </span>
+            JUNJIE L. BAHIAN
+          </p>
         </div>
       </div>
 
