@@ -9,6 +9,8 @@ from django.http import JsonResponse
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.files.storage import default_storage
+from django.conf import settings
 from .auth_utils import issue_admin_token, require_auth
 
 
@@ -80,13 +82,12 @@ def system_status_view(request):
         "latencyMs": None,
         "error": None,
     }
-    metrics = {
-        "cadets": None,
-        "users": None,
-        "trainingDays": None,
-        "activities": None,
-        "unreadNotifications": None,
+    storage_info = {
+        "backend": getattr(settings, "DEFAULT_FILE_STORAGE", "unknown"),
+        "usingCloudinary": False,
+        "publicUrlExample": None,
     }
+    metrics = {}
 
     conn = connections["default"]
     engine = conn.settings_dict.get("ENGINE", "")
@@ -108,5 +109,13 @@ def system_status_view(request):
         db_info["status"] = "error"
         db_info["error"] = str(exc)
 
-    return JsonResponse({"database": db_info, "metrics": metrics})
+    try:
+        b = storage_info["backend"].lower()
+        storage_info["usingCloudinary"] = "cloudinary" in b
+        candidate = "admin_profiles/status_probe.png"
+        storage_info["publicUrlExample"] = default_storage.url(candidate)
+    except Exception:
+        pass
+
+    return JsonResponse({"database": db_info, "storage": storage_info, "metrics": metrics})
 
