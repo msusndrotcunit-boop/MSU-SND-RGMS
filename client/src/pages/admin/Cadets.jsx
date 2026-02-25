@@ -644,7 +644,30 @@ const Cadets = () => {
                             className="flex-1 md:flex-none bg-red-600 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-700 animate-fade-in"
                         >
                             <Trash2 size={18} />
-                            <span>Delete ({selectedCadets.length})</span>
+                            <span>Archive ({selectedCadets.length})</span>
+                        </button>
+                    )}
+                    {selectedCadets.length > 0 && (
+                        <button
+                            onClick={async () => {
+                                if (!window.confirm(`Permanently delete ${selectedCadets.length} cadet(s)? This cannot be undone.`)) return;
+                                try {
+                                    await axios.post('/api/admin/cadets/delete-permanent', { ids: selectedCadets });
+                                    toast.success('Cadets permanently deleted');
+                                    setSelectedCadets([]);
+                                    await cacheSingleton('admin', 'cadets_list', null);
+                                    await clearCache('attendance_by_day');
+                                    fetchCadets(true);
+                                } catch (err) {
+                                    console.error(err);
+                                    toast.error('Failed to permanently delete cadets');
+                                }
+                            }}
+                            className="flex-1 md:flex-none bg-red-700 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 hover:bg-red-800 animate-fade-in"
+                            title="Permanently delete selected cadets"
+                        >
+                            <Trash2 size={18} />
+                            <span>Delete Permanently</span>
                         </button>
                     )}
                     {selectedCadets.length > 0 && selectedCadetCourse === 'Archived' && (

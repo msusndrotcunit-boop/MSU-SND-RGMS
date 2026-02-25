@@ -21,6 +21,7 @@ from io import BytesIO
 from PIL import Image
 import os
 import re
+import secrets
 
 IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(512 * 1024)))
 IMAGE_MAX_DIMENSION = int(os.getenv("IMAGE_MAX_DIMENSION", str(1600)))
@@ -472,15 +473,22 @@ def admin_cadets_update_view(request, cadet_id):
         cadet = Cadet.objects.get(id=cadet_id)
     except Cadet.DoesNotExist:
         return JsonResponse({"message": "Cadet not found"}, status=404)
-    if request.content_type and "application/json" in request.content_type:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-    else:
-        payload = request.POST
-    cadet_data = build_cadet_payload(payload)
-    for key, value in cadet_data.items():
-        setattr(cadet, key, value)
-    cadet.save()
-    return JsonResponse(cadet_to_dict(cadet))
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        else:
+            payload = request.POST
+        cadet_data = build_cadet_payload(payload)
+        # Avoid wiping student_id if omitted/blank in payload
+        if not cadet_data.get("student_id"):
+            cadet_data.pop("student_id", None)
+        for key, value in cadet_data.items():
+            setattr(cadet, key, value)
+        cadet.save()
+        return JsonResponse(cadet_to_dict(cadet))
+    except Exception as exc:
+        logging.exception("Cadet update failed: %s", exc)
+        return JsonResponse({"message": "Cadet update failed"}, status=500)
 
 
 @csrf_exempt
