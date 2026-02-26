@@ -1,0 +1,45 @@
+"""
+URL configuration for system app.
+"""
+from django.urls import path
+from apps.system import views
+
+urlpatterns = [
+    # System settings endpoints
+    path('system-settings/', views.system_settings_list, name='system-settings-list'),
+    path('system-settings/bulk/', views.system_settings_bulk_update, name='system-settings-bulk'),
+    path('system-settings/<str:key>/', views.system_settings_detail, name='system-settings-detail'),
+    
+    # Audit log endpoints
+    path('audit-logs/', views.audit_logs_list, name='audit-logs-list'),
+    path('audit-logs/export/', views.audit_logs_export, name='audit-logs-export'),
+    
+    # Sync event endpoints
+    path('sync-events/', views.sync_events_list, name='sync-events-list'),
+    
+    # Cache management endpoints
+    path('cache/stats/', views.cache_stats_view, name='cache-stats'),
+    path('cache/clear/', views.cache_clear_view, name='cache-clear'),
+    
+    # Celery task management endpoints
+    path('tasks/<str:task_id>/status/', views.task_status_view, name='task-status'),
+    path('tasks/<str:task_id>/revoke/', views.revoke_task_view, name='task-revoke'),
+    path('celery/health/', views.celery_health_check, name='celery-health'),
+    path('celery/stats/', views.celery_stats_view, name='celery-stats'),
+    
+    # Server-Sent Events endpoint for backward compatibility
+    path('events/', views.events_sse_view, name='events-sse'),
+    
+    # Performance monitoring and metrics endpoints
+    path('metrics/', views.metrics_view, name='metrics'),
+    path('metrics/database/', views.database_metrics_view, name='database-metrics'),
+    path('metrics/cache/', views.cache_metrics_view, name='cache-metrics'),
+    path('metrics/prometheus/', views.prometheus_metrics_view, name='prometheus-metrics'),
+    path('metrics/thresholds/', views.performance_thresholds_view, name='performance-thresholds'),
+    path('metrics/check-alerts/', views.check_performance_alerts_view, name='check-performance-alerts'),
+    path('health/', views.health_check_view, name='health-check'),
+    
+    # Slow query monitoring endpoints
+    path('slow-queries/', views.slow_query_statistics, name='slow-queries'),
+    path('slow-queries/reset/', views.reset_query_statistics, name='slow-queries-reset'),
+]

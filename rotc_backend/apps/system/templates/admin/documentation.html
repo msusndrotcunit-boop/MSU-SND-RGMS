@@ -1,0 +1,294 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Admin Documentation - {{ site_title }}{% endblock %}
+
+{% block content %}
+<h1>ROTC Grading System - Admin Documentation</h1>
+
+<div style="max-width: 1200px; margin: 20px auto;">
+    <div style="background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#users">User Management</a></li>
+            <li><a href="#cadets">Cadet Management</a></li>
+            <li><a href="#grading">Grading System</a></li>
+            <li><a href="#attendance">Attendance Tracking</a></li>
+            <li><a href="#activities">Activities & Achievements</a></li>
+            <li><a href="#staff">Training Staff</a></li>
+            <li><a href="#messaging">Messaging & Notifications</a></li>
+            <li><a href="#system">System Administration</a></li>
+            <li><a href="#export">Data Export</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+        </ul>
+
+        <hr>
+
+        <h2 id="overview">System Overview</h2>
+        <p>The ROTC Grading System is a comprehensive management platform for tracking cadet performance, attendance, activities, and communications. This admin interface provides full control over all system data and operations.</p>
+
+        <h3>Key Features</h3>
+        <ul>
+            <li><strong>User Management</strong>: Manage user accounts with role-based access control</li>
+            <li><strong>Cadet Profiles</strong>: Comprehensive cadet information and academic tracking</li>
+            <li><strong>Grading System</strong>: Merit/demerit points and exam scores</li>
+            <li><strong>Attendance Tracking</strong>: Training day attendance and excuse letters</li>
+            <li><strong>Activities</strong>: Events, achievements, and photo galleries</li>
+            <li><strong>Messaging</strong>: Admin messages and notifications</li>
+            <li><strong>Audit Logging</strong>: Complete audit trail of all system changes</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="users">User Management</h2>
+        <h3>User Roles</h3>
+        <ul>
+            <li><strong>Admin</strong>: Full system access, can manage all data</li>
+            <li><strong>Cadet</strong>: Student access, can view own data and submit excuse letters</li>
+            <li><strong>Training Staff</strong>: Instructor access, can manage attendance and grades</li>
+        </ul>
+
+        <h3>User Approval Process</h3>
+        <ol>
+            <li>New users register with <code>is_approved=False</code></li>
+            <li>Admin reviews user registration</li>
+            <li>Admin approves user via bulk action or individual edit</li>
+            <li>User can now access the system</li>
+        </ol>
+
+        <h3>Bulk Actions</h3>
+        <ul>
+            <li><strong>Approve Users</strong>: Approve multiple users at once</li>
+            <li><strong>Unapprove Users</strong>: Revoke approval for multiple users</li>
+            <li><strong>Export to CSV</strong>: Export user data to CSV file</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="cadets">Cadet Management</h2>
+        <h3>Cadet Profile Fields</h3>
+        <ul>
+            <li><strong>Student ID</strong>: Unique identifier (required, must be unique)</li>
+            <li><strong>Name</strong>: First, middle, last, suffix</li>
+            <li><strong>Company & Platoon</strong>: Organizational assignment</li>
+            <li><strong>Course & Year Level</strong>: Academic information</li>
+            <li><strong>Status</strong>: Ongoing, Graduated, Dropped, etc.</li>
+            <li><strong>Personal Information</strong>: Birthdate, address, contact details</li>
+            <li><strong>Uniform Sizes</strong>: Combat boots, uniform, bullcap</li>
+        </ul>
+
+        <h3>Archiving Cadets</h3>
+        <p>Use the archive feature instead of deleting cadets to preserve historical data:</p>
+        <ol>
+            <li>Select cadets to archive</li>
+            <li>Choose "Archive selected cadets" action</li>
+            <li>Archived cadets are hidden from main lists but can be viewed via "Archived" filter</li>
+            <li>Use "Unarchive" action to restore cadets</li>
+        </ol>
+
+        <hr>
+
+        <h2 id="grading">Grading System</h2>
+        <h3>Grade Components</h3>
+        <ul>
+            <li><strong>Attendance Present</strong>: Number of training days attended</li>
+            <li><strong>Merit Points</strong>: Positive behavior points</li>
+            <li><strong>Demerit Points</strong>: Negative behavior points</li>
+            <li><strong>Prelim Score</strong>: Preliminary exam score</li>
+            <li><strong>Midterm Score</strong>: Midterm exam score</li>
+            <li><strong>Final Score</strong>: Final exam score</li>
+        </ul>
+
+        <h3>Merit/Demerit Logs</h3>
+        <p>Each merit or demerit entry creates a log with:</p>
+        <ul>
+            <li>Type (Merit or Demerit)</li>
+            <li>Points (positive integer)</li>
+            <li>Reason (detailed explanation)</li>
+            <li>Issued by (user ID and name)</li>
+            <li>Date recorded (automatic timestamp)</li>
+        </ul>
+        <p><strong>Note:</strong> Grades are automatically updated when merit/demerit logs are added or deleted.</p>
+
+        <hr>
+
+        <h2 id="attendance">Attendance Tracking</h2>
+        <h3>Training Days</h3>
+        <p>Create training days with date, title, description, and location. Each training day can have attendance records for cadets and staff.</p>
+
+        <h3>Attendance Status</h3>
+        <ul>
+            <li><strong>Present</strong>: Cadet attended (increments attendance count)</li>
+            <li><strong>Absent</strong>: Cadet did not attend</li>
+            <li><strong>Late</strong>: Cadet arrived late</li>
+            <li><strong>Excused</strong>: Absence excused via excuse letter</li>
+        </ul>
+
+        <h3>Excuse Letters</h3>
+        <p>Cadets can submit excuse letters for absences:</p>
+        <ol>
+            <li>Cadet submits excuse letter with reason and optional file attachment</li>
+            <li>Status starts as "Pending"</li>
+            <li>Admin reviews and approves/rejects</li>
+            <li>If approved, linked attendance record is updated to "Excused"</li>
+        </ol>
+
+        <h3>Bulk Actions</h3>
+        <ul>
+            <li><strong>Mark as Present</strong>: Bulk update attendance status</li>
+            <li><strong>Mark as Absent</strong>: Bulk update attendance status</li>
+            <li><strong>Approve Letters</strong>: Bulk approve excuse letters</li>
+            <li><strong>Reject Letters</strong>: Bulk reject excuse letters</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="activities">Activities & Achievements</h2>
+        <h3>Activity Types</h3>
+        <ul>
+            <li><strong>Activity</strong>: Regular ROTC activities and events</li>
+            <li><strong>Achievement</strong>: Cadet accomplishments and awards</li>
+            <li><strong>Event</strong>: Special events and ceremonies</li>
+        </ul>
+
+        <h3>Image Management</h3>
+        <p>Activities can have multiple images:</p>
+        <ul>
+            <li>Main image stored in <code>image_path</code> field</li>
+            <li>Additional images stored as ActivityImage records (inline editing)</li>
+            <li>All image URLs stored in <code>images</code> field as JSON array</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="staff">Training Staff</h2>
+        <p>Training staff profiles include:</p>
+        <ul>
+            <li>Rank and role information</li>
+            <li>Contact details</li>
+            <li>AFPSN (Armed Forces Personnel Serial Number)</li>
+            <li>Personal information (similar to cadets)</li>
+            <li>Uniform sizes</li>
+        </ul>
+
+        <h3>Staff Attendance</h3>
+        <p>Track staff attendance at training days with time in/out.</p>
+
+        <hr>
+
+        <h2 id="messaging">Messaging & Notifications</h2>
+        <h3>Admin Messages</h3>
+        <p>Users can send messages to admins:</p>
+        <ul>
+            <li>Subject and message body</li>
+            <li>Status: Pending or Replied</li>
+            <li>Admin can reply via <code>admin_reply</code> field</li>
+        </ul>
+
+        <h3>Staff Messages</h3>
+        <p>Staff chat messages for internal communication.</p>
+
+        <h3>Notifications</h3>
+        <p>System notifications sent to users:</p>
+        <ul>
+            <li>Type categorization</li>
+            <li>Read/unread status</li>
+            <li>Automatic creation on certain events (new messages, grade changes)</li>
+        </ul>
+
+        <h3>Push Subscriptions</h3>
+        <p>Web push notification subscriptions for real-time alerts.</p>
+
+        <hr>
+
+        <h2 id="system">System Administration</h2>
+        <h3>System Settings</h3>
+        <p>Key-value configuration pairs for system-wide settings. Cached for performance.</p>
+
+        <h3>Audit Logs</h3>
+        <p>Immutable audit trail of all system changes:</p>
+        <ul>
+            <li>Table name and operation (CREATE, UPDATE, DELETE)</li>
+            <li>Record ID and user ID</li>
+            <li>Full payload of changes (JSON)</li>
+            <li>Timestamp</li>
+        </ul>
+        <p><strong>Note:</strong> Audit logs cannot be edited or added manually. They are created automatically by Django signals.</p>
+
+        <h3>Sync Events</h3>
+        <p>Real-time synchronization events for WebSocket broadcasting:</p>
+        <ul>
+            <li>Event type (grade_update, notification, etc.)</li>
+            <li>Cadet ID (if applicable)</li>
+            <li>Payload (JSON data)</li>
+            <li>Processed status</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="export">Data Export</h2>
+        <h3>CSV Export</h3>
+        <p>Available for all major models. Select records and choose "Export to CSV" action.</p>
+
+        <h3>Excel Export</h3>
+        <p>Available for Cadets, Merit/Demerit Logs, Activities, and Training Staff. Provides formatted Excel files with headers.</p>
+
+        <h3>Export Tips</h3>
+        <ul>
+            <li>Use filters before exporting to get specific data subsets</li>
+            <li>Select all records using the checkbox in the header</li>
+            <li>Large exports may take time - be patient</li>
+            <li>Exported files include all visible columns from list display</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        <h3>Common Issues</h3>
+
+        <h4>Cannot Access Admin Interface</h4>
+        <ul>
+            <li>Ensure your user has <code>role='admin'</code></li>
+            <li>Check that <code>is_approved=True</code></li>
+            <li>Verify you're logged in</li>
+        </ul>
+
+        <h4>Grades Not Updating</h4>
+        <ul>
+            <li>Check that Django signals are enabled</li>
+            <li>Verify merit/demerit logs are being created</li>
+            <li>Check audit logs for errors</li>
+        </ul>
+
+        <h4>Export Not Working</h4>
+        <ul>
+            <li>Ensure openpyxl is installed for Excel export</li>
+            <li>Check browser download settings</li>
+            <li>Try with fewer records first</li>
+        </ul>
+
+        <h4>Images Not Displaying</h4>
+        <ul>
+            <li>Verify Cloudinary configuration</li>
+            <li>Check image URLs are valid</li>
+            <li>Ensure CORS settings allow image loading</li>
+        </ul>
+
+        <h3>Getting Help</h3>
+        <p>For additional support:</p>
+        <ul>
+            <li>Check system logs in <code>logs/</code> directory</li>
+            <li>Review audit logs for recent changes</li>
+            <li>Contact system administrator</li>
+        </ul>
+
+    </div>
+</div>
+
+<div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+    <p><a href="{% url 'admin:index' %}">← Back to Admin Home</a></p>
+</div>
+
+{% endblock %}

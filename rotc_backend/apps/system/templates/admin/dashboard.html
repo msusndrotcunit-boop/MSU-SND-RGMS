@@ -1,0 +1,175 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Dashboard - {{ site_title }}{% endblock %}
+
+{% block content %}
+<h1>System Dashboard</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
+    <!-- User Statistics -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Users</h2>
+        <p><strong>Total:</strong> {{ stats.total_users }}</p>
+        <p><strong>Approved:</strong> {{ stats.approved_users }}</p>
+        <p><strong>Pending:</strong> <span style="color: #ffc107;">{{ stats.pending_users }}</span></p>
+        <hr>
+        <p><strong>Admins:</strong> {{ stats.admin_users }}</p>
+        <p><strong>Cadets:</strong> {{ stats.cadet_users }}</p>
+        <p><strong>Staff:</strong> {{ stats.staff_users }}</p>
+    </div>
+
+    <!-- Cadet Statistics -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Cadets</h2>
+        <p><strong>Active:</strong> {{ stats.total_cadets }}</p>
+        <p><strong>Archived:</strong> {{ stats.archived_cadets }}</p>
+        <p><strong>Completed Profiles:</strong> {{ stats.completed_profiles }}</p>
+        <hr>
+        <p><strong>Training Staff:</strong> {{ stats.total_staff }}</p>
+        <p><strong>Archived Staff:</strong> {{ stats.archived_staff }}</p>
+    </div>
+
+    <!-- Grading Statistics -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Grading (This Week)</h2>
+        <p><strong>Merit Logs:</strong> <span style="color: #28a745;">{{ stats.merit_logs_week }}</span></p>
+        <p><strong>Demerit Logs:</strong> <span style="color: #dc3545;">{{ stats.demerit_logs_week }}</span></p>
+        <hr>
+        <p><strong>Total Merit:</strong> {{ stats.total_merit_logs }}</p>
+        <p><strong>Total Demerit:</strong> {{ stats.total_demerit_logs }}</p>
+    </div>
+
+    <!-- Attendance Statistics -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Attendance</h2>
+        <p><strong>Training Days (Month):</strong> {{ stats.training_days_month }}</p>
+        <p><strong>Total Training Days:</strong> {{ stats.total_training_days }}</p>
+        <hr>
+        <p><strong>Present (Week):</strong> <span style="color: #28a745;">{{ stats.present_week }}</span></p>
+        <p><strong>Absent (Week):</strong> <span style="color: #dc3545;">{{ stats.absent_week }}</span></p>
+    </div>
+
+    <!-- Excuse Letters -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Excuse Letters</h2>
+        <p><strong>Pending:</strong> <span style="color: #ffc107;">{{ stats.pending_excuse_letters }}</span></p>
+        <p><strong>Approved:</strong> <span style="color: #28a745;">{{ stats.approved_excuse_letters }}</span></p>
+        <p><strong>Rejected:</strong> <span style="color: #dc3545;">{{ stats.rejected_excuse_letters }}</span></p>
+    </div>
+
+    <!-- Activities -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Activities</h2>
+        <p><strong>Total:</strong> {{ stats.total_activities }}</p>
+        <p><strong>This Month:</strong> {{ stats.activities_month }}</p>
+        <hr>
+        <p><strong>Achievements:</strong> {{ stats.achievements }}</p>
+        <p><strong>Events:</strong> {{ stats.events }}</p>
+    </div>
+
+    <!-- Messaging -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">Messaging</h2>
+        <p><strong>Pending Messages:</strong> <span style="color: #ffc107;">{{ stats.pending_messages }}</span></p>
+        <p><strong>Replied Messages:</strong> {{ stats.replied_messages }}</p>
+        <p><strong>Unread Notifications:</strong> <span style="color: #dc3545;">{{ stats.unread_notifications }}</span></p>
+    </div>
+
+    <!-- System -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #417690;">System</h2>
+        <p><strong>Audit Logs (Week):</strong> {{ stats.audit_logs_week }}</p>
+        <p><strong>Sync Events (Week):</strong> {{ stats.sync_events_week }}</p>
+        <p><strong>Unprocessed Events:</strong> <span style="color: #ffc107;">{{ stats.unprocessed_sync_events }}</span></p>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div style="margin-top: 30px;">
+    <h2>Recent Activity</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+        <!-- Pending Excuse Letters -->
+        <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Pending Excuse Letters</h3>
+            {% if pending_excuse_letters %}
+                <ul style="list-style: none; padding: 0;">
+                    {% for letter in pending_excuse_letters %}
+                    <li style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>{{ letter.cadet.first_name }} {{ letter.cadet.last_name }}</strong><br>
+                        <small>{{ letter.date_absent }} - {{ letter.reason|truncatewords:10 }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No pending excuse letters</p>
+            {% endif %}
+        </div>
+
+        <!-- Pending Messages -->
+        <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Pending Admin Messages</h3>
+            {% if pending_messages %}
+                <ul style="list-style: none; padding: 0;">
+                    {% for message in pending_messages %}
+                    <li style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>{{ message.user.username }}</strong><br>
+                        <small>{{ message.subject|truncatewords:8 }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No pending messages</p>
+            {% endif %}
+        </div>
+
+        <!-- Unprocessed Sync Events -->
+        <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Unprocessed Sync Events</h3>
+            {% if recent_sync_events %}
+                <ul style="list-style: none; padding: 0;">
+                    {% for event in recent_sync_events %}
+                    <li style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>{{ event.event_type }}</strong><br>
+                        <small>Cadet ID: {{ event.cadet_id }} - {{ event.created_at|date:"Y-m-d H:i" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No unprocessed sync events</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Audit Logs -->
+        <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Recent Audit Logs</h3>
+            {% if recent_audit_logs %}
+                <ul style="list-style: none; padding: 0;">
+                    {% for log in recent_audit_logs %}
+                    <li style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>{{ log.operation }}</strong> on {{ log.table_name }}<br>
+                        <small>Record ID: {{ log.record_id }} - {{ log.created_at|date:"Y-m-d H:i" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No recent audit logs</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+    <h3>Quick Links</h3>
+    <ul>
+        <li><a href="{% url 'admin:authentication_user_changelist' %}">Manage Users</a></li>
+        <li><a href="{% url 'admin:cadets_cadet_changelist' %}">Manage Cadets</a></li>
+        <li><a href="{% url 'admin:attendance_excuseletter_changelist' %}">Review Excuse Letters</a></li>
+        <li><a href="{% url 'admin:messaging_adminmessage_changelist' %}">Review Messages</a></li>
+        <li><a href="{% url 'admin:system_auditlog_changelist' %}">View Audit Logs</a></li>
+        <li><a href="{% url 'admin:system_syncevent_changelist' %}">View Sync Events</a></li>
+    </ul>
+</div>
+
+{% endblock %}

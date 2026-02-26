@@ -11,7 +11,11 @@
     "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
-    "electron:dist": "npm run build && electron-builder --publish=never"
+    "electron:dist": "npm run build && electron-builder --publish=never",
+    "test:backend": "node test-django-connection.js",
+    "test:backend:prod": "node test-django-connection.js https://rotc-django-web.onrender.com",
+    "test:integration": "node integration-test.js",
+    "test:integration:prod": "node integration-test.js https://rotc-django-web.onrender.com"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",
