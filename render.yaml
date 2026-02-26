@@ -5,37 +5,7 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: |
-      # Install Python dependencies
-      cd rotc_backend
-      pip install --upgrade pip
-      pip install -r requirements.txt
-      
-      # Build React frontend (Node.js should be available in Render's Python environment)
-      cd ../client
-      npm install --legacy-peer-deps
-      npm run build
-      
-      # Verify build output exists
-      if [ ! -f "dist/index.html" ]; then
-        echo "ERROR: React build failed - index.html not found"
-        exit 1
-      fi
-      
-      # Copy built frontend to Django static files
-      cd ../rotc_backend
-      mkdir -p staticfiles
-      cp -r ../client/dist/* staticfiles/
-      
-      # Verify index.html was copied
-      if [ ! -f "staticfiles/index.html" ]; then
-        echo "ERROR: index.html not copied to staticfiles"
-        exit 1
-      fi
-      
-      # Collect Django static files and run migrations
-      python manage.py collectstatic --noinput
-      python manage.py migrate --noinput
+    buildCommand: bash render-build.sh
     startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
