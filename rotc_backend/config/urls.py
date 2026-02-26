@@ -55,12 +55,12 @@ urlpatterns = [
     path('api/', include('apps.integration.urls')),
 ]
 
-# Serve React frontend for all non-API routes
-urlpatterns += [
-    re_path(r'^(?!api/).*$', serve_react_app, name='frontend'),
-]
-
-# Serve static and media files
+# Serve static and media files BEFORE the catch-all
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Serve React frontend for all non-API, non-static routes (MUST BE LAST)
+urlpatterns += [
+    re_path(r'^(?!api/|admin/|static/|media/).*$', serve_react_app, name='frontend'),
+]
