@@ -1,5 +1,5 @@
 services:
-  # Monorepo Web Service (Django Backend + React Frontend)
+  # Full-Stack Web Service (Django + React Frontend)
   - type: web
     name: MSU-SND-RGMS-1
     env: python
@@ -54,3 +54,27 @@ services:
         sync: false
     healthCheckPath: /api/health
     autoDeploy: true
+
+  # Keep-Alive Cron Job
+  - type: cron
+    name: MSU-SND-RGMS-KeepAlive
+    env: python
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"  # Every 10 minutes
+    buildCommand: |
+      cd rotc_backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: cd rotc_backend && python manage.py keep_alive
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_ENV
+        value: production
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
