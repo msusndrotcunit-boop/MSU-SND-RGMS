@@ -5,6 +5,7 @@ services:
     env: python
     region: oregon
     plan: starter
+    rootDir: rotc_backend
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -58,6 +59,7 @@ services:
     env: python
     region: oregon
     plan: starter
+    rootDir: rotc_backend
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -90,6 +92,7 @@ services:
     env: python
     region: oregon
     plan: starter
+    rootDir: rotc_backend
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -136,6 +139,7 @@ services:
     env: python
     region: oregon
     plan: starter
+    rootDir: rotc_backend
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
