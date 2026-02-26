@@ -16,9 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.system.views.frontend import serve_react_app
 
 # API v1 patterns
 api_v1_patterns = [
@@ -57,9 +57,10 @@ urlpatterns = [
 
 # Serve React frontend for all non-API routes
 urlpatterns += [
-    re_path(r'^(?!api/).*$', TemplateView.as_view(template_name='index.html'), name='frontend'),
+    re_path(r'^(?!api/).*$', serve_react_app, name='frontend'),
 ]
 
-# Serve media files in development
+# Serve static and media files
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
