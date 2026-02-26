@@ -108,7 +108,16 @@ SECURE_HSTS_PRELOAD = True
 
 # Static files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Storage configuration for Django 5.0+
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 # WhiteNoise configuration for serving static files in production
 MIDDLEWARE = [
@@ -126,9 +135,6 @@ MIDDLEWARE = [
     'apps.system.middleware.PerformanceMonitoringMiddleware',
     'apps.system.csp_middleware.ContentSecurityPolicyMiddleware',
 ]
-
-# Use Cloudinary for media file storage in production
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Logging for production - console only (Render has read-only filesystem)
 LOGGING = {
