@@ -11,18 +11,18 @@ services:
       pip install --upgrade pip
       pip install -r requirements.txt
       
-      # Frontend is pre-built and committed to staticfiles/
+      # Frontend is pre-built and committed to frontend_build/
       # Verify it exists
-      if [ ! -f "staticfiles/index.html" ]; then
-        echo "ERROR: Pre-built frontend not found in staticfiles/"
+      if [ ! -f "frontend_build/index.html" ]; then
+        echo "ERROR: Pre-built frontend not found in frontend_build/"
         exit 1
       fi
       
-      echo "Using pre-built frontend from staticfiles/"
-      ls -la staticfiles/
+      echo "Using pre-built frontend from frontend_build/"
+      ls -la frontend_build/
       
-      # Collect Django static files and run migrations
-      python manage.py collectstatic --noinput
+      # Collect Django static files (will copy from frontend_build to staticfiles)
+      python manage.py collectstatic --noinput --clear
       python manage.py migrate --noinput
     startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
