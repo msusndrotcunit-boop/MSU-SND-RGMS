@@ -16,22 +16,24 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-in-production')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # ALLOWED_HOSTS configuration
-# Supports comma-separated list from environment variable
-# Automatically includes Render.com domains
+ALLOWED_HOSTS = []
+
+# Add hosts from ALLOWED_HOSTS environment variable (comma-separated)
 allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
 if allowed_hosts_env:
-    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
-else:
-    ALLOWED_HOSTS = []
+    ALLOWED_HOSTS.extend([host.strip() for host in allowed_hosts_env.split(',') if host.strip()])
 
-# Always allow Render.com domains
-RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+# Add Render.com external hostname
+render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME', '')
+if render_hostname:
+    ALLOWED_HOSTS.append(render_hostname)
 
-# Fallback for common patterns
+# Fallback: allow all hosts if nothing configured (temporary for debugging)
 if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['*']  # Allow all hosts if nothing is configured (not recommended for production)
+    ALLOWED_HOSTS = ['*']
+
+# Log the allowed hosts for debugging (will appear in Render logs)
+print(f"ALLOWED_HOSTS configured: {ALLOWED_HOSTS}")
 
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
