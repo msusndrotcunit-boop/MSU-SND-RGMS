@@ -21,13 +21,17 @@ if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 else:
     # Default allowed hosts for Render deployment
+    # Using wildcard for Render subdomains to ensure deployment works
     ALLOWED_HOSTS = [
+        '*',  # Allow all hosts temporarily for deployment
         'msu-snd-rgms-1.onrender.com',
         'rotc-django-web.onrender.com',
         'localhost',
         '127.0.0.1',
-        '.onrender.com',  # Allow all Render subdomains
     ]
+
+# Debug: Print ALLOWED_HOSTS to logs
+print(f"[SETTINGS] ALLOWED_HOSTS configured as: {ALLOWED_HOSTS}")
 
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
