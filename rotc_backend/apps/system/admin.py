@@ -9,17 +9,13 @@ from .models import SystemSettings, AuditLog, SyncEvent
 @admin.register(SystemSettings)
 class SystemSettingsAdmin(admin.ModelAdmin):
     """Comprehensive admin interface for SystemSettings model"""
-    list_display = ('id', 'key', 'value_short', 'created_at', 'updated_at')
-    list_filter = ('created_at', 'updated_at')
+    list_display = ('id', 'key', 'value_short')
     search_fields = ('key', 'value')
-    readonly_fields = ('id', 'created_at', 'updated_at')
+    readonly_fields = ('id',)
     
     fieldsets = (
         ('Setting Information', {
             'fields': ('id', 'key', 'value')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at')
         }),
     )
     
@@ -41,12 +37,11 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         response['Content-Disposition'] = 'attachment; filename="system_settings.csv"'
         
         writer = csv.writer(response)
-        writer.writerow(['ID', 'Key', 'Value', 'Created At', 'Updated At'])
+        writer.writerow(['ID', 'Key', 'Value'])
         
         for setting in queryset:
             writer.writerow([
-                setting.id, setting.key, setting.value,
-                setting.created_at, setting.updated_at
+                setting.id, setting.key, setting.value
             ])
         
         return response
