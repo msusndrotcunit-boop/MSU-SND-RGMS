@@ -11,6 +11,9 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+# Don't use setdefault - let environment variable take precedence
+# This allows DJANGO_SETTINGS_MODULE from render.yaml to be used
+if 'DJANGO_SETTINGS_MODULE' not in os.environ:
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.development'
 
 application = get_wsgi_application()
