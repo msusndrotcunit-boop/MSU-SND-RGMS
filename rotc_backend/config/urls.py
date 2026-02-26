@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from apps.system.views.root import api_root
 
 # API v1 patterns
 api_v1_patterns = [
@@ -34,6 +35,8 @@ api_v1_patterns = [
 ]
 
 urlpatterns = [
+    # Root endpoint
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     # API v1 with versioning
     path('api/v1/', include(api_v1_patterns)),
