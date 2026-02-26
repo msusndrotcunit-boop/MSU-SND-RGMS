@@ -5,16 +5,23 @@ set -o errexit  # Exit on error
 
 echo "=== Starting Build Process ==="
 
-# Check if Node.js is available
-if ! command -v node &> /dev/null; then
-    echo "Node.js not found. Installing Node.js 18..."
-    # Download and install Node.js
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
+# Check Node.js availability
+echo "Checking for Node.js..."
+if command -v node &> /dev/null; then
+    echo "Node.js version: $(node --version)"
+    echo "npm version: $(npm --version)"
+else
+    echo "WARNING: Node.js not found in PATH"
+    echo "Attempting to use Render's Node.js..."
+    # Render typically has Node.js available, just not in PATH
+    export PATH="/opt/render/.nvm/versions/node/v18.17.0/bin:$PATH"
+    if command -v node &> /dev/null; then
+        echo "Node.js found: $(node --version)"
+    else
+        echo "ERROR: Node.js is required but not available"
+        exit 1
+    fi
 fi
-
-echo "Node.js version: $(node --version)"
-echo "npm version: $(npm --version)"
 
 # Install Python dependencies
 echo "=== Installing Python Dependencies ==="
