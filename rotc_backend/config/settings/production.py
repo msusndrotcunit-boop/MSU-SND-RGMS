@@ -20,12 +20,15 @@ ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
 if ALLOWED_HOSTS_ENV:
     # Parse comma-separated hosts from environment variable
     ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
-    # Always add wildcard as fallback
-    if '*' not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append('*')
 else:
     # Default: Allow all hosts for deployment
-    ALLOWED_HOSTS = ['*']
+    ALLOWED_HOSTS = []
+
+# Always ensure these critical hosts are included
+required_hosts = ['msu-snd-rgms-1.onrender.com', 'localhost', '127.0.0.1', '*']
+for host in required_hosts:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 # Debug: Print ALLOWED_HOSTS to logs
 print(f"[SETTINGS] ALLOWED_HOSTS configured as: {ALLOWED_HOSTS}")
