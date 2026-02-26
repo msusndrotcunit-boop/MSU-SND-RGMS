@@ -34,6 +34,10 @@ for host in required_hosts:
 print(f"[SETTINGS] ALLOWED_HOSTS configured as: {ALLOWED_HOSTS}")
 print(f"[SETTINGS] ALLOWED_HOSTS_ENV from environment: '{ALLOWED_HOSTS_ENV}'")
 
+# TEMPORARY FIX: Force wildcard to allow all hosts until we figure out the environment variable issue
+ALLOWED_HOSTS = ['*']
+print(f"[SETTINGS] FORCED ALLOWED_HOSTS to: {ALLOWED_HOSTS}")
+
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
     'default': {
