@@ -19,7 +19,6 @@ from django.urls import path, include, re_path
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.system.views.root import api_root
 
 # API v1 patterns
 api_v1_patterns = [
@@ -38,8 +37,6 @@ api_v1_patterns = [
 ]
 
 urlpatterns = [
-    # API root endpoint (JSON response)
-    path('api/', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     # API v1 with versioning
     path('api/v1/', include(api_v1_patterns)),
