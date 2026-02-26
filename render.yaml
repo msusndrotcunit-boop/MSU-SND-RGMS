@@ -5,7 +5,25 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: bash render-build.sh
+    buildCommand: |
+      # Install Python dependencies
+      cd rotc_backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      
+      # Frontend is pre-built and committed to staticfiles/
+      # Verify it exists
+      if [ ! -f "staticfiles/index.html" ]; then
+        echo "ERROR: Pre-built frontend not found in staticfiles/"
+        exit 1
+      fi
+      
+      echo "Using pre-built frontend from staticfiles/"
+      ls -la staticfiles/
+      
+      # Collect Django static files and run migrations
+      python manage.py collectstatic --noinput
+      python manage.py migrate --noinput
     startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
