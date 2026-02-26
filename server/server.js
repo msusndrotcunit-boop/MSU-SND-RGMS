@@ -78,16 +78,18 @@ app.get('/api/cloudinary/status', (req, res) => {
 });
 
 // Host-based Redirect (Old domain -> New domain)
-const REDIRECT_ENABLED = (process.env.REDIRECT_ENABLED || 'true').toLowerCase() === 'true';
-const REDIRECT_FROM_HOSTS = (process.env.REDIRECT_FROM_HOSTS || 'msu-snd-rgms.onrender.com')
+// DISABLED by default to prevent redirect loops - enable via REDIRECT_ENABLED=true env var
+const REDIRECT_ENABLED = (process.env.REDIRECT_ENABLED || 'false').toLowerCase() === 'true';
+const REDIRECT_FROM_HOSTS = (process.env.REDIRECT_FROM_HOSTS || '')
     .split(',')
     .map(h => h.trim().toLowerCase())
     .filter(Boolean);
-const REDIRECT_TARGET_HOST = process.env.REDIRECT_TARGET_HOST || 'msu-snd-rgms-jcsg.onrender.com';
+const REDIRECT_TARGET_HOST = process.env.REDIRECT_TARGET_HOST || '';
 
 app.use((req, res, next) => {
     if (!REDIRECT_ENABLED) return next();
     if (req.path === '/health') return next();
+    if (!REDIRECT_TARGET_HOST || REDIRECT_FROM_HOSTS.length === 0) return next();
     const host = ((req.headers['x-forwarded-host'] || req.headers.host || '') + '').toLowerCase();
     if (REDIRECT_FROM_HOSTS.includes(host)) {
         const proto = (req.headers['x-forwarded-proto'] || 'https') + '';
@@ -437,7 +439,7 @@ app.use((err, req, res, next) => {
 // --- RENDER FREE TIER SELF-PING KEEP-ALIVE ---
 // Pings the server periodically to prevent inactivity spin-down
 const KEEP_ALIVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const TARGET_URL = process.env.RENDER_EXTERNAL_URL || 'https://msu-snd-rgms-jcsg.onrender.com';
+const TARGET_URL = process.env.RENDER_EXTERNAL_URL || 'https://msu-snd-rgms-1.onrender.com';
 
 function startKeepAlive() {
     console.log(`[KeepAlive] Service configured to ping ${TARGET_URL} every ${KEEP_ALIVE_INTERVAL / 60000} minutes.`);
