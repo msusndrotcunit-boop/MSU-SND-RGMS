@@ -15,8 +15,19 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS - Allow all hosts for now (will be restricted later)
-ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS - Get from environment variable or use defaults
+ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+else:
+    # Default allowed hosts for Render deployment
+    ALLOWED_HOSTS = [
+        'msu-snd-rgms-1.onrender.com',
+        'rotc-django-web.onrender.com',
+        'localhost',
+        '127.0.0.1',
+        '.onrender.com',  # Allow all Render subdomains
+    ]
 
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
