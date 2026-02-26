@@ -250,29 +250,18 @@ TESSERACT_CMD = os.environ.get('TESSERACT_CMD', '/usr/bin/tesseract')
 TESSERACT_LANGUAGES = ['eng', 'fil']  # English and Filipino
 OCR_CACHE_TTL = 86400  # Cache OCR results for 24 hours
 
-# Slow Query Logging Configuration
+# Logging Configuration - Console only (works on Render and locally)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
         'simple': {
             'format': '{levelname} {message}',
             'style': '{',
-        },
-        'json': {
-            '()': 'core.logging_formatters.JSONFormatter',
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
         },
     },
     'handlers': {
@@ -281,89 +270,36 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'api_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'api.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'json',
-        },
-        'celery_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'celery.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'json',
-        },
-        'channels_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'channels.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'json',
-        },
-        'auth_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'auth.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'json',
-        },
-        'error_file': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'errors.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 10,
-            'formatter': 'json',
-        },
-        'slow_queries': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'slow_queries.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'json',
-        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'api_file', 'error_file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.db.backends': {
-            'handlers': ['slow_queries'],
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
         'apps': {
-            'handlers': ['console', 'api_file', 'error_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'apps.authentication': {
-            'handlers': ['console', 'auth_file', 'error_file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'celery': {
-            'handlers': ['console', 'celery_file', 'error_file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'channels': {
-            'handlers': ['console', 'channels_file', 'error_file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
     },
     'root': {
-        'handlers': ['console', 'error_file'],
+        'handlers': ['console'],
         'level': 'INFO',
     },
 }

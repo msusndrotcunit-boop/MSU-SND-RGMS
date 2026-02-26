@@ -57,18 +57,10 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'query_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'queries.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 3,
-            'formatter': 'verbose',
-        },
     },
     'loggers': {
         'django.db.backends': {
-            'handlers': ['console', 'query_file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
