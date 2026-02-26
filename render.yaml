@@ -1,17 +1,30 @@
 services:
-  # Django Web Service (WSGI)
+  # Monorepo Web Service (Django Backend + React Frontend)
   - type: web
     name: MSU-SND-RGMS-1
     env: python
     region: oregon
     plan: starter
-    rootDir: rotc_backend
     buildCommand: |
+      # Install Python dependencies
+      cd rotc_backend
       pip install --upgrade pip
       pip install -r requirements.txt
+      
+      # Build React frontend
+      cd ../client
+      npm install
+      npm run build
+      
+      # Copy built frontend to Django static files
+      cd ../rotc_backend
+      mkdir -p staticfiles
+      cp -r ../client/dist/* staticfiles/
+      
+      # Collect Django static files and run migrations
       python manage.py collectstatic --noinput
       python manage.py migrate --noinput
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

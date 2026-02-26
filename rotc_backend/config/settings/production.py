@@ -71,8 +71,11 @@ CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS', '')
 if CORS_ALLOWED_ORIGINS_ENV:
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(',') if origin.strip()]
 else:
-    # Default CORS origins for production
-    CORS_ALLOWED_ORIGINS = ['https://msu-snd-rgms-1.onrender.com']
+    # Default CORS origins for production - allow both backend and frontend
+    CORS_ALLOWED_ORIGINS = [
+        'https://msu-snd-rgms-1.onrender.com',
+        'https://msu-snd-rgms-frontend.onrender.com',
+    ]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -106,6 +109,23 @@ SECURE_HSTS_PRELOAD = True
 # Static files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Templates for serving React frontend
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'staticfiles'],  # Serve React index.html from staticfiles
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 # Use Cloudinary for media file storage in production
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

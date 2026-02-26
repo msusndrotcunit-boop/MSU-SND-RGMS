@@ -15,7 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.generic import TemplateView
+from django.conf import settings
+from django.conf.urls.static import static
 from apps.system.views.root import api_root
 
 # API v1 patterns
@@ -35,8 +38,8 @@ api_v1_patterns = [
 ]
 
 urlpatterns = [
-    # Root endpoint
-    path('', api_root, name='api-root'),
+    # API root endpoint (JSON response)
+    path('api/', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     # API v1 with versioning
     path('api/v1/', include(api_v1_patterns)),
@@ -54,3 +57,12 @@ urlpatterns = [
     path('api/reports/', include('apps.reports.urls')),
     path('api/', include('apps.integration.urls')),
 ]
+
+# Serve React frontend for all non-API routes
+urlpatterns += [
+    re_path(r'^(?!api/).*$', TemplateView.as_view(template_name='index.html'), name='frontend'),
+]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
