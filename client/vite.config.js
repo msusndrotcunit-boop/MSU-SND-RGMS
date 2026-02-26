@@ -8,7 +8,7 @@ export default defineConfig({
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version)
   },
-  base: '/',
+  base: '/static/',
   plugins: [
     react(),
     VitePWA({
