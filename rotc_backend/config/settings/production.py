@@ -18,20 +18,18 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 # ALLOWED_HOSTS - Get from environment variable or use defaults
 ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', '')
 if ALLOWED_HOSTS_ENV:
+    # Parse comma-separated hosts from environment variable
     ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+    # Always add wildcard as fallback
+    if '*' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('*')
 else:
-    # Default allowed hosts for Render deployment
-    # Using wildcard for Render subdomains to ensure deployment works
-    ALLOWED_HOSTS = [
-        '*',  # Allow all hosts temporarily for deployment
-        'msu-snd-rgms-1.onrender.com',
-        'rotc-django-web.onrender.com',
-        'localhost',
-        '127.0.0.1',
-    ]
+    # Default: Allow all hosts for deployment
+    ALLOWED_HOSTS = ['*']
 
 # Debug: Print ALLOWED_HOSTS to logs
 print(f"[SETTINGS] ALLOWED_HOSTS configured as: {ALLOWED_HOSTS}")
+print(f"[SETTINGS] ALLOWED_HOSTS_ENV from environment: '{ALLOWED_HOSTS_ENV}'")
 
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
