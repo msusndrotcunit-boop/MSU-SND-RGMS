@@ -178,7 +178,7 @@ CACHES = {
                 'max_connections': 100,
                 'retry_on_timeout': True,
             },
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            # Removed HiredisParser - not available in all Redis installations
         },
         'KEY_PREFIX': CACHE_KEY_PREFIX,
     }
