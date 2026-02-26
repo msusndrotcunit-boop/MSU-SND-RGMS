@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.system.views.frontend import serve_react_app
+from apps.system.views_frontend.frontend import serve_react_app
 
 # API v1 patterns
 api_v1_patterns = [
