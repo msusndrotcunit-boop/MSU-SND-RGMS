@@ -15,7 +15,23 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS configuration
+# Supports comma-separated list from environment variable
+# Automatically includes Render.com domains
+allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
+if allowed_hosts_env:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
+else:
+    ALLOWED_HOSTS = []
+
+# Always allow Render.com domains
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Fallback for common patterns
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['*']  # Allow all hosts if nothing is configured (not recommended for production)
 
 # Database - PostgreSQL for production with connection pooling
 DATABASES = {
