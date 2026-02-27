@@ -166,7 +166,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': os.environ.get('SECRET_KEY', 'your-secret-key-here'),
+    'SIGNING_KEY': os.environ.get('SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY', 'your-secret-key-here'),
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
