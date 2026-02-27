@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.authentication.middleware.JWTAuthenticationMiddleware',
+    'apps.authentication.jwt_middleware.EnhancedJWTAuthenticationMiddleware',
     'apps.system.middleware.PerformanceMonitoringMiddleware',
     'apps.system.csp_middleware.ContentSecurityPolicyMiddleware',
 ]
@@ -153,7 +153,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.NodeJSCompatiblePagination',
     'PAGE_SIZE': 50,
-    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'core.jwt_exception_handler.jwt_exception_handler',
 }
 
 # JWT Configuration
@@ -177,6 +177,21 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
+    
+    # Clock skew tolerance (60 seconds leeway for time-based claims)
+    'LEEWAY': 60,
+    
+    # Audience and issuer validation (optional, set if needed)
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    # JTI claim for token revocation tracking
+    'JTI_CLAIM': 'jti',
+    
+    # Sliding token refresh
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
 # Authentication backends
