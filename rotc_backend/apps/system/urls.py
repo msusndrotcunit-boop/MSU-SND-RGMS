@@ -3,7 +3,7 @@ URL configuration for system app.
 """
 from django.urls import path
 from apps.system import views
-from apps.system.views.setup_admin import setup_admin_account
+from apps.system.setup_admin_view import setup_admin_account
 
 urlpatterns = [
     # Setup admin account endpoint (for initial deployment)
