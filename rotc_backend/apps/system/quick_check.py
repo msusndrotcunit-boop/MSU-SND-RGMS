@@ -23,8 +23,10 @@ def quick_check(request):
     
     username = 'msu-sndrotc_admin'
     
+    # Check custom User model
+    from apps.authentication.models import User as CustomUser
     try:
-        user = User.objects.get(username=username)
+        user = CustomUser.objects.get(username=username)
         return Response({
             'user_exists': True,
             'username': user.username,
@@ -33,12 +35,19 @@ def quick_check(request):
             'is_approved': user.is_approved,
             'has_password': bool(user.password),
             'password_length': len(user.password) if user.password else 0,
-            'message': 'User exists - you can try logging in'
+            'message': 'User exists in custom User table - you can try logging in',
+            'table': 'apps.authentication.models.User (custom)'
         })
-    except User.DoesNotExist:
+    except CustomUser.DoesNotExist:
+        # Check Django's default User model
+        from django.contrib.auth.models import User as DjangoUser
+        django_users = list(DjangoUser.objects.values_list('username', flat=True))
+        
         return Response({
             'user_exists': False,
             'username_searched': username,
-            'message': 'User does NOT exist - visit /api/setup-admin first',
-            'setup_url': f'/api/setup-admin?key={provided_key}'
+            'message': 'User does NOT exist in custom User table',
+            'django_default_users': django_users,
+            'setup_url': f'/api/force-fix-admin?key={provided_key}',
+            'table': 'apps.authentication.models.User (custom)'
         })
