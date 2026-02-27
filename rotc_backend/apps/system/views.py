@@ -3,7 +3,9 @@ Views for system settings and admin endpoints.
 """
 import json
 import time
+import logging
 from django.http import StreamingHttpResponse
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -21,6 +23,8 @@ from core.cache import (
     get_cache_stats,
     clear_all_cache,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -293,8 +297,6 @@ def event_stream_generator(user, last_event_id=None):
         
         except Exception as e:
             # Log error and continue
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in SSE stream: {e}")
             time.sleep(5)
 
