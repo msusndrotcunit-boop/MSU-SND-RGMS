@@ -21,7 +21,7 @@ class ContentSecurityPolicyMiddleware:
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https: blob: https://res.cloudinary.com",
-            "connect-src 'self' https://res.cloudinary.com wss: ws:",
+            "connect-src 'self' https://res.cloudinary.com https://cdn.jsdelivr.net wss: ws:",
             "media-src 'self' https://res.cloudinary.com",
             "object-src 'none'",
             "frame-ancestors 'none'",

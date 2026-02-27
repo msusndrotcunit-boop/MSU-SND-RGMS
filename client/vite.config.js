@@ -17,6 +17,9 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       manifestFilename: 'manifest.json',
+      injectManifest: {
+        injectionPoint: undefined
+      },
       devOptions: {
         enabled: true,
         type: 'module',
