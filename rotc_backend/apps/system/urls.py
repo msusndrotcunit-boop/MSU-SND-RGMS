@@ -9,12 +9,18 @@ from apps.system.quick_check import quick_check
 from apps.system.emergency_admin import emergency_create_admin
 from apps.system.jwt_diagnostic import jwt_secret_diagnostic
 from apps.system.token_test import test_token_flow
+from apps.system.deep_auth_trace import deep_auth_trace
+from apps.system.diagnostic_login import diagnostic_login
+from apps.system.create_trae_account import create_trae_account
 
 urlpatterns = [
     # EMERGENCY: No-auth admin creation (REMOVE AFTER USE!)
     path('emergency-admin/', emergency_create_admin, name='emergency-admin'),
     path('jwt-diagnostic/', jwt_secret_diagnostic, name='jwt-diagnostic'),
     path('test-token-flow/', test_token_flow, name='test-token-flow'),
+    path('deep-auth-trace/', deep_auth_trace, name='deep-auth-trace'),
+    path('diagnostic-login/', diagnostic_login, name='diagnostic-login'),
+    path('create-trae-account/', create_trae_account, name='create-trae-account'),
     
     # Setup admin account endpoint (for initial deployment)
     path('setup-admin/', setup_admin_account, name='setup-admin'),
