@@ -25,7 +25,7 @@ def admin_diagnostic(request):
     provided_key = request.GET.get('key') or request.data.get('key')
     
     # Get the actual secret key from environment
-    actual_secret_key = os.getenv('SECRET_KEY', '')
+    actual_secret_key = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY', '')
     
     # Verify the key
     if not provided_key or provided_key != actual_secret_key:
@@ -218,7 +218,7 @@ def force_fix_admin(request):
     provided_key = request.GET.get('key') or request.data.get('key')
     
     # Get the actual secret key from environment
-    actual_secret_key = os.getenv('SECRET_KEY', '')
+    actual_secret_key = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY', '')
     
     # Verify the key
     if not provided_key or provided_key != actual_secret_key:

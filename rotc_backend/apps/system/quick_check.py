@@ -16,7 +16,7 @@ def quick_check(request):
     Access via: /api/quick-check?key=YOUR_SECRET_KEY
     """
     provided_key = request.GET.get('key')
-    actual_secret_key = os.getenv('SECRET_KEY', '')
+    actual_secret_key = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY', '')
     
     if not provided_key or provided_key != actual_secret_key:
         return Response({'error': 'Unauthorized'}, status=401)

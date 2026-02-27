@@ -17,15 +17,15 @@ import os
 def setup_admin_account(request):
     """
     Create or reset the admin account.
-    Requires SECRET_KEY environment variable to match for security.
+    Requires SECRET_KEY or DJANGO_SECRET_KEY environment variable to match for security.
     
     Access via: /api/setup-admin?key=YOUR_SECRET_KEY
     """
     # Get the secret key from query params or request body
     provided_key = request.GET.get('key') or request.data.get('key')
     
-    # Get the actual secret key from environment
-    actual_secret_key = os.getenv('SECRET_KEY', '')
+    # Get the actual secret key from environment (try both SECRET_KEY and DJANGO_SECRET_KEY)
+    actual_secret_key = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY', '')
     
     # Verify the key
     if not provided_key or provided_key != actual_secret_key:
@@ -102,15 +102,15 @@ def setup_admin_account(request):
 def unlock_admin_account(request):
     """
     Unlock the admin account if it's been locked due to failed login attempts.
-    Requires SECRET_KEY environment variable to match for security.
+    Requires SECRET_KEY or DJANGO_SECRET_KEY environment variable to match for security.
     
     Access via: /api/unlock-admin?key=YOUR_SECRET_KEY
     """
     # Get the secret key from query params or request body
     provided_key = request.GET.get('key') or request.data.get('key')
     
-    # Get the actual secret key from environment
-    actual_secret_key = os.getenv('SECRET_KEY', '')
+    # Get the actual secret key from environment (try both SECRET_KEY and DJANGO_SECRET_KEY)
+    actual_secret_key = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY', '')
     
     # Verify the key
     if not provided_key or provided_key != actual_secret_key:
