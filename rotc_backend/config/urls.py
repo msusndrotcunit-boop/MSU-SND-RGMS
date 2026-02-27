@@ -60,7 +60,18 @@ urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+# Add specific route for manifest.json at root
+from django.views.static import serve as static_serve
+import os
+
+urlpatterns += [
+    path('manifest.json', static_serve, {
+        'document_root': settings.STATIC_ROOT,
+        'path': 'manifest.json'
+    }, name='manifest'),
+]
+
 # Serve React frontend for all non-API, non-static routes (MUST BE LAST)
 urlpatterns += [
-    re_path(r'^(?!api/|admin/|static/|media/).*$', serve_react_app, name='frontend'),
+    re_path(r'^(?!api/|admin/|static/|media/|manifest\.json).*$', serve_react_app, name='frontend'),
 ]
