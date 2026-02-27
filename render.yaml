@@ -37,6 +37,10 @@ services:
       
       # Run migrations
       python manage.py migrate --noinput
+      
+      # Create/reset admin account
+      echo "Creating admin account..."
+      python manage.py create_admin
     startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
