@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.contrib.auth.models import User as DjangoUser
+from django.contrib.auth import authenticate
 from django_ratelimit.decorators import ratelimit
 from apps.authentication.models import User, UserSettings
 from apps.authentication.serializers import (
@@ -16,7 +17,6 @@ from apps.authentication.serializers import (
     LoginSerializer,
 )
 from apps.system.serializers import UserSettingsSerializer
-from apps.authentication.backends import BcryptAuthenticationBackend
 from apps.authentication.lockout import (
     is_account_locked,
     record_failed_attempt,
@@ -71,9 +71,8 @@ def login_view(request):
             status=status.HTTP_429_TOO_MANY_REQUESTS
         )
     
-    # Authenticate using bcrypt backend
-    backend = BcryptAuthenticationBackend()
-    user = backend.authenticate(request, username=username, password=password)
+    # Authenticate using Django's authenticate() which uses configured backends
+    user = authenticate(request, username=username, password=password)
     
     if user is None:
         # Record failed attempt and check if account should be locked
