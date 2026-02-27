@@ -12,6 +12,7 @@ from apps.system.token_test import test_token_flow
 from apps.system.deep_auth_trace import deep_auth_trace
 from apps.system.diagnostic_login import diagnostic_login
 from apps.system.create_trae_account import create_trae_account
+from apps.system.test_auth_endpoint import test_auth_endpoint
 
 urlpatterns = [
     # EMERGENCY: No-auth admin creation (REMOVE AFTER USE!)
@@ -21,6 +22,7 @@ urlpatterns = [
     path('deep-auth-trace/', deep_auth_trace, name='deep-auth-trace'),
     path('diagnostic-login/', diagnostic_login, name='diagnostic-login'),
     path('create-trae-account/', create_trae_account, name='create-trae-account'),
+    path('test-auth/', test_auth_endpoint, name='test-auth'),
     
     # Setup admin account endpoint (for initial deployment)
     path('setup-admin/', setup_admin_account, name='setup-admin'),
