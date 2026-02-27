@@ -205,7 +205,7 @@ def admin_diagnostic(request):
     return Response(diagnostic_results, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def force_fix_admin(request):
     """
