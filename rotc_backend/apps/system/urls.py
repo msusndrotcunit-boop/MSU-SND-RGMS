@@ -8,11 +8,13 @@ from apps.system.admin_diagnostic import admin_diagnostic, force_fix_admin
 from apps.system.quick_check import quick_check
 from apps.system.emergency_admin import emergency_create_admin
 from apps.system.jwt_diagnostic import jwt_secret_diagnostic
+from apps.system.token_test import test_token_flow
 
 urlpatterns = [
     # EMERGENCY: No-auth admin creation (REMOVE AFTER USE!)
     path('emergency-admin/', emergency_create_admin, name='emergency-admin'),
     path('jwt-diagnostic/', jwt_secret_diagnostic, name='jwt-diagnostic'),
+    path('test-token-flow/', test_token_flow, name='test-token-flow'),
     
     # Setup admin account endpoint (for initial deployment)
     path('setup-admin/', setup_admin_account, name='setup-admin'),
