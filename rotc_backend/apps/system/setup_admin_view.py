@@ -39,7 +39,7 @@ def setup_admin_account(request):
     # Admin credentials
     username = 'msu-sndrotc_admin'
     password = 'admingrading@2026'
-    email = 'admin@msu-snd-rotc.edu'
+    email = 'msusndrotcunit@gmail.com'
     
     try:
         # Hash the password using bcrypt
