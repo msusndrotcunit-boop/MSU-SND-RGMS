@@ -132,7 +132,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.authentication.middleware.JWTAuthenticationMiddleware',
+    'apps.authentication.jwt_middleware.EnhancedJWTAuthenticationMiddleware',
     'apps.system.middleware.PerformanceMonitoringMiddleware',
     'apps.system.csp_middleware.ContentSecurityPolicyMiddleware',
 ]

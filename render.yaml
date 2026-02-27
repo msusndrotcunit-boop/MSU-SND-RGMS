@@ -1,97 +1,58 @@
 services:
-  # Full-Stack Web Service (Django + React Frontend)
+  # Django Backend Service
   - type: web
-    name: MSU-SND-RGMS-1
-    env: python
+    name: msu-snd-rgms-backend
+    runtime: python
+    plan: free
     region: oregon
-    plan: starter
     buildCommand: |
-      # Install Python dependencies
       cd rotc_backend
       pip install --upgrade pip
       pip install -r requirements.txt
-      
-      # Frontend is pre-built and committed to frontend_build/
-      # Verify it exists
-      if [ ! -f "frontend_build/index.html" ]; then
-        echo "ERROR: Pre-built frontend not found in frontend_build/"
-        ls -la
-        exit 1
-      fi
-      
-      echo "✓ Pre-built frontend found in frontend_build/"
-      echo "Files in frontend_build:"
-      ls -la frontend_build/ | head -20
-      echo "Files in frontend_build/assets:"
-      ls -la frontend_build/assets/ | head -10
-      
-      # Collect Django static files (will copy from frontend_build to staticfiles)
-      echo "Running collectstatic..."
-      python manage.py collectstatic --noinput --clear
-      
-      echo "✓ Static files collected"
-      echo "Files in staticfiles:"
-      ls -la staticfiles/ | head -20
-      echo "Files in staticfiles/assets:"
-      ls -la staticfiles/assets/ | head -10
-      
-      # Run migrations
-      python manage.py migrate --noinput
-      
-      # Create/reset admin account
-      echo "Creating admin account..."
-      python manage.py create_admin
-    startCommand: cd rotc_backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+      python manage.py collectstatic --no-input --settings=config.settings.production
+      python manage.py migrate --no-input --settings=config.settings.production
+    startCommand: |
+      cd rotc_backend
+      daphne -b 0.0.0.0 -p $PORT config.asgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
-      - key: DJANGO_ENV
-        value: production
-      - key: DEBUG
-        value: false
-      - key: SECRET_KEY
+      - key: DJANGO_SECRET_KEY
         generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: msu-snd-rgms-1.onrender.com,localhost,127.0.0.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msu-snd-rgms-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: msu-snd-rgms-redis
+          property: connectionString
       - key: CORS_ALLOWED_ORIGINS
         value: https://msu-snd-rgms-1.onrender.com
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      - key: CELERY_BROKER_URL
-        sync: false
-      - key: CELERY_RESULT_BACKEND
-        sync: false
-    healthCheckPath: /api/health
+    healthCheckPath: /api/health/
     autoDeploy: true
 
-  # Keep-Alive Cron Job
-  - type: cron
-    name: MSU-SND-RGMS-KeepAlive
-    env: python
+databases:
+  - name: msu-snd-rgms-db
+    databaseName: rotc_db
+    user: rotc_user
+    plan: free
     region: oregon
-    plan: starter
-    schedule: "*/10 * * * *"  # Every 10 minutes
-    buildCommand: |
-      cd rotc_backend
-      pip install --upgrade pip
-      pip install -r requirements.txt
-    startCommand: cd rotc_backend && python manage.py keep_alive
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings.production
-      - key: DJANGO_ENV
-        value: production
-      - key: SECRET_KEY
-        sync: false
-      - key: DATABASE_URL
-        sync: false
+
+  - name: msu-snd-rgms-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction
