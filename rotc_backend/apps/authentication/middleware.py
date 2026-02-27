@@ -21,11 +21,12 @@ class JWTAuthenticationMiddleware:
         try:
             auth_result = self.jwt_auth.authenticate(request)
             if auth_result is not None:
-                user, token = auth_result
-                # Fetch the actual User from our custom model
+                django_user, token = auth_result
+                # Fetch the actual User from our custom model using username
                 try:
-                    auth_user = User.objects.get(id=user.id)
-                    request.auth_user = auth_user
+                    custom_user = User.objects.get(username=django_user.username)
+                    request.user = custom_user  # Set request.user to custom User
+                    request.auth_user = custom_user
                 except User.DoesNotExist:
                     pass
         except (AuthenticationFailed, Exception):

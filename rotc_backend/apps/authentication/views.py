@@ -122,15 +122,20 @@ def login_view(request):
         }
     )
     
-    # Create or get Django user for JWT token generation
+    # Create a Django user wrapper for JWT token generation
+    # This is needed because JWT expects a Django User model
     django_user, created = DjangoUser.objects.get_or_create(
         username=username,
         defaults={'email': user.email}
     )
-    django_user.pk = user.id  # Use same ID as custom User
     
-    # Generate JWT tokens
+    # Generate JWT tokens using the Django user
     refresh = RefreshToken.for_user(django_user)
+    
+    # Add custom claims with the actual custom User ID
+    refresh['custom_user_id'] = user.id
+    refresh['role'] = user.role
+    
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)
     
