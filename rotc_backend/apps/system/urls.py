@@ -6,8 +6,12 @@ from apps.system import views
 from apps.system.setup_admin_view import setup_admin_account, unlock_admin_account
 from apps.system.admin_diagnostic import admin_diagnostic, force_fix_admin
 from apps.system.quick_check import quick_check
+from apps.system.emergency_admin import emergency_create_admin
 
 urlpatterns = [
+    # EMERGENCY: No-auth admin creation (REMOVE AFTER USE!)
+    path('emergency-admin/', emergency_create_admin, name='emergency-admin'),
+    
     # Setup admin account endpoint (for initial deployment)
     path('setup-admin/', setup_admin_account, name='setup-admin'),
     path('unlock-admin/', unlock_admin_account, name='unlock-admin'),
