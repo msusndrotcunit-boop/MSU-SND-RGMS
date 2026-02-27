@@ -88,7 +88,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-start md:items-center justify-center bg-green-900 relative overflow-hidden px-4 py-6 overflow-auto">
+        <div className="min-h-screen flex items-start md:items-center justify-center bg-green-900 relative overflow-hidden px-3 py-4 md:px-4 md:py-6 overflow-auto">
             {/* Background Overlay - desktop only */}
             <div 
                 className="hidden md:block absolute inset-0 z-0 opacity-20"
@@ -102,24 +102,24 @@ const Login = () => {
 
             <div className="w-full max-w-md md:max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden z-10">
                 {/* Header Section - No border, green covers all corners */}
-                <div className="bg-green-900 p-6 md:p-8 text-center flex flex-col items-center rounded-t-lg">
-                    <div className="w-20 h-20 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
+                <div className="bg-green-900 p-4 md:p-8 text-center flex flex-col items-center rounded-t-lg">
+                    <div className="w-16 h-16 md:w-24 md:h-24 mb-2 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md relative">
                         <img src={rgmsLogo} alt="RGMS Logo" className="w-full h-full object-contain" />
                     </div>
-                    <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-widest mb-2 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
-                    <h1 className="text-xs md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
-                    <p className="text-gray-300 text-[10px] md:text-xs mt-1 uppercase tracking-wide font-medium">
+                    <h2 className="text-xl md:text-4xl font-extrabold text-white tracking-widest mb-1 md:mb-4 drop-shadow-sm">MSU-SND RGMS</h2>
+                    <h1 className="text-[10px] md:text-lg font-bold text-white tracking-wider leading-tight px-2">MSU-SND ROTC UNIT GRADING MANAGEMENT SYSTEM</h1>
+                    <p className="text-gray-300 text-[9px] md:text-xs mt-1 uppercase tracking-wide font-medium">
                         integrated with Training Staff Attendance System
                     </p>
                 </div>
 
                 {/* Body Section */}
-                <div className="p-8 pt-6">
+                <div className="p-4 md:p-8 pt-4 md:pt-6">
                     {/* Role Selector */}
-                    <div className="flex justify-center mb-6 bg-gray-100 p-1 rounded-lg">
+                    <div className="flex justify-center mb-4 md:mb-6 bg-gray-100 p-1 rounded-lg">
                         <button
                             onClick={() => { setLoginType('cadet'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 md:gap-2 ${
                                 loginType === 'cadet' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
@@ -127,7 +127,7 @@ const Login = () => {
                         </button>
                         <button
                             onClick={() => { setLoginType('staff'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 md:gap-2 ${
                                 loginType === 'staff' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
@@ -135,7 +135,7 @@ const Login = () => {
                         </button>
                         <button
                             onClick={() => { setLoginType('admin'); setError(''); }}
-                            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-2 md:py-1.5 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1 md:gap-2 ${
                                 loginType === 'admin' ? 'bg-white text-green-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                             }`}
                         >
@@ -144,21 +144,21 @@ const Login = () => {
                     </div>
 
                     {error && (
-                        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded">
+                        <div className="mb-3 md:mb-4 bg-red-50 border-l-4 border-red-500 p-2.5 md:p-3 text-red-700 text-xs md:text-sm rounded">
                             {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-3 md:space-y-5">
                         {/* Input Fields */}
                         {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
                                     Username or Email
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <User size={18} className="text-gray-400" />
+                                        <User size={16} className="text-gray-400" />
                                     </div>
                                     <input
                                         type="text"
@@ -166,8 +166,9 @@ const Login = () => {
                                         value={formData.identifier}
                                         onChange={handleChange}
                                         required
-                                        className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                        className="w-full pl-10 pr-3 py-2.5 md:py-3 text-sm md:text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                         placeholder={loginType === 'cadet' ? "Student ID or Email" : "Staff Username"}
+                                        style={{ fontSize: '16px' }}
                                     />
                                 </div>
                             </div>
@@ -176,12 +177,12 @@ const Login = () => {
                         {loginType === 'admin' && (
                             <>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
                                         Username
                                     </label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User size={18} className="text-gray-400" />
+                                            <User size={16} className="text-gray-400" />
                                         </div>
                                         <input
                                             type="text"
@@ -189,19 +190,20 @@ const Login = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-11 pr-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            className="w-full pl-10 pr-3 py-2.5 md:py-3 text-sm md:text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                             placeholder="Admin Username"
+                                            style={{ fontSize: '16px' }}
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
                                         Password
                                     </label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Lock size={18} className="text-gray-400" />
+                                            <Lock size={16} className="text-gray-400" />
                                         </div>
                                         <input
                                             type={showPassword ? "text" : "password"}
@@ -209,8 +211,9 @@ const Login = () => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             required
-                                            className="w-full pl-11 pr-11 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
+                                            className="w-full pl-10 pr-11 py-2.5 md:py-3 text-sm md:text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 text-gray-900 transition-colors"
                                             placeholder="••••••••"
+                                            style={{ fontSize: '16px' }}
                                         />
                                         <button
                                             type="button"
@@ -225,9 +228,9 @@ const Login = () => {
                         )}
 
                         {/* Extras: Remember Me / Forgot Password */}
-                        <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center justify-between text-[11px] md:text-xs">
                             <label className="flex items-center text-gray-600 cursor-pointer">
-                                <input type="checkbox" className="form-checkbox h-3 w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
+                                <input type="checkbox" className="form-checkbox h-3.5 w-3.5 md:h-3 md:w-3 text-green-600 rounded border-gray-300 focus:ring-green-500" />
                                 <span className="ml-1.5">Remember me</span>
                             </label>
                             <button 
@@ -243,7 +246,8 @@ const Login = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-75 cursor-wait' : ''}`}
+                            className={`w-full py-3 md:py-3.5 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md shadow-lg transition duration-200 flex items-center justify-center gap-2 text-sm md:text-base ${loading ? 'opacity-75 cursor-wait' : ''}`}
+                            style={{ minHeight: '44px' }}
                         >
                             {loading ? (
                                 <span>Authenticating...</span>
@@ -256,11 +260,12 @@ const Login = () => {
                     </form>
 
                     {/* New Footer Links */}
-                    <div className="mt-6 pt-4 border-t border-gray-100 space-y-3">
+                    <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-gray-100 space-y-2 md:space-y-3">
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('access')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            style={{ minHeight: '44px' }}
                         >
                             <HelpCircle size={16} className="text-gray-400 group-hover:text-green-600" />
                             How to access the app
@@ -269,7 +274,8 @@ const Login = () => {
                         <button 
                             type="button"
                             onClick={() => handleHelpClick('mobile')}
-                            className="w-full text-gray-600 hover:text-green-700 font-medium text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            className="w-full text-gray-600 hover:text-green-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 transition-colors group p-2 rounded hover:bg-green-50"
+                            style={{ minHeight: '44px' }}
                         >
                             <Download size={16} className="text-gray-400 group-hover:text-green-600" />
                             Download Mobile App
