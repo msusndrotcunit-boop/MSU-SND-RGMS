@@ -555,74 +555,319 @@ function ActionButtons() {
 
 ## Correctness Properties
 
-### Universal Quantification Statements
+*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-**Property 1: Touch Target Compliance**
-```
-∀ element ∈ InteractiveElements:
-  (element.isMobile ∧ element.isInteractive) ⟹ 
-  (element.width >= 44px ∧ element.height >= 44px)
-```
-All interactive elements on mobile devices must have minimum dimensions of 44x44 pixels to comply with WCAG 2.1 Level AAA guidelines.
+### Property 1: Breakpoint Determinism
 
-**Property 2: Responsive Spacing Consistency**
-```
-∀ component ∈ Components:
-  ∀ breakpoint ∈ {mobile, tablet, desktop}:
-    spacing(component, breakpoint) = spacingConfig[breakpoint][component.spacingType]
-```
-All components must use consistent spacing values based on their breakpoint and spacing type.
+*For any* viewport width, calculating the breakpoint twice with the same width should always produce the same result, and the result should be 'mobile' for width < 768px, 'tablet' for 768px ≤ width < 1024px, and 'desktop' for width ≥ 1024px.
 
-**Property 3: Typography Zoom Prevention**
-```
-∀ input ∈ FormInputs:
-  (input.isMobile ∧ input.platform = 'iOS') ⟹ 
-  input.fontSize >= 16px
-```
-All form inputs on iOS mobile devices must have font size of at least 16px to prevent automatic zoom on focus.
+**Validates: Requirements 1.1, 1.2, 1.3**
 
-**Property 4: Keyboard Visibility Handling**
-```
-∀ form ∈ Forms:
-  (form.isMobile ∧ keyboardVisible) ⟹ 
-  form.paddingBottom >= keyboardHeight
-```
-All forms on mobile devices must adjust bottom padding when keyboard is visible to prevent content obstruction.
+### Property 2: Touch Target Minimum Dimensions
 
-**Property 5: Safe Area Inset Compliance**
-```
-∀ layout ∈ FullScreenLayouts:
-  (layout.platform ∈ {iOS, Android}) ⟹ 
-  (layout.padding.top >= safeAreaInsets.top ∧
-   layout.padding.bottom >= safeAreaInsets.bottom)
-```
-All full-screen layouts must respect device safe area insets (notches, home indicators).
+*For any* interactive element displayed on a mobile device, the element should have both width and height of at least 44 pixels to meet WCAG 2.1 Level AAA accessibility requirements.
 
-**Property 6: Breakpoint Consistency**
-```
-∀ viewport ∈ Viewports:
-  calculateBreakpoint(viewport.width) = 
-    if viewport.width < 768 then 'mobile'
-    else if viewport.width < 1024 then 'tablet'
-    else 'desktop'
-```
-Breakpoint calculation must be consistent and deterministic based on viewport width.
+**Validates: Requirements 2.1, 2.2, 19.1**
 
-**Property 7: Modal Responsiveness**
-```
-∀ modal ∈ Modals:
-  (modal.isMobile) ⟹ 
-  (modal.width = '100vw' ∧ modal.height = '100vh' ∧ modal.borderRadius = 0)
-```
-All modals on mobile devices must be full-screen for optimal usability.
+### Property 3: Touch Target Adjustment
 
-**Property 8: Table-to-Card Transformation**
-```
-∀ table ∈ DataTables:
-  (table.isMobile ∧ table.columns.length > 3) ⟹ 
-  table.renderMode = 'card'
-```
-All data tables with more than 3 columns must render as cards on mobile devices.
+*For any* touch target with dimensions below the minimum size, applying the touch target adjustment should result in dimensions of at least 44x44 pixels through padding or size adjustments.
+
+**Validates: Requirement 2.4**
+
+### Property 4: Adjacent Element Spacing
+
+*For any* pair of adjacent interactive elements on mobile, the spacing between them should be at least 8 pixels to prevent accidental taps.
+
+**Validates: Requirement 2.3**
+
+### Property 5: iOS Form Input Font Size
+
+*For any* form input displayed on an iOS mobile device, the font size should be at least 16 pixels to prevent automatic browser zoom on focus.
+
+**Validates: Requirements 3.1, 11.6**
+
+### Property 6: Keyboard Layout Adjustment
+
+*For any* form container on mobile when the keyboard is visible, the bottom padding should be adjusted to at least the keyboard height to keep inputs visible.
+
+**Validates: Requirement 10.3**
+
+### Property 7: Spacing Configuration Ranges
+
+*For any* component at a given breakpoint, the spacing values should fall within the configured range for that breakpoint: mobile (8-32px), tablet (12-48px), desktop (16-64px).
+
+**Validates: Requirements 4.1, 4.2, 4.3**
+
+### Property 8: Spacing Monotonicity
+
+*For any* spacing size level (xs, sm, md, lg, xl), the spacing value should increase or stay the same as the breakpoint increases from mobile to tablet to desktop.
+
+**Validates: Requirements 4.1, 4.2, 4.3**
+
+### Property 9: Nested Component Spacing Consistency
+
+*For any* nested component structure, the spacing ratios between parent and child elements should remain consistent regardless of the breakpoint.
+
+**Validates: Requirement 4.5**
+
+### Property 10: Typography Scaling
+
+*For any* text element, the font size should match the typography configuration for the current breakpoint: mobile (h1: 24px, h2: 20px, body: 16px), tablet (h1: 32px, h2: 24px, body: 16px), desktop (h1: 40px, h2: 32px, body: 16px).
+
+**Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5**
+
+### Property 11: Line Height Minimum
+
+*For any* text element on mobile devices, the line height should be at least 1.5 times the font size for readability.
+
+**Validates: Requirement 5.6**
+
+### Property 12: Safe Area Inset Application
+
+*For any* full-screen layout on a device with safe area insets, the top padding should be at least the safe area inset top value and the bottom padding should be at least the safe area inset bottom value.
+
+**Validates: Requirements 6.1, 6.2, 6.4**
+
+### Property 13: Navigation Safe Area Positioning
+
+*For any* fixed navigation menu at the top of the screen, the top position should account for the safe area inset top value to avoid notches.
+
+**Validates: Requirement 6.5**
+
+### Property 14: Table-to-Card Transformation
+
+*For any* data table with more than 3 columns displayed on mobile, the rendering mode should be 'card' layout instead of table layout.
+
+**Validates: Requirements 7.1, 7.5**
+
+### Property 15: Card Layout Data Preservation
+
+*For any* data table transformed to card layout, all column data should be visible within each card with appropriate labels.
+
+**Validates: Requirement 7.2**
+
+### Property 16: Sorting Consistency Across Layouts
+
+*For any* data table with sorting enabled, applying the same sort should produce the same data order in both table and card layout modes.
+
+**Validates: Requirement 7.3**
+
+### Property 17: Card Layout Touch Target Compliance
+
+*For any* selectable data table in card layout mode, the checkboxes should have minimum touch target dimensions of 44x44 pixels.
+
+**Validates: Requirement 7.4**
+
+### Property 18: Card-Table Interaction Equivalence
+
+*For any* data table, tapping a row in card layout should trigger the same callback as clicking a row in table layout.
+
+**Validates: Requirement 7.6**
+
+### Property 19: Mobile Modal Full-Screen Dimensions
+
+*For any* modal dialog displayed on mobile, the width should be 100% of viewport width, height should be 100% of viewport height, and border radius should be 0 for a full-screen appearance.
+
+**Validates: Requirements 8.1, 8.2, 8.3**
+
+### Property 20: Desktop Modal Centered Layout
+
+*For any* modal dialog displayed on tablet or desktop, the modal should be centered with a maximum width of 600 pixels.
+
+**Validates: Requirement 8.4**
+
+### Property 21: Modal Close Button Touch Target
+
+*For any* modal dialog close button on mobile, the touch target dimensions should be at least 44x44 pixels.
+
+**Validates: Requirement 8.5**
+
+### Property 22: Navigation Menu Item Height
+
+*For any* navigation menu item displayed on mobile, the minimum height should be 44 pixels for touch accessibility.
+
+**Validates: Requirement 9.4**
+
+### Property 23: Mobile Menu Close Button Touch Target
+
+*For any* expanded navigation menu on mobile, the close button should have minimum touch target dimensions of 44x44 pixels.
+
+**Validates: Requirement 9.3**
+
+### Property 24: Touch-Optimized Style Application
+
+*For any* interactive element when touch input is detected, touch-optimized styles should be applied including minimum dimensions and spacing.
+
+**Validates: Requirement 11.4**
+
+### Property 25: Hover Effect Enablement
+
+*For any* interactive element when hover support is detected, hover effects should be enabled in the component styles.
+
+**Validates: Requirement 11.5**
+
+### Property 26: Button Minimum Height
+
+*For any* button displayed on mobile, the minimum height should be 44 pixels for touch accessibility.
+
+**Validates: Requirement 13.1**
+
+### Property 27: Button Vertical Stacking
+
+*For any* group of multiple buttons displayed in a row on mobile, the buttons should be stacked vertically with 12 pixels spacing between them.
+
+**Validates: Requirement 13.2**
+
+### Property 28: Button Padding Adequacy
+
+*For any* button containing icon and text on mobile, the padding around both elements should be at least 12 pixels.
+
+**Validates: Requirement 13.3**
+
+### Property 29: Destructive Button Spacing
+
+*For any* destructive action button on mobile, there should be adequate spacing from other action buttons to prevent accidental taps.
+
+**Validates: Requirement 13.4**
+
+### Property 30: Button Dimension Stability
+
+*For any* button in loading state on mobile, the button dimensions should remain constant to prevent layout shift.
+
+**Validates: Requirement 13.5**
+
+### Property 31: Mobile Form Single Column Layout
+
+*For any* form displayed on mobile, all form input elements should be rendered in a single column layout.
+
+**Validates: Requirement 14.1**
+
+### Property 32: Form Label Positioning
+
+*For any* form label on mobile, it should be positioned above the corresponding input with 8 pixels spacing.
+
+**Validates: Requirement 14.2**
+
+### Property 33: Validation Error Positioning
+
+*For any* form input with validation errors, the error message should be displayed below the input with 8 pixels spacing.
+
+**Validates: Requirement 14.3**
+
+### Property 34: Form Section Spacing
+
+*For any* form with multiple sections on mobile, sections should be separated by 24 pixels spacing.
+
+**Validates: Requirement 14.4**
+
+### Property 35: Desktop Form Multi-Column Layout
+
+*For any* form displayed on tablet or desktop, fields should be rendered in a multi-column layout where appropriate.
+
+**Validates: Requirement 14.5**
+
+### Property 36: Loading Indicator Minimum Size
+
+*For any* loading indicator displayed on mobile, the dimensions should be at least 44x44 pixels for visibility.
+
+**Validates: Requirement 15.1**
+
+### Property 37: Error Message Font Size
+
+*For any* error message displayed on mobile, the font size should be at least 16 pixels for readability.
+
+**Validates: Requirement 15.2**
+
+### Property 38: Error Message Padding
+
+*For any* error message displayed on mobile, the padding around the message should be at least 16 pixels.
+
+**Validates: Requirement 15.3**
+
+### Property 39: Toast Safe Area Positioning
+
+*For any* toast notification displayed on mobile, the position should account for safe area insets to avoid notches and home indicators.
+
+**Validates: Requirement 15.4**
+
+### Property 40: Error Message Stacking
+
+*For any* multiple error messages displayed, they should be stacked vertically with 12 pixels spacing between them.
+
+**Validates: Requirement 15.5**
+
+### Property 41: Image Width Constraint
+
+*For any* image displayed on mobile, the width should be constrained to not exceed the viewport width.
+
+**Validates: Requirement 16.1**
+
+### Property 42: Image Aspect Ratio Preservation
+
+*For any* image displayed on mobile, the aspect ratio should be maintained when the image is scaled to fit the viewport.
+
+**Validates: Requirement 16.2**
+
+### Property 43: Video Control Touch Targets
+
+*For any* video player controls displayed on mobile, each control should have minimum touch target dimensions of 44 pixels.
+
+**Validates: Requirement 16.3**
+
+### Property 44: Media Placeholder Dimensions
+
+*For any* media content loading on mobile, the placeholder should have dimensions matching the final content to prevent layout shift.
+
+**Validates: Requirement 16.4**
+
+### Property 45: Modal Background Scroll Prevention
+
+*For any* modal dialog open on mobile, scrolling of the background content should be prevented.
+
+**Validates: Requirement 17.2**
+
+### Property 46: Scroll-to-Error Behavior
+
+*For any* form submission with validation errors on mobile, the viewport should scroll to the first validation error.
+
+**Validates: Requirement 17.4**
+
+### Property 47: Resize Event Debouncing
+
+*For any* viewport resize event, the resize event handlers should be debounced to fire at most once every 150 milliseconds.
+
+**Validates: Requirement 18.4**
+
+### Property 48: Responsive Calculation Memoization
+
+*For any* responsive style calculation with the same inputs, the result should be returned from cache rather than recalculated.
+
+**Validates: Requirement 18.5**
+
+### Property 49: Focus Indicator Visibility
+
+*For any* focused element on mobile, a visible focus indicator with at least 2 pixel border should be displayed.
+
+**Validates: Requirement 19.2**
+
+### Property 50: ARIA Label Presence
+
+*For any* interactive element on mobile, an appropriate ARIA label should be present for screen reader accessibility.
+
+**Validates: Requirement 19.5**
+
+### Property 51: PWA Standalone Mode Padding
+
+*For any* application running in PWA standalone mode, additional top padding should be applied to account for the status bar.
+
+**Validates: Requirement 20.2**
+
+### Property 52: PWA iOS Viewport Height
+
+*For any* application running in standalone mode on iOS, the full viewport height including safe areas should be utilized.
+
+**Validates: Requirement 20.3**
 
 ## Error Handling
 

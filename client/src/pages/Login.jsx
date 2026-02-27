@@ -154,7 +154,7 @@ const Login = () => {
                         {(loginType === 'cadet' || loginType === 'staff') && (
                             <div>
                                 <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-1">
-                                    Username or Email
+                                    {loginType === 'cadet' ? 'Student ID or Email' : 'Staff Username'}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
