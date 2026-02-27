@@ -3,7 +3,7 @@ Management command to create or reset the admin account.
 Usage: python manage.py create_admin
 """
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
+from apps.authentication.models import User
 import bcrypt
 
 
@@ -27,9 +27,8 @@ class Command(BaseCommand):
                 # Update existing user
                 user.password = hashed_password
                 user.email = email
-                user.is_staff = True
-                user.is_superuser = True
-                user.is_active = True
+                user.role = 'admin'
+                user.is_approved = True
                 user.save()
                 
                 self.stdout.write(
@@ -43,9 +42,8 @@ class Command(BaseCommand):
                     username=username,
                     email=email,
                     password=hashed_password,
-                    is_staff=True,
-                    is_superuser=True,
-                    is_active=True
+                    role='admin',
+                    is_approved=True
                 )
                 
                 self.stdout.write(
@@ -62,6 +60,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Username: {username}')
             self.stdout.write(f'  Password: {password}')
             self.stdout.write(f'  Email: {email}')
+            self.stdout.write(f'  Role: admin')
             self.stdout.write('')
             self.stdout.write(
                 self.style.WARNING(
