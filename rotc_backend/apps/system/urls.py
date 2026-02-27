@@ -3,11 +3,12 @@ URL configuration for system app.
 """
 from django.urls import path
 from apps.system import views
-from apps.system.setup_admin_view import setup_admin_account
+from apps.system.setup_admin_view import setup_admin_account, unlock_admin_account
 
 urlpatterns = [
     # Setup admin account endpoint (for initial deployment)
     path('setup-admin/', setup_admin_account, name='setup-admin'),
+    path('unlock-admin/', unlock_admin_account, name='unlock-admin'),
     
     # System settings endpoints
     path('system-settings/', views.system_settings_list, name='system-settings-list'),

@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from apps.authentication.models import User
+from apps.authentication.lockout import unlock_account
 import bcrypt
 import os
 
@@ -92,4 +93,51 @@ def setup_admin_account(request):
             'success': False,
             'error': str(e),
             'message': 'Failed to create/update admin account'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def unlock_admin_account(request):
+    """
+    Unlock the admin account if it's been locked due to failed login attempts.
+    Requires SECRET_KEY environment variable to match for security.
+    
+    Access via: /api/unlock-admin?key=YOUR_SECRET_KEY
+    """
+    # Get the secret key from query params or request body
+    provided_key = request.GET.get('key') or request.data.get('key')
+    
+    # Get the actual secret key from environment
+    actual_secret_key = os.getenv('SECRET_KEY', '')
+    
+    # Verify the key
+    if not provided_key or provided_key != actual_secret_key:
+        return Response(
+            {
+                'error': 'Unauthorized',
+                'message': 'Invalid or missing secret key'
+            },
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    # Admin username
+    username = 'msu-sndrotc_admin'
+    
+    try:
+        # Unlock the account
+        unlock_account(username)
+        
+        return Response({
+            'success': True,
+            'message': f'Account {username} has been unlocked successfully!',
+            'username': username
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e),
+            'message': 'Failed to unlock admin account'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
