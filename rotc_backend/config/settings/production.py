@@ -5,9 +5,18 @@ Uses PostgreSQL database and environment variables for configuration.
 from .base import *
 import os
 from dotenv import load_dotenv
+from config.env_validation import validate_production_environment, EnvironmentValidationError
 
 # Load environment variables
 load_dotenv()
+
+# Validate all required environment variables before proceeding
+try:
+    validate_production_environment()
+except EnvironmentValidationError as e:
+    import sys
+    print(str(e), file=sys.stderr)
+    sys.exit(1)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Prioritize DJANGO_SECRET_KEY since that's what Render uses

@@ -1,9 +1,9 @@
 services:
-  # Django Backend Service
+  # Django Web Service (WSGI - Gunicorn)
   - type: web
-    name: msu-snd-rgms-backend
+    name: rotc-django-web
     runtime: python
-    plan: free
+    plan: starter
     region: oregon
     buildCommand: |
       cd rotc_backend
@@ -13,18 +13,20 @@ services:
       python manage.py migrate --no-input --settings=config.settings.production
     startCommand: |
       cd rotc_backend
-      daphne -b 0.0.0.0 -p $PORT config.asgi:application
+      gunicorn -c gunicorn.conf.py config.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
+      - key: DJANGO_ENV
+        value: production
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: False
       - key: ALLOWED_HOSTS
-        value: msu-snd-rgms-1.onrender.com,localhost,127.0.0.1
+        value: rotc-django-web.onrender.com,msu-snd-rgms-1.onrender.com,localhost,127.0.0.1
       - key: DATABASE_URL
         fromDatabase:
           name: msu-snd-rgms-db
@@ -35,24 +37,147 @@ services:
           name: msu-snd-rgms-redis
           property: connectionString
       - key: CORS_ALLOWED_ORIGINS
-        value: https://msu-snd-rgms-1.onrender.com
+        value: https://msu-snd-rgms-1.onrender.com,https://rotc-django-web.onrender.com
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: GUNICORN_WORKERS
+        value: 4
+      - key: GUNICORN_LOG_LEVEL
+        value: info
     healthCheckPath: /api/health/
+    autoDeploy: true
+
+  # Django Channels Service (ASGI - Daphne for WebSockets)
+  - type: web
+    name: rotc-django-channels
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: |
+      cd rotc_backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      cd rotc_backend
+      daphne -b 0.0.0.0 -p $PORT config.asgi:application --verbosity 1 --access-log -
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: rotc-django-channels.onrender.com,localhost,127.0.0.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msu-snd-rgms-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: msu-snd-rgms-redis
+          property: connectionString
+      - key: DAPHNE_VERBOSITY
+        value: 1
+    autoDeploy: true
+
+  # Celery Worker Service (Background Tasks)
+  - type: worker
+    name: rotc-celery-worker
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: |
+      cd rotc_backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      cd rotc_backend
+      celery -A config worker --loglevel=info --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msu-snd-rgms-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: msu-snd-rgms-redis
+          property: connectionString
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+    autoDeploy: true
+
+  # Celery Beat Service (Periodic Task Scheduler)
+  - type: worker
+    name: rotc-celery-beat
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: |
+      cd rotc_backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      cd rotc_backend
+      celery -A config beat --loglevel=info
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: DATABASE_URL
+        fromDatabase:
+          name: msu-snd-rgms-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: msu-snd-rgms-redis
+          property: connectionString
     autoDeploy: true
 
 databases:
   - name: msu-snd-rgms-db
     databaseName: rotc_db
     user: rotc_user
-    plan: free
+    plan: starter
     region: oregon
 
   - name: msu-snd-rgms-redis
-    plan: free
+    plan: starter
     region: oregon
     maxmemoryPolicy: noeviction
