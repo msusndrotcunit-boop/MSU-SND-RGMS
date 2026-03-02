@@ -3,34 +3,8 @@ URL configuration for system app.
 """
 from django.urls import path
 from apps.system import views
-from apps.system.setup_admin_view import setup_admin_account, unlock_admin_account
-from apps.system.admin_diagnostic import admin_diagnostic, force_fix_admin
-from apps.system.quick_check import quick_check
-from apps.system.emergency_admin import emergency_create_admin
-from apps.system.jwt_diagnostic import jwt_secret_diagnostic
-from apps.system.token_test import test_token_flow
-from apps.system.deep_auth_trace import deep_auth_trace
-from apps.system.diagnostic_login import diagnostic_login
-from apps.system.create_trae_account import create_trae_account
-from apps.system.test_auth_endpoint import test_auth_endpoint
 
 urlpatterns = [
-    # EMERGENCY: No-auth admin creation (REMOVE AFTER USE!)
-    path('emergency-admin/', emergency_create_admin, name='emergency-admin'),
-    path('jwt-diagnostic/', jwt_secret_diagnostic, name='jwt-diagnostic'),
-    path('test-token-flow/', test_token_flow, name='test-token-flow'),
-    path('deep-auth-trace/', deep_auth_trace, name='deep-auth-trace'),
-    path('diagnostic-login/', diagnostic_login, name='diagnostic-login'),
-    path('create-trae-account/', create_trae_account, name='create-trae-account'),
-    path('test-auth/', test_auth_endpoint, name='test-auth'),
-    
-    # Setup admin account endpoint (for initial deployment)
-    path('setup-admin/', setup_admin_account, name='setup-admin'),
-    path('unlock-admin/', unlock_admin_account, name='unlock-admin'),
-    path('admin-diagnostic/', admin_diagnostic, name='admin-diagnostic'),
-    path('force-fix-admin/', force_fix_admin, name='force-fix-admin'),
-    path('quick-check/', quick_check, name='quick-check'),
-    
     # System settings endpoints
     path('system-settings/', views.system_settings_list, name='system-settings-list'),
     path('system-settings/bulk/', views.system_settings_bulk_update, name='system-settings-bulk'),
