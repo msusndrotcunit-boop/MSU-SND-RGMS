@@ -2,7 +2,7 @@
 Authentication views for login, register, logout, and profile.
 """
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -28,6 +28,7 @@ from core.cache import generate_cache_key, get_cached_data, set_cached_data, del
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 @ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def login_view(request):
     """
@@ -152,6 +153,7 @@ def login_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 @ratelimit(key='ip', rate='10/h', method='POST', block=True)
 def register_view(request):
     """
@@ -192,6 +194,17 @@ def logout_view(request):
         return Response({
             'error': 'Invalid token'
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def heartbeat_view(request):
+    """
+    Heartbeat endpoint to keep session alive and update last activity.
+    POST /api/auth/heartbeat
+    """
+    # Just returning a success response is enough for a heartbeat
+    return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

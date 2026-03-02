@@ -7,7 +7,7 @@ import logging
 from django.http import StreamingHttpResponse
 from django.core.cache import cache
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.system.models import SystemSettings, SyncEvent, AuditLog
@@ -1014,6 +1014,7 @@ def cache_metrics_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def health_check_view(request):
     """
     Health check endpoint for monitoring system status.
