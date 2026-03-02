@@ -36,8 +36,16 @@ else:
     print("[JWT FIX] Skipping environment validation - using secure fallback")
 
 # Ensure JWT signing key matches the FINAL SECRET_KEY
+# Using a fixed key name to avoid any potential confusion with SIMPLE_JWT initialization in base.py
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
-print(f"[JWT FIX] SIMPLE_JWT['SIGNING_KEY'] set to SECRET_KEY (length: {len(SECRET_KEY)})")
+print(f"[JWT FIX] SIMPLE_JWT['SIGNING_KEY'] synchronized with SECRET_KEY (length: {len(SECRET_KEY)})")
+print(f"[JWT FIX] SIGNING_KEY prefix: {SECRET_KEY[:5]}...")
+
+# Add extra check to ensure it's set globally
+import rest_framework_simplejwt.settings as jwt_settings
+if hasattr(jwt_settings, 'api_settings'):
+    jwt_settings.api_settings.SIGNING_KEY = SECRET_KEY
+    print("[JWT FIX] Force-updated rest_framework_simplejwt api_settings.SIGNING_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
