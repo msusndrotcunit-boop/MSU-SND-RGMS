@@ -6,11 +6,12 @@ from .base import *
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-dev-key-change-in-production'
+SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
 
 # Database - SQLite for development
 DATABASES = {
@@ -77,35 +78,14 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 # Redis cache configuration for development
-# Use local Redis or fallback to in-memory cache
+# Forcing LocMemCache to avoid Redis dependency during local testing
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-
-try:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': REDIS_URL,
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'SOCKET_CONNECT_TIMEOUT': 5,
-                'SOCKET_TIMEOUT': 5,
-                'RETRY_ON_TIMEOUT': True,
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 50,
-                    'retry_on_timeout': True,
-                },
-            },
-            'KEY_PREFIX': CACHE_KEY_PREFIX,
-        }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
-except Exception:
-    # Fallback to in-memory cache if Redis is not available
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'unique-snowflake',
-        }
-    }
+}
 
 # Channel layers for Django Channels (development)
 CHANNEL_LAYERS = {

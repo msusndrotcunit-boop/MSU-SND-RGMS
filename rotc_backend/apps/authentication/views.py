@@ -203,7 +203,8 @@ def profile_view(request):
     """
     # Get user from custom User model with settings
     try:
-        user = User.objects.select_related('settings').get(id=request.user.id)
+        # Use username for lookup to handle ID mismatches between Django and custom User models
+        user = User.objects.select_related('settings').get(username=request.user.username)
         user_data = UserSerializer(user).data
         return Response(user_data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
@@ -248,7 +249,8 @@ def user_settings_view(request):
     PUT /api/settings
     """
     try:
-        user = User.objects.select_related('settings').get(id=request.user.id)
+        # Use username for lookup to handle ID mismatches
+        user = User.objects.select_related('settings').get(username=request.user.username)
     except User.DoesNotExist:
         return Response({
             'error': 'User not found'
@@ -318,7 +320,8 @@ def user_settings_reset_view(request):
     POST /api/settings/reset
     """
     try:
-        user = User.objects.get(id=request.user.id)
+        # Use username for lookup to handle ID mismatches
+        user = User.objects.get(username=request.user.username)
     except User.DoesNotExist:
         return Response({
             'error': 'User not found'

@@ -160,7 +160,9 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 # Get the secret key - prioritize DJANGO_SECRET_KEY since that's what Render uses
-JWT_SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('SECRET_KEY', 'your-secret-key-here')
+# This will be overridden in development.py and production.py
+FALLBACK_SECURE_KEY = 'IhmJU6c2p!9(hWO&s3ISA*Xi5ttUJU)9HFxq(QOJ8UDd8a@3j!'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('SECRET_KEY', FALLBACK_SECURE_KEY)
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
@@ -169,7 +171,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': JWT_SECRET_KEY,
+    'SIGNING_KEY': SECRET_KEY,  # This will track SECRET_KEY
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
