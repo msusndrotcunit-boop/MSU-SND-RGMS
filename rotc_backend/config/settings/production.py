@@ -22,9 +22,6 @@ else:
     SECRET_KEY = FALLBACK_SECURE_KEY
     print("[JWT FIX] Using secure fallback SECRET_KEY (environment key is insecure)")
 
-# Ensure JWT signing key matches SECRET_KEY
-SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
-
 # Validate all required environment variables before proceeding
 # TEMPORARY: Skip validation if using fallback key
 if SECRET_KEY != FALLBACK_SECURE_KEY:
@@ -37,6 +34,10 @@ if SECRET_KEY != FALLBACK_SECURE_KEY:
         SECRET_KEY = FALLBACK_SECURE_KEY
 else:
     print("[JWT FIX] Skipping environment validation - using secure fallback")
+
+# Ensure JWT signing key matches the FINAL SECRET_KEY
+SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
+print(f"[JWT FIX] SIMPLE_JWT['SIGNING_KEY'] set to SECRET_KEY (length: {len(SECRET_KEY)})")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
